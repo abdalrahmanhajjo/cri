@@ -1,0 +1,312 @@
+/* Professional Profile – Visit Tripoli */
+
+.profile-page {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 var(--page-padding) 40px;
+}
+
+.profile-header {
+  text-align: center;
+  padding: 24px 0 32px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.profile-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 36px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  border: 3px solid var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-name {
+  font-family: var(--font-serif);
+  font-size: clamp(22px, 4vw, 26px);
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.profile-email {
+  margin: 0 0 8px 0;
+  color: var(--color-text-secondary);
+  font-size: 15px;
+  word-break: break-all;
+}
+
+.profile-meta {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  margin: 0;
+}
+
+/* Section blocks */
+.profile-section {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.profile-section:last-of-type {
+  border-bottom: none;
+}
+
+.profile-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-section-title .icon {
+  color: var(--color-primary);
+}
+
+/* Form fields */
+.profile-field {
+  margin-bottom: 16px;
+}
+
+.profile-field:last-child {
+  margin-bottom: 0;
+}
+
+.profile-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 6px;
+}
+
+.profile-input,
+.profile-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+.profile-input:focus,
+.profile-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2);
+}
+
+.profile-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.profile-input--error {
+  border-color: var(--color-error);
+}
+
+.profile-msg {
+  font-size: 14px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.profile-msg--error {
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--color-error);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.profile-msg--success {
+  background: rgba(5, 150, 105, 0.08);
+  color: var(--color-success);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+/* Toggle row */
+.profile-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.profile-toggle-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.profile-toggle-label {
+  font-size: 15px;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.profile-toggle-desc {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 2px 0 0 0;
+}
+
+.profile-toggle {
+  flex-shrink: 0;
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
+  border: none;
+  background: var(--color-border);
+  position: relative;
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+
+.profile-toggle[aria-pressed="true"] {
+  background: var(--color-primary);
+}
+
+.profile-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform var(--duration-fast);
+}
+
+.profile-toggle[aria-pressed="true"]::after {
+  transform: translateX(20px);
+}
+
+/* Buttons */
+.profile-actions {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.profile-btn {
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  min-height: 44px;
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--duration-fast), background var(--duration-fast);
+}
+
+.profile-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.profile-btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.profile-btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.profile-btn--outline {
+  background: transparent;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.profile-btn--outline:hover:not(:disabled) {
+  background: var(--color-surface-variant);
+}
+
+.profile-btn--danger {
+  background: transparent;
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+}
+
+.profile-btn--danger:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+/* Security / password requirements */
+.profile-password-requirements {
+  margin-top: 8px;
+}
+
+.profile-password-requirement {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 2px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-password-requirement--met {
+  color: var(--color-success);
+}
+
+/* Secure note */
+.profile-secure-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--color-surface-variant);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 24px;
+}
+
+.profile-secure-note .icon {
+  color: var(--color-success);
+  flex-shrink: 0;
+}
+
+@media (max-width: 360px) {
+  .profile-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .profile-section {
+    padding: 20px 0;
+  }
+  .profile-avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 28px;
+  }
+}
