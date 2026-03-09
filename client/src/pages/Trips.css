@@ -1,0 +1,47 @@
+.trips-page {
+  max-width: 640px;
+}
+
+.trips-loading,
+.trips-error {
+  padding: clamp(16px, 4vw, 24px);
+  color: var(--color-text-secondary);
+  font-size: clamp(14px, 2.5vw, 16px);
+}
+.trips-error {
+  color: var(--color-error);
+}
+
+.trips-empty {
+  padding: clamp(16px, 4vw, 24px);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: clamp(14px, 2.5vw, 16px);
+}
+
+.trips-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+}
+
+.trip-item {
+  padding: clamp(16px, 4vw, 20px);
+  min-width: 0;
+}
+
+.trip-item h3 {
+  margin: 0 0 8px 0;
+  font-size: clamp(16px, 4vw, 18px);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.trip-meta {
+  margin: 0;
+  font-size: clamp(13px, 2.5vw, 14px);
+  color: var(--color-text-secondary);
+}
