@@ -4,6 +4,7 @@ import api, { getPlaceImageUrl } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
+import GlobalSearchBar from '../components/GlobalSearchBar';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
@@ -342,21 +343,13 @@ export default function PlaceDiscover() {
             </h1>
             <p className="pd-hero-sub">{t('placeDiscover', 'subtitle')}</p>
           </div>
-          <div className="pd-search">
-            <Icon name="search" size={22} className="pd-search-icon" aria-hidden />
-            <input
-              type="search"
-              className="pd-search-input"
-              placeholder={t('placeDiscover', 'searchPlaceholder')}
-              value={qDraft}
-              onChange={(e) => setQDraft(e.target.value)}
-              aria-label={t('placeDiscover', 'searchPlaceholder')}
+          <div className="pd-global-search-wrap">
+            <GlobalSearchBar
+              className="global-search-bar--full"
+              idPrefix="place-discover"
+              queryValue={qDraft}
+              onQueryChange={setQDraft}
             />
-            {qDraft ? (
-              <button type="button" className="pd-search-clear" onClick={() => setQDraft('')} aria-label={t('placeDiscover', 'clearSearch')}>
-                <Icon name="close" size={20} />
-              </button>
-            ) : null}
           </div>
           <div className="pd-hero-actions" aria-label={t('placeDiscover', 'quickActionsLabel')}>
             <Link to="/map" className="pd-hero-action">

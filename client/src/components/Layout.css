@@ -886,9 +886,39 @@ button.nav-icon {
 
   .header-row--main {
     min-height: 48px;
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 12px;
+    gap: 8px 10px;
+  }
+
+  .header-row--main .nav-toggle {
+    justify-self: start;
+  }
+
+  .header-row--main .logo-wrap {
+    flex: unset;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    justify-self: stretch;
+    justify-content: center;
+  }
+
+  .header-row--main .logo-stack {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .header--vd .header-row--main .logo-stack .logo {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .header-row--main .header-mobile-right {
+    justify-self: end;
   }
 
   .nav-toggle {
@@ -902,12 +932,6 @@ button.nav-icon {
   }
   .nav-toggle:hover {
     background: #d1d5db;
-  }
-
-  .header-row--main .logo-wrap {
-    flex: 1;
-    justify-content: center;
-    min-width: 0;
   }
 
   .header-mobile-right {
