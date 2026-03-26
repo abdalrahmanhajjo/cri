@@ -792,8 +792,9 @@
   transform: scale(1.15);
 }
 
-/* Large: text left, image right – balanced and polished */
-@media (min-width: 768px) {
+/* Desktop only: text panel + image split.
+   Keep tablet/medium on the immersive full-image card style. */
+@media (min-width: 1024px) {
   .vd-top-picks-carousel {
     border-radius: 12px;
     min-height: 420px;
