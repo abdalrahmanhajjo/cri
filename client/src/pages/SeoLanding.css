@@ -1,0 +1,184 @@
+.seo-landing {
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+.seo-landing__container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px var(--page-padding, 20px) 52px;
+}
+
+.seo-landing__header {
+  padding: 18px 0 8px;
+}
+
+.seo-landing__title {
+  font-family: var(--font-display, 'DM Serif Display', serif);
+  font-size: clamp(28px, 4vw, 44px);
+  letter-spacing: -0.02em;
+  line-height: 1.06;
+  margin: 0 0 10px;
+}
+
+.seo-landing__intro {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.65;
+  max-width: 74ch;
+  color: color-mix(in oklab, var(--color-text) 78%, transparent);
+}
+
+.seo-landing__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.seo-landing__main {
+  min-width: 0;
+}
+
+.seo-landing__section {
+  background: var(--color-surface, #fff);
+  border: 1px solid color-mix(in oklab, var(--color-text) 10%, transparent);
+  border-radius: 16px;
+  padding: 18px 18px 14px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+  margin-bottom: 14px;
+}
+
+.seo-landing__h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.seo-landing__p {
+  margin: 0 0 10px;
+  line-height: 1.7;
+  color: color-mix(in oklab, var(--color-text) 88%, transparent);
+}
+
+.seo-landing__p:last-child {
+  margin-bottom: 0;
+}
+
+.seo-landing__side {
+  position: sticky;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+}
+
+.seo-landing__card {
+  background: var(--color-surface, #fff);
+  border: 1px solid color-mix(in oklab, var(--color-text) 10%, transparent);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+  margin-bottom: 12px;
+}
+
+.seo-landing__sideTitle {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.seo-landing__sideTitleSm {
+  margin: 0 0 10px;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--color-text) 72%, transparent);
+}
+
+.seo-landing__sideP {
+  margin: 0 0 14px;
+  color: color-mix(in oklab, var(--color-text) 75%, transparent);
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.seo-landing__ctaRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.seo-landing__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  min-height: 40px;
+}
+
+.seo-landing__btn--primary {
+  background: var(--color-primary, #0ea5a4);
+  color: #fff;
+}
+
+.seo-landing__btn--ghost {
+  background: transparent;
+  border-color: color-mix(in oklab, var(--color-text) 16%, transparent);
+  color: var(--color-text);
+}
+
+.seo-landing__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.seo-landing__li {
+  min-width: 0;
+}
+
+.seo-landing__link {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--color-text) 4%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-text) 10%, transparent);
+  text-decoration: none;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seo-landing__link:hover {
+  background: color-mix(in oklab, var(--color-text) 6%, transparent);
+}
+
+.seo-landing__footer {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in oklab, var(--color-text) 10%, transparent);
+}
+
+.seo-landing__footerP {
+  margin: 0;
+  color: color-mix(in oklab, var(--color-text) 72%, transparent);
+}
+
+.seo-landing__footerLink {
+  color: inherit;
+}
+
+@media (max-width: 940px) {
+  .seo-landing__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .seo-landing__side {
+    position: static;
+  }
+}
+

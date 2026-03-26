@@ -152,43 +152,62 @@ const SITEMAP_TTL_MS = 10 * 60 * 1000;
 
 router.get('/sitemap.xml', async (req, res) => {
   const baseUrl = getBaseUrl(req);
-  const now = Date.now();
-  if (sitemapCache.xml && now - sitemapCache.ts < SITEMAP_TTL_MS) {
-    return res.type('application/xml').send(sitemapCache.xml.replace(/__BASE__/g, baseUrl));
-  }
-
-  const urls = new Set();
-  const add = (p) => urls.add(safeUrlJoin('__BASE__', p)); // placeholder replaced on send
-
-  // Core pages
-  add('/');
-  add('/discover');
-  add('/activities');
-
-  // Dynamic pages from DB
   try {
-    const [places, tours, events] = await Promise.all([
-      query('SELECT id FROM places ORDER BY id ASC'),
-      query('SELECT id FROM tours ORDER BY id ASC'),
-      query('SELECT id FROM events ORDER BY id ASC'),
-    ]);
-    for (const r of places.rows || []) add(`/place/${encodeURIComponent(normalizeSlugSegment(String(r.id)))}`);
-    for (const r of tours.rows || []) add(`/tour/${encodeURIComponent(normalizeSlugSegment(String(r.id)))}`);
-    for (const r of events.rows || []) add(`/event/${encodeURIComponent(String(r.id))}`);
+    const now = Date.now();
+    if (sitemapCache.xml && now - sitemapCache.ts < SITEMAP_TTL_MS) {
+      return res.type('application/xml').send(sitemapCache.xml.replace(/__BASE__/g, baseUrl));
+    }
+
+    const urls = new Set();
+    const add = (p) => urls.add(safeUrlJoin('__BASE__', p)); // placeholder replaced on send
+
+    // Core pages
+    add('/');
+    add('/discover');
+    add('/activities');
+
+    // SEO landing pages
+    add('/things-to-do-in-tripoli-lebanon');
+    add('/tripoli-old-city-guide');
+    add('/tripoli-souks-guide');
+    add('/best-sweets-in-tripoli');
+    add('/tripoli-travel-tips');
+
+    // Dynamic pages from DB
+    try {
+      const [places, tours, events] = await Promise.all([
+        query('SELECT id FROM places ORDER BY id ASC'),
+        query('SELECT id FROM tours ORDER BY id ASC'),
+        query('SELECT id FROM events ORDER BY id ASC'),
+      ]);
+      for (const r of places.rows || []) add(`/place/${encodeURIComponent(normalizeSlugSegment(String(r.id)))}`);
+      for (const r of tours.rows || []) add(`/tour/${encodeURIComponent(normalizeSlugSegment(String(r.id)))}`);
+      for (const r of events.rows || []) add(`/event/${encodeURIComponent(String(r.id))}`);
+    } catch {
+      // If DB is temporarily unavailable, still serve the static sitemap.
+    }
+
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      Array.from(urls)
+        .map((loc) => `  <url><loc>${loc}</loc></url>`)
+        .join('\n') +
+      `\n</urlset>\n`;
+
+    sitemapCache = { xml, ts: now };
+    return res.type('application/xml').send(xml.replace(/__BASE__/g, baseUrl));
   } catch {
-    // If DB is temporarily unavailable, still serve the core sitemap.
+    // Absolute fallback: never 500.
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      `  <url><loc>${safeUrlJoin(baseUrl, '/')}</loc></url>\n` +
+      `  <url><loc>${safeUrlJoin(baseUrl, '/discover')}</loc></url>\n` +
+      `  <url><loc>${safeUrlJoin(baseUrl, '/activities')}</loc></url>\n` +
+      `</urlset>\n`;
+    return res.type('application/xml').send(xml);
   }
-
-  const xml =
-    `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-    Array.from(urls)
-      .map((loc) => `  <url><loc>${loc}</loc></url>`)
-      .join('\n') +
-    `\n</urlset>\n`;
-
-  sitemapCache = { xml, ts: now };
-  return res.type('application/xml').send(xml.replace(/__BASE__/g, baseUrl));
 });
 
 // --- SEO HTML for key public routes ---
@@ -365,6 +384,61 @@ function makeSeoResponder({ clientDistPath }) {
             jsonLdOrg({ baseUrl }),
           ]);
         }
+      } else if (
+        p === '/things-to-do-in-tripoli-lebanon' ||
+        p === '/tripoli-old-city-guide' ||
+        p === '/tripoli-souks-guide' ||
+        p === '/best-sweets-in-tripoli' ||
+        p === '/tripoli-travel-tips'
+      ) {
+        const metaByPath = {
+          '/things-to-do-in-tripoli-lebanon': {
+            title: 'Things to do in Tripoli, Lebanon | Visit Tripoli',
+            description:
+              'Best things to do in Tripoli, Lebanon: explore the old city souks, visit historic mosques, and taste the city’s famous sweets. A simple guide for first-time visitors.',
+          },
+          '/tripoli-old-city-guide': {
+            title: 'Tripoli Old City guide (Lebanon) | Visit Tripoli',
+            description:
+              'A walking guide to Tripoli’s old city: where to start, what to see in the souks and khans, and practical tips for a smooth visit in Tripoli, Lebanon.',
+          },
+          '/tripoli-souks-guide': {
+            title: 'Tripoli Souks guide: markets, spices & crafts | Visit Tripoli',
+            description:
+              'Explore Tripoli’s souks in Lebanon: spice markets, soap khans, crafts, and what to buy. A practical guide to the old city markets.',
+          },
+          '/best-sweets-in-tripoli': {
+            title: 'Best sweets in Tripoli, Lebanon | Visit Tripoli',
+            description:
+              'Tripoli is the sweets capital of Lebanon. Learn what to try, where to go, and how to plan a tasting walk with markets and landmarks.',
+          },
+          '/tripoli-travel-tips': {
+            title: 'Tripoli, Lebanon travel tips | Visit Tripoli',
+            description:
+              'Tripoli travel tips: best time to visit, how to get around the old city, what to wear, and respectful visiting advice for a comfortable day in Tripoli, Lebanon.',
+          },
+        };
+        const info = metaByPath[p];
+        title = info.title;
+        description = info.description;
+        canonical = safeUrlJoin(baseUrl, p);
+        alternates = buildAlternates(baseUrl, p);
+        const crumbs = jsonLdBreadcrumb({
+          baseUrl,
+          items: [
+            { name: 'Home', path: '/' },
+            { name: info.title.replace(/\s*\|\s*Visit Tripoli$/, ''), path: p },
+          ],
+        });
+        const webPage = {
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          name: info.title,
+          url: canonical,
+          description: clampText(description, 300) || undefined,
+          isPartOf: { '@type': 'WebSite', name: 'Visit Tripoli', url: baseUrl },
+        };
+        jsonLd = JSON.stringify([webPage, crumbs, jsonLdOrg({ baseUrl })]);
       } else {
         return next();
       }
