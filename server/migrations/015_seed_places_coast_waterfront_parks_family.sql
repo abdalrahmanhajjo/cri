@@ -27,7 +27,8 @@ INSERT INTO places (
   rating,
   review_count,
   hours,
-  tags
+  tags,
+  checkin_token
 )
 VALUES
   (
@@ -47,7 +48,8 @@ VALUES
     4.5,
     120,
     NULL,
-    '["coast","sea","promenade","outdoors","corniche","sunset","walking"]'::jsonb
+    '["coast","sea","promenade","outdoors","corniche","sunset","walking"]'::jsonb,
+    encode(digest('tripoli_coast_promenade', 'sha256'), 'hex')::varchar(64)
   ),
   (
     'tripoli_waterfront_marina',
@@ -66,7 +68,8 @@ VALUES
     4.4,
     85,
     NULL,
-    '["waterfront","marina","harbour","port","sea","promenade","evening"]'::jsonb
+    '["waterfront","marina","harbour","port","sea","promenade","evening"]'::jsonb,
+    encode(digest('tripoli_waterfront_marina', 'sha256'), 'hex')::varchar(64)
   ),
   (
     'tripoli_family_park',
@@ -85,7 +88,8 @@ VALUES
     4.3,
     60,
     NULL,
-    '["park","family","kids","children","garden","playground","picnic","relax"]'::jsonb
+    '["park","family","kids","children","garden","playground","picnic","relax"]'::jsonb,
+    encode(digest('tripoli_family_park', 'sha256'), 'hex')::varchar(64)
   ),
   (
     'tripoli_family_garden',
@@ -104,7 +108,8 @@ VALUES
     4.2,
     42,
     NULL,
-    '["garden","park","family","relax","outing","leisure","green","kids"]'::jsonb
+    '["garden","park","family","relax","outing","leisure","green","kids"]'::jsonb,
+    encode(digest('tripoli_family_garden', 'sha256'), 'hex')::varchar(64)
   )
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
@@ -122,5 +127,6 @@ ON CONFLICT (id) DO UPDATE SET
   rating = EXCLUDED.rating,
   review_count = EXCLUDED.review_count,
   hours = EXCLUDED.hours,
-  tags = EXCLUDED.tags;
+  tags = EXCLUDED.tags,
+  checkin_token = EXCLUDED.checkin_token;
 
