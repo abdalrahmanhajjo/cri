@@ -1,0 +1,122 @@
+.backlink-kit {
+  position: relative;
+  min-height: 100%;
+  background: radial-gradient(1200px 600px at 10% -10%, #d9f3ec 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #ecf4ff 0%, transparent 50%),
+    var(--color-background);
+}
+
+.backlink-kit__mesh {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(to right, rgba(10, 30, 40, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(10, 30, 40, 0.04) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.26), transparent 70%);
+  pointer-events: none;
+}
+
+.backlink-kit__container {
+  position: relative;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 30px var(--page-padding, 20px) 56px;
+}
+
+.backlink-kit__hero h1 {
+  margin: 0 0 12px;
+  font-family: var(--font-display, "DM Serif Display", serif);
+  font-size: clamp(32px, 5vw, 54px);
+  line-height: 1.03;
+  letter-spacing: -0.02em;
+}
+
+.backlink-kit__hero p {
+  margin: 0;
+  max-width: 76ch;
+  line-height: 1.7;
+  color: color-mix(in oklab, var(--color-text) 84%, transparent);
+}
+
+.backlink-kit__eyebrow {
+  margin: 0 0 14px;
+  display: inline-flex;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: color-mix(in oklab, var(--color-primary) 16%, white 84%);
+  color: color-mix(in oklab, var(--color-primary) 72%, black 28%);
+}
+
+.backlink-kit__cards {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.backlink-kit__card {
+  border-radius: 18px;
+  padding: 18px;
+  border: 1px solid color-mix(in oklab, var(--color-text) 12%, transparent);
+  background: color-mix(in oklab, var(--color-surface) 94%, white 6%);
+  box-shadow: 0 18px 34px rgba(10, 20, 24, 0.09);
+}
+
+.backlink-kit__card h2 {
+  margin: 0 0 9px;
+  font-size: 19px;
+  line-height: 1.25;
+}
+
+.backlink-kit__url {
+  display: inline-block;
+  margin: 0 0 12px;
+  text-decoration: none;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--color-primary) 76%, black 24%);
+  word-break: break-word;
+}
+
+.backlink-kit__card label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--color-text) 70%, transparent);
+}
+
+.backlink-kit pre {
+  margin: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #0f1a1e;
+  color: #ecf6f3;
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+.backlink-kit__outreach {
+  margin-top: 18px;
+  border-radius: 18px;
+  padding: 18px;
+  border: 1px solid color-mix(in oklab, var(--color-text) 12%, transparent);
+  background: color-mix(in oklab, var(--color-surface) 94%, white 6%);
+  box-shadow: 0 18px 34px rgba(10, 20, 24, 0.09);
+}
+
+.backlink-kit__outreach h2 {
+  margin: 0 0 10px;
+}
+
+@media (max-width: 900px) {
+  .backlink-kit__cards {
+    grid-template-columns: 1fr;
+  }
+}
+

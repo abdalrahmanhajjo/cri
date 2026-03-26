@@ -172,6 +172,7 @@ router.get('/sitemap.xml', async (req, res) => {
     add('/tripoli-souks-guide');
     add('/best-sweets-in-tripoli');
     add('/tripoli-travel-tips');
+    add('/partner-link-kit');
 
     // Dynamic pages from DB
     try {
@@ -389,7 +390,8 @@ function makeSeoResponder({ clientDistPath }) {
         p === '/tripoli-old-city-guide' ||
         p === '/tripoli-souks-guide' ||
         p === '/best-sweets-in-tripoli' ||
-        p === '/tripoli-travel-tips'
+        p === '/tripoli-travel-tips' ||
+        p === '/partner-link-kit'
       ) {
         const metaByPath = {
           '/things-to-do-in-tripoli-lebanon': {
@@ -416,6 +418,11 @@ function makeSeoResponder({ clientDistPath }) {
             title: 'Tripoli, Lebanon travel tips | Visit Tripoli',
             description:
               'Tripoli travel tips: best time to visit, how to get around the old city, what to wear, and respectful visiting advice for a comfortable day in Tripoli, Lebanon.',
+          },
+          '/partner-link-kit': {
+            title: 'Partner Link Kit for Visit Tripoli | Official Backlinks',
+            description:
+              'Official Visit Tripoli backlink kit with exact target URLs and anchor texts for municipality, university, venue, and event websites.',
           },
         };
         const info = metaByPath[p];

@@ -24,6 +24,7 @@ import ActivitiesHub from './pages/ActivitiesHub';
 import Plan from './pages/Plan';
 import AiPlanner from './pages/AiPlanner';
 import PlaceDiscover from './pages/PlaceDiscover';
+import BacklinkKit from './pages/BacklinkKit';
 import {
   ThingsToDoTripoli,
   OldCityGuide,
@@ -187,6 +188,7 @@ function AppRoutes() {
         <Route path="tripoli-souks-guide" element={<SouksGuide />} />
         <Route path="best-sweets-in-tripoli" element={<SweetsGuide />} />
         <Route path="tripoli-travel-tips" element={<TravelTipsTripoli />} />
+        <Route path="partner-link-kit" element={<BacklinkKit />} />
         <Route path="trips/:tripId" element={<ProtectedRoute><TripDetail /></ProtectedRoute>} />
         <Route path="trips" element={<ProtectedRoute><Trips /></ProtectedRoute>} />
         <Route path="favourites" element={<ProtectedRoute><Favourites /></ProtectedRoute>} />
