@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { api, getImageUrl, fixImageUrlExtension, getImageUrlAlternate } from '../../api/client';
 import MapPicker from '../../components/MapPicker';
@@ -32,6 +32,9 @@ const BEST_TIME_OPTIONS = ['', 'Morning (9 AM - 12 PM)', 'Afternoon (12 PM - 5 P
 const RATING_OPTIONS = ['', '0', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'];
 
 function PlaceFormModal({ place, onClose, onSaved }) {
+  const didHydrateImagesRef = useRef(false);
+  const userTouchedImagesRef = useRef(false);
+
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -60,6 +63,7 @@ function PlaceFormModal({ place, onClose, onSaved }) {
   const [categories, setCategories] = useState([]);
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [hydrating, setHydrating] = useState(false);
   const [categoryCustom, setCategoryCustom] = useState(false);
   const [modReviews, setModReviews] = useState([]);
   const [modReviewsLoading, setModReviewsLoading] = useState(false);
@@ -127,6 +131,10 @@ function PlaceFormModal({ place, onClose, onSaved }) {
         images: Array.isArray(place.images) ? place.images.join('\n') : '',
         tags: Array.isArray(place.tags) ? place.tags.join(', ') : (place.tags || ''),
       });
+
+      // Hydrate full place details (images/tags) because the admin list endpoint returns summary fields.
+      didHydrateImagesRef.current = false;
+      userTouchedImagesRef.current = false;
     } else {
       setCategoryCustom(false);
       setForm({
@@ -134,8 +142,75 @@ function PlaceFormModal({ place, onClose, onSaved }) {
         category: '', categoryId: '', duration: '', price: '', bestTime: '', rating: '', reviewCount: '',
         images: '', tags: '',
       });
+
+      didHydrateImagesRef.current = false;
+      userTouchedImagesRef.current = false;
     }
   }, [place]);
+
+  // Hydrate full place data (images/tags) when opening Edit.
+  // Admin list endpoint returns only summary fields, so without this the edit modal can't show stored images reliably.
+  useEffect(() => {
+    let cancelled = false;
+    const placeId = place?.id;
+    if (!placeId) return undefined;
+    if (didHydrateImagesRef.current) return undefined;
+
+    setHydrating(true);
+    api.places
+      .get(placeId)
+      .then((p) => {
+        if (cancelled) return;
+
+        const keepImages = userTouchedImagesRef.current;
+        const keepTags = userTouchedImagesRef.current;
+
+        setForm((f) => ({
+          ...f,
+          id: p?.id ?? f.id,
+          name: p?.name ?? f.name,
+          description: p?.description ?? f.description,
+          location: p?.location ?? f.location,
+          latitude: p?.latitude ?? f.latitude,
+          longitude: p?.longitude ?? f.longitude,
+          category: p?.category ?? f.category,
+          categoryId: p?.categoryId ?? p?.category_id ?? f.categoryId,
+          duration: p?.duration ?? f.duration,
+          price: p?.price ?? f.price,
+          bestTime: p?.bestTime ?? p?.best_time ?? f.bestTime,
+          rating: p?.rating ?? f.rating,
+          reviewCount: p?.reviewCount ?? p?.review_count ?? f.reviewCount,
+          images: keepImages
+            ? f.images
+            : Array.isArray(p?.images)
+              ? p.images.join('\n')
+              : (typeof p?.images === 'string' ? p.images : ''),
+          tags: keepTags
+            ? f.tags
+            : Array.isArray(p?.tags)
+              ? p.tags.join(', ')
+              : (p?.tags ?? ''),
+        }));
+
+        if (categories.length > 0) {
+          const hydratedCatId = p?.categoryId ?? p?.category_id ?? '';
+          setCategoryCustom(!hydratedCatId || !categories.some((c) => c.id === hydratedCatId));
+        }
+
+        didHydrateImagesRef.current = true;
+      })
+      .catch(() => {
+        // Not fatal; modal still works for editing via form inputs.
+        didHydrateImagesRef.current = true;
+      })
+      .finally(() => {
+        if (!cancelled) setHydrating(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [place?.id, categories]);
 
   useEffect(() => {
     if (place && categories.length > 0) {
@@ -193,6 +268,7 @@ function PlaceFormModal({ place, onClose, onSaved }) {
   const handleImageUpload = async (files) => {
     if (!files?.length) return;
     setErr(null);
+    userTouchedImagesRef.current = true;
     setUploading(true);
     try {
       const results = await Promise.all(
@@ -214,6 +290,7 @@ function PlaceFormModal({ place, onClose, onSaved }) {
   const removeImage = (index) => {
     const next = [...imageUrls];
     next.splice(index, 1);
+    userTouchedImagesRef.current = true;
     setForm((f) => ({ ...f, images: next.join('\n') }));
   };
 
@@ -222,6 +299,7 @@ function PlaceFormModal({ place, onClose, onSaved }) {
     const next = [...imageUrls];
     const [img] = next.splice(index, 1);
     next.unshift(img);
+    userTouchedImagesRef.current = true;
     setForm((f) => ({ ...f, images: next.join('\n') }));
   };
   const PlaceIcon = () => (
@@ -449,6 +527,7 @@ function PlaceFormModal({ place, onClose, onSaved }) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
                 Media & tags
               </div>
+              {hydrating && place ? <p className="admin-form-hint">Loading saved media…</p> : null}
               <div
                 className="admin-image-upload-zone"
                 onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('admin-image-upload-zone--drag'); }}
@@ -488,7 +567,15 @@ function PlaceFormModal({ place, onClose, onSaved }) {
               )}
               <div className="admin-form-group">
                 <label>Or paste URLs (one per line)</label>
-                <textarea value={form.images} onChange={(e) => setForm((f) => ({ ...f, images: e.target.value }))} placeholder={'https://example.com/image1.jpg\nhttps://example.com/image2.jpg'} rows={2} />
+                <textarea
+                  value={form.images}
+                  onChange={(e) => {
+                    userTouchedImagesRef.current = true;
+                    setForm((f) => ({ ...f, images: e.target.value }));
+                  }}
+                  placeholder={'https://example.com/image1.jpg\nhttps://example.com/image2.jpg'}
+                  rows={2}
+                />
               </div>
               <div className="admin-form-group">
                 <label>Tags (comma-separated)</label>
