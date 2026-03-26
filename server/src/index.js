@@ -53,6 +53,7 @@ const feedPublicRoutes = require('./routes/feed');
 const promotionsPublicRoutes = require('./routes/promotionsPublic');
 const couponsRoutes = require('./routes/coupons');
 const aiRoutes = require('./routes/ai');
+const { seoRouter, makeSeoResponder } = require('./seo/seoRoutes');
 const { verifyDatabaseConnection } = require('./db');
 const { isDatabaseConnectivityError, userFacingDbUnavailableMessage } = require('./utils/dbHttpError');
 
@@ -219,6 +220,10 @@ const serveClientDist =
 const clientDistPath = path.join(__dirname, '../../client/dist');
 if (serveClientDist) {
   if (fs.existsSync(clientDistPath)) {
+    // SEO endpoints + server-rendered HTML for key public routes (so Google gets real HTML).
+    app.use(seoRouter);
+    app.get('*', makeSeoResponder({ clientDistPath }));
+
     app.use(express.static(clientDistPath));
     app.get('*', (req, res, next) => {
       if (req.method !== 'GET' && req.method !== 'HEAD') return next();
