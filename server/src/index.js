@@ -57,6 +57,14 @@ const { verifyDatabaseConnection } = require('./db');
 const { isDatabaseConnectivityError, userFacingDbUnavailableMessage } = require('./utils/dbHttpError');
 
 const app = express();
+/** Behind Render / nginx / load balancers so rate limits and req.ip reflect the client. Set TRUST_PROXY=0 to disable. */
+if (process.env.TRUST_PROXY === '0' || process.env.TRUST_PROXY === 'false') {
+  app.set('trust proxy', false);
+} else if (process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+} else if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 const PORT = process.env.PORT || 3095;
 
 /** Positive int from env, or default. Used for rate limits and body size tuning. */
@@ -73,6 +81,7 @@ const RATE_LIMIT_AUTH_WINDOW_MIN = envInt('RATE_LIMIT_AUTH_WINDOW_MIN', 15, 1);
 const RATE_LIMIT_ADMIN_PER_MIN = envInt('RATE_LIMIT_ADMIN_PER_MIN', 240, 10);
 const RATE_LIMIT_BUSINESS_PER_MIN = envInt('RATE_LIMIT_BUSINESS_PER_MIN', 300, 10);
 const RATE_LIMIT_COUPONS_PER_MIN = envInt('RATE_LIMIT_COUPONS_PER_MIN', 120, 10);
+const RATE_LIMIT_AI_PER_MIN = envInt('RATE_LIMIT_AI_PER_MIN', 24, 5);
 const JSON_BODY_LIMIT = process.env.JSON_BODY_LIMIT?.trim() || '512kb';
 
 app.disable('x-powered-by');
@@ -86,7 +95,7 @@ app.use(helmet({
   xssFilter: true,
 }));
 app.use(compression());
-app.use(express.json({ limit: JSON_BODY_LIMIT }));
+app.use(express.json({ limit: JSON_BODY_LIMIT, strict: true }));
 app.use(sanitizeBody);
 
 /** Comma-separated origins, or * for all (same as mobile app .env). */
@@ -157,6 +166,16 @@ app.use(
     windowMs: 60 * 1000,
     max: RATE_LIMIT_COUPONS_PER_MIN,
     message: { error: 'Too many coupon requests. Please slow down.' },
+    standardHeaders: true,
+  })
+);
+
+app.use(
+  '/api/ai',
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: RATE_LIMIT_AI_PER_MIN,
+    message: { error: 'Too many AI requests. Please slow down.' },
     standardHeaders: true,
   })
 );

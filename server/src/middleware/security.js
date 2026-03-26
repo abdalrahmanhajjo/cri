@@ -5,8 +5,11 @@
 const MAX_STRING_LENGTH = 10000;
 const DANGEROUS_PATTERNS = /[\x00-\x08\x0b\x0c\x0e-\x1f]/g;
 
+const POLLUTION_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 /**
  * Recursively sanitize strings in an object. Truncate long strings, strip control chars.
+ * Drops prototype-pollution keys (__proto__, constructor, prototype).
  */
 function sanitizeValue(val, depth = 0) {
   if (depth > 10) return null;
@@ -22,6 +25,7 @@ function sanitizeValue(val, depth = 0) {
     const out = {};
     const keys = Object.keys(val).slice(0, 100);
     for (const k of keys) {
+      if (POLLUTION_KEYS.has(k)) continue;
       if (typeof k === 'string' && k.length <= 100 && !DANGEROUS_PATTERNS.test(k)) {
         out[k] = sanitizeValue(val[k], depth + 1);
       }

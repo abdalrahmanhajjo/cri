@@ -2,13 +2,28 @@ const express = require('express');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
+const { assertAllowedTableName } = require('../../utils/sqlIdentifiers');
 
 const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
 
+/** Only these tables may be counted (defense in depth — names are not user-controlled today). */
+const STATS_COUNT_TABLES = new Set([
+  'users',
+  'places',
+  'categories',
+  'tours',
+  'events',
+  'trips',
+  'feed_posts',
+  'interests',
+  'saved_places',
+]);
+
 async function countTable(name) {
   try {
-    const { rows } = await query(`SELECT COUNT(*)::int AS c FROM ${name}`);
+    const safe = assertAllowedTableName(name, STATS_COUNT_TABLES);
+    const { rows } = await query(`SELECT COUNT(*)::int AS c FROM ${safe}`);
     return rows[0]?.c ?? 0;
   } catch {
     return 0;
