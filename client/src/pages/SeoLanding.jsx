@@ -388,6 +388,31 @@ export function AboutTripoli() {
     'A walkable destination for history-led cultural travel',
   ];
 
+  const visualPanels = [
+    {
+      title: 'Historic Souks',
+      text: 'Layered markets, arches, and daily life in the old city core.',
+      image: '/home-bento/hero-tripoli-coast.jpg',
+    },
+    {
+      title: 'Coastal Identity',
+      text: 'A Mediterranean city where heritage and sea routes shaped commerce.',
+      image: '/home-bento/hero-ocean-dramatic.jpg',
+    },
+    {
+      title: 'Cultural Continuity',
+      text: 'Tripoli keeps traditions alive through craft, food, and neighborhood rhythm.',
+      image: '/city.png',
+    },
+  ];
+
+  const keyMetrics = [
+    { value: '1000+', label: 'Years of urban history' },
+    { value: '50+', label: 'Notable heritage landmarks' },
+    { value: '4', label: 'Core visitor themes: culture, souks, food, coast' },
+    { value: '1 day', label: 'Minimum to experience old city highlights' },
+  ];
+
   return (
     <div className="seo-landing seo-landing--about">
       <div className="seo-landing__aboutGlow" aria-hidden />
@@ -401,6 +426,32 @@ export function AboutTripoli() {
             spirit, heritage, and visitor value of Tripoli in one page.
           </p>
         </header>
+
+        <section className="seo-landing__aboutVisualGrid" aria-label="Tripoli visual overview">
+          {visualPanels.map((panel) => (
+            <article key={panel.title} className="seo-landing__aboutVisualCard">
+              <div
+                className="seo-landing__aboutVisualMedia"
+                style={{ backgroundImage: `url(${panel.image})` }}
+                role="img"
+                aria-label={panel.title}
+              />
+              <div className="seo-landing__aboutVisualBody">
+                <h2>{panel.title}</h2>
+                <p>{panel.text}</p>
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <section className="seo-landing__aboutMetrics" aria-label="Tripoli at a glance">
+          {keyMetrics.map((m) => (
+            <div key={m.label} className="seo-landing__aboutMetric">
+              <strong>{m.value}</strong>
+              <span>{m.label}</span>
+            </div>
+          ))}
+        </section>
 
         <section className="seo-landing__aboutBand" aria-label="Tripoli overview highlights">
           {highlights.map((item) => (
