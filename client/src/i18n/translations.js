@@ -493,7 +493,10 @@ export const translations = {
         'Live directions need your location to update time, distance, and turns while you drive or walk.',
       liveNavAllowInBrowser:
         'When your browser asks to use your location for this site, choose Allow. You can change this later in the site settings next to the address bar.',
-      liveNavPermissionWaiting: 'Waiting for location access — if a dialog appears, tap Allow so live directions can work on the web.',
+      liveNavPermissionWaiting:
+        'Waiting for location access — Safari will show a permission dialog. Tap Allow to enable live directions.',
+      liveNavInsecureContext:
+        'Safari will not ask for location on insecure (http) pages. Open this site over https and try again.',
       liveNavLocationFailed:
         'Could not read your location. Turn on location services if they are off, then try again.',
       liveNavStop: 'Exit navigation',
@@ -1364,7 +1367,9 @@ export const translations = {
       liveNavAllowInBrowser:
         'عندما يطلب المتصفح استخدام موقعك لهذا الموقع، اختر السماح. يمكنك تغيير ذلك لاحقاً من إعدادات الموقع بجانب شريط العنوان.',
       liveNavPermissionWaiting:
-        'بانتظار الإذن بالموقع — إن ظهرت نافذة، اضغط السماح حتى تعمل الاتجاهات المباشرة على الويب.',
+        'بانتظار الإذن بالموقع — سيظهر تنبيه الإذن من Safari. اضغط السماح لتمكين الاتجاهات المباشرة على هاتفك.',
+      liveNavInsecureContext:
+        'لن يطلب Safari الإذن بالموقع على صفحات غير آمنة (http). افتح هذا الموقع عبر https ثم أعد المحاولة.',
       liveNavLocationFailed:
         'تعذر قراءة موقعك. تأكد من تفعيل خدمات الموقع ثم أعد المحاولة.',
       liveNavStop: 'إنهاء التنقل',
@@ -2230,7 +2235,9 @@ export const translations = {
       liveNavAllowInBrowser:
         'Lorsque le navigateur demande l’accès à la position pour ce site, choisissez Autoriser. Vous pourrez modifier ce choix plus tard dans les paramètres du site (icône à côté de la barre d’adresse).',
       liveNavPermissionWaiting:
-        'Accès à la position en attente — si une boîte de dialogue s’affiche, choisissez Autoriser pour la navigation en direct sur le web.',
+        'Accès à la position en attente — Safari affichera une boîte d’autorisation. Touchez Autoriser pour activer la navigation en direct.',
+      liveNavInsecureContext:
+        'Safari ne demandera pas l’accès à la position sur les pages non sécurisées (http). Ouvrez ce site en https puis réessayez.',
       liveNavLocationFailed:
         'Impossible de lire votre position. Vérifiez que la géolocalisation est activée, puis réessayez.',
       liveNavStop: 'Quitter la navigation',
