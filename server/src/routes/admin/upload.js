@@ -68,6 +68,11 @@ router.post('/', upload.single('file'), async (req, res) => {
   const filePath = `places/${filename}`;
 
   const supabase = getSupabase();
+  if (!supabase && process.env.NODE_ENV === 'production') {
+    return res.status(503).json({
+      error: 'Uploads are not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on the server.',
+    });
+  }
   if (supabase) {
     try {
       const { data, error } = await supabase.storage
