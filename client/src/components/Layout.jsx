@@ -73,29 +73,6 @@ export default function Layout() {
     };
   }, [lockScroll]);
 
-  useEffect(() => {
-    const id = settings.analyticsId?.trim();
-    if (!id || !/^G-[A-Z0-9]+$/i.test(id)) return;
-    // GTM is already installed globally in index.html; avoid duplicate GA/gtag injection.
-    if (typeof window !== 'undefined' && window.google_tag_manager) return;
-    const existing = document.getElementById('tripoli-ga4');
-    if (existing) return;
-    const s = document.createElement('script');
-    s.async = true;
-    s.id = 'tripoli-ga4';
-    s.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`;
-    s.onload = () => {
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        window.dataLayer.push(arguments);
-      }
-      window.gtag = gtag;
-      gtag('js', new Date());
-      gtag('config', id);
-    };
-    document.head.appendChild(s);
-  }, [settings.analyticsId]);
-
   return (
     <div className="layout">
       <header className={`header header--vd ${menuOpen ? 'menu-open' : ''}`}>
