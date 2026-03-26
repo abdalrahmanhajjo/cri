@@ -50,7 +50,9 @@ async function ensureBucket(supabase) {
 const memoryStorage = multer.memoryStorage();
 const uploadMw = multer({
   storage: memoryStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  // Allow high-quality photos; Supabase Storage supports large objects.
+  // 25MB keeps uploads practical on mobile while allowing high-res images.
+  limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ok = /^image\/(jpeg|png|gif|webp)$/i.test(file.mimetype);
     cb(ok ? null : new Error('Only images (JPEG, PNG, GIF, WebP) allowed'), ok);

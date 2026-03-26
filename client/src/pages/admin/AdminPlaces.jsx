@@ -543,7 +543,7 @@ function PlaceFormModal({ place, onClose, onSaved }) {
                   onChange={(e) => { handleImageUpload(e.target.files); e.target.value = ''; }}
                 />
                 <label htmlFor="place-image-upload" style={{ cursor: uploading ? 'wait' : 'pointer', margin: 0 }}>
-                  {uploading ? 'Uploading…' : 'Drop images here or click to upload (JPEG, PNG, GIF, WebP)'}
+                  {uploading ? 'Uploading…' : 'Drop images here or click to upload (JPEG, PNG, GIF, WebP — up to 25MB each)'}
                 </label>
               </div>
               {imageUrls.length > 0 && (
