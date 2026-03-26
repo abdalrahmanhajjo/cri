@@ -245,7 +245,10 @@ export default function MapPage() {
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
+  /** Google Maps script / API load failures only — never geolocation (see myLocationNotice). */
   const [mapError, setMapError] = useState(null);
+  /** My location FAB: permission or timeout — shown as a small toast, not the map load modal. */
+  const [myLocationNotice, setMyLocationNotice] = useState(null);
   const [googlePlaceData, setGooglePlaceData] = useState({});
   const [fetchingPlaces, setFetchingPlaces] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -975,7 +978,12 @@ export default function MapPage() {
   }, [selectedPlaceId, selectedPlace, focusMapOnPlace]);
 
   const handleMyLocation = useCallback(() => {
-    if (!navigator.geolocation || !mapInstanceRef.current) return;
+    setMyLocationNotice(null);
+    if (!mapInstanceRef.current) return;
+    if (!navigator.geolocation) {
+      setMyLocationNotice('unsupported');
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -985,8 +993,14 @@ export default function MapPage() {
           mapInstanceRef.current.setZoom(DETAIL_MAP_ZOOM);
         }
         setUserLocation(loc);
+        setMyLocationNotice(null);
       },
-      () => setMapError('Location unavailable')
+      (err) => {
+        const code = err?.code;
+        if (code === 1) setMyLocationNotice('denied');
+        else setMyLocationNotice('unavailable');
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   }, []);
 
@@ -1168,17 +1182,34 @@ export default function MapPage() {
         {mapError && (
           <div className="map-error-card" role="alert">
             <div className="map-error-card-inner">
-              <h3 className="map-error-title">Map could not load</h3>
+              <h3 className="map-error-title">{t('home', 'mapLoadErrorTitle')}</h3>
               <p className="map-error-message">{mapError}</p>
-              <p className="map-error-steps-title">Fix it in Google Cloud Console:</p>
+              <p className="map-error-steps-title">{t('home', 'mapLoadErrorFixTitle')}</p>
               <ol className="map-error-steps">
-                <li>Enable <strong>Maps JavaScript API</strong> (APIs &amp; Services → Library → search &quot;Maps JavaScript API&quot;).</li>
-                <li>Enable <strong>billing</strong> on your project (billing is required even for free tier).</li>
-                <li>Under API key <strong>restrictions</strong>, add your site to HTTP referrers, e.g. <code>http://localhost:5173/*</code> or <code>http://localhost:*</code>.</li>
+                <li>{t('home', 'mapLoadErrorStepApi')}</li>
+                <li>{t('home', 'mapLoadErrorStepBilling')}</li>
+                <li>{t('home', 'mapLoadErrorStepReferrers')}</li>
               </ol>
-              <p className="map-error-console">Check the browser console (F12) for the exact error.</p>
-              <button type="button" className="map-error-dismiss" onClick={() => setMapError(null)}>Dismiss</button>
+              <p className="map-error-console">{t('home', 'mapLoadErrorConsoleHint')}</p>
+              <p className="map-error-https-hint">{t('home', 'mapLoadErrorHttpsHint')}</p>
+              <button type="button" className="map-error-dismiss" onClick={() => setMapError(null)}>
+                {t('home', 'mapLoadErrorDismiss')}
+              </button>
             </div>
+          </div>
+        )}
+        {myLocationNotice && (
+          <div className="map-geo-toast" role="status">
+            <p className="map-geo-toast-text">
+              {myLocationNotice === 'denied'
+                ? t('home', 'mapMyLocationDenied')
+                : myLocationNotice === 'unsupported'
+                  ? t('home', 'mapMyLocationUnsupported')
+                  : t('home', 'mapMyLocationUnavailable')}
+            </p>
+            <button type="button" className="map-geo-toast-dismiss" onClick={() => setMyLocationNotice(null)}>
+              {t('home', 'mapGeoToastDismiss')}
+            </button>
           </div>
         )}
         {(loading || fetchingPlaces) && (

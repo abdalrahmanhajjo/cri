@@ -1146,9 +1146,62 @@
 }
 
 .map-error-console {
-  margin: 0 0 16px 0;
+  margin: 0 0 8px 0;
   font-size: 12px;
   color: #80868b;
+}
+
+.map-error-https-hint {
+  margin: 0 0 16px 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #1967d2;
+}
+
+.map-geo-toast {
+  position: absolute;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 130;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: calc(100% - 32px);
+  max-width: 420px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+}
+
+.map-geo-toast-text {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #202124;
+}
+
+.map-geo-toast-dismiss {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #1a73e8;
+  background: rgba(26, 115, 232, 0.08);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.map-geo-toast-dismiss:hover {
+  background: rgba(26, 115, 232, 0.14);
 }
 
 .map-error-dismiss {

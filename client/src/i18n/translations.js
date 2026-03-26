@@ -504,6 +504,22 @@ export const translations = {
       liveNavPeekExpand: 'Show full directions',
       liveNavPeekUpdating: 'Updating route…',
       liveNavCollapseToMap: 'Hide panel · map view',
+      mapLoadErrorTitle: 'Map could not load',
+      mapLoadErrorFixTitle: 'Fix it in Google Cloud Console:',
+      mapLoadErrorStepApi:
+        'Enable Maps JavaScript API (APIs and Services → Library → search "Maps JavaScript API").',
+      mapLoadErrorStepBilling: 'Enable billing on your project (required even for the free tier).',
+      mapLoadErrorStepReferrers:
+        'Under API key restrictions, add your site to HTTP referrers (e.g. https://your-domain.com/* and https://*.onrender.com/* for Render).',
+      mapLoadErrorConsoleHint: 'Open the browser console (F12) for the exact error from Google.',
+      mapLoadErrorHttpsHint:
+        'Use https in production. Location on the map and live directions require a secure context.',
+      mapLoadErrorDismiss: 'Dismiss',
+      mapMyLocationDenied:
+        'Location was blocked. Allow location for this site in browser settings, then tap My location again.',
+      mapMyLocationUnavailable: 'Could not read your position. Turn on location services if needed, then try again.',
+      mapMyLocationUnsupported: 'This browser does not support map location.',
+      mapGeoToastDismiss: 'OK',
       roadsToPass: 'Roads you\'ll pass',
       mapPageSub: 'Explore Tripoli on the map: attractions, restaurants and places to visit.',
       stayTitle: 'Accommodation',
@@ -1359,6 +1375,21 @@ export const translations = {
       liveNavPeekExpand: 'عرض الاتجاهات كاملة',
       liveNavPeekUpdating: 'جاري تحديث المسار…',
       liveNavCollapseToMap: 'إخفاء اللوحة · عرض الخريطة',
+      mapLoadErrorTitle: 'تعذر تحميل الخريطة',
+      mapLoadErrorFixTitle: 'الإصلاح في Google Cloud Console:',
+      mapLoadErrorStepApi:
+        'فعّل Maps JavaScript API (واجهات برمجة التطبيقات والخدمات ← المكتبة ← ابحث عن «Maps JavaScript API»).',
+      mapLoadErrorStepBilling: 'فعّل الفوترة للمشروع (مطلوب حتى للطبقة المجانية).',
+      mapLoadErrorStepReferrers:
+        'في قيود مفتاح واجهة البرمجة، أضف موقعك إلى مراجع HTTP (مثل https://your-domain.com/* و https://*.onrender.com/* لاستضافة Render).',
+      mapLoadErrorConsoleHint: 'افتح وحدة تحكم المتصفح (F12) لرؤية رسالة الخطأ من Google.',
+      mapLoadErrorHttpsHint: 'في الإنتاج استخدم https — الموقع والاتجاهات المباشرة تحتاج اتصالاً آمناً.',
+      mapLoadErrorDismiss: 'إغلاق',
+      mapMyLocationDenied:
+        'تم حظر الموقع. اسمح بالموقع لهذا الموقع من إعدادات المتصفح ثم اضغط «موقعي» مرة أخرى.',
+      mapMyLocationUnavailable: 'تعذر قراءة موقعك. تأكد من تشغيل خدمات الموقع ثم أعد المحاولة.',
+      mapMyLocationUnsupported: 'هذا المتصفح لا يدعم الموقع على الخريطة.',
+      mapGeoToastDismiss: 'حسناً',
       roadsToPass: 'الطرق التي ستمر بها',
       mapPageSub: 'اكتشف طرابلس على الخريطة: معالم ومطاعم وأماكن للزيارة.',
       stayTitle: 'الإقامة',
@@ -2211,6 +2242,23 @@ export const translations = {
       liveNavPeekExpand: 'Afficher tout l’itinéraire',
       liveNavPeekUpdating: 'Mise à jour de l’itinéraire…',
       liveNavCollapseToMap: 'Masquer le panneau · carte',
+      mapLoadErrorTitle: 'Impossible de charger la carte',
+      mapLoadErrorFixTitle: 'À corriger dans Google Cloud Console :',
+      mapLoadErrorStepApi:
+        'Activez l’API Maps JavaScript (APIs et services → Bibliothèque → recherchez « Maps JavaScript API »).',
+      mapLoadErrorStepBilling: 'Activez la facturation sur le projet (requise même pour le niveau gratuit).',
+      mapLoadErrorStepReferrers:
+        'Dans les restrictions de la clé API, ajoutez votre site aux référents HTTP (ex. https://votre-domaine.com/* et https://*.onrender.com/* pour Render).',
+      mapLoadErrorConsoleHint: 'Ouvrez la console du navigateur (F12) pour le message d’erreur exact de Google.',
+      mapLoadErrorHttpsHint:
+        'En production, utilisez https. La géolocalisation sur la carte et la navigation en direct exigent un contexte sécurisé.',
+      mapLoadErrorDismiss: 'Fermer',
+      mapMyLocationDenied:
+        'La position a été refusée. Autorisez la géolocalisation pour ce site dans les paramètres du navigateur, puis touchez à nouveau Ma position.',
+      mapMyLocationUnavailable:
+        'Impossible de lire votre position. Vérifiez les services de localisation, puis réessayez.',
+      mapMyLocationUnsupported: 'Ce navigateur ne prend pas en charge la position sur la carte.',
+      mapGeoToastDismiss: 'OK',
       roadsToPass: 'Routes à emprunter',
       mapPageSub: 'Découvrez Tripoli sur la carte : attractions, restaurants et lieux à visiter.',
       stayTitle: 'Hébergement',

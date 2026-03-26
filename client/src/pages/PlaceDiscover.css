@@ -23,7 +23,8 @@
   padding: clamp(28px, 5vw, 56px) var(--page-padding) clamp(24px, 4vw, 40px);
   padding-left: max(var(--page-padding), env(safe-area-inset-left, 0px));
   padding-right: max(var(--page-padding), env(safe-area-inset-right, 0px));
-  overflow: hidden;
+  /* visible so GlobalSearchBar suggestion panel is not clipped */
+  overflow: visible;
 }
 
 .pd-hero-grid {
@@ -31,6 +32,8 @@
   inset: 0;
   background: #ffffff;
   opacity: 1;
+  overflow: hidden;
+  border-radius: inherit;
 }
 
 .pd-hero-grid::after {
@@ -501,64 +504,16 @@
   color: #fff;
 }
 
-.pd-search {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: min(520px, 100%);
-  padding: 14px 18px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(15, 118, 110, 0.18);
-  box-shadow: 0 10px 36px rgba(12, 44, 40, 0.12), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: box-shadow 0.25s var(--ease-out), border-color 0.25s var(--ease-out);
+/* Same search UX as site header (GlobalSearchBar) */
+.pd-global-search-wrap {
+  width: 100%;
+  max-width: min(640px, 100%);
+  margin-top: 4px;
 }
 
-.pd-search:focus-within {
-  border-color: rgba(15, 118, 110, 0.45);
-  box-shadow: 0 14px 42px rgba(12, 44, 40, 0.16), 0 0 0 3px rgba(15, 118, 110, 0.15);
-}
-
-.pd-search-icon {
-  color: var(--pd-teal);
-  flex-shrink: 0;
-}
-
-.pd-search-input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  font-family: var(--pd-sans);
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  outline: none;
-}
-
-.pd-search-input::placeholder {
-  color: var(--color-text-tertiary);
-  font-weight: 400;
-}
-
-.pd-search-clear {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(28, 25, 23, 0.07);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: background 0.18s, color 0.18s;
-}
-
-.pd-search-clear:hover {
-  background: rgba(28, 25, 23, 0.12);
-  color: var(--color-text-primary);
+.pd-global-search-wrap .global-search-bar {
+  max-width: none;
+  z-index: 20;
 }
 
 .pd-container {
@@ -1018,7 +973,7 @@
     max-width: none;
   }
 
-  .pd-search {
+  .pd-global-search-wrap {
     max-width: none;
   }
 

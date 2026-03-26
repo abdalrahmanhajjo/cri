@@ -1914,6 +1914,8 @@
 .vd-home-bento-inner {
   max-width: var(--main-content-max);
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .vd-home-bento-grid {
@@ -1929,11 +1931,24 @@
 
 /* Phones & tablets: vertical “story” — not a mini version of the desktop bento */
 @media (max-width: 959px) {
+  /* One horizontal inset: inner padding only. Section uses safe-area so hero can go true edge-to-edge. */
+  .vd-home-bento {
+    padding-left: max(0px, env(safe-area-inset-left, 0px));
+    padding-right: max(0px, env(safe-area-inset-right, 0px));
+  }
+
+  .vd-home-bento-inner {
+    padding-left: max(var(--page-padding), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--page-padding), env(safe-area-inset-right, 0px));
+  }
+
   .vd-home-bento-grid {
     display: flex;
     flex-direction: column;
     gap: clamp(10px, 2.4vw, 14px);
     align-items: stretch;
+    width: 100%;
+    min-width: 0;
   }
 
   /* Single continuous module: photo hero + Why Visit (no gap, shared radius & shadow) */
@@ -1946,6 +1961,15 @@
     border-radius: clamp(22px, 2.5vw, 30px);
     overflow: hidden;
     box-shadow: 0 4px 24px rgba(28, 25, 23, 0.07), 0 1px 4px rgba(28, 25, 23, 0.04);
+    /* Break out of inner horizontal padding so the gateway fills the screen (no empty stripe). */
+    margin-left: calc(-1 * max(var(--page-padding), env(safe-area-inset-left, 0px)));
+    margin-right: calc(-1 * max(var(--page-padding), env(safe-area-inset-right, 0px)));
+    width: calc(
+      100% + max(var(--page-padding), env(safe-area-inset-left, 0px)) + max(var(--page-padding), env(safe-area-inset-right, 0px))
+    );
+    max-width: none;
+    box-sizing: border-box;
+    align-self: center;
   }
 
   .vd-bento-hero-why-bundle .vd-bento-hero-main,
@@ -2029,6 +2053,9 @@
 /* Hero main */
 .vd-bento-hero-main {
   min-height: 260px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 /* Hero photo: <img> paints reliably (CSS var backgrounds can flicker until hover in some browsers). */
@@ -6343,6 +6370,11 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
    ═══════════════════════════════════════════════════════════════════════════ */
 .vd-home {
   --home-band-y: clamp(44px, 6vw, 88px);
+}
+
+/* Full-bleed home gateway: don’t clip the hero breakout on small screens */
+.vd.vd-home {
+  overflow-x: clip;
 }
 
 .vd-home .vd-container,
