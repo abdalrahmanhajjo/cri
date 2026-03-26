@@ -8,9 +8,12 @@ WORKDIR /app/client
 COPY client/package.json client/package-lock.json* ./
 RUN npm ci
 COPY client/ ./
-# Same-origin API: browser uses /api on this host. Override at build time if UI is on another domain.
+# Vite inlines VITE_* at image build — add the same keys in Render Environment (build-time / Docker).
+# Same-origin: leave VITE_API_URL empty so the browser uses /api on this host.
 ARG VITE_API_URL=
 ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_GOOGLE_MAPS_API_KEY=
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
 RUN npm run build
 
 FROM node:22-alpine AS server-prod
