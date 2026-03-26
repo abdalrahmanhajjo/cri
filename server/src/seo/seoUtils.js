@@ -63,6 +63,7 @@ function injectSeoIntoIndexHtml(indexHtml, seo) {
   const robots = seo?.robots ? String(seo.robots) : 'index,follow';
   const lang = seo?.lang ? String(seo.lang) : null;
   const jsonLd = seo?.jsonLd ? String(seo.jsonLd) : '';
+  const alternates = Array.isArray(seo?.alternates) ? seo.alternates : [];
 
   let html = indexHtml;
 
@@ -90,6 +91,13 @@ function injectSeoIntoIndexHtml(indexHtml, seo) {
   meta.push(`<meta name="twitter:title" content="${escapeAttr(title)}" />`);
   if (description) meta.push(`<meta name="twitter:description" content="${escapeAttr(clampText(description, 200))}" />`);
   if (ogImage) meta.push(`<meta name="twitter:image" content="${escapeAttr(ogImage)}" />`);
+
+  // hreflang alternates (EN/AR/FR + x-default)
+  for (const a of alternates) {
+    if (!a || typeof a !== 'object') continue;
+    if (!a.href || !a.hreflang) continue;
+    meta.push(`<link rel="alternate" hreflang="${escapeAttr(a.hreflang)}" href="${escapeAttr(a.href)}" />`);
+  }
 
   if (jsonLd) {
     meta.push(`<script type="application/ld+json">${jsonLd}</script>`);
