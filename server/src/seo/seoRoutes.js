@@ -12,9 +12,26 @@ const {
 
 const router = express.Router();
 
+const LANGS = ['en', 'ar', 'fr'];
+
 function wantsHtml(req) {
   const accept = String(req.get('accept') || '');
   return accept.includes('text/html') || accept.includes('*/*');
+}
+
+function normalizeSlugSegment(seg) {
+  return String(seg || '').trim().toLowerCase();
+}
+
+function buildAlternates(baseUrl, pathname) {
+  const pathOnly = String(pathname || '').startsWith('/') ? String(pathname) : `/${pathname || ''}`;
+  const out = LANGS.map((code) => ({
+    hreflang: code,
+    href: `${safeUrlJoin(baseUrl, pathOnly)}?lang=${code}`,
+  }));
+  // x-default should usually point to English.
+  out.push({ hreflang: 'x-default', href: `${safeUrlJoin(baseUrl, pathOnly)}?lang=en` });
+  return out;
 }
 
 function pickFirstImage(imagesJson) {
@@ -25,6 +42,29 @@ function pickFirstImage(imagesJson) {
   } catch {
     return null;
   }
+}
+
+function jsonLdOrg({ baseUrl }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Visit Tripoli',
+    url: baseUrl,
+    sameAs: [],
+  };
+}
+
+function jsonLdBreadcrumb({ baseUrl, items }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: (items || []).map((it, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: it.name,
+      item: it.path ? safeUrlJoin(baseUrl, it.path) : undefined,
+    })),
+  };
 }
 
 function jsonLdWebsite({ baseUrl }) {
@@ -132,8 +172,8 @@ router.get('/sitemap.xml', async (req, res) => {
       query('SELECT id FROM tours ORDER BY id ASC'),
       query('SELECT id FROM events ORDER BY id ASC'),
     ]);
-    for (const r of places.rows || []) add(`/place/${encodeURIComponent(String(r.id))}`);
-    for (const r of tours.rows || []) add(`/tour/${encodeURIComponent(String(r.id))}`);
+    for (const r of places.rows || []) add(`/place/${encodeURIComponent(normalizeSlugSegment(String(r.id)))}`);
+    for (const r of tours.rows || []) add(`/tour/${encodeURIComponent(normalizeSlugSegment(String(r.id)))}`);
     for (const r of events.rows || []) add(`/event/${encodeURIComponent(String(r.id))}`);
   } catch {
     // If DB is temporarily unavailable, still serve the core sitemap.
@@ -169,7 +209,8 @@ function makeSeoResponder({ clientDistPath }) {
       let canonical = safeUrlJoin(baseUrl, req.originalUrl.split('?')[0]);
       let ogImage = safeUrlJoin(baseUrl, '/tripoli-hero-bg.png');
       let robots = 'index,follow';
-      let jsonLd = jsonLdWebsite({ baseUrl });
+      let alternates = buildAlternates(baseUrl, req.path);
+      let jsonLd = JSON.stringify([JSON.parse(jsonLdWebsite({ baseUrl })), jsonLdOrg({ baseUrl })]);
       let status = 200;
 
       if (p === '/' || p === '/discover' || p === '/activities') {
@@ -177,23 +218,28 @@ function makeSeoResponder({ clientDistPath }) {
           title = 'Discover Tripoli – Places directory | Visit Tripoli';
           description = 'Browse places in Tripoli, Lebanon. Search by name and explore venues with photos and details.';
           canonical = safeUrlJoin(baseUrl, '/discover');
+          alternates = buildAlternates(baseUrl, '/discover');
         } else if (p === '/activities') {
           title = 'Activities & events in Tripoli | Visit Tripoli';
           description = 'Find experiences, activities, and upcoming events in Tripoli, Lebanon.';
           canonical = safeUrlJoin(baseUrl, '/activities');
+          alternates = buildAlternates(baseUrl, '/activities');
         } else {
           canonical = safeUrlJoin(baseUrl, '/');
+          alternates = buildAlternates(baseUrl, '/');
         }
       } else if (p.startsWith('/place/')) {
-        const id = decodeURIComponent(p.slice('/place/'.length));
+        const raw = decodeURIComponent(p.slice('/place/'.length));
+        const id = normalizeSlugSegment(raw);
         const { rows } = await query(
           `SELECT p.id, p.latitude, p.longitude, p.images,
+                  p.search_name,
                   COALESCE(pt.name, p.name) AS name,
                   COALESCE(pt.description, p.description) AS description,
                   COALESCE(pt.location, p.location) AS location
            FROM places p
            LEFT JOIN place_translations pt ON pt.place_id = p.id AND pt.lang = $2
-           WHERE p.id::text = $1
+           WHERE LOWER(p.id::text) = $1 OR LOWER(COALESCE(p.search_name, '')) = $1
            LIMIT 1`,
           [String(id), lang]
         );
@@ -206,22 +252,38 @@ function makeSeoResponder({ clientDistPath }) {
           jsonLd = '';
           ogImage = safeUrlJoin(baseUrl, '/tripoli-hero-bg.png');
         } else {
+          const canonicalId = normalizeSlugSegment(String(place.search_name || place.id));
           title = `${place.name} | Visit Tripoli`;
           description = place.description || `Explore ${place.name} in Tripoli, Lebanon.`;
-          canonical = safeUrlJoin(baseUrl, `/place/${encodeURIComponent(String(place.id))}`);
+          canonical = safeUrlJoin(baseUrl, `/place/${encodeURIComponent(canonicalId)}`);
+          alternates = buildAlternates(baseUrl, `/place/${encodeURIComponent(canonicalId)}`);
           const img = pickFirstImage(place.images);
           ogImage = resolveOgImage(baseUrl, img) || ogImage;
-          jsonLd = jsonLdPlace({ baseUrl, place, canonical, image: ogImage });
+          const crumbs = jsonLdBreadcrumb({
+            baseUrl,
+            items: [
+              { name: 'Home', path: '/' },
+              { name: 'Discover', path: '/discover' },
+              { name: place.name, path: `/place/${encodeURIComponent(canonicalId)}` },
+            ],
+          });
+          jsonLd = JSON.stringify([
+            JSON.parse(jsonLdPlace({ baseUrl, place, canonical, image: ogImage })),
+            crumbs,
+            jsonLdOrg({ baseUrl }),
+          ]);
         }
       } else if (p.startsWith('/tour/')) {
-        const id = decodeURIComponent(p.slice('/tour/'.length));
+        const raw = decodeURIComponent(p.slice('/tour/'.length));
+        const id = normalizeSlugSegment(raw);
         const { rows } = await query(
           `SELECT t.id, t.image,
+                  COALESCE(t.id::text, '') AS slug,
                   COALESCE(tt.name, t.name) AS name,
                   COALESCE(tt.description, t.description) AS description
            FROM tours t
            LEFT JOIN tour_translations tt ON tt.tour_id = t.id AND tt.lang = $2
-           WHERE t.id::text = $1
+           WHERE LOWER(t.id::text) = $1
            LIMIT 1`,
           [String(id), lang]
         );
@@ -233,11 +295,25 @@ function makeSeoResponder({ clientDistPath }) {
           description = 'This tour could not be found.';
           jsonLd = '';
         } else {
+          const canonicalId = normalizeSlugSegment(String(tour.id));
           title = `${tour.name} | Tours in Tripoli`;
           description = tour.description || `Tour: ${tour.name}`;
-          canonical = safeUrlJoin(baseUrl, `/tour/${encodeURIComponent(String(tour.id))}`);
+          canonical = safeUrlJoin(baseUrl, `/tour/${encodeURIComponent(canonicalId)}`);
+          alternates = buildAlternates(baseUrl, `/tour/${encodeURIComponent(canonicalId)}`);
           ogImage = resolveOgImage(baseUrl, tour.image) || ogImage;
-          jsonLd = jsonLdTour({ canonical, tour, image: ogImage });
+          const crumbs = jsonLdBreadcrumb({
+            baseUrl,
+            items: [
+              { name: 'Home', path: '/' },
+              { name: 'Activities', path: '/activities' },
+              { name: tour.name, path: `/tour/${encodeURIComponent(canonicalId)}` },
+            ],
+          });
+          jsonLd = JSON.stringify([
+            JSON.parse(jsonLdTour({ canonical, tour, image: ogImage })),
+            crumbs,
+            jsonLdOrg({ baseUrl }),
+          ]);
         }
       } else if (p.startsWith('/event/')) {
         const id = decodeURIComponent(p.slice('/event/'.length));
@@ -273,8 +349,21 @@ function makeSeoResponder({ clientDistPath }) {
           title = `${event.name} | Events in Tripoli`;
           description = event.description || `Event: ${event.name}`;
           canonical = safeUrlJoin(baseUrl, `/event/${encodeURIComponent(String(event.id))}`);
+          alternates = buildAlternates(baseUrl, `/event/${encodeURIComponent(String(event.id))}`);
           ogImage = resolveOgImage(baseUrl, row.image) || ogImage;
-          jsonLd = jsonLdEvent({ canonical, event, image: ogImage });
+          const crumbs = jsonLdBreadcrumb({
+            baseUrl,
+            items: [
+              { name: 'Home', path: '/' },
+              { name: 'Activities', path: '/activities' },
+              { name: event.name, path: `/event/${encodeURIComponent(String(event.id))}` },
+            ],
+          });
+          jsonLd = JSON.stringify([
+            JSON.parse(jsonLdEvent({ canonical, event, image: ogImage })),
+            crumbs,
+            jsonLdOrg({ baseUrl }),
+          ]);
         }
       } else {
         return next();
@@ -288,6 +377,7 @@ function makeSeoResponder({ clientDistPath }) {
         robots,
         lang,
         jsonLd,
+        alternates,
       });
       res.status(status).type('text/html').send(out);
     } catch (err) {
