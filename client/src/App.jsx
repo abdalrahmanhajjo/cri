@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
@@ -8,7 +8,7 @@ import ScrollToTop from './components/ScrollToTop';
 import Explore from './pages/Explore';
 import Discover from './pages/Discover';
 import Messages from './pages/Messages';
-import MapPage from './pages/Map';
+const MapPage = lazy(() => import('./pages/Map'));
 import Trips from './pages/Trips';
 import TripDetail from './pages/TripDetail';
 import Favourites from './pages/Favourites';
@@ -24,6 +24,13 @@ import ActivitiesHub from './pages/ActivitiesHub';
 import Plan from './pages/Plan';
 import AiPlanner from './pages/AiPlanner';
 import PlaceDiscover from './pages/PlaceDiscover';
+import {
+  ThingsToDoTripoli,
+  OldCityGuide,
+  SouksGuide,
+  SweetsGuide,
+  TravelTipsTripoli,
+} from './pages/SeoLanding';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminPlaces from './pages/admin/AdminPlaces';
@@ -154,7 +161,16 @@ function AppRoutes() {
         <Route path="community" element={<Discover />} />
         <Route path="discover/place/:placeId" element={<LegacyDiscoverPlaceRedirect />} />
         <Route path="discover" element={<PlaceDiscover />} />
-        <Route path="map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
+        <Route
+          path="map"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<BusinessGateLoader message="Loading map…" />}>
+                <MapPage />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
         <Route path="spots" element={<Navigate to="/discover" replace />} />
         <Route path="activities" element={<ActivitiesHub />} />
         <Route path="experiences" element={<Navigate to="/activities" replace />} />
@@ -165,6 +181,12 @@ function AppRoutes() {
         <Route path="place/:id" element={<PlaceDetail />} />
         <Route path="tour/:id" element={<TourDetail />} />
         <Route path="event/:id" element={<EventDetail />} />
+        {/* SEO landing pages (public) */}
+        <Route path="things-to-do-in-tripoli-lebanon" element={<ThingsToDoTripoli />} />
+        <Route path="tripoli-old-city-guide" element={<OldCityGuide />} />
+        <Route path="tripoli-souks-guide" element={<SouksGuide />} />
+        <Route path="best-sweets-in-tripoli" element={<SweetsGuide />} />
+        <Route path="tripoli-travel-tips" element={<TravelTipsTripoli />} />
         <Route path="trips/:tripId" element={<ProtectedRoute><TripDetail /></ProtectedRoute>} />
         <Route path="trips" element={<ProtectedRoute><Trips /></ProtectedRoute>} />
         <Route path="favourites" element={<ProtectedRoute><Favourites /></ProtectedRoute>} />
