@@ -131,4 +131,11 @@ async function verifyDatabaseConnection() {
   }
 }
 
-module.exports = { pool, query: (text, params) => pool.query(text, params), verifyDatabaseConnection };
+/**
+ * Run parameterized SQL only: use $1, $2, … for values — never concatenate user input into `text`.
+ */
+function query(text, params) {
+  return pool.query(text, params);
+}
+
+module.exports = { pool, query, verifyDatabaseConnection };

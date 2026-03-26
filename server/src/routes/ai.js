@@ -1,10 +1,15 @@
 /**
  * AI routes — Trip planning via Groq (same as VisitTripoliApp) or optional n8n webhook.
  * POST /api/ai/complete — body: { prompt } or { system, user, temperature?, maxTokens? }
+ *
+ * Production hardening: set AI_REQUIRE_AUTH=1 to require a valid JWT for /complete.
+ * /test is off in production unless AI_TEST_ENDPOINT=1 (avoids unauthenticated LLM probes).
  */
 const express = require('express');
+const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
+const isProd = process.env.NODE_ENV === 'production';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 /** Read at request time so a restart picks up .env without relying on require order. */
@@ -88,7 +93,14 @@ async function callGroq(messages, temperature = 0.5, maxTokens = 2048) {
   throw lastErr;
 }
 
-router.post('/complete', async (req, res) => {
+function aiAuthIfRequired(req, res, next) {
+  const requireAuth =
+    process.env.AI_REQUIRE_AUTH === '1' || process.env.AI_REQUIRE_AUTH === 'true';
+  if (isProd && requireAuth) return authMiddleware(req, res, next);
+  next();
+}
+
+router.post('/complete', aiAuthIfRequired, async (req, res) => {
   if (!isConfigured()) {
     return res.status(503).json({
       error: 'AI not configured',
@@ -215,6 +227,9 @@ router.get('/status', (req, res) => {
 });
 
 router.get('/test', async (req, res) => {
+  if (isProd && process.env.AI_TEST_ENDPOINT !== '1' && process.env.AI_TEST_ENDPOINT !== 'true') {
+    return res.status(404).json({ error: 'Not found' });
+  }
   if (!isConfigured()) {
     return res.status(503).json({
       ok: false,
