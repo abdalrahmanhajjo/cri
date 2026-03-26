@@ -361,47 +361,80 @@ export function TravelTipsTripoli() {
 }
 
 export function AboutTripoli() {
+  const { t } = useLanguage();
+  const highlights = [
+    {
+      title: 'Historic Core',
+      text: 'A living old city with Mamluk-era streets, mosques, khans, and markets still active today.',
+    },
+    {
+      title: 'Craft & Trade Heritage',
+      text: 'Soap, spices, sweets, and small workshops preserve Tripoli’s long merchant tradition.',
+    },
+    {
+      title: 'Authentic Urban Energy',
+      text: 'Tripoli blends heritage with everyday life: not a museum city, but a real city to experience.',
+    },
+    {
+      title: 'Gateway of North Lebanon',
+      text: 'A strategic base for exploring culture, coast, and communities across northern Lebanon.',
+    },
+  ];
+
+  const quickFacts = [
+    'One of the oldest continuously inhabited cities on the Mediterranean',
+    'Known for landmark mosques, khans, and Ottoman/Mamluk urban fabric',
+    'Famous across Lebanon for traditional sweets and old souk culture',
+    'A walkable destination for history-led cultural travel',
+  ];
+
   return (
-    <Page
-      title="About Tripoli, Lebanon"
-      intro="Tripoli is one of the oldest cities on the Mediterranean and a cultural center of North Lebanon. It blends Mamluk-era landmarks, living souks, coastal life, and famous sweets into one unforgettable city experience."
-      links={placeLinks}
-      dbTitle="About Tripoli: key places from database"
-      sections={[
-        {
-          id: 'history',
-          h: 'A city with deep history',
-          p: [
-            'Tripoli has layers of history visible in its architecture, mosques, khans, and old neighborhoods. The old city remains active, not only preserved.',
-            'Walking through the streets gives visitors a direct sense of the city’s historical depth and daily life.',
-          ],
-        },
-        {
-          id: 'culture',
-          h: 'Culture, crafts, and community',
-          p: [
-            'Tripoli is known for local craftsmanship, traditional markets, and a strong culture of hospitality.',
-            'From spices to soaps and handmade products, cultural identity is present in everyday commerce.',
-          ],
-        },
-        {
-          id: 'food-sweets',
-          h: 'Food and sweets heritage',
-          p: [
-            'The city is famous across Lebanon for traditional sweets. A visit is incomplete without tasting iconic desserts from Tripoli’s top shops.',
-            'Local food culture also includes market snacks, family restaurants, and classic coffee moments in old streets.',
-          ],
-        },
-        {
-          id: 'visitor-tips',
-          h: 'Why visitors choose Tripoli',
-          p: [
-            'Tripoli offers high-value cultural travel: walkable old-city routes, historic landmarks, and authentic local experiences in one destination.',
-            'For many visitors, it feels both historic and alive — a city you can explore deeply in one day and still want to return to.',
-          ],
-        },
-      ]}
-    />
+    <div className="seo-landing seo-landing--about">
+      <div className="seo-landing__aboutGlow" aria-hidden />
+      <div className="seo-landing__container">
+        <header className="seo-landing__aboutHero">
+          <p className="seo-landing__aboutEyebrow">{t('nav', 'megaAboutTripoli') || 'About Tripoli'}</p>
+          <h1 className="seo-landing__title">About Tripoli, Lebanon</h1>
+          <p className="seo-landing__intro">
+            Tripoli is a Mediterranean city of memory and movement. Its old streets carry deep history, while its
+            souks, workshops, and neighborhoods keep the city present-tense and alive. This overview introduces the
+            spirit, heritage, and visitor value of Tripoli in one page.
+          </p>
+        </header>
+
+        <section className="seo-landing__aboutBand" aria-label="Tripoli overview highlights">
+          {highlights.map((item) => (
+            <article key={item.title} className="seo-landing__aboutCard">
+              <h2>{item.title}</h2>
+              <p>{item.text}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="seo-landing__aboutNarrative" aria-labelledby="tripoli-overview-story">
+          <h2 id="tripoli-overview-story" className="seo-landing__h2">City overview</h2>
+          <p className="seo-landing__p">
+            Tripoli has long connected people, craft, scholarship, and trade. Its historic center is known for layered
+            architecture and civic landmarks, but what makes the city special is continuity: markets still function,
+            families still produce local foods, and neighborhoods still carry identity through everyday routines.
+          </p>
+          <p className="seo-landing__p">
+            For visitors, Tripoli offers high cultural density in a compact urban footprint. You can discover landmark
+            spaces, traditional streets, and strong local hospitality in a single day, then return for deeper
+            exploration through food, craft, and community life.
+          </p>
+        </section>
+
+        <section className="seo-landing__aboutFacts" aria-label="Quick facts">
+          <h2 className="seo-landing__h2">Quick facts</h2>
+          <ul className="seo-landing__aboutList">
+            {quickFacts.map((fact) => (
+              <li key={fact}>{fact}</li>
+            ))}
+          </ul>
+        </section>
+      </div>
+    </div>
   );
 }
 

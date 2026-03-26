@@ -150,12 +150,12 @@ export default function Layout() {
               </Link>
               <Link
                 to="/about-tripoli"
-                className={`nav-link nav-link--about ${isAboutTripoliPage ? 'nav-link--active' : ''}`}
+                className={`nav-link ${isAboutTripoliPage ? 'nav-link--active' : ''}`}
                 onClick={closeMenu}
               >
                 {t('nav', 'megaAboutTripoli') || 'About Tripoli'}
               </Link>
-              <Link to="/plan" className={`nav-link ${isPlan ? 'nav-link--active' : ''}`} onClick={closeMenu}>
+              <Link to="/plan" className={`nav-link nav-link--plan ${isPlan ? 'nav-link--active' : ''}`} onClick={closeMenu}>
                 {t('nav', 'planYourVisit')}
               </Link>
             </nav>
@@ -274,12 +274,12 @@ export default function Layout() {
             </Link>
             <Link
               to="/about-tripoli"
-              className={`nav-link nav-link--about ${isAboutTripoliPage ? 'nav-link--active' : ''}`}
+              className={`nav-link ${isAboutTripoliPage ? 'nav-link--active' : ''}`}
               onClick={closeMenu}
             >
               {t('nav', 'megaAboutTripoli') || 'About Tripoli'}
             </Link>
-            <Link to="/plan" className={`nav-link ${isPlan ? 'nav-link--active' : ''}`} onClick={closeMenu}>
+            <Link to="/plan" className={`nav-link nav-link--plan ${isPlan ? 'nav-link--active' : ''}`} onClick={closeMenu}>
               {t('nav', 'planYourVisit')}
             </Link>
           </nav>
