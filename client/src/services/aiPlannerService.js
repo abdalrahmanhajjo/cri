@@ -72,23 +72,36 @@ export class AIPlannerApiError extends Error {
   }
 }
 
+const AI_FETCH_TIMEOUT_MS = 120000;
+
 /**
  * @param {{ prompt?: string, system?: string, user?: string, temperature?: number, maxTokens?: number }} body
+ * @param {{ timeoutMs?: number }} [options]
  */
-export async function callAIComplete(body) {
+export async function callAIComplete(body, options = {}) {
+  const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : AI_FETCH_TIMEOUT_MS;
   const base = apiBase();
   const url = `${base}/api/ai/complete`;
   let res;
   try {
+    const signal =
+      typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+        ? AbortSignal.timeout(timeoutMs)
+        : undefined;
     res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(body),
+      ...(signal ? { signal } : {}),
     });
-  } catch {
+  } catch (e) {
+    const name = e && e.name;
+    if (name === 'TimeoutError' || name === 'AbortError') {
+      throw new AIPlannerApiError('The AI request took too long. Please try again.', { status: 0 });
+    }
     throw new AIPlannerApiError(
-      'Connection failed. Ensure the API is running and reachable.',
+      'Connection failed. Check your network and try again.',
       { status: 0 }
     );
   }
@@ -130,6 +143,34 @@ export async function callAIComplete(body) {
   const text = json?.text != null ? String(json.text).trim() : '';
   const errorDetail = json?.errorDetail;
   return { text: text || null, errorDetail };
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * Retries transient failures (network, 502/503/504) so mobile flaky links still get a response.
+ */
+export async function callAICompleteReliable(body) {
+  const maxAttempts = 3;
+  let lastErr;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      return await callAIComplete(body);
+    } catch (e) {
+      lastErr = e;
+      if (!(e instanceof AIPlannerApiError)) throw e;
+      const retryable =
+        e.status === 0 ||
+        e.status === 502 ||
+        e.status === 503 ||
+        e.status === 504;
+      if (!retryable || attempt === maxAttempts - 1) throw e;
+      await sleep(500 * (attempt + 1));
+    }
+  }
+  throw lastErr;
 }
 
 function parsePlanJson(rawText, placeIdSet) {
@@ -558,7 +599,7 @@ ${activityContext ? `\n${activityContext}\n` : ''}${daySchedulingNote}${currentP
           : 0.52;
 
   try {
-    const result = await callAIComplete({
+    const result = await callAICompleteReliable({
       system: systemPrompt,
       user: userPrompt,
       temperature: plannerTemperature,

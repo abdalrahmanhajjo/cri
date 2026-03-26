@@ -489,7 +489,13 @@ export const translations = {
       timeToDrive: 'Time to drive',
       timeToWalk: 'Time to walk',
       liveNavStart: 'Start live directions',
-      liveNavStartHint: 'Uses your location to update time, distance, and turns as you move (driving or walking).',
+      liveNavStartHint:
+        'Live directions need your location to update time, distance, and turns while you drive or walk.',
+      liveNavAllowInBrowser:
+        'When your browser asks to use your location for this site, choose Allow. You can change this later in the site settings next to the address bar.',
+      liveNavPermissionWaiting: 'Waiting for location access — if a dialog appears, tap Allow so live directions can work on the web.',
+      liveNavLocationFailed:
+        'Could not read your location. Turn on location services if they are off, then try again.',
       liveNavStop: 'Exit navigation',
       liveNavTracking: 'Live — route updates as you move',
       liveNavUpdatingHint: 'Time and route refresh automatically along the way.',
@@ -1337,7 +1343,14 @@ export const translations = {
       timeToDrive: 'وقت القيادة',
       timeToWalk: 'وقت المشي',
       liveNavStart: 'ابدأ الاتجاهات المباشرة',
-      liveNavStartHint: 'يستخدم موقعك لتحديث الوقت والمسافة والانعطافات أثناء التحرك (قيادة أو مشي).',
+      liveNavStartHint:
+        'الاتجاهات المباشرة تحتاج إلى موقعك لتحديث الوقت والمسافة والانعطافات أثناء القيادة أو المشي.',
+      liveNavAllowInBrowser:
+        'عندما يطلب المتصفح استخدام موقعك لهذا الموقع، اختر السماح. يمكنك تغيير ذلك لاحقاً من إعدادات الموقع بجانب شريط العنوان.',
+      liveNavPermissionWaiting:
+        'بانتظار الإذن بالموقع — إن ظهرت نافذة، اضغط السماح حتى تعمل الاتجاهات المباشرة على الويب.',
+      liveNavLocationFailed:
+        'تعذر قراءة موقعك. تأكد من تفعيل خدمات الموقع ثم أعد المحاولة.',
       liveNavStop: 'إنهاء التنقل',
       liveNavTracking: 'مباشر — المسار يتحدث مع تحركك',
       liveNavUpdatingHint: 'يُحدَّث الوقت والمسار تلقائياً أثناء الطريق.',
@@ -2182,7 +2195,13 @@ export const translations = {
       timeToWalk: 'Temps à pied',
       liveNavStart: 'Lancer la navigation en direct',
       liveNavStartHint:
-        'Utilise votre position pour mettre à jour durée, distance et virages en déplacement (voiture ou marche).',
+        'La navigation en direct a besoin de votre position pour mettre à jour durée, distance et virages en voiture ou à pied.',
+      liveNavAllowInBrowser:
+        'Lorsque le navigateur demande l’accès à la position pour ce site, choisissez Autoriser. Vous pourrez modifier ce choix plus tard dans les paramètres du site (icône à côté de la barre d’adresse).',
+      liveNavPermissionWaiting:
+        'Accès à la position en attente — si une boîte de dialogue s’affiche, choisissez Autoriser pour la navigation en direct sur le web.',
+      liveNavLocationFailed:
+        'Impossible de lire votre position. Vérifiez que la géolocalisation est activée, puis réessayez.',
       liveNavStop: 'Quitter la navigation',
       liveNavTracking: 'En direct — l’itinéraire se met à jour quand vous vous déplacez',
       liveNavUpdatingHint: 'Durée et itinéraire se mettent à jour automatiquement en chemin.',

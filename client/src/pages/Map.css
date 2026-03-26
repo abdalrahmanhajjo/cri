@@ -110,11 +110,25 @@
   background: #185abc;
 }
 
+.map-live-nav-start-btn:disabled {
+  opacity: 0.75;
+  cursor: wait;
+  pointer-events: none;
+}
+
 .map-live-nav-start-hint {
   margin: 10px 0 0;
   font-size: 12px;
   line-height: 1.45;
   color: #5f6368;
+}
+
+.map-live-nav-permission-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #1967d2;
+  font-weight: 500;
 }
 
 .map-live-next-turn {
@@ -755,7 +769,7 @@
   background: #1557b0;
 }
 
-.map-search-bar--add-stop {
+.map-search-wrap--add-stop .global-search-bar__inner {
   box-shadow: 0 2px 16px rgba(25, 103, 210, 0.35);
   border-color: #8ab4f8;
 }
@@ -1153,61 +1167,19 @@
   background: #1765cc;
 }
 
-/* Search bar – Google style */
-.map-search-bar {
+/* Map floating search — same component/styling as header GlobalSearchBar */
+.map-search-wrap {
   position: absolute;
   top: 16px;
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 32px);
   max-width: 520px;
-  display: flex;
-  align-items: center;
-  background: #fff;
-  border-radius: 24px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  padding: 10px 16px 10px 20px;
-  z-index: 10;
-  transition: box-shadow 0.2s;
+  z-index: 120;
 }
 
-.map-search-bar:focus-within {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-.map-search-icon {
-  color: #5f6368;
-  flex-shrink: 0;
-  margin-right: 12px;
-}
-
-.map-search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 16px;
-  font-family: inherit;
-  background: transparent;
-  color: #202124;
-}
-
-.map-search-input::placeholder {
-  color: #5f6368;
-}
-
-.map-search-clear {
-  flex-shrink: 0;
-  padding: 4px;
-  background: none;
-  border: none;
-  color: #5f6368;
-  cursor: pointer;
-  border-radius: 50%;
-}
-
-.map-search-clear:hover {
-  background: #f1f3f4;
-  color: #202124;
+.map-search-wrap .map-page-global-search {
+  width: 100%;
 }
 
 /* FABs */
@@ -1484,10 +1456,9 @@
 
 /* Responsive: stack FABs and move search on small screens */
 @media (max-width: 480px) {
-  .map-search-bar {
+  .map-search-wrap {
     top: 12px;
     width: calc(100% - 24px);
-    padding: 8px 14px 8px 16px;
   }
 
   .map-fab--list {

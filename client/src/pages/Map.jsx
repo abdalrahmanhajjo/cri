@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
+import GlobalSearchBar from '../components/GlobalSearchBar';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { asyncPool } from '../utils/asyncPool';
 import { placeIdsFromDay, getDateForDayIndex } from '../utils/tripPlannerHelpers';
@@ -267,6 +268,8 @@ export default function MapPage() {
   const [liveNavDirectionsExpanded, setLiveNavDirectionsExpanded] = useState(false);
   const [routeRefreshTick, setRouteRefreshTick] = useState(0);
   const [liveNavError, setLiveNavError] = useState(null);
+  /** True while waiting for the browser geolocation prompt / first fix. */
+  const [liveNavRequestingPermission, setLiveNavRequestingPermission] = useState(false);
   const [addingTripStop, setAddingTripStop] = useState(false);
   const [catalogPlaces, setCatalogPlaces] = useState([]);
   const [catalogFetched, setCatalogFetched] = useState(false);
@@ -309,6 +312,7 @@ export default function MapPage() {
     const days = state?.tripDays;
     setLiveNavigation(false);
     setLiveNavError(null);
+    setLiveNavRequestingPermission(false);
     setAddingTripStop(false);
     setSearchQuery('');
     setGooglePlaceData({});
@@ -608,6 +612,17 @@ export default function MapPage() {
       if (map && infoWindow && maps) focusMapOnPlace(place, maps, map, infoWindow);
     },
     [addingTripStop, commitAddStop, focusMapOnPlace]
+  );
+
+  const handleMapSearchPick = useCallback(
+    (p) => {
+      const full =
+        markersForMapList.find((x) => String(x.id) === String(p.id)) ||
+        mergedPlacesList.find((x) => String(x.id) === String(p.id)) ||
+        p;
+      handlePlaceSelect(full);
+    },
+    [markersForMapList, mergedPlacesList, handlePlaceSelect]
   );
 
   useEffect(() => {
@@ -981,8 +996,10 @@ export default function MapPage() {
       setLiveNavError('noGeolocation');
       return;
     }
+    setLiveNavRequestingPermission(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        setLiveNavRequestingPermission(false);
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         userLocationRef.current = loc;
         setUserLocation(loc);
@@ -994,7 +1011,12 @@ export default function MapPage() {
           mapInstanceRef.current.panTo(loc);
         }
       },
-      () => setLiveNavError('denied'),
+      (err) => {
+        setLiveNavRequestingPermission(false);
+        const code = err?.code;
+        if (code === 1) setLiveNavError('denied');
+        else setLiveNavError('unavailable');
+      },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   }, []);
@@ -1003,6 +1025,7 @@ export default function MapPage() {
     setLiveNavigation(false);
     setLiveNavDirectionsExpanded(false);
     setLiveNavError(null);
+    setLiveNavRequestingPermission(false);
     prevWatchPositionRef.current = null;
     setRouteRefreshTick((t) => t + 1);
   }, []);
@@ -1022,11 +1045,18 @@ export default function MapPage() {
         setRouteRefreshTick((t) => t + 1);
       }
     };
-    const watchId = navigator.geolocation.watchPosition(onPosition, () => {}, {
-      enableHighAccuracy: true,
-      maximumAge: 5000,
-      timeout: 25000,
-    });
+    const watchId = navigator.geolocation.watchPosition(
+      onPosition,
+      (err) => {
+        if (err?.code === 1) setLiveNavError('denied');
+        else if (err?.code != null) setLiveNavError('unavailable');
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 5000,
+        timeout: 25000,
+      }
+    );
     const intervalId = setInterval(() => {
       setRouteRefreshTick((t) => t + 1);
     }, 45000);
@@ -1160,21 +1190,16 @@ export default function MapPage() {
 
         {/* Floating search — hidden in trip/tour mode (VisitTripoliApp map_screen). */}
         {(!tripFilterName || addingTripStop) && (
-          <div className={`map-search-bar${addingTripStop ? ' map-search-bar--add-stop' : ''}`}>
-            <Icon name="search" size={22} className="map-search-icon" />
-            <input
-              type="search"
-              className="map-search-input"
-              placeholder={t('home', 'search') || 'Search places...'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Search places"
+          <div
+            className={`map-search-wrap${addingTripStop ? ' map-search-wrap--add-stop' : ''}`}
+          >
+            <GlobalSearchBar
+              className="global-search-bar--full map-page-global-search"
+              idPrefix="map-search"
+              queryValue={searchQuery}
+              onQueryChange={setSearchQuery}
+              onSelectPlace={handleMapSearchPick}
             />
-            {searchQuery && (
-              <button type="button" className="map-search-clear" onClick={() => setSearchQuery('')} aria-label="Clear search">
-                <Icon name="close" size={18} />
-              </button>
-            )}
           </div>
         )}
 
@@ -1249,7 +1274,9 @@ export default function MapPage() {
                   <p className="map-live-nav-peek-alert-text">
                     {liveNavError === 'denied'
                       ? t('home', 'liveNavDenied')
-                      : t('home', 'liveNavNoGeo')}
+                      : liveNavError === 'unavailable'
+                        ? t('home', 'liveNavLocationFailed')
+                        : t('home', 'liveNavNoGeo')}
                   </p>
                   <span className="map-live-nav-peek-hint">{t('home', 'liveNavPeekExpand')}</span>
                   <Icon name="keyboard_arrow_up" size={26} className="map-live-nav-peek-chevron" />
@@ -1317,17 +1344,34 @@ export default function MapPage() {
                 <p className="map-live-nav-error" role="alert">
                   {liveNavError === 'denied'
                     ? t('home', 'liveNavDenied')
-                    : t('home', 'liveNavNoGeo')}
+                    : liveNavError === 'unavailable'
+                      ? t('home', 'liveNavLocationFailed')
+                      : liveNavError === 'noGeolocation'
+                        ? t('home', 'liveNavNoGeo')
+                        : t('home', 'liveNavLocationFailed')}
                 </p>
               )}
 
               {placesInTripOrder.length >= 1 && !liveNavigation && (
                 <div className="map-live-nav-start-wrap">
-                  <button type="button" className="map-live-nav-start-btn" onClick={startLiveNavigation}>
+                  <button
+                    type="button"
+                    className="map-live-nav-start-btn"
+                    onClick={startLiveNavigation}
+                    disabled={liveNavRequestingPermission}
+                    aria-busy={liveNavRequestingPermission}
+                  >
                     <Icon name="navigation" size={22} />
                     <span>{t('home', 'liveNavStart')}</span>
                   </button>
-                  <p className="map-live-nav-start-hint">{t('home', 'liveNavStartHint')}</p>
+                  <p className="map-live-nav-start-hint">
+                    {liveNavRequestingPermission
+                      ? t('home', 'liveNavPermissionWaiting')
+                      : t('home', 'liveNavStartHint')}
+                  </p>
+                  {!liveNavRequestingPermission ? (
+                    <p className="map-live-nav-permission-note">{t('home', 'liveNavAllowInBrowser')}</p>
+                  ) : null}
                 </div>
               )}
 

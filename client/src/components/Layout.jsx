@@ -39,6 +39,7 @@ export default function Layout() {
   const isMapPage = location.pathname === '/map';
   const isPlaceDiscoverPage =
     location.pathname === PLACES_DISCOVER_PATH || location.pathname.startsWith(`${PLACES_DISCOVER_PATH}/`);
+  const isAiPlannerPage = location.pathname === '/plan/ai';
 
   const handleLogout = () => {
     logout();
@@ -421,7 +422,7 @@ export default function Layout() {
       >
         <Outlet />
       </main>
-      <BackToTop />
+      {!isAiPlannerPage && <BackToTop />}
     </div>
   );
 }

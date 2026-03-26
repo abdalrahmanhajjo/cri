@@ -16,10 +16,23 @@ export default function GlobalSearchBar({
   onEscape,
   idPrefix = 'global-search',
   endAdornment = null,
+  /** When set with `onQueryChange`, the input is controlled by the parent (e.g. map filters). */
+  queryValue,
+  onQueryChange,
+  /** If set, choosing a suggestion focuses this flow instead of navigating to `/place/:id`. */
+  onSelectPlace,
 }) {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
-  const [query, setQuery] = useState('');
+  const [internalQuery, setInternalQuery] = useState('');
+  const controlled = queryValue !== undefined && typeof onQueryChange === 'function';
+  const query = controlled ? queryValue : internalQuery;
+
+  function updateQuery(next) {
+    if (controlled) onQueryChange(next);
+    else setInternalQuery(next);
+  }
+
   const deferredQ = useDeferredValue(query);
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,16 +90,28 @@ export default function GlobalSearchBar({
 
   function goPlace(p) {
     navigate(`/place/${p.id}`);
-    setQuery('');
+    updateQuery('');
     setOpen(false);
     setFocused(false);
     onPick?.();
   }
 
+  function pickPlace(p) {
+    if (onSelectPlace) {
+      onSelectPlace(p);
+      updateQuery('');
+      setOpen(false);
+      setFocused(false);
+      onPick?.();
+      return;
+    }
+    goPlace(p);
+  }
+
   function goDiscoverAll() {
     const q = query.trim();
     navigate(`${PLACES_DISCOVER_PATH}${q ? `?q=${encodeURIComponent(q)}` : ''}`);
-    setQuery('');
+    updateQuery('');
     setOpen(false);
     setFocused(false);
     onPick?.();
@@ -101,7 +126,7 @@ export default function GlobalSearchBar({
     }
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (suggestions.length > 0) goPlace(suggestions[0]);
+      if (suggestions.length > 0) pickPlace(suggestions[0]);
       else goDiscoverAll();
     }
   }
@@ -122,7 +147,7 @@ export default function GlobalSearchBar({
           autoComplete="off"
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value);
+            updateQuery(e.target.value);
             setOpen(true);
           }}
           onFocus={() => {
@@ -136,7 +161,7 @@ export default function GlobalSearchBar({
             type="button"
             className="global-search-bar__clear"
             onClick={() => {
-              setQuery('');
+              updateQuery('');
               setOpen(false);
               inputRef.current?.focus();
             }}
@@ -161,7 +186,7 @@ export default function GlobalSearchBar({
                 role="option"
                 className="global-search-bar__option"
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => goPlace(p)}
+                onClick={() => pickPlace(p)}
               >
                 <span className="global-search-bar__option-name">{p.name}</span>
                 {p.location ? <span className="global-search-bar__option-loc">{p.location}</span> : null}
