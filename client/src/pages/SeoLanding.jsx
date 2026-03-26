@@ -1,9 +1,69 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import api, { getPlaceImageUrl } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import './SeoLanding.css';
 
-function Page({ title, intro, sections, links }) {
-  const { t } = useLanguage();
+function placeSlug(place) {
+  return String(place?.searchName || place?.search_name || place?.id || '')
+    .trim()
+    .toLowerCase();
+}
+
+function Page({ title, intro, sections, links, dbTitle = 'Featured places from database' }) {
+  const { t, lang } = useLanguage();
+  const [places, setPlaces] = useState([]);
+  const [loadingPlaces, setLoadingPlaces] = useState(true);
+  const [placesError, setPlacesError] = useState('');
+  const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingPlaces(true);
+    setPlacesError('');
+    api.places
+      .list({ lang: langParam })
+      .then((res) => {
+        if (cancelled) return;
+        const list = Array.isArray(res?.locations)
+          ? res.locations
+          : Array.isArray(res?.popular)
+            ? res.popular
+            : [];
+        setPlaces(list);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setPlaces([]);
+        setPlacesError(e?.message || 'Could not load places');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPlaces(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [langParam]);
+
+  const dbPlaces = useMemo(() => {
+    const bySlug = new Map(
+      (places || [])
+        .map((p) => [placeSlug(p), p])
+        .filter(([slug]) => Boolean(slug))
+    );
+    const fromLinks = (links || [])
+      .map((l) => {
+        const slug = String(l.to || '')
+          .replace(/^\/place\//, '')
+          .trim()
+          .toLowerCase();
+        return bySlug.get(slug) || null;
+      })
+      .filter(Boolean);
+    if (fromLinks.length > 0) return fromLinks.slice(0, 8);
+    return (places || []).slice(0, 8);
+  }, [places, links]);
+
   return (
     <div className="seo-landing">
       <div className="seo-landing__container">
@@ -52,6 +112,46 @@ function Page({ title, intro, sections, links }) {
             </div>
           </aside>
         </div>
+
+        <section className="seo-landing__dbSection" aria-label={dbTitle}>
+          <div className="seo-landing__dbHead">
+            <h2>{dbTitle}</h2>
+            <p>Live venue cards generated from your actual database entries.</p>
+          </div>
+          {loadingPlaces && <p className="seo-landing__dbState">Loading places…</p>}
+          {!loadingPlaces && placesError && (
+            <p className="seo-landing__dbState seo-landing__dbState--err">{placesError}</p>
+          )}
+          {!loadingPlaces && !placesError && dbPlaces.length === 0 && (
+            <p className="seo-landing__dbState">No places found.</p>
+          )}
+          {!loadingPlaces && !placesError && dbPlaces.length > 0 && (
+            <div className="seo-landing__dbGrid">
+              {dbPlaces.map((p) => {
+                const slug = placeSlug(p);
+                const to = `/place/${encodeURIComponent(slug)}`;
+                const img =
+                  getPlaceImageUrl(p.image) ||
+                  getPlaceImageUrl(Array.isArray(p.images) ? p.images[0] : '');
+                return (
+                  <article key={slug} className="seo-landing__dbCard">
+                    <Link
+                      to={to}
+                      className="seo-landing__dbMedia"
+                      style={img ? { backgroundImage: `url(${img})` } : undefined}
+                      aria-label={p.name || slug}
+                    />
+                    <div className="seo-landing__dbBody">
+                      <h3>{p.name || slug}</h3>
+                      <p>{p.location || 'Tripoli, Lebanon'}</p>
+                      <Link to={to} className="seo-landing__dbCta">View place</Link>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         <footer className="seo-landing__footer">
           <p className="seo-landing__footerP">
@@ -253,6 +353,51 @@ export function TravelTipsTripoli() {
           p: [
             'Dress modestly when visiting religious sites and ask before taking photos of people.',
             'If you feel lost, ask shopkeepers — people are often happy to guide you.',
+          ],
+        },
+      ]}
+    />
+  );
+}
+
+export function AboutTripoli() {
+  return (
+    <Page
+      title="About Tripoli, Lebanon"
+      intro="Tripoli is one of the oldest cities on the Mediterranean and a cultural center of North Lebanon. It blends Mamluk-era landmarks, living souks, coastal life, and famous sweets into one unforgettable city experience."
+      links={placeLinks}
+      dbTitle="About Tripoli: key places from database"
+      sections={[
+        {
+          id: 'history',
+          h: 'A city with deep history',
+          p: [
+            'Tripoli has layers of history visible in its architecture, mosques, khans, and old neighborhoods. The old city remains active, not only preserved.',
+            'Walking through the streets gives visitors a direct sense of the city’s historical depth and daily life.',
+          ],
+        },
+        {
+          id: 'culture',
+          h: 'Culture, crafts, and community',
+          p: [
+            'Tripoli is known for local craftsmanship, traditional markets, and a strong culture of hospitality.',
+            'From spices to soaps and handmade products, cultural identity is present in everyday commerce.',
+          ],
+        },
+        {
+          id: 'food-sweets',
+          h: 'Food and sweets heritage',
+          p: [
+            'The city is famous across Lebanon for traditional sweets. A visit is incomplete without tasting iconic desserts from Tripoli’s top shops.',
+            'Local food culture also includes market snacks, family restaurants, and classic coffee moments in old streets.',
+          ],
+        },
+        {
+          id: 'visitor-tips',
+          h: 'Why visitors choose Tripoli',
+          p: [
+            'Tripoli offers high-value cultural travel: walkable old-city routes, historic landmarks, and authentic local experiences in one destination.',
+            'For many visitors, it feels both historic and alive — a city you can explore deeply in one day and still want to return to.',
           ],
         },
       ]}
