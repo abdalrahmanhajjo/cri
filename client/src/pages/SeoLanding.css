@@ -409,6 +409,9 @@
   .seo-landing__aboutBand {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 760px) {
   .seo-landing__aboutVisualGrid {
     grid-template-columns: 1fr;
   }
