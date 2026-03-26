@@ -1,26 +1,44 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { getPlaceImageUrl } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import { DateRangeCalendar } from '../components/Calendar';
 import { filterPlacesByQuery } from '../utils/searchFilter';
+import {
+  getDayCount,
+  isValidDateRange,
+  ensureDaysWithSlots,
+  mergeDaysWithSlotsWhenShrinking,
+  toDateOnly,
+  BEST_TIME_ORDER,
+  buildTripDaysApiPayload,
+  hasOverlappingTimeSlots,
+  tripHasDateConflict,
+  findNextNonOverlappingDateRange,
+  tripCalendarRangesOverlap,
+  tripPhaseForSort,
+  sortTripsSmart,
+  quickDatePresetRange,
+  datesOnOrAfterToday,
+  optimizeSlotsOrder,
+  dayFromApiShape,
+  placeIdsFromDay,
+  getDateForDayIndex,
+  formatYMD,
+} from '../utils/tripPlannerHelpers';
+import { loadSmartScheduleContext, sortAndAssignSmartSlotTimes } from '../utils/smartVisitTiming';
 import './Explore.css';
-import './Events.css';
 import './Plan.css';
 
-function filterEventsByQuery(list, query) {
-  if (!Array.isArray(list)) return [];
-  const q = (query && String(query).trim()) || '';
-  if (!q) return list;
-  const lower = q.toLowerCase();
-  return list.filter((e) => {
-    const name = (e?.name || '').toLowerCase();
-    const cat = (e?.category || '').toLowerCase();
-    const loc = (e?.location || '').toLowerCase();
-    return name.includes(lower) || cat.includes(lower) || loc.includes(lower);
+/** Replace `{key}` placeholders in translation strings. */
+function formatPlanToast(template, vars) {
+  let s = template;
+  Object.entries(vars).forEach(([k, v]) => {
+    s = s.split(`{${k}}`).join(String(v));
   });
+  return s;
 }
 
 function groupPlacesByCategory(places, categories) {
@@ -43,88 +61,17 @@ function groupPlacesByCategory(places, categories) {
 }
 
 const TIME_SLOTS = ['morning', 'afternoon', 'evening'];
-const BEST_TIME_ORDER = { Morning: 0, Afternoon: 1, Evening: 2, morning: 0, afternoon: 1, evening: 2 };
 
-function getDayCount(startDate, endDate) {
-  if (!startDate || !endDate) return 1;
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-  return Math.max(1, diff);
-}
+const getDateForDay = getDateForDayIndex;
 
-function isValidDateRange(startStr, endStr) {
-  if (!startStr || !endStr) return true;
-  return new Date(startStr) <= new Date(endStr);
-}
+const INITIAL_BUILDER_SECTION_COLLAPSED = {
+  basics: false,
+  discover: false,
+  favourites: false,
+  itinerary: false,
+};
 
-function ensureDaysArray(days, dayCount) {
-  const base = Array.isArray(days) ? days : [];
-  const result = [];
-  for (let i = 0; i < dayCount; i++) {
-    const d = base[i];
-    result.push({
-      placeIds: Array.isArray(d?.placeIds) ? [...d.placeIds] : []
-    });
-  }
-  return result;
-}
-
-function mergeDaysWhenShrinking(prevDays, newDayCount) {
-  if (newDayCount >= prevDays.length) return ensureDaysArray(prevDays, newDayCount);
-  const result = prevDays.slice(0, newDayCount).map((d) => ({ placeIds: [...(d?.placeIds || [])] }));
-  for (let i = newDayCount; i < prevDays.length; i++) {
-    const ids = prevDays[i]?.placeIds || [];
-    if (result.length > 0) result[result.length - 1].placeIds.push(...ids);
-  }
-  return result;
-}
-
-function getDateForDay(startDate, dayIndex) {
-  if (!startDate) return '';
-  const d = new Date(String(startDate).slice(0, 10));
-  if (Number.isNaN(d.getTime())) return '';
-  d.setDate(d.getDate() + dayIndex);
-  return d.toISOString().slice(0, 10);
-}
-
-function toDateOnly(val) {
-  if (!val) return '';
-  const s = String(val).trim().slice(0, 10);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const d = new Date(val);
-  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
-}
-
-/** Sort places by bestTime (morning first), then duration, then rating */
-function sortPlacesForItinerary(places, placeMap) {
-  return [...places].sort((a, b) => {
-    const pa = placeMap[a];
-    const pb = placeMap[b];
-    const bestA = pa?.bestTime ? String(pa.bestTime).trim() : '';
-    const bestB = pb?.bestTime ? String(pb.bestTime).trim() : '';
-    const orderA = BEST_TIME_ORDER[bestA] ?? 99;
-    const orderB = BEST_TIME_ORDER[bestB] ?? 99;
-    if (orderA !== orderB) return orderA - orderB;
-    const durA = parseDuration(pa?.duration);
-    const durB = parseDuration(pb?.duration);
-    if (durA !== durB) return durA - durB;
-    const rA = Number(pa?.rating) || 0;
-    const rB = Number(pb?.rating) || 0;
-    return rB - rA;
-  });
-}
-
-function parseDuration(str) {
-  if (!str || typeof str !== 'string') return 999;
-  const m = str.match(/(\d+)\s*(h|hr|hour|min|m)/i);
-  if (!m) return 999;
-  const n = parseInt(m[1], 10);
-  if (m[2].toLowerCase().startsWith('h')) return n * 60;
-  return n;
-}
-
-function PlaceCardDiscover({ place, isFavourite, onToggleFavourite, t }) {
+function PlaceCardDiscover({ place, isFavourite, onToggleFavourite, tripDayCount = 0, onAddToTrip, t }) {
   if (!place || place.id == null) return null;
   const placeId = String(place.id);
   const imgUrl = getPlaceImageUrl(place.image || (Array.isArray(place.images) && place.images[0])) || null;
@@ -133,6 +80,7 @@ function PlaceCardDiscover({ place, isFavourite, onToggleFavourite, t }) {
   const rating = place.rating != null ? Number(place.rating) : null;
   const bestTime = place.bestTime ? String(place.bestTime) : '';
   const duration = place.duration ? String(place.duration) : '';
+  const showTripAdd = typeof onAddToTrip === 'function' && tripDayCount > 0;
 
   return (
     <div className="plan-discover-card">
@@ -161,36 +109,32 @@ function PlaceCardDiscover({ place, isFavourite, onToggleFavourite, t }) {
           className={`plan-discover-fav-btn ${isFavourite ? 'plan-discover-fav-btn--active' : ''}`}
           onClick={(e) => { e.preventDefault(); onToggleFavourite(placeId); }}
           aria-label={t('home', 'planSavePlace')}
-          title={t('home', 'planSavePlace')}
+          title={t('home', 'planSavePlaceOptional')}
         >
           <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={22} />
         </button>
       </div>
+      {showTripAdd && (
+        <div className="plan-discover-card-add">
+          <span className="plan-fav-add-label">{t('home', 'planAddToDay')}:</span>
+          <div className="plan-fav-add-btns">
+            {Array.from({ length: tripDayCount }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                className="plan-fav-add-day-btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onAddToTrip(placeId, name, i);
+                }}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
-  );
-}
-
-function EventCardPlan({ event }) {
-  const img = getPlaceImageUrl(event.image) || null;
-  const date = event.startDate
-    ? new Date(event.startDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
-    : '';
-  const category = event.category || '';
-  const price = event.priceDisplay || event.price || '';
-
-  return (
-    <Link to={`/event/${event.id}`} className="plan-event-card">
-      <div className="plan-event-card-media" style={{ backgroundImage: img ? `url(${img})` : undefined }}>
-        {!img && <span className="plan-event-card-fallback">Event</span>}
-        {date && <span className="plan-event-card-date">{date}</span>}
-      </div>
-      <div className="plan-event-card-body">
-        <h3 className="plan-event-card-title">{event.name}</h3>
-        {category && <span className="plan-event-card-cat">{category}</span>}
-        {event.location && <p className="plan-event-card-loc">{event.location}</p>}
-        {price && <span className="plan-event-card-price">{price}</span>}
-      </div>
-    </Link>
   );
 }
 
@@ -234,6 +178,7 @@ function FavouriteCard({ place, dayCount, onAddToDay, t }) {
 export default function Plan() {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const [trips, setTrips] = useState([]);
   const [tripsLoading, setTripsLoading] = useState(true);
@@ -242,13 +187,11 @@ export default function Plan() {
   const [editingTripId, setEditingTripId] = useState(null);
   const [places, setPlaces] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [events, setEvents] = useState([]);
   const [favouriteIds, setFavouriteIds] = useState(new Set());
   const [favouritePlaces, setFavouritePlaces] = useState([]);
   const [placeMap, setPlaceMap] = useState({});
   const [placeSearch, setPlaceSearch] = useState('');
   const [placeCategoryFilter, setPlaceCategoryFilter] = useState(null);
-  const [eventSearch, setEventSearch] = useState('');
   const [favSearch, setFavSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [placeNames, setPlaceNames] = useState({});
@@ -257,7 +200,105 @@ export default function Plan() {
   const [createName, setCreateName] = useState('');
   const [createStart, setCreateStart] = useState('');
   const [createEnd, setCreateEnd] = useState('');
+  const [createDescription, setCreateDescription] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [nameError, setNameError] = useState('');
   const [duplicatingId, setDuplicatingId] = useState(null);
+  const [deletingTripId, setDeletingTripId] = useState(null);
+  const [schedulingDayIndex, setSchedulingDayIndex] = useState(null);
+  const [builderSectionCollapsed, setBuilderSectionCollapsed] = useState(() => ({
+    ...INITIAL_BUILDER_SECTION_COLLAPSED,
+  }));
+  const [tripListSearch, setTripListSearch] = useState('');
+  const [tripFilterFrom, setTripFilterFrom] = useState('');
+  const [tripFilterTo, setTripFilterTo] = useState('');
+  const [tripFilterPhase, setTripFilterPhase] = useState('all');
+  const [tripFilterStops, setTripFilterStops] = useState('any');
+  const [tripFiltersOpen, setTripFiltersOpen] = useState(false);
+
+  const sortedTrips = useMemo(() => sortTripsSmart(trips), [trips]);
+
+  const tripStopsCount = useCallback((tr) => {
+    if (!Array.isArray(tr?.days)) return 0;
+    return tr.days.reduce((acc, d) => acc + placeIdsFromDay(d).length, 0);
+  }, []);
+
+  const filteredSortedTrips = useMemo(() => {
+    let list = sortedTrips;
+    const q = tripListSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter((tr) => {
+        const name = String(tr.name || '').toLowerCase();
+        const desc = String(tr.description || '').toLowerCase();
+        return name.includes(q) || desc.includes(q);
+      });
+    }
+    if (tripFilterPhase !== 'all') {
+      list = list.filter((tr) => tripPhaseForSort(tr) === tripFilterPhase);
+    }
+    const f0 = toDateOnly(tripFilterFrom);
+    const f1 = toDateOnly(tripFilterTo);
+    if (f0 && f1) {
+      const rangeStart = f0 <= f1 ? f0 : f1;
+      const rangeEnd = f0 <= f1 ? f1 : f0;
+      list = list.filter((tr) => tripCalendarRangesOverlap(tr.startDate, tr.endDate, rangeStart, rangeEnd));
+    } else if (f0) {
+      list = list.filter((tr) => {
+        const e = toDateOnly(tr.endDate);
+        return e && e >= f0;
+      });
+    } else if (f1) {
+      list = list.filter((tr) => {
+        const s = toDateOnly(tr.startDate);
+        return s && s <= f1;
+      });
+    }
+    if (tripFilterStops === 'with') {
+      list = list.filter((tr) => tripStopsCount(tr) > 0);
+    } else if (tripFilterStops === 'without') {
+      list = list.filter((tr) => tripStopsCount(tr) === 0);
+    }
+    return list;
+  }, [sortedTrips, tripListSearch, tripFilterFrom, tripFilterTo, tripFilterPhase, tripFilterStops, tripStopsCount]);
+
+  const tripFiltersActive =
+    tripListSearch.trim() !== ''
+    || !!toDateOnly(tripFilterFrom)
+    || !!toDateOnly(tripFilterTo)
+    || tripFilterPhase !== 'all'
+    || tripFilterStops !== 'any';
+
+  const clearTripListFilters = useCallback(() => {
+    setTripListSearch('');
+    setTripFilterFrom('');
+    setTripFilterTo('');
+    setTripFilterPhase('all');
+    setTripFilterStops('any');
+  }, []);
+
+  const applyTripFilterDatePreset = useCallback((preset) => {
+    const today = new Date();
+    const d0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (preset === 'this_month') {
+      const s = new Date(d0.getFullYear(), d0.getMonth(), 1);
+      const e = new Date(d0.getFullYear(), d0.getMonth() + 1, 0);
+      setTripFilterFrom(formatYMD(s));
+      setTripFilterTo(formatYMD(e));
+    } else if (preset === 'next_month') {
+      const s = new Date(d0.getFullYear(), d0.getMonth() + 1, 1);
+      const e = new Date(d0.getFullYear(), d0.getMonth() + 2, 0);
+      setTripFilterFrom(formatYMD(s));
+      setTripFilterTo(formatYMD(e));
+    } else if (preset === 'next_30') {
+      const e = new Date(d0);
+      e.setDate(e.getDate() + 29);
+      setTripFilterFrom(formatYMD(d0));
+      setTripFilterTo(formatYMD(e));
+    } else if (preset === 'clear') {
+      setTripFilterFrom('');
+      setTripFilterTo('');
+    }
+  }, []);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
@@ -301,18 +342,15 @@ export default function Plan() {
       .catch(() => { setFavouriteIds(new Set()); setFavouritePlaces([]); });
   }, []);
 
-  const loadPlacesAndEvents = useCallback(() => {
+  const loadPlacesAndCategories = useCallback(() => {
     Promise.all([
       api.places.list({ lang: langParam }).catch(() => ({ popular: [] })),
       api.categories.list({ lang: langParam }).catch(() => ({ categories: [] })),
-      api.events.list({ lang: langParam }).catch(() => ({ events: [] }))
-    ]).then(([placesRes, catRes, eventsRes]) => {
+    ]).then(([placesRes, catRes]) => {
       const pl = Array.isArray(placesRes?.popular) ? placesRes.popular : (Array.isArray(placesRes?.locations) ? placesRes.locations : []);
       const cat = Array.isArray(catRes?.categories) ? catRes.categories : [];
-      const ev = Array.isArray(eventsRes?.events) ? eventsRes.events : [];
       setPlaces(pl);
       setCategories(cat);
-      setEvents(ev);
       setPlaceMap((prev) => {
         const next = { ...prev };
         pl.forEach((p) => { next[String(p.id)] = p; });
@@ -334,19 +372,44 @@ export default function Plan() {
     [filteredPlaces, categories]
   );
 
-  const filteredEvents = useMemo(
-    () => filterEventsByQuery(events, eventSearch),
-    [events, eventSearch]
-  );
-
   const filteredFavourites = useMemo(
     () => filterPlacesByQuery(favouritePlaces, favSearch),
     [favouritePlaces, favSearch]
   );
 
   useEffect(() => { loadTrips(); }, [loadTrips]);
+
+  useEffect(() => {
+    if (tripsLoading) return;
+    const editId = searchParams.get('edit');
+    if (!editId) return;
+    if (trips.some((tr) => tr.id === editId)) {
+      setEditingTripId(editId);
+      setShowCreateForm(false);
+      const next = new URLSearchParams(searchParams);
+      next.delete('edit');
+      setSearchParams(next, { replace: true });
+      return;
+    }
+    let cancelled = false;
+    api.user
+      .getTrip(editId)
+      .then((trip) => {
+        if (cancelled || !trip?.id) return;
+        setTrips((prev) => (prev.some((t) => t.id === trip.id) ? prev : [trip, ...prev]));
+        setEditingTripId(editId);
+        setShowCreateForm(false);
+        const next = new URLSearchParams(searchParams);
+        next.delete('edit');
+        setSearchParams(next, { replace: true });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [tripsLoading, trips, searchParams, setSearchParams]);
   useEffect(() => { loadFavourites(); }, [loadFavourites]);
-  useEffect(() => { loadPlacesAndEvents(); }, [loadPlacesAndEvents]);
+  useEffect(() => { loadPlacesAndCategories(); }, [loadPlacesAndCategories]);
 
   const toggleFavourite = useCallback((placeId) => {
     const id = String(placeId);
@@ -355,9 +418,11 @@ export default function Plan() {
       api.user.removeFavourite(id).catch(() => {});
       setFavouriteIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
       setFavouritePlaces((prev) => prev.filter((p) => String(p.id) !== id));
+      showToast(t('home', 'planToastFavouriteOff'), 'info');
     } else {
       api.user.addFavourite(id).catch(() => {});
       setFavouriteIds((prev) => new Set([...prev, id]));
+      showToast(t('home', 'planToastFavouriteOn'), 'success');
       api.places.get(id).then((p) => {
         if (p) {
           setFavouritePlaces((prev) => {
@@ -369,13 +434,12 @@ export default function Plan() {
         }
       }).catch(() => {});
     }
-  }, [favouriteIds]);
+  }, [favouriteIds, showToast, t]);
 
   const editingTrip = useMemo(
-    () => (editingTripId ? trips.find((tr) => tr.id === editingTripId) ?? null : null),
-    [trips, editingTripId]
+    () => (editingTripId ? sortedTrips.find((tr) => tr.id === editingTripId) ?? null : null),
+    [sortedTrips, editingTripId]
   );
-  const dayCount = editingTrip ? getDayCount(editingTrip.startDate, editingTrip.endDate) : 0;
   const [editDays, setEditDays] = useState([]);
   const [editName, setEditName] = useState('');
   const [editStart, setEditStart] = useState('');
@@ -388,19 +452,28 @@ export default function Plan() {
       setEditName('');
       setEditStart('');
       setEditEnd('');
+      setEditDescription('');
+      setNameError('');
       prevEditStateRef.current = null;
       return;
     }
     const start = toDateOnly(editingTrip.startDate);
     const end = toDateOnly(editingTrip.endDate);
     const dc = getDayCount(start || editingTrip.startDate, end || editingTrip.endDate);
-    const days = ensureDaysArray(editingTrip.days, dc);
+    const days = ensureDaysWithSlots(editingTrip.days, dc);
     setEditName(editingTrip.name || '');
     setEditStart(start);
     setEditEnd(end);
+    setEditDescription(editingTrip.description != null ? String(editingTrip.description) : '');
     setEditDays(days);
-    prevEditStateRef.current = { name: editingTrip.name || '', start, end, days: JSON.stringify(days) };
-    const placeIds = days.flatMap((d) => d?.placeIds || []);
+    prevEditStateRef.current = {
+      name: editingTrip.name || '',
+      start,
+      end,
+      description: editingTrip.description != null ? String(editingTrip.description) : '',
+      days: JSON.stringify(days),
+    };
+    const placeIds = days.flatMap((d) => placeIdsFromDay(d));
     if (placeIds.length > 0) {
       Promise.all(placeIds.map((id) => api.places.get(id).catch(() => null))).then((placesRes) => {
         placesRes.filter(Boolean).forEach((p) => {
@@ -412,11 +485,28 @@ export default function Plan() {
   }, [editingTripId, editingTrip]);
 
   useEffect(() => {
+    if (!editingTripId) {
+      setBuilderSectionCollapsed({ ...INITIAL_BUILDER_SECTION_COLLAPSED });
+    }
+  }, [editingTripId]);
+
+  const toggleBuilderSection = useCallback((key) => {
+    setBuilderSectionCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  const expandBuilderSection = useCallback((key) => {
+    setBuilderSectionCollapsed((prev) => {
+      if (!prev[key]) return prev;
+      return { ...prev, [key]: false };
+    });
+  }, []);
+
+  useEffect(() => {
     if (!editingTrip || editStart === '' || editEnd === '') return;
     const count = getDayCount(editStart, editEnd);
     setEditDays((prev) => {
-      if (count < prev.length) return mergeDaysWhenShrinking(prev, count);
-      return ensureDaysArray(prev, count);
+      if (count < prev.length) return mergeDaysWithSlotsWhenShrinking(prev, count);
+      return ensureDaysWithSlots(prev, count);
     });
   }, [editStart, editEnd, editingTrip]);
 
@@ -424,6 +514,7 @@ export default function Plan() {
     editName !== prevEditStateRef.current.name ||
     editStart !== prevEditStateRef.current.start ||
     editEnd !== prevEditStateRef.current.end ||
+    editDescription !== (prevEditStateRef.current.description || '') ||
     JSON.stringify(editDays) !== prevEditStateRef.current.days
   );
 
@@ -432,128 +523,333 @@ export default function Plan() {
     const name = createName.trim();
     const start = toDateOnly(createStart);
     const end = toDateOnly(createEnd);
-    if (!name || !start || !end) return;
+    setNameError('');
+    if (!name) {
+      setNameError(t('home', 'tripNameRequired'));
+      showToast(t('home', 'tripNameRequired'), 'error');
+      return;
+    }
+    if (!start || !end) {
+      showToast(t('home', 'planToastDatesMissing'), 'error');
+      return;
+    }
     if (!isValidDateRange(start, end)) {
       setDateError(t('home', 'dateInvalid'));
+      showToast(t('home', 'dateInvalid'), 'error');
+      return;
+    }
+    if (!datesOnOrAfterToday(start, end)) {
+      setDateError(t('home', 'tripDatesPast'));
+      showToast(t('home', 'tripDatesPast'), 'error');
+      return;
+    }
+    if (tripHasDateConflict(trips, start, end, null)) {
+      setDateError(t('home', 'tripDateOverlap'));
+      showToast(t('home', 'tripDateOverlap'), 'error');
       return;
     }
     setDateError(null);
+    const desc = createDescription.trim();
     setSaving(true);
     api.user
-      .createTrip({ name, startDate: start, endDate: end })
+      .createTrip({
+        name,
+        startDate: start,
+        endDate: end,
+        ...(desc ? { description: desc } : {}),
+      })
       .then((created) => {
         loadTrips();
         setShowCreateForm(false);
         setCreateName('');
         setCreateStart('');
         setCreateEnd('');
+        setCreateDescription('');
         setEditingTripId(created.id);
-        showToast(t('home', 'tripSaved'));
+        showToast(t('home', 'planToastTripCreated'));
       })
-      .catch((err) => showToast(err.message || t('home', 'tripSaveFailed'), 'error'))
+      .catch((err) => {
+        const msg =
+          err?.data?.code === 'TRIP_DATE_OVERLAP'
+            ? t('home', 'tripDateOverlap')
+            : err.message || t('home', 'tripSaveFailed');
+        showToast(msg, 'error');
+      })
       .finally(() => setSaving(false));
   };
 
   const handleSaveTrip = () => {
     if (!editingTripId) return;
+    const name = editName.trim();
+    setNameError('');
+    if (!name) {
+      setNameError(t('home', 'tripNameRequired'));
+      showToast(t('home', 'tripNameRequired'), 'error');
+      return;
+    }
     const start = toDateOnly(editStart);
     const end = toDateOnly(editEnd);
     if (!isValidDateRange(start, end)) {
       setDateError(t('home', 'dateInvalid'));
+      showToast(t('home', 'dateInvalid'), 'error');
       return;
     }
+    if (tripHasDateConflict(trips, start, end, editingTripId)) {
+      setDateError(t('home', 'tripDateOverlap'));
+      showToast(t('home', 'tripDateOverlap'), 'error');
+      return;
+    }
+    for (let i = 0; i < editDays.length; i++) {
+      const slots = dayFromApiShape(editDays[i]).slots;
+      if (hasOverlappingTimeSlots(slots)) {
+        showToast(t('home', 'tripTimeConflict'), 'error');
+        return;
+      }
+    }
     setDateError(null);
+    const daysPayload = buildTripDaysApiPayload(editDays, start);
+    const desc = editDescription.trim();
     setSaving(true);
     api.user
       .updateTrip(editingTripId, {
-        name: editName.trim(),
+        name,
         startDate: start,
         endDate: end,
-        days: editDays
+        days: daysPayload,
+        description: desc,
       })
       .then(() => {
         loadTrips();
-        prevEditStateRef.current = { name: editName.trim(), start, end, days: JSON.stringify(editDays) };
-        showToast(t('home', 'tripSaved'));
+        const nextDesc = desc;
+        const nextDays = ensureDaysWithSlots(daysPayload, getDayCount(start, end));
+        setEditDays(nextDays);
+        prevEditStateRef.current = {
+          name,
+          start,
+          end,
+          description: nextDesc,
+          days: JSON.stringify(nextDays),
+        };
+        showToast(t('home', 'planToastTripUpdated'));
       })
-      .catch((err) => showToast(err.message || t('home', 'tripSaveFailed'), 'error'))
+      .catch((err) => {
+        const msg =
+          err?.data?.code === 'TRIP_DATE_OVERLAP'
+            ? t('home', 'tripDateOverlap')
+            : err.message || t('home', 'tripSaveFailed');
+        showToast(msg, 'error');
+      })
       .finally(() => setSaving(false));
   };
 
   const handleDeleteTrip = (id) => {
+    if (!id || deletingTripId) return;
     if (!window.confirm(t('home', 'deleteTrip') + '?')) return;
-    api.user.deleteTrip(id).then(loadTrips).catch((err) => showToast(err.message || 'Failed to delete', 'error'));
-    setEditingTripId((current) => (current === id ? null : current));
+    setDeletingTripId(id);
+    api.user
+      .deleteTrip(id)
+      .then(() => {
+        showToast(t('home', 'planToastTripDeleted'));
+        setEditingTripId((current) => (current === id ? null : current));
+        loadTrips();
+      })
+      .catch((err) => showToast(err.message || t('home', 'tripDeleteFailed'), 'error'))
+      .finally(() => setDeletingTripId(null));
   };
 
   const handleCancelEdit = () => {
     if (hasUnsavedChanges && !window.confirm(t('home', 'unsavedChanges'))) return;
+    if (hasUnsavedChanges) showToast(t('home', 'planToastEditDiscarded'), 'info');
     setEditingTripId(null);
     setDateError(null);
+    setNameError('');
   };
 
   const handleCloseCreateForm = () => {
+    const hadDraft =
+      createName.trim() || createStart || createEnd || createDescription.trim();
     setShowCreateForm(false);
     setDateError(null);
+    setNameError('');
     setCreateName('');
     setCreateStart('');
     setCreateEnd('');
+    setCreateDescription('');
+    if (hadDraft) showToast(t('home', 'planToastCreateFormClosed'), 'info');
   };
 
-  const addPlaceToDay = useCallback((placeId, name, dayIndex) => {
-    const idStr = String(placeId);
-    setEditDays((prev) => {
-      const next = prev.map((day, i) =>
-        i === dayIndex
-          ? { placeIds: day.placeIds.includes(idStr) ? day.placeIds : [...day.placeIds, idStr] }
-          : day
-      );
-      return next;
-    });
-    if (name) setPlaceNames((prev) => ({ ...prev, [idStr]: name }));
-  }, []);
+  const applyEditQuickPreset = useCallback(
+    (presetKey) => {
+      const r = quickDatePresetRange(presetKey);
+      setEditStart(r.start);
+      setEditEnd(r.end);
+      setDateError(null);
+      const label =
+        presetKey === 'today'
+          ? t('home', 'planQuickToday')
+          : presetKey === 'weekend'
+            ? t('home', 'planQuickWeekend')
+            : t('home', 'planQuickWeek');
+      showToast(formatPlanToast(t('home', 'planToastDatesQuick'), { label }), 'info');
+    },
+    [showToast, t]
+  );
 
-  const removePlaceFromDay = useCallback((dayIndex, placeId) => {
+  const applyCreateQuickPreset = useCallback(
+    (presetKey) => {
+      const r = quickDatePresetRange(presetKey);
+      setCreateStart(r.start);
+      setCreateEnd(r.end);
+      setDateError(null);
+      const label =
+        presetKey === 'today'
+          ? t('home', 'planQuickToday')
+          : presetKey === 'weekend'
+            ? t('home', 'planQuickWeekend')
+            : t('home', 'planQuickWeek');
+      showToast(formatPlanToast(t('home', 'planToastDatesQuick'), { label }), 'info');
+    },
+    [showToast, t]
+  );
+
+  const onEditCalendarRangeChange = useCallback(
+    (start, end) => {
+      setEditStart(start);
+      setEditEnd(end);
+      setDateError(null);
+      showToast(t('home', 'planToastDatesCalendar'), 'info');
+    },
+    [showToast, t]
+  );
+
+  const onCreateCalendarRangeChange = useCallback(
+    (start, end) => {
+      setCreateStart(start);
+      setCreateEnd(end);
+      setDateError(null);
+      showToast(t('home', 'planToastDatesCalendar'), 'info');
+    },
+    [showToast, t]
+  );
+
+  const addPlaceToDay = useCallback(
+    (placeId, name, dayIndex) => {
+      const idStr = String(placeId);
+      const p = placeMap[idStr] ?? places.find((x) => String(x.id) === idStr);
+      const label = String((p?.name || name || idStr || '').trim() || idStr);
+      if (p) {
+        setPlaceMap((prev) => ({ ...prev, [idStr]: p }));
+        setPlaceNames((prev) => ({ ...prev, [idStr]: p.name != null ? String(p.name) : idStr }));
+      } else if (name) {
+        setPlaceNames((prev) => ({ ...prev, [idStr]: name }));
+      }
+      setEditDays((prev) =>
+        prev.map((day, i) => {
+          if (i !== dayIndex) return day;
+          const slots = dayFromApiShape(day).slots;
+          if (slots.some((s) => s.placeId === idStr)) {
+            showToast(formatPlanToast(t('home', 'planToastAlreadyOnDay'), { place: label, n: dayIndex + 1 }), 'info');
+            return { slots: [...slots] };
+          }
+          showToast(formatPlanToast(t('home', 'planToastPlaceAdded'), { place: label, n: dayIndex + 1 }), 'success');
+          return {
+            slots: [...slots, { placeId: idStr, startTime: null, endTime: null, notes: null }],
+          };
+        })
+      );
+    },
+    [placeMap, places, showToast, t]
+  );
+
+  const removePlaceFromDay = useCallback(
+    (dayIndex, placeId) => {
+      const idStr = String(placeId);
+      setEditDays((prev) => {
+        const slots = dayFromApiShape(prev[dayIndex]).slots;
+        const had = slots.some((s) => s.placeId === idStr);
+        const label =
+          placeNames[idStr] || placeMap[idStr]?.name || idStr;
+        if (had) {
+          showToast(formatPlanToast(t('home', 'planToastPlaceRemoved'), { place: label, n: dayIndex + 1 }), 'info');
+        }
+        return prev.map((day, i) =>
+          i === dayIndex ? { slots: slots.filter((s) => s.placeId !== idStr) } : day
+        );
+      });
+    },
+    [placeMap, placeNames, showToast, t]
+  );
+
+  const updateSlotTime = useCallback((dayIndex, placeId, field, value) => {
+    const v = value && String(value).trim() ? String(value).trim().slice(0, 8) : null;
     setEditDays((prev) =>
-      prev.map((day, i) =>
-        i === dayIndex ? { placeIds: day.placeIds.filter((id) => id !== placeId) } : day
-      )
+      prev.map((day, i) => {
+        if (i !== dayIndex) return day;
+        const slots = dayFromApiShape(day).slots.map((s) =>
+          s.placeId === placeId ? { ...s, [field]: v } : s
+        );
+        return { slots };
+      })
     );
   }, []);
 
-  const optimizeDayOrder = useCallback((dayIndex) => {
-    setEditDays((prev) => {
-      const day = prev[dayIndex];
-      if (!day?.placeIds?.length) return prev;
-      const sorted = sortPlacesForItinerary(day.placeIds, placeMap);
-      const next = prev.map((d, i) =>
-        i === dayIndex ? { placeIds: sorted } : d
-      );
-      return next;
-    });
-  }, [placeMap]);
+  const optimizeDayOrder = useCallback(
+    async (dayIndex) => {
+      const dateYmd = getDateForDay(editStart, dayIndex);
+      if (!dateYmd) {
+        showToast(t('home', 'planToastSmartNeedDates'), 'error');
+        return;
+      }
+      setSchedulingDayIndex(dayIndex);
+      try {
+        const ctx = await loadSmartScheduleContext(dateYmd);
+        setEditDays((prev) => {
+          const slots = dayFromApiShape(prev[dayIndex] ?? { slots: [] }).slots;
+          if (!slots.length) return prev;
+          const nextSlots = sortAndAssignSmartSlotTimes(slots, placeMap, ctx);
+          return prev.map((d, i) => (i === dayIndex ? { slots: nextSlots } : d));
+        });
+        showToast(formatPlanToast(t('home', 'planToastDaySmartScheduled'), { n: dayIndex + 1 }), 'success');
+      } catch {
+        setEditDays((prev) => {
+          const slots = dayFromApiShape(prev[dayIndex] ?? { slots: [] }).slots;
+          if (!slots.length) return prev;
+          const sortedSlots = optimizeSlotsOrder(slots, placeMap);
+          return prev.map((d, i) => (i === dayIndex ? { slots: sortedSlots } : d));
+        });
+        showToast(t('home', 'planToastSmartScheduleFailed'), 'error');
+      } finally {
+        setSchedulingDayIndex(null);
+      }
+    },
+    [editStart, getDateForDay, placeMap, showToast, t]
+  );
 
   const getTripPlaceIds = useCallback((tr) => {
     if (!Array.isArray(tr.days)) return [];
-    return tr.days.flatMap((d) => d?.placeIds || []);
+    return tr.days.flatMap((d) => placeIdsFromDay(d));
   }, []);
 
-  const handleViewTripOnMap = useCallback((tr) => {
-    const placeIds = getTripPlaceIds(tr);
-    const days = Array.isArray(tr.days) ? tr.days.map((d) => ({ placeIds: [...(d?.placeIds || [])] })) : [{ placeIds }];
-    navigate('/map', {
-      state: {
-        tripPlaceIds: placeIds,
-        tripDays: days,
-        tripName: tr.name || t('home', 'planTitle'),
-        tripStartDate: tr.startDate || '',
-      },
-    });
-  }, [getTripPlaceIds, navigate, t]);
+  const handleViewTripOnMap = useCallback(
+    (tr) => {
+      const placeIds = getTripPlaceIds(tr);
+      const days = Array.isArray(tr.days) ? tr.days : [{ placeIds }];
+      showToast(t('home', 'planToastOpenMap'), 'info');
+      navigate('/map', {
+        state: {
+          tripPlaceIds: placeIds,
+          tripDays: days,
+          tripName: tr.name || t('home', 'planTitle'),
+          tripStartDate: tr.startDate || '',
+        },
+      });
+    },
+    [getTripPlaceIds, navigate, showToast, t]
+  );
 
   const handleShareTrip = useCallback((tr) => {
     const name = tr.name || t('home', 'planTitle');
-    const url = window.location.origin + '/plan';
+    const url = `${window.location.origin}/trips/${encodeURIComponent(tr.id)}`;
     if (typeof navigator !== 'undefined' && navigator.share) {
       navigator.share({ title: name, text: t('home', 'planTitle') + ': ' + name, url })
         .then(() => showToast(t('home', 'linkCopied'))).catch(() => {});
@@ -570,25 +866,49 @@ export default function Plan() {
       showToast(t('home', 'tripSaveFailed'), 'error');
       return;
     }
+    const range = findNextNonOverlappingDateRange(trips, start, end);
+    if (!range) {
+      showToast(t('home', 'tripDuplicateNoFreeRange'), 'error');
+      return;
+    }
+    const { startDate: newStart, endDate: newEnd } = range;
+    const shifted = newStart !== start || newEnd !== end;
     setDuplicatingId(tr.id);
+    const descCopy = tr.description != null && String(tr.description).trim() ? String(tr.description).trim() : null;
     api.user
-      .createTrip({ name, startDate: start, endDate: end })
+      .createTrip({
+        name,
+        startDate: newStart,
+        endDate: newEnd,
+        ...(descCopy ? { description: descCopy } : {}),
+      })
       .then((created) => {
-        const days = Array.isArray(tr.days) && tr.days.length > 0
-          ? tr.days.map((d) => ({ placeIds: [...(d?.placeIds || [])] }))
-          : [];
-        if (days.length > 0) {
-          return api.user.updateTrip(created.id, { days }).then(() => created);
+        const dc = getDayCount(newStart, newEnd);
+        const normalized = ensureDaysWithSlots(tr.days, dc);
+        const daysPayload = buildTripDaysApiPayload(normalized, newStart);
+        const hasPlaces = daysPayload.some((d) => d.slots && d.slots.length > 0);
+        if (hasPlaces) {
+          return api.user.updateTrip(created.id, { days: daysPayload }).then(() => created);
         }
         return created;
       })
       .then(() => {
         loadTrips();
-        showToast(t('home', 'tripSaved'));
+        showToast(
+          shifted
+            ? formatPlanToast(t('home', 'tripDuplicateDatesShifted'), { start: newStart, end: newEnd })
+            : t('home', 'planToastTripDuplicated')
+        );
       })
-      .catch((err) => showToast(err.message || t('home', 'tripSaveFailed'), 'error'))
+      .catch((err) => {
+        const msg =
+          err?.data?.code === 'TRIP_DATE_OVERLAP'
+            ? t('home', 'tripDateOverlap')
+            : err.message || t('home', 'tripSaveFailed');
+        showToast(msg, 'error');
+      })
       .finally(() => setDuplicatingId(null));
-  }, [loadTrips, showToast, t]);
+  }, [loadTrips, showToast, t, trips]);
 
   const timeSlotLabel = (slot) => {
     if (slot === 'morning') return t('home', 'planTimeMorning');
@@ -600,16 +920,16 @@ export default function Plan() {
     const id = String(placeId);
     const p = placeMap[id];
     const bestTime = p?.bestTime ? String(p.bestTime).trim() : '';
-    const slot = bestTime in BEST_TIME_ORDER ? bestTime.toLowerCase() : 'morning';
+    const slot = bestTime in BEST_TIME_ORDER ? String(bestTime).toLowerCase() : 'morning';
     return { placeId: id, slot, name: placeNames[id] || p?.name || id };
   };
 
-  const groupedPlacesBySlot = (dayPlaceIds, dayIndex) => {
+  const groupedPlacesBySlot = (dayObj, dayIndex) => {
     const groups = { morning: [], afternoon: [], evening: [] };
-    dayPlaceIds.forEach((placeId) => {
-      const { slot, name } = getPlaceForSlot(placeId, dayIndex);
-      const s = slot in groups ? slot : 'morning';
-      groups[s].push({ placeId, name });
+    dayFromApiShape(dayObj).slots.forEach((slot) => {
+      const { slot: slotKey, name } = getPlaceForSlot(slot.placeId, dayIndex);
+      const s = slotKey in groups ? slotKey : 'morning';
+      groups[s].push({ placeId: slot.placeId, name, slot });
     });
     return groups;
   };
@@ -633,29 +953,62 @@ export default function Plan() {
         ) : isInBuilder ? (
           <>
           <nav className="plan-section-nav" aria-label="Plan sections">
-            <a href="#plan-basics" className="plan-section-nav-link">
+            <a
+              href="#plan-basics"
+              className={`plan-section-nav-link${builderSectionCollapsed.basics ? ' plan-section-nav-link--collapsed' : ''}`}
+              onClick={() => expandBuilderSection('basics')}
+            >
               <span className="plan-section-nav-num">1</span>
               <span>{t('home', 'planStepBasics')}</span>
             </a>
-            <a href="#plan-discover" className="plan-section-nav-link">
+            <a
+              href="#plan-discover"
+              className={`plan-section-nav-link${builderSectionCollapsed.discover ? ' plan-section-nav-link--collapsed' : ''}`}
+              onClick={() => expandBuilderSection('discover')}
+            >
               <span className="plan-section-nav-num">2</span>
               <span>{t('home', 'planStepDiscover')}</span>
             </a>
-            <a href="#plan-favourites" className="plan-section-nav-link">
+            <a
+              href="#plan-favourites"
+              className={`plan-section-nav-link${builderSectionCollapsed.favourites ? ' plan-section-nav-link--collapsed' : ''}`}
+              onClick={() => expandBuilderSection('favourites')}
+            >
               <span className="plan-section-nav-num">3</span>
               <span>{t('home', 'planStepSelect')}</span>
             </a>
-            <a href="#plan-itinerary" className="plan-section-nav-link">
+            <a
+              href="#plan-itinerary"
+              className={`plan-section-nav-link${builderSectionCollapsed.itinerary ? ' plan-section-nav-link--collapsed' : ''}`}
+              onClick={() => expandBuilderSection('itinerary')}
+            >
               <span className="plan-section-nav-num">4</span>
               <span>{t('home', 'planStepItinerary')}</span>
             </a>
           </nav>
           <div className="plan-unified" id="plan">
-            <section className="plan-unified-section plan-unified-section--basics" id="plan-basics">
-              <div className="plan-section-step">
-                <span className="plan-step-num">1</span>
-                <h2 className="plan-section-title">{t('home', 'planStepBasics')}</h2>
+            <section
+              className={`plan-unified-section plan-unified-section--basics${builderSectionCollapsed.basics ? ' plan-unified-section--collapsed' : ''}`}
+              id="plan-basics"
+            >
+              <div className="plan-section-head-toggle">
+                <div className="plan-section-step">
+                  <span className="plan-step-num">1</span>
+                  <h2 className="plan-section-title" id="plan-basics-label">{t('home', 'planStepBasics')}</h2>
+                </div>
+                <button
+                  type="button"
+                  className="plan-builder-section-toggle"
+                  onClick={() => toggleBuilderSection('basics')}
+                  aria-expanded={!builderSectionCollapsed.basics}
+                  aria-controls="plan-basics-body"
+                >
+                  <Icon name={builderSectionCollapsed.basics ? 'expand_more' : 'expand_less'} size={22} aria-hidden />
+                  <span>{builderSectionCollapsed.basics ? t('home', 'planBuilderSectionShow') : t('home', 'planBuilderSectionHide')}</span>
+                </button>
               </div>
+              {!builderSectionCollapsed.basics && (
+              <div id="plan-basics-body" className="plan-builder-section-body" role="region" aria-labelledby="plan-basics-label">
               <div className="plan-unified-basics">
                 <button type="button" className="plan-builder-back" onClick={handleCancelEdit} aria-label={t('home', 'cancel')}>
                   <Icon name="arrow_back" size={22} /> {t('home', 'cancel')}
@@ -665,10 +1018,28 @@ export default function Plan() {
                     type="text"
                     className="plan-builder-title"
                     value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
+                    maxLength={200}
+                    onChange={(e) => { setEditName(e.target.value); setNameError(''); }}
                     placeholder={t('home', 'tripNamePlaceholder')}
                     aria-label={t('home', 'tripName')}
+                    aria-invalid={!!nameError}
                   />
+                  {nameError && <p className="plan-name-error" role="alert">{nameError}</p>}
+                  <p className="plan-label plan-notes-label">{t('home', 'tripNotesOptional')}</p>
+                  <textarea
+                    className="plan-notes-input"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder={t('home', 'tripNotesPlaceholder')}
+                    rows={3}
+                    maxLength={10000}
+                    aria-label={t('home', 'tripNotesOptional')}
+                  />
+                  <div className="plan-quick-dates" role="group" aria-label={t('home', 'planQuickDates')}>
+                    <button type="button" className="plan-quick-date-chip" onClick={() => applyEditQuickPreset('today')}>{t('home', 'planQuickToday')}</button>
+                    <button type="button" className="plan-quick-date-chip" onClick={() => applyEditQuickPreset('weekend')}>{t('home', 'planQuickWeekend')}</button>
+                    <button type="button" className="plan-quick-date-chip" onClick={() => applyEditQuickPreset('week')}>{t('home', 'planQuickWeek')}</button>
+                  </div>
                   <div className="plan-builder-dates">
                     <label>
                       <span className="plan-label">{t('home', 'startDate')}</span>
@@ -680,11 +1051,21 @@ export default function Plan() {
                     </label>
                   </div>
                 </div>
-                {editDays.some((d) => (d?.placeIds?.length || 0) > 0) && (
+                {editDays.some((d) => placeIdsFromDay(d).length > 0) && (
                   <button
                     type="button"
                     className="plan-builder-map-btn"
-                    onClick={() => navigate('/map', { state: { tripPlaceIds: editDays.flatMap((d) => d?.placeIds || []), tripDays: editDays.map((d) => ({ placeIds: [...(d?.placeIds || [])] })), tripName: editName || t('home', 'planTitle'), tripStartDate: editStart || '' } })}
+                    onClick={() => {
+                      showToast(t('home', 'planToastOpenMap'), 'info');
+                      navigate('/map', {
+                        state: {
+                          tripPlaceIds: editDays.flatMap((d) => placeIdsFromDay(d)),
+                          tripDays: editDays,
+                          tripName: editName || t('home', 'planTitle'),
+                          tripStartDate: editStart || '',
+                        },
+                      });
+                    }}
                   >
                     <Icon name="map" size={20} /> {t('detail', 'viewOnMap')}
                   </button>
@@ -695,18 +1076,37 @@ export default function Plan() {
                 <DateRangeCalendar
                   startDate={editStart || undefined}
                   endDate={editEnd || undefined}
-                  onChange={(start, end) => { setEditStart(start); setEditEnd(end); setDateError(null); }}
+                  onChange={onEditCalendarRangeChange}
                   hintStart={t('home', 'selectStartDate')}
                   hintEnd={t('home', 'selectEndDate')}
                 />
               </div>
+              </div>
+              )}
             </section>
 
-            <section className="plan-unified-section plan-unified-section--discover" id="plan-discover">
-              <div className="plan-section-step">
-                <span className="plan-step-num">2</span>
-                <h2 className="plan-section-title">{t('home', 'planStepDiscover')}</h2>
+            <section
+              className={`plan-unified-section plan-unified-section--discover${builderSectionCollapsed.discover ? ' plan-unified-section--collapsed' : ''}`}
+              id="plan-discover"
+            >
+              <div className="plan-section-head-toggle">
+                <div className="plan-section-step">
+                  <span className="plan-step-num">2</span>
+                  <h2 className="plan-section-title" id="plan-discover-label">{t('home', 'planStepDiscover')}</h2>
+                </div>
+                <button
+                  type="button"
+                  className="plan-builder-section-toggle"
+                  onClick={() => toggleBuilderSection('discover')}
+                  aria-expanded={!builderSectionCollapsed.discover}
+                  aria-controls="plan-discover-body"
+                >
+                  <Icon name={builderSectionCollapsed.discover ? 'expand_more' : 'expand_less'} size={22} aria-hidden />
+                  <span>{builderSectionCollapsed.discover ? t('home', 'planBuilderSectionShow') : t('home', 'planBuilderSectionHide')}</span>
+                </button>
               </div>
+              {!builderSectionCollapsed.discover && (
+              <div id="plan-discover-body" className="plan-builder-section-body" role="region" aria-labelledby="plan-discover-label">
               <p className="plan-section-sub">{t('home', 'planDiscoverSub')}</p>
               <div className="plan-discover-toolbar">
                 <div className="plan-search-wrap">
@@ -724,7 +1124,12 @@ export default function Plan() {
                   <button
                     type="button"
                     className={`plan-category-pill ${!placeCategoryFilter ? 'plan-category-pill--active' : ''}`}
-                    onClick={() => setPlaceCategoryFilter(null)}
+                    onClick={() => {
+                      if (placeCategoryFilter != null) {
+                        showToast(t('home', 'planToastCategoryAll'), 'info');
+                      }
+                      setPlaceCategoryFilter(null);
+                    }}
                   >
                     {t('home', 'planFilterAllCategories')}
                   </button>
@@ -733,7 +1138,20 @@ export default function Plan() {
                       key={c.id}
                       type="button"
                       className={`plan-category-pill ${placeCategoryFilter === c.id ? 'plan-category-pill--active' : ''}`}
-                      onClick={() => setPlaceCategoryFilter(placeCategoryFilter === c.id ? null : c.id)}
+                      onClick={() => {
+                        const next = placeCategoryFilter === c.id ? null : c.id;
+                        setPlaceCategoryFilter(next);
+                        if (next == null) {
+                          showToast(t('home', 'planToastCategoryAll'), 'info');
+                        } else {
+                          showToast(
+                            formatPlanToast(t('home', 'planToastCategoryFilter'), {
+                              label: c.name != null ? String(c.name) : String(c.id),
+                            }),
+                            'info'
+                          );
+                        }
+                      }}
                     >
                       {c.name || c.id}
                     </button>
@@ -751,6 +1169,8 @@ export default function Plan() {
                           place={p}
                           isFavourite={favouriteIds.has(String(p.id))}
                           onToggleFavourite={toggleFavourite}
+                          tripDayCount={isInBuilder ? editDays.length : 0}
+                          onAddToTrip={isInBuilder ? addPlaceToDay : undefined}
                           t={t}
                         />
                       ))}
@@ -761,43 +1181,37 @@ export default function Plan() {
               {placeSections.length === 0 && (
                 <p className="plan-empty-msg">{t('home', 'noSpots')}</p>
               )}
-              <div className="plan-events-block">
-                <h3 className="plan-events-title">{t('home', 'eventsFestivals')}</h3>
-                <div className="plan-events-toolbar">
-                  <div className="plan-search-wrap plan-search-wrap--sm">
-                    <Icon name="search" size={18} className="plan-search-icon" />
-                    <input
-                      type="search"
-                      className="plan-search-input"
-                      placeholder={t('home', 'planSearchEvents')}
-                      value={eventSearch}
-                      onChange={(e) => setEventSearch(e.target.value)}
-                      aria-label={t('home', 'planSearchEvents')}
-                    />
-                  </div>
-                </div>
-                {filteredEvents.length > 0 ? (
-                  <div className="plan-events-grid">
-                    {filteredEvents.map((ev) => (
-                      <EventCardPlan key={ev.id} event={ev} />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="plan-empty-msg">{t('home', 'noEvents')}</p>
-                )}
               </div>
+              )}
             </section>
 
-            <section className="plan-unified-section plan-unified-section--favourites" id="plan-favourites">
-              <div className="plan-section-step">
-                <span className="plan-step-num">3</span>
-                <h2 className="plan-section-title">{t('home', 'planFavouritesTitle')}</h2>
+            <section
+              className={`plan-unified-section plan-unified-section--favourites${builderSectionCollapsed.favourites ? ' plan-unified-section--collapsed' : ''}`}
+              id="plan-favourites"
+            >
+              <div className="plan-section-head-toggle">
+                <div className="plan-section-step">
+                  <span className="plan-step-num">3</span>
+                  <h2 className="plan-section-title" id="plan-favourites-label">{t('home', 'planFavouritesTitle')}</h2>
+                </div>
+                <button
+                  type="button"
+                  className="plan-builder-section-toggle"
+                  onClick={() => toggleBuilderSection('favourites')}
+                  aria-expanded={!builderSectionCollapsed.favourites}
+                  aria-controls="plan-favourites-body"
+                >
+                  <Icon name={builderSectionCollapsed.favourites ? 'expand_more' : 'expand_less'} size={22} aria-hidden />
+                  <span>{builderSectionCollapsed.favourites ? t('home', 'planBuilderSectionShow') : t('home', 'planBuilderSectionHide')}</span>
+                </button>
               </div>
+              {!builderSectionCollapsed.favourites && (
+              <div id="plan-favourites-body" className="plan-builder-section-body" role="region" aria-labelledby="plan-favourites-label">
               <p className="plan-section-sub">{t('home', 'planFavouritesSub')}</p>
               {favouritePlaces.length === 0 ? (
                 <div className="plan-fav-empty">
                   <Icon name="favorite_border" size={48} />
-                  <p>{t('home', 'noSavedPlaces')}</p>
+                  <p>{t('home', 'planFavouritesEmptyHint')}</p>
                 </div>
               ) : (
                 <>
@@ -830,16 +1244,36 @@ export default function Plan() {
                   )}
                 </>
               )}
+              </div>
+              )}
             </section>
 
-            <section className="plan-unified-section plan-unified-section--itinerary" id="plan-itinerary">
-              <div className="plan-section-step">
-                <span className="plan-step-num">4</span>
-                <h2 className="plan-section-title">{t('home', 'planStepItinerary')}</h2>
+            <section
+              className={`plan-unified-section plan-unified-section--itinerary${builderSectionCollapsed.itinerary ? ' plan-unified-section--collapsed' : ''}`}
+              id="plan-itinerary"
+            >
+              <div className="plan-section-head-toggle">
+                <div className="plan-section-step">
+                  <span className="plan-step-num">4</span>
+                  <h2 className="plan-section-title" id="plan-itinerary-label">{t('home', 'planStepItinerary')}</h2>
+                </div>
+                <button
+                  type="button"
+                  className="plan-builder-section-toggle"
+                  onClick={() => toggleBuilderSection('itinerary')}
+                  aria-expanded={!builderSectionCollapsed.itinerary}
+                  aria-controls="plan-itinerary-body"
+                >
+                  <Icon name={builderSectionCollapsed.itinerary ? 'expand_more' : 'expand_less'} size={22} aria-hidden />
+                  <span>{builderSectionCollapsed.itinerary ? t('home', 'planBuilderSectionShow') : t('home', 'planBuilderSectionHide')}</span>
+                </button>
               </div>
+              {!builderSectionCollapsed.itinerary && (
+              <div id="plan-itinerary-body" className="plan-builder-section-body" role="region" aria-labelledby="plan-itinerary-label">
               <div className="plan-days plan-days--unified">
                 {editDays.map((day, i) => {
-                  const groups = groupedPlacesBySlot(day.placeIds, i);
+                  const groups = groupedPlacesBySlot(day, i);
+                  const nPlaces = placeIdsFromDay(day).length;
                   return (
                     <div key={i} className="plan-day-card plan-day-card--unified">
                       <h3 className="plan-day-title">
@@ -850,14 +1284,19 @@ export default function Plan() {
                           </span>
                         )}
                       </h3>
-                      {day.placeIds.length > 0 && (
-                        <button
-                          type="button"
-                          className="plan-optimize-btn"
-                          onClick={() => optimizeDayOrder(i)}
-                        >
-                          <Icon name="auto_awesome" size={18} /> {t('home', 'planOptimizeOrder')}
-                        </button>
+                      {nPlaces > 0 && (
+                        <>
+                          <button
+                            type="button"
+                            className="plan-optimize-btn"
+                            onClick={() => { void optimizeDayOrder(i); }}
+                            disabled={schedulingDayIndex !== null}
+                          >
+                            <Icon name="auto_awesome" size={18} />{' '}
+                            {schedulingDayIndex === i ? t('home', 'loading') : t('home', 'planOptimizeOrder')}
+                          </button>
+                          <p className="plan-smart-schedule-hint">{t('home', 'planSmartScheduleHint')}</p>
+                        </>
                       )}
                       <div className="plan-day-slots">
                         {TIME_SLOTS.map((slot) => {
@@ -867,9 +1306,29 @@ export default function Plan() {
                             <div key={slot} className="plan-day-slot">
                               <span className="plan-day-slot-label">{timeSlotLabel(slot)}</span>
                               <ul className="plan-day-places">
-                                {items.map(({ placeId, name }) => (
+                                {items.map(({ placeId, name, slot: slotRow }) => (
                                   <li key={placeId} className="plan-day-place">
-                                    <Link to={`/place/${placeId}`} className="plan-day-place-link">{name || placeId}</Link>
+                                    <div className="plan-day-place-main">
+                                      <Link to={`/place/${placeId}`} className="plan-day-place-link">{name || placeId}</Link>
+                                      <div className="plan-slot-times">
+                                        <label className="plan-time-field">
+                                          <span className="plan-time-field-label">{t('home', 'tripSlotStart')}</span>
+                                          <input
+                                            type="time"
+                                            value={(slotRow.startTime && String(slotRow.startTime).slice(0, 5)) || ''}
+                                            onChange={(e) => updateSlotTime(i, placeId, 'startTime', e.target.value ? `${e.target.value}:00` : '')}
+                                          />
+                                        </label>
+                                        <label className="plan-time-field">
+                                          <span className="plan-time-field-label">{t('home', 'tripSlotEnd')}</span>
+                                          <input
+                                            type="time"
+                                            value={(slotRow.endTime && String(slotRow.endTime).slice(0, 5)) || ''}
+                                            onChange={(e) => updateSlotTime(i, placeId, 'endTime', e.target.value ? `${e.target.value}:00` : '')}
+                                          />
+                                        </label>
+                                      </div>
+                                    </div>
                                     <button
                                       type="button"
                                       className="plan-day-place-remove"
@@ -885,13 +1344,15 @@ export default function Plan() {
                           );
                         })}
                       </div>
-                      {day.placeIds.length === 0 && (
+                      {nPlaces === 0 && (
                         <p className="plan-day-empty">{t('home', 'planDayEmpty')}</p>
                       )}
                     </div>
                   );
                 })}
               </div>
+              </div>
+              )}
               <div className="plan-builder-actions">
                 <button type="button" className="vd-btn vd-btn--primary" onClick={handleSaveTrip} disabled={saving}>
                   {saving ? t('home', 'loading') : t('home', 'saveTrip')}
@@ -899,8 +1360,19 @@ export default function Plan() {
                 <button type="button" className="vd-btn vd-btn--secondary" onClick={handleCancelEdit}>
                   {t('home', 'cancel')}
                 </button>
-                <button type="button" className="vd-btn plan-delete-btn" onClick={() => handleDeleteTrip(editingTripId)}>
-                  <Icon name="delete_outline" size={20} /> {t('home', 'deleteTrip')}
+                <button
+                  type="button"
+                  className="vd-btn plan-delete-btn plan-delete-btn--icon-only"
+                  onClick={() => handleDeleteTrip(editingTripId)}
+                  disabled={saving || deletingTripId === editingTripId}
+                  aria-busy={deletingTripId === editingTripId}
+                  aria-label={
+                    deletingTripId === editingTripId
+                      ? t('home', 'loading')
+                      : t('home', 'deleteTrip')
+                  }
+                >
+                  <Icon name="delete" size={22} ariaHidden />
                 </button>
               </div>
             </section>
@@ -911,12 +1383,151 @@ export default function Plan() {
             <section id="plan" style={{ scrollMarginTop: '100px' }}>
               <div className="plan-section-head">
                 <h2 className="plan-section-title">{t('nav', 'myTrips')}</h2>
-                {!showCreateForm && (
-                  <button type="button" className="plan-btn-create" onClick={() => setShowCreateForm(true)}>
-                    <Icon name="add" size={24} /> {t('home', 'createTrip')}
-                  </button>
-                )}
+                <div className="plan-section-head-actions">
+                  <Link to="/plan/ai" className="plan-btn-ai">
+                    <Icon name="auto_awesome" size={22} /> {t('nav', 'aiPlanBannerCta')}
+                  </Link>
+                  {!showCreateForm && (
+                    <button
+                      type="button"
+                      className="plan-btn-create"
+                      onClick={() => {
+                        setShowCreateForm(true);
+                        showToast(t('home', 'planToastNewTripForm'), 'info');
+                      }}
+                    >
+                      <Icon name="add" size={24} /> {t('home', 'createTrip')}
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {trips.length > 0 && !showCreateForm && (
+                <div className="plan-trips-filters" aria-label={t('home', 'tripsFilterTitle')}>
+                  <div className="plan-trips-filters-toolbar">
+                    <p className="plan-trips-filters-results">
+                      {formatPlanToast(t('home', 'tripsFilterShowing'), {
+                        shown: filteredSortedTrips.length,
+                        total: trips.length,
+                      })}
+                    </p>
+                    <div className="plan-trips-filters-toolbar-actions">
+                      {tripFiltersActive && (
+                        <button type="button" className="plan-trips-filter-clear vd-btn vd-btn--secondary" onClick={clearTripListFilters}>
+                          {t('home', 'tripsFilterClearAll')}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={`plan-trips-filters-toggle ${tripFiltersOpen ? 'plan-trips-filters-toggle--open' : ''}`}
+                        onClick={() => setTripFiltersOpen((o) => !o)}
+                        aria-expanded={tripFiltersOpen}
+                        aria-controls="plan-trips-filters-panel"
+                        id="plan-trips-filters-toggle"
+                      >
+                        <span>{tripFiltersOpen ? t('home', 'tripsFilterToggleHide') : t('home', 'tripsFilterToggleShow')}</span>
+                        <Icon name={tripFiltersOpen ? 'expand_less' : 'expand_more'} size={22} />
+                      </button>
+                    </div>
+                  </div>
+                  {tripFiltersOpen && (
+                    <div id="plan-trips-filters-panel" className="plan-trips-filters-panel" role="region" aria-labelledby="plan-trips-filters-toggle">
+                      <div className="plan-trips-filter-search" role="search">
+                        <Icon name="search" size={22} className="plan-trips-filter-search-icon" aria-hidden />
+                        <input
+                          type="search"
+                          className="plan-trips-filter-search-input"
+                          value={tripListSearch}
+                          onChange={(e) => setTripListSearch(e.target.value)}
+                          placeholder={t('home', 'tripsFilterSearchPlaceholder')}
+                          aria-label={t('home', 'tripsFilterSearchLabel')}
+                        />
+                      </div>
+                      <div className="plan-trips-filter-group">
+                        <span className="plan-trips-filter-label">{t('home', 'tripsFilterWhenLabel')}</span>
+                        <div className="plan-trips-filter-dates">
+                          <label className="plan-trips-filter-date">
+                            <input
+                              type="date"
+                              value={tripFilterFrom}
+                              onChange={(e) => setTripFilterFrom(e.target.value)}
+                              aria-label={t('home', 'tripsFilterFrom')}
+                            />
+                          </label>
+                          <span className="plan-trips-filter-date-sep" aria-hidden>–</span>
+                          <label className="plan-trips-filter-date">
+                            <input
+                              type="date"
+                              value={tripFilterTo}
+                              onChange={(e) => setTripFilterTo(e.target.value)}
+                              aria-label={t('home', 'tripsFilterTo')}
+                            />
+                          </label>
+                        </div>
+                        <div className="plan-trips-filter-quick-chips" role="group" aria-label={t('home', 'tripsFilterQuickPresets')}>
+                          <button type="button" className="plan-quick-date-chip" onClick={() => applyTripFilterDatePreset('this_month')}>
+                            {t('home', 'tripsFilterPresetThisMonth')}
+                          </button>
+                          <button type="button" className="plan-quick-date-chip" onClick={() => applyTripFilterDatePreset('next_month')}>
+                            {t('home', 'tripsFilterPresetNextMonth')}
+                          </button>
+                          <button type="button" className="plan-quick-date-chip" onClick={() => applyTripFilterDatePreset('next_30')}>
+                            {t('home', 'tripsFilterPresetNext30')}
+                          </button>
+                          {(tripFilterFrom || tripFilterTo) && (
+                            <button type="button" className="plan-quick-date-chip plan-quick-date-chip--ghost" onClick={() => applyTripFilterDatePreset('clear')}>
+                              {t('home', 'tripsFilterClearDates')}
+                            </button>
+                          )}
+                        </div>
+                        <div className="plan-calendar-wrap plan-calendar-wrap--trips-filter">
+                          <DateRangeCalendar
+                            startDate={tripFilterFrom || undefined}
+                            endDate={tripFilterTo || undefined}
+                            onChange={(start, end) => {
+                              setTripFilterFrom(start);
+                              setTripFilterTo(end);
+                            }}
+                            showHint={false}
+                          />
+                        </div>
+                      </div>
+                      <div className="plan-trips-filter-group">
+                        <span className="plan-trips-filter-label">{t('home', 'tripsFilterPhaseLabel')}</span>
+                        <div className="plan-trips-filter-pills" role="group">
+                          {(['all', 'upcoming', 'ongoing', 'past']).map((key) => (
+                            <button
+                              key={key}
+                              type="button"
+                              className={`plan-trips-filter-pill ${tripFilterPhase === key ? 'plan-trips-filter-pill--active' : ''}`}
+                              onClick={() => setTripFilterPhase(key)}
+                              aria-pressed={tripFilterPhase === key}
+                            >
+                              {t('home', key === 'all' ? 'tripsFilterPhaseAll' : key === 'upcoming' ? 'tripsFilterPhaseUpcoming' : key === 'ongoing' ? 'tripsFilterPhaseOngoing' : 'tripsFilterPhasePast')}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="plan-trips-filter-group">
+                        <span className="plan-trips-filter-label">{t('home', 'tripsFilterStopsLabel')}</span>
+                        <div className="plan-trips-filter-pills" role="group">
+                          {(['any', 'with', 'without']).map((key) => (
+                            <button
+                              key={key}
+                              type="button"
+                              className={`plan-trips-filter-pill ${tripFilterStops === key ? 'plan-trips-filter-pill--active' : ''}`}
+                              onClick={() => setTripFilterStops(key)}
+                              aria-pressed={tripFilterStops === key}
+                            >
+                              {t('home', key === 'any' ? 'tripsFilterStopsAny' : key === 'with' ? 'tripsFilterStopsWith' : 'tripsFilterStopsWithout')}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {trips.length === 0 && !showCreateForm && (
                 <div className="plan-empty">
@@ -940,8 +1551,18 @@ export default function Plan() {
                   <h3 className="plan-form-title">{t('home', 'createTrip')}</h3>
                   <label>
                     <span className="plan-label">{t('home', 'tripName')}</span>
-                    <input type="text" value={createName} onChange={(e) => setCreateName(e.target.value)} maxLength={200} placeholder={t('home', 'tripNamePlaceholder')} className="plan-input" required />
+                    <input type="text" value={createName} onChange={(e) => { setCreateName(e.target.value); setNameError(''); }} maxLength={200} placeholder={t('home', 'tripNamePlaceholder')} className="plan-input" aria-invalid={!!nameError} />
                   </label>
+                  {nameError && <p className="plan-name-error" role="alert">{nameError}</p>}
+                  <label>
+                    <span className="plan-label">{t('home', 'tripNotesOptional')}</span>
+                    <textarea value={createDescription} onChange={(e) => setCreateDescription(e.target.value)} className="plan-input plan-input--textarea" rows={3} maxLength={10000} placeholder={t('home', 'tripNotesPlaceholder')} />
+                  </label>
+                  <div className="plan-quick-dates plan-quick-dates--create" role="group" aria-label={t('home', 'planQuickDates')}>
+                    <button type="button" className="plan-quick-date-chip" onClick={() => applyCreateQuickPreset('today')}>{t('home', 'planQuickToday')}</button>
+                    <button type="button" className="plan-quick-date-chip" onClick={() => applyCreateQuickPreset('weekend')}>{t('home', 'planQuickWeekend')}</button>
+                    <button type="button" className="plan-quick-date-chip" onClick={() => applyCreateQuickPreset('week')}>{t('home', 'planQuickWeek')}</button>
+                  </div>
                   <div className="plan-create-dates">
                     <label>
                       <span className="plan-label">{t('home', 'startDate')}</span>
@@ -957,7 +1578,7 @@ export default function Plan() {
                     <DateRangeCalendar
                       startDate={createStart || undefined}
                       endDate={createEnd || undefined}
-                      onChange={(start, end) => { setCreateStart(start); setCreateEnd(end); setDateError(null); }}
+                      onChange={onCreateCalendarRangeChange}
                       hintStart={t('home', 'selectStartDate')}
                       hintEnd={t('home', 'selectEndDate')}
                     />
@@ -973,15 +1594,23 @@ export default function Plan() {
                 </form>
               )}
 
-              {trips.length > 0 && !showCreateForm && (
+              {trips.length > 0 && !showCreateForm && filteredSortedTrips.length === 0 && (
+                <p className="plan-trips-filter-empty" role="status">
+                  {t('home', 'tripsFilterNoResults')}
+                </p>
+              )}
+
+              {trips.length > 0 && !showCreateForm && filteredSortedTrips.length > 0 && (
                 <ul className="plan-trips-grid">
-                  {trips.map((tr) => {
-                    const totalPlaces = Array.isArray(tr.days) ? tr.days.reduce((acc, d) => acc + (d?.placeIds?.length || 0), 0) : 0;
-                    const numDays = Array.isArray(tr.days) ? tr.days.length : 0;
+                  {filteredSortedTrips.map((tr) => {
+                    const totalPlaces = Array.isArray(tr.days)
+                      ? tr.days.reduce((acc, d) => acc + placeIdsFromDay(d).length, 0)
+                      : 0;
+                    const numDays = getDayCount(tr.startDate, tr.endDate);
                     const hasPlaces = totalPlaces > 0;
                     return (
                       <li key={tr.id} className="plan-trip-card">
-                        <button type="button" className="plan-trip-card-inner" onClick={() => setEditingTripId(tr.id)}>
+                        <button type="button" className="plan-trip-card-inner" onClick={() => navigate(`/trips/${encodeURIComponent(tr.id)}`)}>
                           <h3>{tr.name || t('home', 'planTitle')}</h3>
                           {tr.description && <p className="plan-trip-desc">{tr.description}</p>}
                           <div className="plan-trip-stats">
@@ -1005,6 +1634,21 @@ export default function Plan() {
                           </button>
                           <button type="button" className="plan-trip-card-btn" onClick={(e) => { e.stopPropagation(); handleDuplicateTrip(tr); }} disabled={duplicatingId === tr.id}>
                             <Icon name="content_copy" size={18} /> {t('home', 'duplicate')}
+                          </button>
+                          <button
+                            type="button"
+                            className="plan-trip-card-btn plan-trip-card-btn--danger plan-trip-card-btn--icon-only"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTrip(tr.id);
+                            }}
+                            disabled={deletingTripId === tr.id || duplicatingId === tr.id}
+                            aria-busy={deletingTripId === tr.id}
+                            aria-label={
+                              deletingTripId === tr.id ? t('home', 'loading') : t('home', 'deleteTrip')
+                            }
+                          >
+                            <Icon name="delete" size={20} ariaHidden />
                           </button>
                         </div>
                       </li>

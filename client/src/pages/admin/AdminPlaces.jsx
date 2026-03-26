@@ -61,6 +61,43 @@ function PlaceFormModal({ place, onClose, onSaved }) {
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [categoryCustom, setCategoryCustom] = useState(false);
+  const [modReviews, setModReviews] = useState([]);
+  const [modReviewsLoading, setModReviewsLoading] = useState(false);
+  const [modReviewsErr, setModReviewsErr] = useState(null);
+
+  const refreshModReviews = useCallback(async () => {
+    if (!place?.id) return;
+    const r = await api.admin.places.reviews(place.id);
+    setModReviews(Array.isArray(r.reviews) ? r.reviews : []);
+  }, [place?.id]);
+
+  useEffect(() => {
+    if (!place?.id) {
+      setModReviews([]);
+      setModReviewsErr(null);
+      return;
+    }
+    let cancelled = false;
+    setModReviewsLoading(true);
+    setModReviewsErr(null);
+    api.admin.places
+      .reviews(place.id)
+      .then((r) => {
+        if (!cancelled) setModReviews(Array.isArray(r.reviews) ? r.reviews : []);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setModReviewsErr(e.message || 'Failed to load member reviews');
+          setModReviews([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setModReviewsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [place?.id]);
 
   useEffect(() => {
     api.categories.list().then((r) => {
@@ -338,6 +375,74 @@ function PlaceFormModal({ place, onClose, onSaved }) {
                 </div>
               </div>
             </div>
+
+            {place && (
+              <div className="admin-form-section">
+                <div className="admin-form-section-title">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                  Member reviews (moderation)
+                </div>
+                <p className="admin-form-hint">
+                  Hide from the public place page, restore, or delete. Visit Tripoli members can still edit or delete their own reviews when visible.
+                </p>
+                {modReviewsErr && <div className="admin-error">{modReviewsErr}</div>}
+                {modReviewsLoading && <p className="admin-form-hint">Loading reviews…</p>}
+                {!modReviewsLoading && modReviews.length === 0 && (
+                  <p className="admin-form-hint">No member reviews for this place yet.</p>
+                )}
+                {modReviews.length > 0 && (
+                  <ul className="admin-place-reviews-list">
+                    {modReviews.map((rv) => (
+                      <li key={rv.id} className="admin-place-reviews-item">
+                        <div className="admin-place-reviews-meta">
+                          <strong>{rv.authorName}</strong>
+                          {rv.authorEmail ? (
+                            <span className="admin-place-reviews-email">{rv.authorEmail}</span>
+                          ) : null}
+                          <span className="admin-place-reviews-stars">{rv.rating}★</span>
+                          {rv.hidden ? <span className="admin-badge admin-badge--gray">Hidden</span> : null}
+                        </div>
+                        {rv.title ? <div className="admin-place-reviews-title">{rv.title}</div> : null}
+                        {rv.review ? <p className="admin-place-reviews-body">{rv.review}</p> : null}
+                        <div className="admin-place-reviews-actions">
+                          <button
+                            type="button"
+                            className="admin-btn admin-btn--sm admin-btn--secondary"
+                            onClick={async () => {
+                              try {
+                                setModReviewsErr(null);
+                                await api.places.patchReview(place.id, rv.id, { hidden: !rv.hidden });
+                                await refreshModReviews();
+                              } catch (e) {
+                                setModReviewsErr(e.message || 'Update failed');
+                              }
+                            }}
+                          >
+                            {rv.hidden ? 'Restore on public page' : 'Hide from public page'}
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-btn admin-btn--sm admin-btn--secondary"
+                            onClick={async () => {
+                              if (!window.confirm('Permanently delete this review?')) return;
+                              try {
+                                setModReviewsErr(null);
+                                await api.places.deleteReview(place.id, rv.id);
+                                await refreshModReviews();
+                              } catch (e) {
+                                setModReviewsErr(e.message || 'Delete failed');
+                              }
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             <div className="admin-form-section">
               <div className="admin-form-section-title">

@@ -2,6 +2,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .skip-to-main {
@@ -33,6 +34,44 @@
 }
 
 /* AI plan banner – remind users to download app */
+.site-settings-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1.25rem;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.site-settings-banner-text {
+  margin: 0;
+  text-align: center;
+}
+
+.site-settings-banner--maintenance {
+  background: #fef3c7;
+  color: #92400e;
+  border-bottom: 1px solid #fcd34d;
+}
+
+.site-settings-banner--announcement {
+  background: #e0f2fe;
+  color: #0c4a6e;
+  border-bottom: 1px solid #7dd3fc;
+}
+
+.site-settings-banner-link {
+  font-weight: 700;
+  color: inherit;
+  text-decoration: underline;
+}
+
+.site-settings-banner-link:hover {
+  text-decoration: none;
+}
+
 .ai-plan-banner {
   display: flex;
   align-items: center;
@@ -115,14 +154,68 @@
   min-height: 48px;
 }
 
-/* Row 2: favourites, search, profile/sign in/sign up */
+/* Row 2: global search (desktop), favourites, profile/sign in/sign up */
 .header-row--secondary {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px 16px;
+  gap: 12px 16px;
+  flex-wrap: wrap;
   padding-top: 4px;
   border-top: 1px solid var(--color-border);
+}
+
+.header-search-slot--desktop {
+  flex: 1;
+  min-width: 200px;
+  max-width: min(420px, 100%);
+  margin-inline-end: auto;
+}
+
+.header-row--secondary-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-width: 0;
+}
+
+@media (max-width: 1199px) {
+  .header-search-slot--desktop {
+    display: none;
+  }
+}
+
+button.nav-icon {
+  font: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.header-search-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 115;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.header-search-mobile-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 116;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) var(--page-padding) 14px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 8px 28px rgba(28, 25, 23, 0.12);
+}
+
+.header-drawer__search {
+  padding: 0 var(--page-padding) 16px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 /* Logo – Visit Dubai style (wordmark + tagline + chevron) */
@@ -145,6 +238,38 @@
   gap: 4px 6px;
 }
 
+/* Cedar emblem + wordmark on one row (LTR: icon left; RTL: icon right — first flex item follows inline-start) */
+.logo-stack {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+}
+
+.logo-stack .logo-mark {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-stack .header-emblem-icon {
+  display: block;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.logo-stack .logo {
+  min-width: 0;
+}
+
+.logo-stack--drawer .header-emblem-icon {
+  width: 44px;
+  height: 44px;
+}
+
 .header--vd .logo {
   font-family: var(--font-serif);
   font-weight: 700;
@@ -156,10 +281,29 @@
 }
 
 .header--vd .logo-tagline {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--color-text-tertiary);
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
+}
+
+/* Short i18n line under wordmark — smaller, lighter than main title */
+.header--vd .logo-tagline--brand {
+  flex-basis: 100%;
+  width: 100%;
+  margin-top: 1px;
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  opacity: 0.9;
+}
+
+[dir='rtl'] .header--vd .logo-tagline--brand {
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 .logo-chevron {
@@ -183,7 +327,8 @@
 .nav--vd.nav--main {
   display: flex;
   align-items: center;
-  gap: 2px 0;
+  /* Explicit column gap so spacing matches between every item (links + mega menu wrap). */
+  gap: 2px 8px;
   flex-wrap: nowrap;
   flex: 1;
   min-width: 0;
@@ -256,7 +401,9 @@
 }
 
 .nav-dropdown-trigger {
-  background: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
   border: none;
   cursor: pointer;
   font: inherit;
@@ -269,6 +416,17 @@
   font-weight: 500;
   color: var(--color-text-primary);
   transition: background var(--duration-fast), color var(--duration-fast);
+}
+
+/* Desktop primary row: match plain nav links (no system button grey, no chevron). */
+.nav--vd.nav--main:not(.nav--drawer) .nav-dropdown-trigger {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+.nav--vd.nav--main:not(.nav--drawer) .nav-dropdown-trigger .nav-chevron {
+  display: none;
 }
 
 .nav-dropdown-trigger:hover {
@@ -299,7 +457,9 @@
 .nav-dropdown-menu {
   position: absolute;
   top: calc(100% + 8px);
-  left: 0;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
   min-width: 200px;
   margin: 0;
   padding: 8px 0;
@@ -312,8 +472,9 @@
 }
 
 [dir="rtl"] .nav-dropdown-menu {
-  left: auto;
-  right: 0;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
 }
 
 .nav-dropdown-item {
@@ -340,6 +501,9 @@
 /* Mega menu – Dubai-style multi-column panel */
 .nav-mega-wrap {
   position: static;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
 }
 
 .nav-mega-panel {
@@ -418,7 +582,7 @@
   font-weight: 400;
 }
 
-/* Language + emblem (row 1 right) */
+/* Language switcher (row 1 right) */
 .header-meta {
   display: flex;
   align-items: center;
@@ -427,6 +591,15 @@
   margin-left: 8px;
   padding-left: 12px;
   border-left: 1px solid var(--color-border);
+}
+
+[dir="rtl"] .header-meta {
+  margin-left: 0;
+  margin-right: 8px;
+  padding-left: 0;
+  padding-right: 12px;
+  border-left: none;
+  border-right: 1px solid var(--color-border);
 }
 
 /* Nav icons – elegant pill hover (no circle) */
@@ -527,8 +700,10 @@
 .nav-lang-dropdown {
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
-  min-width: 140px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  min-width: 160px;
   margin: 0;
   padding: 6px 0;
   list-style: none;
@@ -536,12 +711,13 @@
   border: 1px solid var(--color-border);
   border-radius: 12px;
   box-shadow: var(--shadow-card-hover);
-  z-index: 110;
+  z-index: 120;
 }
 
 [dir="rtl"] .nav-lang-dropdown {
+  left: 50%;
   right: auto;
-  left: 0;
+  transform: translateX(-50%);
 }
 
 .nav-lang-option {
@@ -570,18 +746,9 @@
   background: rgba(15, 118, 110, 0.08);
 }
 
-/* Official emblem – Tripoli Lebanon icon (local) */
-.header-emblem {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
+/* Emblem image (inside .logo-mark, inline with wordmark) */
 .header-emblem-icon {
   display: block;
-  width: 40px;
-  height: 40px;
   object-fit: contain;
 }
 
@@ -672,10 +839,35 @@
   padding: 0;
 }
 
+/* Map route: fill space below header/banners without double 100vh scroll (mobile). */
+.main--map {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .main--contained {
-  max-width: 1200px;
+  width: 100%;
+  max-width: var(--main-content-max, 1200px);
   margin: 0 auto;
-  padding: var(--page-padding);
+  padding: var(--main-content-padding-y, var(--page-padding)) var(--page-padding)
+    clamp(28px, 4vw, 56px);
+  box-sizing: border-box;
+}
+
+@media (max-width: 479px) {
+  .main--contained {
+    padding-left: max(var(--page-padding), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--page-padding), env(safe-area-inset-right, 0px));
+  }
+}
+
+@media (min-width: 1440px) {
+  .main--contained {
+    padding-left: max(var(--page-padding), 40px);
+    padding-right: max(var(--page-padding), 40px);
+  }
 }
 
 /* Desktop: hide mobile drawer */
@@ -683,8 +875,11 @@
   display: none;
 }
 
-/* Mobile: hamburger left, logo center, icons right; drawer = header + nav + footer */
-@media (max-width: 767px) {
+/*
+ * Tablet + small laptop: use hamburger + drawer (same as phone).
+ * Full horizontal nav only from 1200px up — avoids nav overlapping logo/tagline at 768–1199px.
+ */
+@media (max-width: 1199px) {
   .header-inner {
     padding: 10px var(--page-padding) 10px;
   }
@@ -797,14 +992,18 @@
   .header-drawer__brand {
     display: flex;
     align-items: center;
-    gap: 10px;
     flex-shrink: 0;
+    min-width: 0;
   }
-  .header-drawer__emblem {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
+
+  .header-drawer__brand-lockup {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    min-width: 0;
   }
+
   .header-drawer__title {
     font-family: var(--font-serif);
     font-weight: 700;
@@ -815,7 +1014,19 @@
     font-size: 12px;
     font-weight: 500;
     color: var(--color-text-tertiary);
-    margin-left: 2px;
+    line-height: 1.35;
+  }
+
+  .header-drawer__subtitle--brand {
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  [dir='rtl'] .header-drawer__subtitle--brand {
+    letter-spacing: 0.02em;
+    text-transform: none;
   }
 
   .header-drawer .nav--main.nav--drawer {
@@ -895,12 +1106,42 @@
   .nav-lang-wrap--drawer {
     position: relative;
   }
+
+  /*
+   * Phone / drawer: anchor language list to the viewport so it isn’t clipped by
+   * overflow or misaligned next to wrapped footer chips — centered, thumb-friendly sheet.
+   */
   .nav-lang-dropdown--drawer {
-    position: absolute;
-    bottom: 100%;
-    left: 0;
-    margin-bottom: 4px;
-    min-width: 140px;
+    position: fixed;
+    left: 50%;
+    right: auto;
+    top: auto;
+    bottom: max(16px, calc(12px + env(safe-area-inset-bottom, 0px)));
+    transform: translateX(-50%);
+    width: min(300px, calc(100vw - 32px));
+    min-width: 0;
+    max-width: calc(100vw - 24px);
+    margin: 0;
+    padding: 10px 0;
+    z-index: 200;
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.16),
+      0 4px 12px rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+  }
+
+  .nav-lang-dropdown--drawer .nav-lang-option {
+    text-align: center;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 20px;
+    font-size: 16px;
+    border-radius: 10px;
+    margin: 2px 8px;
+    width: calc(100% - 16px);
+    box-sizing: border-box;
   }
 
   .nav-overlay {
@@ -952,8 +1193,14 @@
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1200px) {
   .nav-overlay {
-    display: none;
+    display: none !important;
+  }
+
+  /* Keep primary nav on one line so flex gap reads evenly (no tall wrapped pill). */
+  .nav--vd.nav--main > .nav-link,
+  .nav--vd.nav--main .nav-dropdown-trigger {
+    white-space: nowrap;
   }
 }

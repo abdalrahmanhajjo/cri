@@ -2,6 +2,7 @@ const express = require('express');
 const { query } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 const { parsePlaceId } = require('../utils/validate');
+const { sendDbAwareError } = require('../utils/dbHttpError');
 
 const router = express.Router();
 
@@ -54,7 +55,7 @@ router.get('/', async (req, res) => {
     res.json({ featured: result.rows.map(rowToTour) });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch tours', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+    sendDbAwareError(res, err, 'Failed to fetch tours');
   }
 });
 
@@ -84,7 +85,7 @@ router.get('/:id', async (req, res) => {
     res.json(rowToTour(result.rows[0]));
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch tour' });
+    sendDbAwareError(res, err, 'Failed to fetch tour');
   }
 });
 

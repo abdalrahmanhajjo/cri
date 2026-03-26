@@ -29,8 +29,21 @@
 }
 
 .trip-item {
-  padding: clamp(16px, 4vw, 20px);
+  padding: 0;
   min-width: 0;
+}
+
+.trip-item-link {
+  display: block;
+  padding: clamp(16px, 4vw, 20px);
+  text-decoration: none;
+  color: inherit;
+  border-radius: inherit;
+  transition: background var(--duration-fast, 0.15s);
+}
+
+.trip-item-link:hover {
+  background: rgba(15, 118, 110, 0.06);
 }
 
 .trip-item h3 {

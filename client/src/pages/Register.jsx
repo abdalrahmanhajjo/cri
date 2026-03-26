@@ -6,16 +6,23 @@ import {
   checkPasswordRequirements,
   PASSWORD_REQUIREMENTS,
 } from '../utils/passwordRequirements';
+import {
+  checkUsernameRequirements,
+  USERNAME_REQUIREMENTS,
+} from '../utils/usernameRequirements';
 import './Auth.css';
 
 export default function Register() {
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
+  /** After register when API did not send email (no SMTP) — show instructions before home */
+  const [smtpNotice, setSmtpNotice] = useState(false);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -24,16 +31,25 @@ export default function Register() {
     () => checkPasswordRequirements(password),
     [password]
   );
+  const usernameReqs = useMemo(
+    () => checkUsernameRequirements(username),
+    [username]
+  );
   const passwordsMatch =
     password.length > 0 && confirmPassword.length > 0 && password === confirmPassword;
   const confirmMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
   const canSubmit =
     name.trim() &&
+    username.trim() &&
     email.trim() &&
     password &&
     confirmPassword &&
     passwordsMatch &&
+    usernameReqs.minLength &&
+    usernameReqs.maxLength &&
+    usernameReqs.format &&
+    usernameReqs.notReserved &&
     requirements.minLength &&
     requirements.uppercase &&
     requirements.lowercase &&
@@ -47,7 +63,16 @@ export default function Register() {
     if (!canSubmit) return;
     setLoading(true);
     try {
-      await register(name.trim() || undefined, email.trim(), password);
+      const result = await register(
+        name.trim() || undefined,
+        username.trim(),
+        email.trim(),
+        password
+      );
+      if (result?.verificationEmailDelivered === false) {
+        setSmtpNotice(true);
+        return;
+      }
       navigate('/', { replace: true });
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
@@ -68,6 +93,32 @@ export default function Register() {
         </div>
 
         <div className="auth-card card">
+          {smtpNotice ? (
+            <>
+              <h2 className="auth-title">Account created</h2>
+              <div className="auth-error auth-error--info" role="status">
+                We could not send a verification email. Ask your administrator to configure outgoing mail (SMTP) in
+                the API <code className="auth-code-inline">.env</code>, or check the server log for your 6-digit code.
+              </div>
+              <p className="auth-error-help" style={{ marginTop: 14 }}>
+                Already have a code?{' '}
+                <Link
+                  to={`/verify-email?email=${encodeURIComponent(email.trim())}`}
+                  className="auth-error-help-link"
+                >
+                  Verify your email
+                </Link>
+              </p>
+              <button
+                type="button"
+                className="btn-primary auth-submit"
+                onClick={() => navigate('/', { replace: true })}
+              >
+                Continue to Tripoli
+              </button>
+            </>
+          ) : (
+            <>
           <h2 className="auth-title">Sign up</h2>
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
             {error && (
@@ -95,6 +146,47 @@ export default function Register() {
                   aria-describedby={error ? 'register-error' : undefined}
                   disabled={loading}
                 />
+              </div>
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="register-username" className="auth-label">
+                Username
+              </label>
+              <div className="auth-input-wrap">
+                <Icon name="alternate_email" className="auth-input-icon" size={22} />
+                <input
+                  id="register-username"
+                  type="text"
+                  className={`auth-input ${error ? 'auth-input--error' : ''}`}
+                  placeholder="your_handle"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  aria-invalid={!!error}
+                  aria-describedby={
+                    error ? 'register-username-requirements register-error' : 'register-username-requirements'
+                  }
+                  disabled={loading}
+                />
+              </div>
+              <div id="register-username-requirements" className="auth-requirements" aria-live="polite">
+                <p className="auth-requirements-title">Username must:</p>
+                {USERNAME_REQUIREMENTS.map(({ key, label }) => (
+                  <p
+                    key={key}
+                    className={`auth-requirement ${usernameReqs[key] ? 'auth-requirement--met' : ''}`}
+                  >
+                    <Icon
+                      name={usernameReqs[key] ? 'check_circle' : 'radio_button_unchecked'}
+                      className="auth-requirement-icon"
+                      size={16}
+                    />
+                    {label}
+                  </p>
+                ))}
               </div>
             </div>
 
@@ -228,6 +320,8 @@ export default function Register() {
           <p className="auth-footer">
             Already have an account? <Link to="/login">Log in</Link>
           </p>
+            </>
+          )}
         </div>
 
         <div className="auth-secure-note" role="status">

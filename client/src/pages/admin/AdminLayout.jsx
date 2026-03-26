@@ -5,11 +5,15 @@ import './Admin.css';
 
 const navItems = [
   { to: '/admin', end: true, icon: 'dashboard', label: 'Dashboard' },
-  { to: '/admin/content', end: false, icon: 'content', label: 'Content' },
   { to: '/admin/places', end: false, icon: 'place', label: 'Places' },
   { to: '/admin/categories', end: false, icon: 'category', label: 'Categories' },
+  { to: '/admin/interests', end: false, icon: 'interest', label: 'Interests' },
   { to: '/admin/experiences', end: false, icon: 'tour', label: 'Experiences' },
   { to: '/admin/events', end: false, icon: 'event', label: 'Events' },
+  { to: '/admin/feed', end: false, icon: 'feed', label: 'Feed' },
+  { to: '/admin/users', end: false, icon: 'users', label: 'Users' },
+  { to: '/admin/user-trips', end: false, icon: 'trips', label: 'User trips' },
+  { to: '/admin/place-owners', end: false, icon: 'owners', label: 'Place owners' },
   { to: '/admin/settings', end: false, icon: 'settings', label: 'Settings' },
 ];
 
@@ -61,6 +65,41 @@ function Icon({ name }) {
           <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
         </svg>
       );
+    case 'interest':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        </svg>
+      );
+    case 'feed':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16" />
+          <circle cx="5" cy="19" r="1" />
+        </svg>
+      );
+    case 'users':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      );
+    case 'trips':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <path d="M16 2v4M8 2v4M3 10h18" />
+        </svg>
+      );
+    case 'owners':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+      );
     case 'settings':
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -107,19 +146,28 @@ function AdminLayoutInner() {
     <div className="admin-root" dir="ltr" lang="en">
       <header className="admin-header">
         <div className="admin-header-left">
-          <Link to="/admin" className="admin-logo">Tripoli Explorer</Link>
+          <Link to="/admin" className="admin-logo">Visit Tripoli — Admin</Link>
           <nav className="admin-header-nav">
             <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')}>
               Overview
             </NavLink>
             <NavLink
               to="/admin/places"
-              className={['/admin/places', '/admin/categories', '/admin/experiences', '/admin/content'].includes(location.pathname) ? 'active' : ''}
+              className={['/admin/places', '/admin/categories', '/admin/interests', '/admin/experiences'].includes(location.pathname) ? 'active' : ''}
             >
-              Content
+              Catalogue
+            </NavLink>
+            <NavLink to="/admin/feed" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Feed
+            </NavLink>
+            <NavLink
+              to="/admin/users"
+              className={['/admin/users', '/admin/user-trips', '/admin/place-owners'].includes(location.pathname) ? 'active' : ''}
+            >
+              People
             </NavLink>
             <NavLink to="/admin/events" className={({ isActive }) => (isActive ? 'active' : '')}>
-              Reports
+              Events
             </NavLink>
             <NavLink to="/admin/settings" className={({ isActive }) => (isActive ? 'active' : '')}>
               Settings
@@ -150,7 +198,7 @@ function AdminLayoutInner() {
             <div className="admin-user-avatar">{initials}</div>
             <div className="admin-user-info">
               <span className="admin-user-name">{user?.name || user?.email || 'Admin'}</span>
-              <span className="admin-user-role">Admin</span>
+              <span className="admin-user-role">App &amp; web admin</span>
             </div>
           </div>
         </div>

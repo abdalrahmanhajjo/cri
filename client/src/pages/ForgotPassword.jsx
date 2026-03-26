@@ -13,11 +13,12 @@ export default function ForgotPassword() {
   const [step, setStep] = useState('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [devCode, setDevCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNew, setShowNew] = useState(false);
   const [error, setError] = useState('');
+  /** False when server did not confirm email delivery */
+  const [resetEmailDelivered, setResetEmailDelivered] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const passwordReqs = useMemo(() => checkPasswordRequirements(newPassword), [newPassword]);
@@ -34,12 +35,8 @@ export default function ForgotPassword() {
     try {
       const res = await api.auth.forgotPassword(trimmed);
       setEmail(trimmed);
-      if (res.devCode) {
-        setDevCode(res.devCode);
-        setCode(res.devCode);
-      } else {
-        setDevCode('');
-      }
+      setResetEmailDelivered(res.emailDelivered !== false);
+      setCode('');
       setStep('reset');
     } catch (err) {
       setError(err.message || 'Failed to send code. Try again.');
@@ -97,14 +94,17 @@ export default function ForgotPassword() {
             </div>
             <h1 className="auth-brand-title">Reset password</h1>
             <p className="auth-brand-sub">
-              {devCode ? 'Use the code below (email may not have arrived)' : `Enter the 6-digit code we sent to ${email}`}
+              {resetEmailDelivered
+                ? `Enter the 6-digit code we sent to ${email}`
+                : 'Email could not be sent from this server. If you are the site operator, check the API server log for the code; otherwise ask an administrator to configure SMTP.'}
             </p>
           </div>
           <div className="auth-card card">
-            {devCode && (
-              <p className="auth-dev-code" role="status">
-                Your code: <strong>{devCode}</strong>
-              </p>
+            {!resetEmailDelivered && (
+              <div className="auth-error auth-error--info" role="status">
+                We could not deliver the code to your inbox. The code is never shown on this page for security. Check
+                the API server log (development) or ask your administrator to configure outgoing mail (SMTP).
+              </div>
             )}
             <h2 className="auth-title">New password</h2>
             <form onSubmit={handleResetPassword} className="auth-form" noValidate>
@@ -117,7 +117,7 @@ export default function ForgotPassword() {
               <div className="auth-field">
                 <label htmlFor="forgot-code" className="auth-label">Code</label>
                 <div className="auth-input-wrap">
-                  <Icon name="pin" className="auth-input-icon" size={22} />
+                  <Icon name="confirmation_number" className="auth-input-icon" size={22} />
                   <input
                     id="forgot-code"
                     type="text"
@@ -212,7 +212,7 @@ export default function ForgotPassword() {
                 type="button"
                 className="auth-link"
                 style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit' }}
-                onClick={() => { setStep('email'); setError(''); setCode(''); setDevCode(''); setNewPassword(''); setConfirmPassword(''); }}
+                onClick={() => { setStep('email'); setError(''); setCode(''); setNewPassword(''); setConfirmPassword(''); }}
               >
                 ← Use a different email
               </button>

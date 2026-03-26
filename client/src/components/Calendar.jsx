@@ -15,7 +15,17 @@ function parseLocalDate(str) {
   return new Date(y, m - 1, d);
 }
 
-export function DateRangeCalendar({ startDate, endDate, onChange, minDate, maxDate, locale = 'en-GB', hintStart = 'Select start date', hintEnd = 'Select end date' }) {
+export function DateRangeCalendar({
+  startDate,
+  endDate,
+  onChange,
+  minDate,
+  maxDate,
+  locale = 'en-GB',
+  hintStart = 'Select start date',
+  hintEnd = 'Select end date',
+  showHint = true,
+}) {
   const today = new Date();
   const [viewMonth, setViewMonth] = useState(() => {
     const from = startDate ? parseLocalDate(startDate) : today;
@@ -132,9 +142,11 @@ export function DateRangeCalendar({ startDate, endDate, onChange, minDate, maxDa
           );
         })}
       </div>
-      <p className="calendar-hint" aria-live="polite">
-        {selecting === 'start' ? hintStart : hintEnd}
-      </p>
+      {showHint ? (
+        <p className="calendar-hint" aria-live="polite">
+          {selecting === 'start' ? hintStart : hintEnd}
+        </p>
+      ) : null}
     </div>
   );
 }

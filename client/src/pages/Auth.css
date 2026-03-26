@@ -86,13 +86,32 @@
 
 .auth-input {
   width: 100%;
-  padding: 12px 14px 12px 44px;
+  padding: 12px 14px;
+  padding-inline-start: 44px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-size: 16px;
   background: var(--color-surface);
   min-height: 48px;
   transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+/* Password row: leading icon + trailing visibility toggle */
+.auth-input-wrap:has(.auth-toggle-password) .auth-input {
+  padding-inline-end: 44px;
+}
+
+/*
+ * Email, passwords, OTP codes, and masked passwords (type=text + toggle) must stay LTR even when
+ * the page is Arabic — otherwise the bidirectional algorithm can scramble values and login fails.
+ */
+.auth-input[type="email"],
+.auth-input[type="password"],
+.auth-input[inputmode="numeric"],
+.auth-input-wrap:has(.auth-toggle-password) .auth-input {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: start;
 }
 
 .auth-input:focus {
@@ -115,7 +134,7 @@
 
 .auth-input-icon {
   position: absolute;
-  left: 14px;
+  inset-inline-start: 14px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-text-tertiary);
@@ -124,7 +143,7 @@
 
 .auth-toggle-password {
   position: absolute;
-  right: 12px;
+  inset-inline-end: 12px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
@@ -148,14 +167,39 @@
   border: 1px solid rgba(220, 38, 38, 0.2);
 }
 
-.auth-dev-code {
-  padding: 12px 14px;
+/* Email verification sent — same alert role, positive styling */
+.auth-error.auth-error--info {
   background: rgba(5, 150, 105, 0.08);
   color: var(--color-success);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  border: 1px solid rgba(5, 150, 105, 0.2);
-  margin-bottom: 16px;
+  border-color: rgba(5, 150, 105, 0.25);
+}
+
+.auth-error-help {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: inherit;
+  opacity: 0.95;
+}
+
+.auth-error-help-link {
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-error-help-link:hover {
+  color: var(--color-primary-dark);
+}
+
+.auth-code-inline {
+  font-size: 0.9em;
+  font-family: ui-monospace, Consolas, monospace;
+  background: var(--color-surface-variant);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .auth-actions {
@@ -211,6 +255,37 @@
 
 .auth-footer a {
   font-weight: 600;
+}
+
+.auth-verify-code-btn {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.auth-footer-note {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  line-height: 1.45;
+}
+
+.auth-footer-note a {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.auth-footer-note-path {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.auth-verify-lead {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
 }
 
 /* Password requirements (Register) */
@@ -273,9 +348,15 @@
     margin-bottom: 20px;
   }
   .auth-input {
-    padding-left: 40px;
+    padding-inline-start: 40px;
+  }
+  .auth-input-wrap:has(.auth-toggle-password) .auth-input {
+    padding-inline-end: 40px;
   }
   .auth-input-icon {
-    left: 12px;
+    inset-inline-start: 12px;
+  }
+  .auth-toggle-password {
+    inset-inline-end: 10px;
   }
 }

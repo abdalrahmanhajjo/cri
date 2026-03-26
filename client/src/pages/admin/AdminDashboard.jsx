@@ -15,7 +15,7 @@ function formatDate(str) {
 
 export default function AdminDashboard() {
   const [search, setSearch] = useState('');
-  const [stats, setStats] = useState({ places: 0, categories: 0, tours: 0, events: 0 });
+  const [stats, setStats] = useState({ places: 0, categories: 0, tours: 0, events: 0, users: 0, trips: 0, feedPosts: 0 });
   const [places, setPlaces] = useState([]);
   const [events, setEvents] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -28,22 +28,24 @@ export default function AdminDashboard() {
     setLoading(true);
     setError(null);
     Promise.all([
+      api.admin.stats().catch(() => ({})),
       api.places.list().then((r) => r.popular || r.locations || []),
       api.categories.list().then((r) => r.categories || []),
-      api.tours.list().then((r) => r.featured || []),
       api.events.list().then((r) => r.events || []),
     ])
-      .then(([pList, cList, tList, eList]) => {
+      .then(([st, pList, cList, eList]) => {
         if (cancelled) return;
         const placesArr = Array.isArray(pList) ? pList : [];
         const categoriesArr = Array.isArray(cList) ? cList : [];
-        const toursArr = Array.isArray(tList) ? tList : [];
         const eventsArr = Array.isArray(eList) ? eList : [];
         setStats({
-          places: placesArr.length,
-          categories: categoriesArr.length,
-          tours: toursArr.length,
-          events: eventsArr.length,
+          places: st.places != null ? st.places : placesArr.length,
+          categories: st.categories != null ? st.categories : categoriesArr.length,
+          tours: st.tours != null ? st.tours : 0,
+          events: st.events != null ? st.events : eventsArr.length,
+          users: st.users ?? 0,
+          trips: st.trips ?? 0,
+          feedPosts: st.feedPosts ?? 0,
         });
         setPlaces(placesArr.slice(0, 5));
         setEvents(eventsArr.slice(0, 5));
@@ -58,7 +60,7 @@ export default function AdminDashboard() {
     return () => { cancelled = true; };
   }, []);
 
-  const { places: placesNum, categories: categoriesNum, tours: toursNum, events: eventsNum } = stats;
+  const { places: placesNum, categories: categoriesNum, tours: toursNum, events: eventsNum, users: usersNum, trips: tripsNum, feedPosts: feedNum } = stats;
   const total = placesNum + categoriesNum + toursNum + eventsNum;
 
   const categoryCounts = categories.slice(0, 4).map((c) => ({
@@ -86,8 +88,8 @@ export default function AdminDashboard() {
     <div className="admin-main">
       <div className="admin-page-header">
         <div className="admin-page-title-wrap">
-          <p className="admin-subtitle">Manage and track your content</p>
-          <h1>Admin Dashboard</h1>
+          <p className="admin-subtitle">Website and mobile app — one database</p>
+          <h1>Admin dashboard</h1>
         </div>
         <div className="admin-search-wrap">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -300,7 +302,28 @@ export default function AdminDashboard() {
           <div className="admin-card-body">
             <div className="admin-stat-value">Aa</div>
             <div className="admin-stat-label">Content</div>
-            <Link to="/admin/content">Edit text →</Link>
+            <Link to="/admin/settings?tab=translations">Translations →</Link>
+          </div>
+        </div>
+        <div className="admin-card" style={{ gridColumn: 'span 2' }}>
+          <div className="admin-card-body">
+            <div className="admin-stat-value">{usersNum}</div>
+            <div className="admin-stat-label">Users</div>
+            <Link to="/admin/users">Manage →</Link>
+          </div>
+        </div>
+        <div className="admin-card" style={{ gridColumn: 'span 2' }}>
+          <div className="admin-card-body">
+            <div className="admin-stat-value">{tripsNum}</div>
+            <div className="admin-stat-label">Trips</div>
+            <Link to="/admin/user-trips">View →</Link>
+          </div>
+        </div>
+        <div className="admin-card" style={{ gridColumn: 'span 2' }}>
+          <div className="admin-card-body">
+            <div className="admin-stat-value">{feedNum}</div>
+            <div className="admin-stat-label">Feed posts</div>
+            <Link to="/admin/feed">Open →</Link>
           </div>
         </div>
         <div className="admin-card" style={{ gridColumn: 'span 2' }}>

@@ -6,6 +6,7 @@ const { validatePassword } = require('../utils/passwordValidator');
 
 const router = express.Router();
 router.use(authMiddleware);
+const { visitorFollowupsFromDb } = require('../utils/inquiryFollowups');
 
 function sanitizeProfileInput(body) {
   const out = {};
@@ -29,7 +30,14 @@ function sanitizeProfileInput(body) {
 router.get('/profile', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const userResult = await query('SELECT id, email, name, avatar_url, created_at FROM users WHERE id = $1', [userId]);
+    const userResult = await query(
+      `SELECT u.id, u.email, u.name, u.avatar_url, u.created_at,
+              COALESCE(u.is_admin, false) AS is_admin,
+              COALESCE(u.is_business_owner, false) AS is_business_owner,
+              (SELECT COUNT(*)::int FROM place_owners po WHERE po.user_id = u.id) AS owned_place_count
+       FROM users u WHERE u.id = $1`,
+      [userId]
+    );
     if (userResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
     const user = userResult.rows[0];
     const profileResult = await query('SELECT * FROM profiles WHERE user_id = $1', [userId]);
@@ -50,7 +58,10 @@ router.get('/profile', async (req, res) => {
       showTips: profile.show_tips ?? true,
       appRating: profile.app_rating ?? 0,
       onboardingCompleted: profile.onboarding_completed === true,
-      createdAt: user.created_at
+      createdAt: user.created_at,
+      isAdmin: user.is_admin === true,
+      isBusinessOwner: user.is_business_owner === true,
+      ownedPlaceCount: user.owned_place_count ?? 0,
     });
   } catch (err) {
     console.error(err);
@@ -80,7 +91,14 @@ router.patch('/profile', async (req, res) => {
         await query('INSERT INTO profiles (user_id, bio, city, analytics, show_tips) VALUES ($1, $2, $3, $4, $5)', [userId, bio, city, analytics, showTips]);
       }
     }
-    const userResult = await query('SELECT id, email, name, created_at FROM users WHERE id = $1', [userId]);
+    const userResult = await query(
+      `SELECT u.id, u.email, u.name, u.created_at,
+              COALESCE(u.is_admin, false) AS is_admin,
+              COALESCE(u.is_business_owner, false) AS is_business_owner,
+              (SELECT COUNT(*)::int FROM place_owners po WHERE po.user_id = u.id) AS owned_place_count
+       FROM users u WHERE u.id = $1`,
+      [userId]
+    );
     const profileResult = await query('SELECT bio, city, analytics, show_tips FROM profiles WHERE user_id = $1', [userId]);
     const user = userResult.rows[0];
     const profile = profileResult.rows[0] || {};
@@ -92,12 +110,69 @@ router.patch('/profile', async (req, res) => {
       bio: profile.bio || '',
       analytics: profile.analytics ?? true,
       showTips: profile.show_tips ?? true,
-      createdAt: user.created_at
+      createdAt: user.created_at,
+      isAdmin: user.is_admin === true,
+      isBusinessOwner: user.is_business_owner === true,
+      ownedPlaceCount: user.owned_place_count ?? 0,
     });
   } catch (err) {
     if (err.code === '42P01') return res.status(400).json({ error: 'Profile table not configured' });
     console.error(err);
     res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+/** Logged-in visitors: all place inquiry threads they started (user_id set on send). */
+router.get('/inquiries', async (req, res) => {
+  const userId = req.user.userId;
+  try {
+    let rows;
+    try {
+      ({ rows } = await query(
+        `SELECT i.id, i.place_id, i.message, i.status, i.response, i.responded_at, i.created_at,
+                p.name AS place_name,
+                COALESCE(i.visitor_followups, '[]'::jsonb) AS visitor_followups
+         FROM place_inquiries i
+         INNER JOIN places p ON p.id = i.place_id
+         WHERE i.user_id = $1
+         ORDER BY i.created_at DESC
+         LIMIT 300`,
+        [userId]
+      ));
+    } catch (e) {
+      if (e.code === '42703' && String(e.message || '').includes('visitor_followups')) {
+        ({ rows } = await query(
+          `SELECT i.id, i.place_id, i.message, i.status, i.response, i.responded_at, i.created_at,
+                  p.name AS place_name
+           FROM place_inquiries i
+           INNER JOIN places p ON p.id = i.place_id
+           WHERE i.user_id = $1
+           ORDER BY i.created_at DESC
+           LIMIT 300`,
+          [userId]
+        ));
+      } else {
+        throw e;
+      }
+    }
+    const inquiries = rows.map((r) => ({
+      id: r.id,
+      placeId: r.place_id,
+      placeName: r.place_name || String(r.place_id),
+      message: r.message || '',
+      status: r.status,
+      response: r.response || null,
+      respondedAt: r.responded_at || null,
+      createdAt: r.created_at,
+      visitorFollowups: visitorFollowupsFromDb(r.visitor_followups),
+    }));
+    res.json({ inquiries });
+  } catch (err) {
+    if (err.code === '42P01') {
+      return res.json({ inquiries: [] });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load messages' });
   }
 });
 

@@ -1,9 +1,9 @@
 -- Favourites (saved places) for logged-in users.
--- Run this against your database once, e.g. psql $DATABASE_URL -f server/migrations/001_user_favourites.sql
+-- Aligns with users(id) UUID and places(id) varchar. App primarily uses saved_places; this is optional/legacy.
 
 CREATE TABLE IF NOT EXISTS user_favourites (
-  user_id   INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  place_id INT NOT NULL,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  place_id VARCHAR(50) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY (user_id, place_id)
 );
