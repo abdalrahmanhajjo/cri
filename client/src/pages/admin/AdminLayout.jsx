@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, NavLink, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
@@ -123,6 +123,7 @@ function HeaderIcon({ children, title }) {
 function AdminLayoutInner() {
   const { user } = useAuth();
   const location = useLocation();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Admin is always English and LTR
   useEffect(() => {
@@ -142,10 +143,27 @@ function AdminLayoutInner() {
     .toUpperCase()
     .slice(0, 2);
 
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="admin-root" dir="ltr" lang="en">
       <header className="admin-header">
         <div className="admin-header-left">
+          <button
+            type="button"
+            className="admin-mobile-menu-btn"
+            aria-label="Open admin navigation"
+            aria-expanded={mobileNavOpen}
+            onClick={() => setMobileNavOpen(true)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
           <Link to="/admin" className="admin-logo">Visit Tripoli — Admin</Link>
           <nav className="admin-header-nav">
             <NavLink to="/admin" end className={({ isActive }) => (isActive ? 'active' : '')}>
@@ -212,6 +230,38 @@ function AdminLayoutInner() {
             </NavLink>
           ))}
         </aside>
+
+        {mobileNavOpen && (
+          <>
+            <button
+              type="button"
+              className="admin-mobile-backdrop"
+              aria-label="Close admin navigation"
+              onClick={() => setMobileNavOpen(false)}
+            />
+            <aside className="admin-mobile-drawer" aria-label="Admin navigation">
+              <div className="admin-mobile-drawer-head">
+                <strong>Admin navigation</strong>
+                <button
+                  type="button"
+                  className="admin-mobile-drawer-close"
+                  onClick={() => setMobileNavOpen(false)}
+                  aria-label="Close admin navigation"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="admin-mobile-drawer-body">
+                {navItems.map(({ to, end, icon, label }) => (
+                  <NavLink key={to} to={to} end={end} className={({ isActive }) => `admin-mobile-nav-link${isActive ? ' active' : ''}`}>
+                    <Icon name={icon} />
+                    <span>{label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </aside>
+          </>
+        )}
 
         <main className="admin-main">
           <Outlet />
