@@ -2,6 +2,10 @@
 .env
 *.env
 server/.env
+client/.env
+
+# Local DB dumps (large / may contain sensitive data)
+dump.sql
 
 # Dependencies
 node_modules

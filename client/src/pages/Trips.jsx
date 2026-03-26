@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
 import './Trips.css';
 
@@ -20,11 +21,13 @@ export default function Trips() {
         <ul className="trips-list">
           {trips.map((t) => (
           <li key={t.id} className="card trip-item">
-            <h3>{t.name || 'Trip'}</h3>
-            <p className="trip-meta">
-              {t.startDate && new Date(t.startDate).toLocaleDateString()} – {t.endDate && new Date(t.endDate).toLocaleDateString()}
-              {Array.isArray(t.days) && t.days.length > 0 && ` · ${t.days.length} day(s)`}
-            </p>
+            <Link to={`/trips/${encodeURIComponent(t.id)}`} className="trip-item-link">
+              <h3>{t.name || 'Trip'}</h3>
+              <p className="trip-meta">
+                {t.startDate && new Date(t.startDate).toLocaleDateString()} – {t.endDate && new Date(t.endDate).toLocaleDateString()}
+                {Array.isArray(t.days) && t.days.length > 0 && ` · ${t.days.length} day(s)`}
+              </p>
+            </Link>
           </li>
         ))}
         </ul>

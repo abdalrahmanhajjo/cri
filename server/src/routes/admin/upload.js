@@ -5,6 +5,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { authMiddleware } = require('../../middleware/auth');
+const { adminMiddleware } = require('../../middleware/admin');
 
 const router = express.Router();
 const BUCKET = 'place-images';
@@ -16,7 +17,7 @@ try {
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL?.trim();
-  const key = process.env.SUPABASE_SERVICE_KEY?.trim();
+  const key = (process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)?.trim();
   if (!url || !key) return null;
   try {
     return createClient(url, key);
@@ -54,7 +55,7 @@ const upload = multer({
   },
 });
 
-router.use(authMiddleware);
+router.use(authMiddleware, adminMiddleware);
 
 /** POST /api/admin/upload - try Supabase Storage, fallback to local */
 router.post('/', upload.single('file'), async (req, res) => {

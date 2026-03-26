@@ -5,11 +5,15 @@ import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { asyncPool } from '../utils/asyncPool';
+import { placeIdsFromDay, getDateForDayIndex } from '../utils/tripPlannerHelpers';
 import './Map.css';
 import './Explore.css';
 
-const TRIPOLI_CENTER = { lat: 34.4363, lng: 35.8363 };
+// Same reference as Flutter `lib/map/tripoli_geo.dart` + `map_constants.dart` (VisitTripoliApp)
+const TRIPOLI_CENTER = { lat: 34.43692, lng: 35.83846 };
 const DEFAULT_ZOOM = 14;
+const DETAIL_MAP_ZOOM = 15;
+const MAP_FIT_PADDING = 64;
 const PLACES_REGION = 'Tripoli, Lebanon';
 const GOOGLE_PLACES_CONCURRENCY = 3;
 const GOOGLE_PLACES_DELAY_MS = 200;
@@ -19,12 +23,25 @@ const MAP_TYPES = Object.freeze([
   { id: 'terrain', label: 'Terrain', icon: 'terrain' },
 ]);
 
+/** Car & walking only (matches product request; avoids transit/bike in web nav). */
 const TRAVEL_MODES = Object.freeze([
   { id: 'DRIVING', icon: 'directions_car', labelKey: 'travelModeCar' },
-  { id: 'TRANSIT', icon: 'directions_transit', labelKey: 'travelModeTransit' },
   { id: 'WALKING', icon: 'directions_walk', labelKey: 'travelModeWalk' },
-  { id: 'BICYCLING', icon: 'directions_bike', labelKey: 'travelModeBicycle' },
 ]);
+
+const LIVE_ROUTE_MIN_INTERVAL_MS = 22000;
+const LIVE_ROUTE_MIN_MOVE_M = 48;
+
+function haversineMeters(a, b) {
+  if (!a || !b || a.lat == null || b.lat == null) return 0;
+  const R = 6371000;
+  const φ1 = (Number(a.lat) * Math.PI) / 180;
+  const φ2 = (Number(b.lat) * Math.PI) / 180;
+  const Δφ = ((Number(b.lat) - Number(a.lat)) * Math.PI) / 180;
+  const Δλ = ((Number(b.lng) - Number(a.lng)) * Math.PI) / 180;
+  const x = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(Math.max(0, 1 - x)));
+}
 
 function stripHtml(html) {
   if (!html || typeof html !== 'string') return '';
@@ -49,11 +66,45 @@ function formatRouteDistance(meters) {
 }
 
 function getDateForDayLabel(startDate, dayIndex) {
-  if (!startDate || typeof startDate !== 'string') return '';
-  const d = new Date(String(startDate).slice(0, 10) + 'T12:00:00');
-  if (Number.isNaN(d.getTime())) return '';
-  d.setDate(d.getDate() + dayIndex);
-  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const ymd = getDateForDayIndex(startDate, dayIndex);
+  if (!ymd) return '';
+  const [y, m, d] = ymd.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  if (Number.isNaN(dt.getTime())) return '';
+  return dt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/**
+ * When driving with traffic, Directions may return several routes. Google Maps picks the
+ * best current-traffic option; put that route first so the polyline + legs match that choice.
+ */
+function reorderRoutesByFastestTraffic(directionsResult, isDriving) {
+  const routes = directionsResult?.routes;
+  if (!isDriving || !routes || routes.length <= 1) return directionsResult;
+
+  const routeTrafficSeconds = (route) => {
+    let total = 0;
+    for (const leg of route.legs || []) {
+      const v = leg.duration_in_traffic?.value ?? leg.duration?.value;
+      if (v != null && Number.isFinite(v)) total += v;
+    }
+    return total;
+  };
+
+  let bestIdx = 0;
+  let bestSecs = routeTrafficSeconds(routes[0]);
+  for (let i = 1; i < routes.length; i++) {
+    const secs = routeTrafficSeconds(routes[i]);
+    if (secs > 0 && (bestSecs <= 0 || secs < bestSecs)) {
+      bestSecs = secs;
+      bestIdx = i;
+    }
+  }
+  if (bestIdx === 0) return directionsResult;
+
+  const best = routes[bestIdx];
+  const rest = routes.filter((_, i) => i !== bestIdx);
+  return { ...directionsResult, routes: [best, ...rest] };
 }
 
 function getRouteSummary(directionsResult) {
@@ -64,7 +115,9 @@ function getRouteSummary(directionsResult) {
   let viaText = '';
   const steps = [];
   for (const leg of route.legs) {
-    if (leg.duration?.value) totalDuration += leg.duration.value;
+    const durVal =
+      leg.duration_in_traffic?.value != null ? leg.duration_in_traffic.value : leg.duration?.value;
+    if (durVal) totalDuration += durVal;
     if (leg.distance?.value) totalDistance += leg.distance.value;
     if (leg.steps?.length) {
       for (const step of leg.steps) {
@@ -203,35 +256,76 @@ export default function MapPage() {
   const [tripPlaceIds, setTripPlaceIds] = useState(null);
   const [tripDays, setTripDays] = useState(null);
   const [tripStartDate, setTripStartDate] = useState('');
+  /** Parity with app deep link `tripDayLabel` (e.g. "Day 2 · Feb 3, 2025"). */
+  const [tripDayLabel, setTripDayLabel] = useState(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [directionsError, setDirectionsError] = useState(null);
   const [travelMode, setTravelMode] = useState('DRIVING');
   const [directionsResult, setDirectionsResult] = useState(null);
   const [routeDetailsOpen, setRouteDetailsOpen] = useState(false);
+  const [liveNavigation, setLiveNavigation] = useState(false);
+  const [liveNavDirectionsExpanded, setLiveNavDirectionsExpanded] = useState(false);
+  const [routeRefreshTick, setRouteRefreshTick] = useState(0);
+  const [liveNavError, setLiveNavError] = useState(null);
+  const [addingTripStop, setAddingTripStop] = useState(false);
+  const [catalogPlaces, setCatalogPlaces] = useState([]);
+  const [catalogFetched, setCatalogFetched] = useState(false);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
   const markersByPlaceIdRef = useRef(new Map());
   const infoWindowRef = useRef(null);
   const directionsRendererRef = useRef(null);
+  const userLocationRef = useRef(null);
+  const userMarkerRef = useRef(null);
+  const lastLiveRouteTriggerRef = useRef(0);
+  const prevWatchPositionRef = useRef(null);
   const apiKey = typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
 
-  const placesList = Array.isArray(places) ? places : [];
+  const infoWindowStrings = useMemo(
+    () => ({
+      viewDetails: `${t('home', 'viewDetails')} →`,
+      directions: `${t('home', 'mapDirections')} →`,
+    }),
+    [t, lang]
+  );
+
+  useEffect(() => {
+    userLocationRef.current = userLocation;
+  }, [userLocation]);
+
+  /* Live nav: start in map-only mode; full sheet opens only when user asks. */
+  useEffect(() => {
+    setLiveNavDirectionsExpanded(false);
+  }, [liveNavigation]);
+
+  useEffect(() => {
+    setTravelMode((m) => (m === 'TRANSIT' || m === 'BICYCLING' ? 'DRIVING' : m));
+  }, []);
 
   useEffect(() => {
     const state = location.state;
     const tripIds = state?.tripPlaceIds;
     const days = state?.tripDays;
+    setLiveNavigation(false);
+    setLiveNavError(null);
+    setAddingTripStop(false);
+    setSearchQuery('');
     setGooglePlaceData({});
     setTripPlaceIds(null);
     setTripDays(null);
     setTripStartDate(state?.tripStartDate || '');
+    setTripDayLabel(state?.tripDayLabel || null);
     setSelectedDayIndex(0);
     if (Array.isArray(tripIds) && tripIds.length > 0) {
       setLoading(true);
       setTripFilterName(state.tripName || 'Trip');
       setTripPlaceIds(tripIds);
-      setTripDays(Array.isArray(days) && days.length > 0 ? days : [{ placeIds: tripIds }]);
+      const normalizedDays =
+        Array.isArray(days) && days.length > 0
+          ? days.map((d) => ({ ...d, placeIds: placeIdsFromDay(d) }))
+          : [{ placeIds: tripIds }];
+      setTripDays(normalizedDays);
       Promise.all(tripIds.map((id) => api.places.get(id).catch(() => null)))
         .then((results) => setPlaces(results.filter(Boolean)))
         .catch(() => setPlaces([]))
@@ -239,6 +333,7 @@ export default function MapPage() {
     } else {
       setLoading(true);
       setTripFilterName(null);
+      setTripDayLabel(null);
       api.places
         .list({ lang: langParam })
         .then((r) => setPlaces(r.popular || r.locations || []))
@@ -247,13 +342,46 @@ export default function MapPage() {
     }
   }, [langParam, location.state]);
 
+  useEffect(() => {
+    if (!addingTripStop || catalogFetched) return undefined;
+    let cancelled = false;
+    api.places
+      .list({ lang: langParam })
+      .then((r) => {
+        if (!cancelled) {
+          const list = r.popular || r.locations || [];
+          setCatalogPlaces(Array.isArray(list) ? list : []);
+          setCatalogFetched(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCatalogPlaces([]);
+          setCatalogFetched(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [addingTripStop, catalogFetched, langParam]);
+
+  const placesList = Array.isArray(places) ? places : [];
+  const mergedPlacesList = useMemo(() => {
+    if (!addingTripStop || catalogPlaces.length === 0) return placesList;
+    const m = new Map(placesList.map((p) => [String(p.id), p]));
+    for (const p of catalogPlaces) {
+      if (p && p.id != null && !m.has(String(p.id))) m.set(String(p.id), p);
+    }
+    return Array.from(m.values());
+  }, [placesList, catalogPlaces, addingTripStop]);
+
   const withNativeCoords = useMemo(
-    () => placesList.filter((p) => p.latitude != null && p.longitude != null),
-    [placesList]
+    () => mergedPlacesList.filter((p) => p.latitude != null && p.longitude != null),
+    [mergedPlacesList]
   );
   const needGoogleData = useMemo(
-    () => placesList.filter((p) => p.name || p.location),
-    [placesList]
+    () => mergedPlacesList.filter((p) => p.name || p.location),
+    [mergedPlacesList]
   );
   const needGoogleDataIds = useMemo(
     () => needGoogleData.map((p) => p.id).sort().join(','),
@@ -325,13 +453,27 @@ export default function MapPage() {
     return list;
   }, [withNativeCoords, needGoogleData, googlePlaceData]);
 
-  /** Current day's place IDs (for multi-day trips, one day at a time). */
+  /** Current day's place IDs (supports API `{ slots }` or `{ placeIds }` — VisitTripoliApp TripDay). */
   const currentDayPlaceIds = useMemo(() => {
-    const days = Array.isArray(tripDays) && tripDays.length > 0 ? tripDays : (tripPlaceIds ? [{ placeIds: tripPlaceIds }] : []);
+    const days =
+      Array.isArray(tripDays) && tripDays.length > 0
+        ? tripDays
+        : tripPlaceIds
+          ? [{ placeIds: tripPlaceIds }]
+          : [];
     const dayIndex = Math.max(0, Math.min(selectedDayIndex, days.length - 1));
     const day = days[dayIndex];
-    return Array.isArray(day?.placeIds) ? day.placeIds : [];
+    return placeIdsFromDay(day);
   }, [tripDays, tripPlaceIds, selectedDayIndex]);
+
+  /** Marker / list order: trip waypoint order (app: numbered markers follow filterIds order). */
+  const mapDisplayPlaces = useMemo(() => {
+    if (tripFilterName && currentDayPlaceIds.length > 0) {
+      const byId = new Map(withCoords.map((p) => [String(p.id), p]));
+      return currentDayPlaceIds.map((id) => byId.get(String(id))).filter(Boolean);
+    }
+    return withCoords;
+  }, [tripFilterName, currentDayPlaceIds, withCoords]);
 
   /** Trip places in the order they appear for the selected day (for routing – only with coords). */
   const placesInTripOrder = useMemo(() => {
@@ -348,23 +490,79 @@ export default function MapPage() {
   /** Current day places for the waypoints list (includes places still loading). */
   const currentDayPlacesForList = useMemo(() => {
     if (currentDayPlaceIds.length === 0) return [];
-    const byId = new Map(placesList.map((p) => [String(p.id), p]));
+    const byId = new Map(mergedPlacesList.map((p) => [String(p.id), p]));
     const withG = new Map(withCoords.map((p) => [String(p.id), p]));
     return currentDayPlaceIds.map((id) => withG.get(String(id)) || byId.get(String(id))).filter(Boolean);
-  }, [currentDayPlaceIds, placesList, withCoords]);
+  }, [currentDayPlaceIds, mergedPlacesList, withCoords]);
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
-  const filteredPlaces = useMemo(
-    () => filterPlacesByQuery(withCoords, deferredSearchQuery),
-    [withCoords, deferredSearchQuery]
+
+  const catalogPickerPlaces = useMemo(() => {
+    if (!addingTripStop) return [];
+    return filterPlacesByQuery(catalogPlaces, deferredSearchQuery);
+  }, [addingTripStop, catalogPlaces, deferredSearchQuery]);
+
+  const markersForMapList = useMemo(() => {
+    if (!addingTripStop) return mapDisplayPlaces;
+    const tripOrdered = mapDisplayPlaces;
+    const idSet = new Set(tripOrdered.map((p) => String(p.id)));
+    const extras = catalogPickerPlaces.filter((p) => !idSet.has(String(p.id)));
+    return [...tripOrdered, ...extras];
+  }, [addingTripStop, mapDisplayPlaces, catalogPickerPlaces]);
+
+  const drawerPlaces = useMemo(
+    () =>
+      filterPlacesByQuery(addingTripStop ? catalogPlaces : mapDisplayPlaces, deferredSearchQuery),
+    [addingTripStop, catalogPlaces, mapDisplayPlaces, deferredSearchQuery]
   );
 
   const selectedPlace = useMemo(
-    () => (selectedPlaceId ? filteredPlaces.find((p) => p.id === selectedPlaceId) ?? null : null),
-    [selectedPlaceId, filteredPlaces]
+    () =>
+      selectedPlaceId
+        ? drawerPlaces.find((p) => p.id === selectedPlaceId) ??
+          markersForMapList.find((p) => p.id === selectedPlaceId) ??
+          null
+        : null,
+    [selectedPlaceId, drawerPlaces, markersForMapList]
   );
 
   const routeSummary = useMemo(() => getRouteSummary(directionsResult), [directionsResult]);
+
+  const commitAddStop = useCallback(
+    (rawId) => {
+      const id = String(rawId);
+      const st = location.state;
+      if (!Array.isArray(st?.tripPlaceIds) || st.tripPlaceIds.length === 0) {
+        setAddingTripStop(false);
+        setSearchQuery('');
+        return;
+      }
+      const maxDay = Math.max(0, (Array.isArray(st.tripDays) ? st.tripDays.length : 1) - 1);
+      const dayIdx = Math.max(0, Math.min(selectedDayIndex, maxDay));
+      const baseDays =
+        Array.isArray(st.tripDays) && st.tripDays.length > 0
+          ? st.tripDays.map((d) => ({ ...d, placeIds: [...placeIdsFromDay(d)] }))
+          : [{ placeIds: st.tripPlaceIds.map(String) }];
+      const nextDays = baseDays.map((d, i) => {
+        if (i !== dayIdx) return d;
+        const cur = [...(d.placeIds || []).map(String)];
+        if (cur.includes(id)) return d;
+        return { ...d, placeIds: [...cur, id] };
+      });
+      const allIds = Array.from(new Set([...st.tripPlaceIds.map(String), id]));
+      navigate('/map', {
+        replace: true,
+        state: {
+          ...st,
+          tripPlaceIds: allIds,
+          tripDays: nextDays,
+        },
+      });
+      setAddingTripStop(false);
+      setSearchQuery('');
+    },
+    [location.state, navigate, selectedDayIndex]
+  );
 
   const handleCopyRouteLink = useCallback(() => {
     const url = window.location.href;
@@ -387,27 +585,67 @@ export default function MapPage() {
     if (!place || !map) return;
     const pos = { lat: Number(place.latitude), lng: Number(place.longitude) };
     map.panTo(pos);
-    map.setZoom(16);
+    map.setZoom(DETAIL_MAP_ZOOM);
     const markerEntry = markersByPlaceIdRef.current.get(place.id);
     if (markerEntry?.marker && infoWindow) {
-      const content = buildInfoContent(place, apiKey);
+      const content = buildInfoContent(place, apiKey, infoWindowStrings);
       infoWindow.setContent(content);
       infoWindow.open(map, markerEntry.marker);
     }
-  }, [apiKey]);
+  }, [apiKey, infoWindowStrings]);
+
+  const handlePlaceSelect = useCallback(
+    (place) => {
+      if (addingTripStop) {
+        commitAddStop(place.id);
+        return;
+      }
+      setSelectedPlaceId(place.id);
+      setListOpen(false);
+      const map = mapInstanceRef.current;
+      const infoWindow = infoWindowRef.current;
+      const maps = window.google?.maps;
+      if (map && infoWindow && maps) focusMapOnPlace(place, maps, map, infoWindow);
+    },
+    [addingTripStop, commitAddStop, focusMapOnPlace]
+  );
 
   useEffect(() => {
-    const onMapLinkClick = (e) => {
-      const link = e.target.closest?.('.map-info-link');
-      if (!link) return;
-      const id = link.getAttribute('data-place-id');
-      if (id) {
+    const onInfoWindowAction = (e) => {
+      const detailLink = e.target.closest?.('.map-info-link');
+      if (detailLink) {
+        const id = detailLink.getAttribute('data-place-id');
+        if (id) {
+          e.preventDefault();
+          navigate(`/place/${id}`);
+        }
+        return;
+      }
+      const dirEl = e.target.closest?.('.map-info-directions');
+      if (dirEl) {
         e.preventDefault();
-        navigate(`/place/${id}`);
+        const id = dirEl.getAttribute('data-place-id');
+        if (!id) return;
+        let tripName = 'Trip';
+        const enc = dirEl.getAttribute('data-trip-name');
+        if (enc) {
+          try {
+            tripName = decodeURIComponent(enc) || tripName;
+          } catch {
+            /* ignore */
+          }
+        }
+        navigate('/map', {
+          state: {
+            tripPlaceIds: [id],
+            tripDays: [{ placeIds: [String(id)] }],
+            tripName,
+          },
+        });
       }
     };
-    document.addEventListener('click', onMapLinkClick, true);
-    return () => document.removeEventListener('click', onMapLinkClick, true);
+    document.addEventListener('click', onInfoWindowAction, true);
+    return () => document.removeEventListener('click', onInfoWindowAction, true);
   }, [navigate]);
 
   useEffect(() => {
@@ -420,21 +658,45 @@ export default function MapPage() {
       markersRef.current.forEach((m) => m?.marker?.setMap?.(null));
       markersRef.current = [];
       markersByPlaceIdRef.current.clear();
-      const list = withCoords || [];
+      const list = markersForMapList || [];
+      const tripRank = new Map((mapDisplayPlaces || []).map((p, i) => [p.id, String(i + 1)]));
+      const showTripNumbers = Boolean(tripFilterName && mapDisplayPlaces.length > 0);
       const bounds = new maps.LatLngBounds();
+      const fitPad = {
+        top: tripFilterName ? MAP_FIT_PADDING + 8 : MAP_FIT_PADDING + 16,
+        right: MAP_FIT_PADDING,
+        bottom: MAP_FIT_PADDING,
+        left: tripFilterName ? 400 : MAP_FIT_PADDING,
+      };
       list.forEach((p) => {
         const pos = { lat: Number(p.latitude), lng: Number(p.longitude) };
         bounds.extend(pos);
+        const labelText = showTripNumbers ? tripRank.get(p.id) : null;
         const marker = new maps.Marker({
           position: pos,
           map,
           title: p.name || p.id,
+          ...(labelText
+            ? {
+                label: {
+                  text: labelText,
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                },
+              }
+            : {}),
         });
         const placeId = p.id;
         marker.addListener('click', () => {
+          if (addingTripStop) {
+            commitAddStop(placeId);
+            infoWindow.close();
+            return;
+          }
           setSelectedPlaceId(placeId);
           setListOpen(false);
-          infoWindow.setContent(buildInfoContent(p, apiKey));
+          infoWindow.setContent(buildInfoContent(p, apiKey, infoWindowStrings));
           infoWindow.open(map, marker);
         });
         const entry = { marker, placeId };
@@ -442,10 +704,10 @@ export default function MapPage() {
         markersByPlaceIdRef.current.set(placeId, entry);
       });
       if (markersRef.current.length > 1) {
-        map.fitBounds(bounds, { top: 80, right: 24, bottom: 24, left: 24 });
+        map.fitBounds(bounds, fitPad);
       } else if (markersRef.current.length === 1) {
         map.panTo(markersRef.current[0].marker.getPosition());
-        map.setZoom(16);
+        map.setZoom(DETAIL_MAP_ZOOM);
       }
     };
 
@@ -461,6 +723,8 @@ export default function MapPage() {
         const map = new maps.Map(mapRef.current, {
           center: TRIPOLI_CENTER,
           zoom: DEFAULT_ZOOM,
+          minZoom: 2,
+          maxZoom: 21,
           mapTypeControl: false,
           streetViewControl: true,
           fullscreenControl: false,
@@ -485,7 +749,7 @@ export default function MapPage() {
       markersRef.current = [];
       markersByPlaceIdRef.current.clear();
     };
-  }, [apiKey, withCoords]);
+  }, [apiKey, markersForMapList, mapDisplayPlaces, tripFilterName, infoWindowStrings, addingTripStop, commitAddStop]);
 
   useEffect(() => {
     return () => {
@@ -514,14 +778,19 @@ export default function MapPage() {
     if (!map || !maps) return;
     setTimeout(() => {
       maps.event.trigger(map, 'resize');
-      const leftPadding = tripFilterName ? 400 : (listOpen ? 360 : 24);
+      const leftPadding = tripFilterName ? 400 : (listOpen ? 360 : MAP_FIT_PADDING);
       if (markersRef.current.length > 1) {
         const bounds = new maps.LatLngBounds();
         markersRef.current.forEach((m) => bounds.extend(m.marker.getPosition()));
-        map.fitBounds(bounds, { top: 80, right: 24, bottom: 24, left: leftPadding });
+        map.fitBounds(bounds, {
+          top: tripFilterName ? MAP_FIT_PADDING + 8 : MAP_FIT_PADDING + 16,
+          right: MAP_FIT_PADDING,
+          bottom: MAP_FIT_PADDING,
+          left: leftPadding,
+        });
       } else if (markersRef.current.length === 1) {
         map.panTo(markersRef.current[0].marker.getPosition());
-        map.setZoom(16);
+        map.setZoom(DETAIL_MAP_ZOOM);
       }
     }, 150);
   }, [tripFilterName, listOpen]);
@@ -549,7 +818,7 @@ export default function MapPage() {
     return () => ro.disconnect();
   }, []);
 
-  /* Draw route between trip places when in trip mode and 2+ places have coords. */
+  /* Trip route: static (first→last) or live (GPS→…→last with ordered waypoints). Car & walk only. */
   useEffect(() => {
     const map = mapInstanceRef.current;
     const maps = window.google?.maps;
@@ -565,9 +834,48 @@ export default function MapPage() {
           renderer.setDirections(null);
         } catch (_) {}
       }
+      directionsRendererRef.current = null;
     };
 
-    if (!tripFilterName || placesInTripOrder.length < 2) {
+    if (!tripFilterName || placesInTripOrder.length < 1) {
+      clearRoute();
+      return;
+    }
+
+    const ordered = placesInTripOrder;
+    const lastStop = ordered[ordered.length - 1];
+    const firstStop = ordered[0];
+    let origin;
+    let destination;
+    let waypoints;
+
+    if (liveNavigation) {
+      const ul = userLocationRef.current;
+      if (!ul || ul.lat == null || ul.lng == null) {
+        return () => {};
+      }
+      origin = { lat: Number(ul.lat), lng: Number(ul.lng) };
+      destination = { lat: Number(lastStop.latitude), lng: Number(lastStop.longitude) };
+      if (ordered.length >= 2) {
+        waypoints = ordered
+          .slice(0, -1)
+          .map((p) => ({
+            location: { lat: Number(p.latitude), lng: Number(p.longitude) },
+            stopover: true,
+          }))
+          .slice(0, 25);
+      } else {
+        waypoints = [];
+      }
+    } else if (ordered.length >= 2) {
+      origin = { lat: Number(firstStop.latitude), lng: Number(firstStop.longitude) };
+      destination = { lat: Number(lastStop.latitude), lng: Number(lastStop.longitude) };
+      const middle = ordered.slice(1, -1);
+      waypoints = middle.slice(0, 25).map((p) => ({
+        location: { lat: Number(p.latitude), lng: Number(p.longitude) },
+        stopover: true,
+      }));
+    } else {
       clearRoute();
       return;
     }
@@ -575,26 +883,26 @@ export default function MapPage() {
     let cancelled = false;
     setDirectionsError(null);
 
-    const origin = placesInTripOrder[0];
-    const destination = placesInTripOrder[placesInTripOrder.length - 1];
-    const middle = placesInTripOrder.slice(1, -1);
-    const waypoints = middle.slice(0, 25).map((p) => ({
-      location: { lat: Number(p.latitude), lng: Number(p.longitude) },
-      stopover: true,
-    }));
-
-    const mode = maps.TravelMode[travelMode] || maps.TravelMode.DRIVING;
+    const modeKey = travelMode === 'WALKING' ? 'WALKING' : 'DRIVING';
+    const mode = maps.TravelMode[modeKey] || maps.TravelMode.DRIVING;
     const isDriving = mode === maps.TravelMode.DRIVING;
 
-    // Best-route algorithm: optimize waypoint order (TSP), traffic-aware driving, region bias for Tripoli/Lebanon
     const request = {
-      origin: { lat: Number(origin.latitude), lng: Number(origin.longitude) },
-      destination: { lat: Number(destination.latitude), lng: Number(destination.longitude) },
+      origin,
+      destination,
       waypoints: waypoints.length > 0 ? waypoints : undefined,
-      optimizeWaypoints: waypoints.length > 1,
+      optimizeWaypoints: false,
       travelMode: mode,
       region: 'LB',
-      drivingOptions: isDriving ? { departureTime: new Date() } : undefined,
+      unitSystem: maps.UnitSystem.METRIC,
+      /** Driving: ask for traffic-aware times (`duration_in_traffic`) and fastest corridor among alternates. */
+      provideRouteAlternatives: isDriving,
+      drivingOptions: isDriving
+        ? {
+            departureTime: new Date(),
+            trafficModel: maps.TrafficModel.BEST_GUESS,
+          }
+        : undefined,
     };
 
     const directionsService = new maps.DirectionsService();
@@ -605,10 +913,18 @@ export default function MapPage() {
       if (status !== maps.DirectionsStatus.OK) {
         setDirectionsError(status);
         setDirectionsResult(null);
-        clearRoute();
+        const renderer = directionsRendererRef.current;
+        if (renderer) {
+          try {
+            renderer.setMap(null);
+            renderer.setDirections(null);
+          } catch (_) {}
+        }
+        directionsRendererRef.current = null;
         return;
       }
-      setDirectionsResult(result);
+      const withBestRoute = reorderRoutesByFastestTraffic(result, isDriving);
+      setDirectionsResult(withBestRoute);
       const renderer = directionsRendererRef.current;
       if (renderer) {
         try {
@@ -618,24 +934,23 @@ export default function MapPage() {
       }
       const newRenderer = new maps.DirectionsRenderer({
         suppressMarkers: false,
-        preserveViewport: false,
+        preserveViewport: !!liveNavigation,
         polylineOptions: {
           strokeColor: '#4285F4',
-          strokeWeight: 6,
+          strokeWeight: liveNavigation ? 7 : 6,
           strokeOpacity: 1,
         },
       });
       directionsRendererRef.current = newRenderer;
       newRenderer.setMap(currentMap);
-      newRenderer.setDirections(result);
+      newRenderer.setDirections(withBestRoute);
       setTimeout(() => { maps.event.trigger(currentMap, 'resize'); }, 0);
     });
 
     return () => {
       cancelled = true;
-      clearRoute();
     };
-  }, [tripFilterName, placesInTripOrder, travelMode]);
+  }, [tripFilterName, placesInTripOrder, travelMode, liveNavigation, routeRefreshTick]);
 
   useEffect(() => {
     if (!selectedPlace || !mapInstanceRef.current || !infoWindowRef.current) return;
@@ -649,9 +964,10 @@ export default function MapPage() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        userLocationRef.current = loc;
         if (mapInstanceRef.current) {
           mapInstanceRef.current.panTo(loc);
-          mapInstanceRef.current.setZoom(15);
+          mapInstanceRef.current.setZoom(DETAIL_MAP_ZOOM);
         }
         setUserLocation(loc);
       },
@@ -659,22 +975,109 @@ export default function MapPage() {
     );
   }, []);
 
-  const handlePlaceSelect = useCallback((place) => {
-    setSelectedPlaceId(place.id);
-    setListOpen(false);
+  const startLiveNavigation = useCallback(() => {
+    setLiveNavError(null);
+    if (!navigator.geolocation) {
+      setLiveNavError('noGeolocation');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        userLocationRef.current = loc;
+        setUserLocation(loc);
+        lastLiveRouteTriggerRef.current = Date.now();
+        prevWatchPositionRef.current = loc;
+        setLiveNavigation(true);
+        setRouteRefreshTick((t) => t + 1);
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.panTo(loc);
+        }
+      },
+      () => setLiveNavError('denied'),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }, []);
+
+  const stopLiveNavigation = useCallback(() => {
+    setLiveNavigation(false);
+    setLiveNavDirectionsExpanded(false);
+    setLiveNavError(null);
+    prevWatchPositionRef.current = null;
+    setRouteRefreshTick((t) => t + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!liveNavigation || typeof navigator === 'undefined' || !navigator.geolocation) return undefined;
+    const onPosition = (pos) => {
+      const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      userLocationRef.current = loc;
+      setUserLocation(loc);
+      const now = Date.now();
+      const prev = prevWatchPositionRef.current;
+      const moved = prev ? haversineMeters(prev, loc) : LIVE_ROUTE_MIN_MOVE_M;
+      prevWatchPositionRef.current = loc;
+      if (now - lastLiveRouteTriggerRef.current >= LIVE_ROUTE_MIN_INTERVAL_MS || moved >= LIVE_ROUTE_MIN_MOVE_M) {
+        lastLiveRouteTriggerRef.current = now;
+        setRouteRefreshTick((t) => t + 1);
+      }
+    };
+    const watchId = navigator.geolocation.watchPosition(onPosition, () => {}, {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 25000,
+    });
+    const intervalId = setInterval(() => {
+      setRouteRefreshTick((t) => t + 1);
+    }, 45000);
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      clearInterval(intervalId);
+    };
+  }, [liveNavigation]);
+
+  useEffect(() => {
     const map = mapInstanceRef.current;
-    const infoWindow = infoWindowRef.current;
     const maps = window.google?.maps;
-    if (map && infoWindow && maps) focusMapOnPlace(place, maps, map, infoWindow);
-  }, [focusMapOnPlace]);
+    if (!map || !maps) return;
+    if (liveNavigation && userLocation) {
+      if (!userMarkerRef.current) {
+        userMarkerRef.current = new maps.Marker({
+          position: userLocation,
+          map,
+          zIndex: 10000,
+          title: 'You',
+          icon: {
+            path: maps.SymbolPath.CIRCLE,
+            fillColor: '#1a73e8',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 3,
+            scale: 11,
+          },
+        });
+      } else {
+        userMarkerRef.current.setPosition(userLocation);
+        userMarkerRef.current.setMap(map);
+      }
+    } else if (userMarkerRef.current) {
+      userMarkerRef.current.setMap(null);
+      userMarkerRef.current = null;
+    }
+  }, [liveNavigation, userLocation]);
 
   const handleZoomToFit = useCallback(() => {
     const map = mapInstanceRef.current;
     if (!map || markersRef.current.length === 0) return;
     const bounds = new window.google.maps.LatLngBounds();
     markersRef.current.forEach((m) => bounds.extend(m.marker.getPosition()));
-    const leftPadding = tripFilterName ? 400 : (listOpen ? 360 : 24);
-    map.fitBounds(bounds, { top: 80, right: 24, bottom: 24, left: leftPadding });
+    const leftPadding = tripFilterName ? 400 : (listOpen ? 360 : MAP_FIT_PADDING);
+    map.fitBounds(bounds, {
+      top: tripFilterName ? MAP_FIT_PADDING + 8 : MAP_FIT_PADDING + 16,
+      right: MAP_FIT_PADDING,
+      bottom: MAP_FIT_PADDING,
+      left: leftPadding,
+    });
   }, [listOpen, tripFilterName]);
 
   if (!apiKey) {
@@ -694,14 +1097,32 @@ export default function MapPage() {
     navigate('/map', { replace: true });
   }, [navigate]);
 
+  const routeTimeLabel = travelMode === 'WALKING' ? t('home', 'timeToWalk') : t('home', 'timeToDrive');
+  const nextTurnText = routeSummary?.steps?.[0] || routeSummary?.via || '';
+
   return (
-    <div className="vd map-page map-page--google" role="main" aria-label={t('home', 'mapPageTitle')}>
+    <div
+      className={`vd map-page map-page--google${liveNavigation ? ' map-page--live-nav' : ''}${
+        liveNavigation && !liveNavDirectionsExpanded ? ' map-page--live-nav-collapsed' : ''
+      }`}
+      role="main"
+      aria-label={t('home', 'mapPageTitle')}
+    >
       <div className="map-full-bleed">
         <div ref={mapRef} className="map-canvas" />
+        {liveNavigation && (
+          <button type="button" className="map-live-nav-exit" onClick={stopLiveNavigation}>
+            <Icon name="close" size={22} /> {t('home', 'liveNavStop')}
+          </button>
+        )}
         {tripFilterName && (
-          <div className="map-trip-banner" role="status">
+          <div
+            className={`map-trip-banner${liveNavigation ? ' map-trip-banner--hidden' : ''}`}
+            role="status"
+          >
             <span className="map-trip-banner-label">
-              <Icon name="route" size={20} /> {t('home', 'viewingTrip')}: {tripFilterName}
+              <Icon name="route" size={20} />{' '}
+              {tripDayLabel || `${t('home', 'viewingTrip')}: ${tripFilterName}`}
               {placesInTripOrder.length >= 2 && !directionsError && (
                 <span className="map-trip-banner-route"> · {t('home', 'routeShown') || 'Route shown'}</span>
               )}
@@ -737,28 +1158,30 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* Floating search bar */}
-        <div className="map-search-bar">
-          <Icon name="search" size={22} className="map-search-icon" />
-          <input
-            type="search"
-            className="map-search-input"
-            placeholder={t('home', 'search') || 'Search places...'}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label="Search places"
-          />
-          {searchQuery && (
-            <button type="button" className="map-search-clear" onClick={() => setSearchQuery('')} aria-label="Clear search">
-              <Icon name="close" size={18} />
-            </button>
-          )}
-        </div>
+        {/* Floating search — hidden in trip/tour mode (VisitTripoliApp map_screen). */}
+        {(!tripFilterName || addingTripStop) && (
+          <div className={`map-search-bar${addingTripStop ? ' map-search-bar--add-stop' : ''}`}>
+            <Icon name="search" size={22} className="map-search-icon" />
+            <input
+              type="search"
+              className="map-search-input"
+              placeholder={t('home', 'search') || 'Search places...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search places"
+            />
+            {searchQuery && (
+              <button type="button" className="map-search-clear" onClick={() => setSearchQuery('')} aria-label="Clear search">
+                <Icon name="close" size={18} />
+              </button>
+            )}
+          </div>
+        )}
 
-        {/* List toggle */}
+        {/* List toggle — hidden during live navigation */}
         <button
           type="button"
-          className="map-fab map-fab--list"
+          className={`map-fab map-fab--list${liveNavigation ? ' map-fab--hidden' : ''}`}
           onClick={() => setListOpen((o) => !o)}
           aria-label={listOpen ? 'Close list' : 'Open places list'}
           aria-expanded={listOpen}
@@ -766,8 +1189,8 @@ export default function MapPage() {
           <Icon name={listOpen ? 'close' : 'list'} size={24} />
         </button>
 
-        {/* Map type selector */}
-        <div className="map-type-pill">
+        {/* Map type selector — hidden during live navigation for a cleaner view */}
+        <div className={`map-type-pill${liveNavigation ? ' map-type-pill--hidden' : ''}`}>
           {MAP_TYPES.map((type) => (
             <button
               key={type.id}
@@ -793,7 +1216,7 @@ export default function MapPage() {
         </button>
 
         {/* Zoom to fit */}
-        {filteredPlaces.length > 1 && (
+        {markersForMapList.length > 1 && (
           <button type="button" className="map-fab map-fab--fit" onClick={handleZoomToFit} aria-label="Fit all places">
             <Icon name="fit_screen" size={22} />
           </button>
@@ -801,19 +1224,74 @@ export default function MapPage() {
 
         {/* Zoom controls (Google style) */}
         <div className="map-zoom-controls">
-          <button type="button" className="map-zoom-btn" onClick={() => mapInstanceRef.current?.setZoom((mapInstanceRef.current.getZoom() || 14) + 1)} aria-label="Zoom in">
+          <button type="button" className="map-zoom-btn" onClick={() => mapInstanceRef.current?.setZoom((mapInstanceRef.current.getZoom() || DEFAULT_ZOOM) + 1)} aria-label="Zoom in">
             <Icon name="add" size={24} />
           </button>
-          <button type="button" className="map-zoom-btn" onClick={() => mapInstanceRef.current?.setZoom((mapInstanceRef.current.getZoom() || 14) - 1)} aria-label="Zoom out">
+          <button type="button" className="map-zoom-btn" onClick={() => mapInstanceRef.current?.setZoom((mapInstanceRef.current.getZoom() || DEFAULT_ZOOM) - 1)} aria-label="Zoom out">
             <Icon name="remove" size={24} />
           </button>
         </div>
 
-        {/* Trip route panel (right sidebar) – when viewing a trip */}
-        {tripFilterName && (placesInTripOrder.length >= 1 || (tripDays?.length > 0)) && (
+        {/* Live navigation: slim peek bar so the map stays visible; tap for full directions */}
+        {tripFilterName &&
+          liveNavigation &&
+          !liveNavDirectionsExpanded &&
+          (placesInTripOrder.length >= 1 || (tripDays?.length > 0)) && (
+            <button
+              type="button"
+              className="map-live-nav-peek"
+              onClick={() => setLiveNavDirectionsExpanded(true)}
+              aria-label={t('home', 'liveNavPeekExpand')}
+            >
+              <span className="map-live-nav-peek-handle" aria-hidden="true" />
+              {liveNavError ? (
+                <div className="map-live-nav-peek-inner map-live-nav-peek-inner--alert" role="alert">
+                  <p className="map-live-nav-peek-alert-text">
+                    {liveNavError === 'denied'
+                      ? t('home', 'liveNavDenied')
+                      : t('home', 'liveNavNoGeo')}
+                  </p>
+                  <span className="map-live-nav-peek-hint">{t('home', 'liveNavPeekExpand')}</span>
+                  <Icon name="keyboard_arrow_up" size={26} className="map-live-nav-peek-chevron" />
+                </div>
+              ) : (
+                <div className="map-live-nav-peek-inner">
+                  <div className="map-live-nav-peek-row">
+                    {routeSummary ? (
+                      <span className="map-live-nav-peek-eta">
+                        <strong>{routeSummary.durationText}</strong>
+                        <span className="map-live-nav-peek-sep"> · </span>
+                        <span>{routeSummary.distanceText}</span>
+                      </span>
+                    ) : (
+                      <span className="map-live-nav-peek-eta map-live-nav-peek-eta--muted">{t('home', 'liveNavPeekUpdating')}</span>
+                    )}
+                    <Icon name="keyboard_arrow_up" size={26} className="map-live-nav-peek-chevron" />
+                  </div>
+                  {nextTurnText ? (
+                    <p className="map-live-nav-peek-turn">{nextTurnText}</p>
+                  ) : null}
+                </div>
+              )}
+            </button>
+          )}
+
+        {/* Trip route panel (right sidebar) – when viewing a trip; hidden during live nav until user expands */}
+        {tripFilterName && (placesInTripOrder.length >= 1 || (tripDays?.length > 0)) && (!liveNavigation || liveNavDirectionsExpanded) && (
           <div className="map-trip-route-panel gm-directions-panel" role="complementary" aria-label={t('home', 'viewingTrip')}>
             <div className="map-trip-route-panel-inner">
               <div className="map-trip-route-panel-handle" aria-hidden="true" />
+              {liveNavigation && (
+                <button
+                  type="button"
+                  className="map-live-nav-collapse-bar"
+                  onClick={() => setLiveNavDirectionsExpanded(false)}
+                  aria-label={t('home', 'liveNavCollapseToMap')}
+                >
+                  <Icon name="keyboard_arrow_down" size={22} />
+                  <span>{t('home', 'liveNavCollapseToMap')}</span>
+                </button>
+              )}
               {/* Day selector – one route per day */}
               {Array.isArray(tripDays) && tripDays.length > 1 && (
                 <div className="map-trip-route-days">
@@ -835,17 +1313,40 @@ export default function MapPage() {
               )}
 
               {/* Route summary: time to drive + distance + roads to pass */}
+              {liveNavError && (
+                <p className="map-live-nav-error" role="alert">
+                  {liveNavError === 'denied'
+                    ? t('home', 'liveNavDenied')
+                    : t('home', 'liveNavNoGeo')}
+                </p>
+              )}
+
+              {placesInTripOrder.length >= 1 && !liveNavigation && (
+                <div className="map-live-nav-start-wrap">
+                  <button type="button" className="map-live-nav-start-btn" onClick={startLiveNavigation}>
+                    <Icon name="navigation" size={22} />
+                    <span>{t('home', 'liveNavStart')}</span>
+                  </button>
+                  <p className="map-live-nav-start-hint">{t('home', 'liveNavStartHint')}</p>
+                </div>
+              )}
+
               {routeSummary && (
                 <div className="map-trip-route-summary gm-summary-card">
                   <p className="gm-summary-time-label">
                     <Icon name="schedule" size={20} />
-                    <span>{t('home', 'timeToDrive')}</span>
+                    <span>{routeTimeLabel}</span>
                   </p>
                   <p className="map-trip-route-time-dist gm-summary-primary">
                     {routeSummary.durationText} <span className="gm-summary-sep">·</span> {routeSummary.distanceText}
                   </p>
-                  <p className="map-trip-route-leave-now">{t('home', 'leaveNow')}</p>
-                  {routeSummary.steps?.length > 0 && (
+                  {liveNavigation && nextTurnText && (
+                    <p className="map-live-next-turn">{nextTurnText}</p>
+                  )}
+                  <p className="map-trip-route-leave-now">
+                    {liveNavigation ? t('home', 'liveNavUpdatingHint') : t('home', 'leaveNow')}
+                  </p>
+                  {routeSummary.steps?.length > 0 && !liveNavigation && (
                     <div className="gm-roads-to-pass">
                       <p className="gm-roads-to-pass-title">
                         <Icon name="route" size={18} />
@@ -861,7 +1362,13 @@ export default function MapPage() {
                 </div>
               )}
 
-              {/* Transport mode selector (Google Maps: icon row with time) */}
+              {liveNavigation && (
+                <p className="map-live-nav-pulse" aria-live="polite">
+                  <Icon name="my_location" size={18} /> {t('home', 'liveNavTracking')}
+                </p>
+              )}
+
+              {/* Drive & walk only */}
               <div className="map-trip-route-modes">
                 {TRAVEL_MODES.map((mode) => (
                   <button
@@ -881,8 +1388,8 @@ export default function MapPage() {
                 ))}
               </div>
 
-              {/* Waypoints (From / To list like Google Maps) */}
-              <div className="map-trip-route-waypoints">
+              {/* Waypoints — simplified while live nav is on */}
+              <div className={`map-trip-route-waypoints${liveNavigation ? ' map-trip-route-waypoints--compact' : ''}`}>
                 {currentDayPlacesForList.map((p, index) => {
                   const g = p._google;
                   const name = g?.name || p.name || p.id;
@@ -904,14 +1411,38 @@ export default function MapPage() {
                     </div>
                   );
                 })}
-                <button type="button" className="map-trip-route-add-dest" onClick={() => navigate('/plan')}>
-                  <Icon name="add" size={20} />
-                  <span>{t('home', 'addDestination')}</span>
-                </button>
+                {addingTripStop ? (
+                  <div className="map-add-stop-panel">
+                    <p className="map-add-stop-hint">{t('home', 'mapAddStopHint')}</p>
+                    <button
+                      type="button"
+                      className="map-add-stop-done"
+                      onClick={() => {
+                        setAddingTripStop(false);
+                        setSearchQuery('');
+                      }}
+                    >
+                      {t('home', 'mapAddStopDone')}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="map-trip-route-add-dest"
+                    disabled={liveNavigation}
+                    onClick={() => {
+                      setAddingTripStop(true);
+                      setListOpen(true);
+                    }}
+                  >
+                    <Icon name="add" size={20} />
+                    <span>{t('home', 'addDestination')}</span>
+                  </button>
+                )}
               </div>
 
-              {/* Step-by-step (Details) */}
-              {routeSummary && (
+              {/* Step-by-step (Details) — optional when not in live nav to keep UI calm */}
+              {routeSummary && !liveNavigation && (
                 <div className="map-trip-route-details-wrap">
                   <button type="button" className="map-trip-route-link gm-details-toggle" onClick={() => setRouteDetailsOpen((o) => !o)}>
                     {t('home', 'details')}
@@ -932,7 +1463,7 @@ export default function MapPage() {
               )}
 
               {/* Options (Share, Send to phone) */}
-              <div className="map-trip-route-options">
+              <div className={`map-trip-route-options${liveNavigation ? ' map-trip-route-options--compact' : ''}`}>
                 <button type="button" className="map-trip-route-opt-btn" onClick={handleCopyRouteLink}>
                   <Icon name="link" size={20} />
                   <span>{t('home', 'copyLink')}</span>
@@ -950,21 +1481,23 @@ export default function MapPage() {
         <div className={`map-drawer ${listOpen ? 'map-drawer--open' : ''}`}>
           <div className="map-drawer-header">
             <h2 className="map-drawer-title">{t('home', 'mapPageTitle')}</h2>
-            <p className="map-drawer-sub">{filteredPlaces.length} places</p>
+            <p className="map-drawer-sub">{drawerPlaces.length} places</p>
             <button type="button" className="map-drawer-close" onClick={() => setListOpen(false)} aria-label="Close">
               <Icon name="close" size={24} />
             </button>
           </div>
           <div className="map-drawer-list">
-            {filteredPlaces.length === 0 ? (
+            {drawerPlaces.length === 0 ? (
               <p className="map-drawer-empty">{searchQuery ? 'No places match your search.' : 'No places with location.'}</p>
             ) : (
-              filteredPlaces.map((p) => {
+              drawerPlaces.map((p) => {
                 const g = p._google;
                 const name = g?.name || p.name || p.id;
                 const loc = g?.formatted_address || p.location;
-                const rating = g?.rating ?? p.rating;
-                const reviews = g?.user_ratings_total ?? null;
+                const dbRating = p.rating != null && Number.isFinite(Number(p.rating)) ? Number(p.rating) : null;
+                const rating = dbRating ?? (g?.rating != null ? Number(g.rating) : null);
+                const dbReviews = p.reviewCount != null && Number.isFinite(Number(p.reviewCount)) ? Number(p.reviewCount) : null;
+                const reviews = dbReviews ?? g?.user_ratings_total ?? null;
                 const openNow = g?.opening_hours && typeof g.opening_hours.open_now === 'boolean'
                   ? g.opening_hours.open_now
                   : null;
@@ -1002,24 +1535,32 @@ export default function MapPage() {
   );
 }
 
-function buildInfoContent(p, apiKey = '') {
+function buildInfoContent(p, apiKey = '', strings = {}) {
+  const s = {
+    viewDetails: strings.viewDetails ?? 'View details →',
+    directions: strings.directions ?? 'Directions →',
+  };
   const placeId = p.id;
   const g = p._google || null;
   const name = g?.name || p.name || p.id;
   const address = g?.formatted_address || p.location || '';
-  const rating = g?.rating ?? p.rating;
-  const reviews = g?.user_ratings_total ?? null;
+  const dbRating = p.rating != null && Number.isFinite(Number(p.rating)) ? Number(p.rating) : null;
+  const rating = dbRating ?? (g?.rating != null ? Number(g.rating) : null);
+  const dbReviews = p.reviewCount != null && Number.isFinite(Number(p.reviewCount)) ? Number(p.reviewCount) : null;
+  const reviews = dbReviews ?? g?.user_ratings_total ?? null;
   const openNow = g?.opening_hours && typeof g.opening_hours.open_now === 'boolean'
     ? g.opening_hours.open_now
     : null;
-  const website = g?.website || null;
-  const gmUrl = g?.url || null;
   const rawImg =
     (g?.photo_reference && placePhotoUrl(g.photo_reference, apiKey)) ||
     p.image ||
     (Array.isArray(p.images) && p.images[0]) ||
     '';
   const img = rawImg ? (getPlaceImageUrl(rawImg) || rawImg) : '';
+  const dirLink =
+    placeId != null && String(placeId) !== ''
+      ? `<a href="#" class="map-info-directions" data-place-id="${escapeHtml(String(placeId))}" data-trip-name="${encodeURIComponent(name)}" style="display:inline-block;color:#1a73e8;font-weight:600;text-decoration:none;cursor:pointer;">${escapeHtml(s.directions)}</a>`
+      : '';
   return `
     <div class="gm-info-content" style="padding:0;min-width:220px;max-width:280px;font-size:14px;">
       ${img ? `<img src="${escapeHtml(img)}" alt="" style="width:100%;height:100px;object-fit:cover;border-radius:8px 8px 0 0;margin:-8px -8px 8px -8px;" />` : ''}
@@ -1027,8 +1568,10 @@ function buildInfoContent(p, apiKey = '') {
       ${address ? `<p style="margin:0 0 6px 0;color:#5f6368;font-size:13px;">${escapeHtml(address)}</p>` : ''}
       ${rating != null ? `<p style="margin:0 0 4px 0;font-size:13px;">★ ${Number(rating).toFixed(1)}${reviews != null ? ` (${reviews} reviews)` : ''}</p>` : ''}
       ${openNow !== null ? `<p style="margin:0 0 8px 0;font-size:12px;color:${openNow ? '#137333' : '#c5221f'};">${openNow ? 'Open now' : 'Closed'}</p>` : ''}
-      <a href="/place/${encodeURIComponent(placeId)}" class="map-info-link" data-place-id="${escapeHtml(String(placeId))}" style="display:inline-block;margin-right:8px;color:#1a73e8;font-weight:600;text-decoration:none;">View details →</a>
-      ${gmUrl ? `<a href="${escapeHtml(gmUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;font-size:12px;color:#5f6368;text-decoration:none;">Open in Google Maps</a>` : ''}
+      <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;line-height:1.35;">
+        <a href="/place/${encodeURIComponent(placeId)}" class="map-info-link" data-place-id="${escapeHtml(String(placeId))}" style="color:#1a73e8;font-weight:600;text-decoration:none;">${escapeHtml(s.viewDetails)}</a>
+        ${dirLink}
+      </div>
     </div>
   `;
 }

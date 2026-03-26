@@ -1,10 +1,11 @@
 const express = require('express');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
+const { adminMiddleware } = require('../../middleware/admin');
 
 const router = express.Router();
 
-router.use(authMiddleware);
+router.use(authMiddleware, adminMiddleware);
 
 router.post('/', async (req, res) => {
   try {

@@ -1,6 +1,7 @@
 const express = require('express');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
+const { adminMiddleware } = require('../../middleware/admin');
 
 const router = express.Router();
 const ROW_ID = 'default';
@@ -22,8 +23,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-/** PUT /api/admin/content - save translation overrides (auth required) */
-router.put('/', authMiddleware, async (req, res) => {
+/** PUT /api/admin/content - save translation overrides (admin: web + app CMS) */
+router.put('/', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const overrides = req.body?.overrides;
     if (overrides !== undefined && typeof overrides !== 'object') {

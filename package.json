@@ -1,0 +1,16 @@
+{
+  "name": "tripoli-explorer-web",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,magenta \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix client",
+    "build:client": "npm run build --prefix client",
+    "start:server": "npm run start --prefix server",
+    "quality": "npm run build --prefix client",
+    "db:migrate": "npm run db:migrate --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "supabase": "^2.84.0"
+  }
+}

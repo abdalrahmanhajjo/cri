@@ -1,6 +1,7 @@
 const express = require('express');
 const { query } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
+const { sendDbAwareError } = require('../utils/dbHttpError');
 
 const router = express.Router();
 
@@ -32,7 +33,7 @@ router.get('/', async (req, res) => {
     res.json({ categories: result.rows.map(rowToCategory) });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch categories', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+    sendDbAwareError(res, err, 'Failed to fetch categories');
   }
 });
 

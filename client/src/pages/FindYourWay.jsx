@@ -1,56 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import api from '../api/client';
+import api, { getPlaceImageUrl } from '../api/client';
 import Icon from '../components/Icon';
-import { getPlaceImageUrl } from '../api/client';
+import { WAYS_CONFIG, groupPlacesByWay, FIND_YOUR_WAY_WAY_KEYS } from '../utils/findYourWayGrouping';
 import './Explore.css';
-
-/* Section names and keywords aligned for a clear divide; keywords are non-overlapping so each category maps to one section. */
-const WAYS_CONFIG = [
-  { wayKey: 'explorer', titleKey: 'wayExplorer', descKey: 'wayExplorerDesc', icon: 'explore', keywords: ['attraction', 'landmark', 'souq', 'souk', 'market', 'explore', 'sightseeing', 'old city', 'shopping', 'bazaar'] },
-  { wayKey: 'food', titleKey: 'wayFood', descKey: 'wayFoodDesc', icon: 'restaurant', keywords: ['restaurant', 'food', 'cafe', 'café', 'dining', 'cuisine', 'sweet', 'sweets', 'bakery', 'coffee', 'eat', 'meal'] },
-  { wayKey: 'history', titleKey: 'wayHistory', descKey: 'wayHistoryDesc', icon: 'account_balance', keywords: ['history', 'heritage', 'culture', 'citadel', 'mosque', 'museum', 'historic', 'monument', 'religious', 'archaeology'] },
-  { wayKey: 'sea', titleKey: 'waySea', descKey: 'waySeaDesc', icon: 'waves', keywords: ['beach', 'sea', 'coast', 'corniche', 'nature', 'mina', 'water', 'port', 'marina', 'outdoors'] },
-  { wayKey: 'family', titleKey: 'wayFamily', descKey: 'wayFamilyDesc', icon: 'family_restroom', keywords: ['family', 'park', 'kids', 'children', 'relax', 'garden', 'playground'] },
-];
-
-/** Map a category (name + tags) to a way key using keyword match. */
-function matchCategoryToWay(categoryName, categoryTags) {
-  const name = (categoryName || '').toLowerCase();
-  const tagStr = Array.isArray(categoryTags) ? categoryTags.join(' ').toLowerCase() : '';
-  const combined = `${name} ${tagStr}`;
-  for (const way of WAYS_CONFIG) {
-    for (const kw of way.keywords) {
-      if (combined.includes(kw.toLowerCase())) return way.wayKey;
-    }
-  }
-  return 'explorer';
-}
-
-/** Group places into sections by their real category (each place in the section that matches its category). */
-function groupPlacesByWay(places, categories) {
-  const categoryToWay = new Map();
-  (categories || []).forEach((c) => {
-    const wayKey = matchCategoryToWay(c.name, c.tags);
-    categoryToWay.set(c.id, wayKey);
-  });
-  const byWay = new Map();
-  WAYS_CONFIG.forEach((w) => byWay.set(w.wayKey, []));
-  (places || []).forEach((p) => {
-    const catId = p.categoryId ?? p.category_id;
-    let wayKey = catId ? categoryToWay.get(catId) : null;
-    if (!wayKey && (p.categoryName != null || p.category != null)) {
-      const name = String(p.categoryName ?? p.category ?? '');
-      wayKey = matchCategoryToWay(name, []);
-    }
-    wayKey = wayKey || 'explorer';
-    const list = byWay.get(wayKey);
-    if (list) list.push(p);
-  });
-  byWay.forEach((list) => list.sort((a, b) => (Number(b?.rating) || 0) - (Number(a?.rating) || 0)));
-  return byWay;
-}
 
 function PlaceCard({ place }) {
   if (!place || place.id == null) return null;
@@ -76,8 +30,6 @@ function PlaceCard({ place }) {
   );
 }
 
-const WAY_IDS = WAYS_CONFIG.map((w) => w.wayKey);
-
 export default function FindYourWay() {
   const { t, lang } = useLanguage();
   const location = useLocation();
@@ -89,7 +41,7 @@ export default function FindYourWay() {
 
   useEffect(() => {
     const hash = (location.hash || '').replace(/^#/, '');
-    if (hash && WAY_IDS.includes(hash)) {
+    if (hash && FIND_YOUR_WAY_WAY_KEYS.includes(hash)) {
       const el = document.getElementById(hash);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }

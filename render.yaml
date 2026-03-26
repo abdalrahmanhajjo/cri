@@ -1,0 +1,22 @@
+# Render Blueprint (free web service): https://dashboard.render.com/select-repo?type=blueprint
+# After first deploy: add secrets in the Render dashboard (Environment):
+#   DATABASE_URL, JWT_SECRET, CORS_ORIGIN (your https://….onrender.com URL),
+#   SMTP_*, SUPABASE_* as in server/.env.example
+# Run DB migrations once from your machine: DATABASE_URL="…" npm run db:migrate
+# Free tier: service sleeps after ~15 min idle (first request may take ~1 min). Disk is ephemeral — prefer Supabase Storage for uploads.
+
+services:
+  - type: web
+    name: tripoli-explorer
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: SERVE_CLIENT_DIST
+        value: true

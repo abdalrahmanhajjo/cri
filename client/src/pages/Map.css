@@ -6,6 +6,306 @@
   overflow: hidden;
 }
 
+/* Inside site layout: height comes from flex, not a second full viewport (fixes phone). */
+.main--map .map-page {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.main--map .map-page--google {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+}
+
+.main--map .map-full-bleed {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  min-height: unset;
+}
+
+/* Live navigation — focused map, minimal chrome */
+.map-page--live-nav .map-zoom-controls {
+  opacity: 0.92;
+}
+
+.map-trip-banner--hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.map-live-nav-exit {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #202124;
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+
+.map-live-nav-exit:hover {
+  background: #f8f9fa;
+}
+
+.map-fab--hidden,
+.map-type-pill--hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.map-live-nav-error {
+  margin: 0 16px 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #c5221f;
+  background: #fce8e6;
+  border-radius: 8px;
+}
+
+.map-live-nav-start-wrap {
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.map-live-nav-start-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  background: #1a73e8;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.map-live-nav-start-btn:hover {
+  background: #185abc;
+}
+
+.map-live-nav-start-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #5f6368;
+}
+
+.map-live-next-turn {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #202124;
+}
+
+.map-live-nav-pulse {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #137333;
+  background: #e6f4ea;
+  border-radius: 8px;
+}
+
+/* Live nav map-first: slim peek bar (full sheet hidden until user taps). */
+.map-live-nav-peek {
+  position: absolute;
+  bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  inset-inline-start: max(12px, env(safe-area-inset-left, 0px));
+  inset-inline-end: max(12px, env(safe-area-inset-right, 0px));
+  z-index: 13;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  text-align: start;
+}
+
+.map-live-nav-peek:active {
+  background: #f8f9fa;
+}
+
+.map-live-nav-peek-handle {
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: 10px auto 6px;
+  background: #dadce0;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.map-live-nav-peek-inner {
+  padding: 0 14px 14px;
+}
+
+.map-live-nav-peek-inner--alert {
+  padding-bottom: 12px;
+}
+
+.map-live-nav-peek-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.map-live-nav-peek-eta {
+  font-size: 16px;
+  color: #202124;
+  line-height: 1.3;
+}
+
+.map-live-nav-peek-eta--muted {
+  font-size: 15px;
+  font-weight: 500;
+  color: #5f6368;
+}
+
+.map-live-nav-peek-sep {
+  font-weight: 400;
+}
+
+.map-live-nav-peek-turn {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #202124;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.map-live-nav-peek-chevron {
+  flex-shrink: 0;
+  color: #5f6368;
+  margin-top: 2px;
+}
+
+.map-live-nav-peek-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #5f6368;
+}
+
+.map-live-nav-peek-alert-text {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #c5221f;
+}
+
+.map-live-nav-collapse-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  flex-shrink: 0;
+  padding: 8px 12px 10px;
+  margin: 0;
+  border: none;
+  border-bottom: 1px solid #e8eaed;
+  background: #f8f9fa;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #1967d2;
+  cursor: pointer;
+}
+
+.map-live-nav-collapse-bar:hover {
+  background: #ecedef;
+}
+
+@media (max-width: 768px) {
+  /* Peek bar sits above FABs on phones */
+  .map-page--live-nav-collapsed .map-fab--location {
+    bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .map-page--live-nav-collapsed .map-zoom-controls {
+    bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.map-trip-route-waypoints--compact {
+  padding: 8px 10px;
+  gap: 4px;
+}
+
+.map-trip-route-waypoints--compact .map-trip-route-waypoint {
+  padding: 8px 10px 8px 6px;
+}
+
+.map-trip-route-waypoints--compact .map-trip-route-waypoint-name {
+  font-size: 13px;
+}
+
+.map-trip-route-waypoints--compact .map-trip-route-waypoint-address {
+  display: none;
+}
+
+.map-trip-route-waypoints--compact .map-trip-route-waypoint-menu {
+  display: none;
+}
+
+.map-trip-route-waypoints--compact .map-trip-route-add-dest {
+  padding: 8px 8px 8px 36px;
+  font-size: 13px;
+}
+
+.map-trip-route-options--compact {
+  padding: 8px 12px 12px;
+  gap: 4px 12px;
+}
+
+.map-trip-route-options--compact .map-trip-route-opt-btn {
+  font-size: 13px;
+  padding: 6px 0;
+}
+
 .map-full-bleed {
   position: relative;
   width: 100%;
@@ -416,6 +716,50 @@
   background: #f1f3f4;
 }
 
+.map-trip-route-add-dest:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.map-add-stop-panel {
+  margin-top: 8px;
+  padding: 12px 12px 14px 44px;
+  border-radius: 12px;
+  background: #e8f0fe;
+  border: 1px solid #c6dafc;
+}
+
+.map-add-stop-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #1967d2;
+}
+
+.map-add-stop-done {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  background: #1967d2;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.map-add-stop-done:hover {
+  background: #1557b0;
+}
+
+.map-search-bar--add-stop {
+  box-shadow: 0 2px 16px rgba(25, 103, 210, 0.35);
+  border-color: #8ab4f8;
+}
+
 .map-trip-route-options {
   padding: 12px 16px 16px;
   border-top: 1px solid #e8eaed;
@@ -625,6 +969,50 @@
   .map-trip-banner-btn {
     padding: 8px 12px;
     font-size: 12px;
+  }
+
+  /* Live navigation: short bottom sheet so the route stays visible on phones */
+  .map-page--live-nav .map-trip-route-panel {
+    max-height: min(48vh, 360px);
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    inset-inline: 10px;
+  }
+
+  .map-page--live-nav .map-trip-route-panel.gm-directions-panel .map-trip-route-panel-inner {
+    max-height: min(48vh, 360px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .map-page--live-nav .map-trip-route-waypoints--compact {
+    max-height: min(22vh, 140px);
+    flex-shrink: 0;
+  }
+
+  .map-page--live-nav .gm-summary-card {
+    margin: 0 10px 8px;
+    padding: 12px;
+  }
+
+  .map-page--live-nav .map-live-nav-pulse {
+    margin: 0 12px 8px;
+    font-size: 11px;
+  }
+
+  .map-page--live-nav .map-trip-route-modes {
+    padding: 8px 6px;
+    flex-shrink: 0;
+  }
+
+  .map-page--live-nav .map-trip-route-mode-btn {
+    min-height: 48px;
+    padding: 10px 6px;
+  }
+
+  /* Share row hidden while driving — reduces sheet height; exit + scroll still available */
+  .map-page--live-nav .map-trip-route-options--compact {
+    display: none;
   }
 }
 

@@ -36,6 +36,9 @@
   --page-padding: 16px;
   --section-gap: 32px;
   --card-gap: 16px;
+  /* Default content width for `.main--contained` routes (not full-bleed home/community) */
+  --main-content-max: 1200px;
+  --main-content-padding-y: clamp(16px, 2.5vw, 36px);
 }
 
 @media (max-width: 359px) {
@@ -64,12 +67,21 @@
 @media (min-width: 1280px) {
   :root {
     --page-padding: 28px;
+    --main-content-max: 1320px;
   }
 }
 
 @media (min-width: 1440px) {
   :root {
     --page-padding: 32px;
+    --main-content-max: 1440px;
+    --main-content-padding-y: clamp(20px, 2.8vw, 48px);
+  }
+}
+
+@media (min-width: 1680px) {
+  :root {
+    --main-content-max: 1560px;
   }
 }
 

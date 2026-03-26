@@ -2,6 +2,7 @@ const express = require('express');
 const { query } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 const { parsePositiveInt } = require('../utils/validate');
+const { sendDbAwareError } = require('../utils/dbHttpError');
 
 const router = express.Router();
 
@@ -66,7 +67,7 @@ router.get('/:id', async (req, res) => {
     res.json(rowToEvent(result.rows[0]));
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch event' });
+    sendDbAwareError(res, err, 'Failed to fetch event');
   }
 });
 

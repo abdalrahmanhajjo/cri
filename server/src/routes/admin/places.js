@@ -1,10 +1,11 @@
 const express = require('express');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
+const { adminMiddleware } = require('../../middleware/admin');
 
 const router = express.Router();
 
-router.use(authMiddleware);
+router.use(authMiddleware, adminMiddleware);
 
 function safeJson(val, fallback = []) {
   if (Array.isArray(val)) return val;
@@ -14,6 +15,42 @@ function safeJson(val, fallback = []) {
   }
   return fallback;
 }
+
+/** GET /api/admin/places?q=&limit= — search places for admin pickers (id, name, location) */
+router.get('/', async (req, res) => {
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 40, 1), 100);
+  const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 120) : '';
+  const params = [];
+  let whereSql = '';
+  if (q) {
+    const idx = params.length + 1;
+    params.push(`%${q}%`);
+    whereSql = `WHERE (id ILIKE $${idx} OR name ILIKE $${idx} OR COALESCE(location, '') ILIKE $${idx})`;
+  }
+  const limIdx = params.length + 1;
+  params.push(limit);
+  try {
+    const { rows } = await query(
+      `SELECT id, name, COALESCE(location, '') AS location
+       FROM places
+       ${whereSql}
+       ORDER BY name ASC
+       LIMIT $${limIdx}`,
+      params
+    );
+    res.json({
+      places: rows.map((r) => ({
+        id: r.id,
+        name: r.name || '',
+        location: r.location || '',
+      })),
+    });
+  } catch (err) {
+    if (err.code === '42P01') return res.json({ places: [] });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to search places' });
+  }
+});
 
 router.post('/', async (req, res) => {
   try {
@@ -59,6 +96,71 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to save place', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+  }
+});
+
+function displayReviewAuthorName(name, email) {
+  const n = typeof name === 'string' ? name.trim() : '';
+  if (n) return n;
+  const e = typeof email === 'string' ? email.trim() : '';
+  if (e && e.includes('@')) {
+    const local = e.split('@')[0] || '';
+    if (local) return local;
+  }
+  return 'Member';
+}
+
+/** All member reviews for a place (including hidden). Admin-only. */
+router.get('/:id/reviews', async (req, res) => {
+  const placeId = req.params.id;
+  try {
+    const { rows: placeRows } = await query('SELECT id FROM places WHERE id = $1', [placeId]);
+    if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
+    const pid = placeRows[0].id;
+    let rows;
+    try {
+      ({ rows } = await query(
+        `SELECT r.id, r.rating, r.title, r.review, r.created_at, r.hidden_at,
+                u.name AS user_name, u.email AS user_email
+         FROM place_reviews r
+         INNER JOIN users u ON u.id = r.user_id
+         WHERE r.place_id = $1
+         ORDER BY r.created_at DESC
+         LIMIT 200`,
+        [pid]
+      ));
+    } catch (err) {
+      if (err.code === '42P01') return res.json({ placeId: pid, reviews: [] });
+      if (err.code === '42703' && String(err.message || '').includes('hidden_at')) {
+        ({ rows } = await query(
+          `SELECT r.id, r.rating, r.title, r.review, r.created_at, NULL::timestamptz AS hidden_at,
+                  u.name AS user_name, u.email AS user_email
+           FROM place_reviews r
+           INNER JOIN users u ON u.id = r.user_id
+           WHERE r.place_id = $1
+           ORDER BY r.created_at DESC
+           LIMIT 200`,
+          [pid]
+        ));
+      } else {
+        throw err;
+      }
+    }
+    const reviews = rows.map((r) => ({
+      id: String(r.id),
+      rating: r.rating,
+      title: r.title || null,
+      review: r.review || null,
+      createdAt: r.created_at,
+      authorName: displayReviewAuthorName(r.user_name, r.user_email),
+      authorEmail: (r.user_email && String(r.user_email).trim()) || null,
+      hidden: r.hidden_at != null,
+      hiddenAt: r.hidden_at || null,
+    }));
+    res.json({ placeId: pid, reviews });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load reviews', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
   }
 });
 

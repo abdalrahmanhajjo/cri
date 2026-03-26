@@ -1,0 +1,297 @@
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import api, { getPlaceImageUrl } from '../api/client';
+import Icon from '../components/Icon';
+import { useLanguage } from '../context/LanguageContext';
+import {
+  getDayCount,
+  toDateOnly,
+  dayFromApiShape,
+  placeIdsFromDay,
+  getDateForDayIndex,
+} from '../utils/tripPlannerHelpers';
+import './TripDetail.css';
+
+function formatClockHm(t) {
+  if (t == null || String(t).trim() === '') return null;
+  const s = String(t).trim().slice(0, 8);
+  return s.length >= 5 ? s.slice(0, 5) : s;
+}
+
+function slotTimeLabel(slot) {
+  const a = formatClockHm(slot.startTime);
+  const b = formatClockHm(slot.endTime);
+  if (a && b) return `${a}–${b}`;
+  if (a) return a;
+  if (b) return b;
+  return null;
+}
+
+export default function TripDetail() {
+  const { tripId } = useParams();
+  const navigate = useNavigate();
+  const { t } = useLanguage();
+  const [trip, setTrip] = useState(null);
+  const [placesById, setPlacesById] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    api.user
+      .getTrip(tripId)
+      .then((data) => {
+        if (cancelled) return;
+        setTrip(data);
+        const ids = Array.isArray(data?.days)
+          ? [...new Set(data.days.flatMap((d) => placeIdsFromDay(d)))]
+          : [];
+        if (ids.length === 0) {
+          setPlacesById({});
+          return;
+        }
+        return Promise.all(ids.map((id) => api.places.get(id).catch(() => null))).then((rows) => {
+          if (cancelled) return;
+          const map = {};
+          rows.filter(Boolean).forEach((p) => {
+            map[String(p.id)] = p;
+          });
+          setPlacesById(map);
+        });
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e?.message || t('home', 'tripDetailLoadFailed'));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tripId, t]);
+
+  const dayBlocks = useMemo(() => {
+    if (!trip) return [];
+    const start = toDateOnly(trip.startDate);
+    const end = toDateOnly(trip.endDate);
+    const n = getDayCount(start || trip.startDate, end || trip.endDate);
+    return Array.from({ length: n }, (_, i) => {
+      const dayRow = Array.isArray(trip.days) ? trip.days[i] : null;
+      const slots = dayRow ? dayFromApiShape(dayRow).slots : [];
+      const dateStr = getDateForDayIndex(trip.startDate, i);
+      let dateLabel = '';
+      if (dateStr) {
+        try {
+          dateLabel = new Date(`${dateStr}T12:00:00`).toLocaleDateString(undefined, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          });
+        } catch {
+          dateLabel = dateStr;
+        }
+      }
+      return { index: i, dateLabel, slots };
+    });
+  }, [trip]);
+
+  const totalStops = useMemo(
+    () => dayBlocks.reduce((acc, d) => acc + d.slots.length, 0),
+    [dayBlocks]
+  );
+
+  const openMap = useCallback(() => {
+    if (!trip) return;
+    const placeIds = dayBlocks.flatMap((d) => d.slots.map((s) => s.placeId));
+    const days = Array.isArray(trip.days) ? trip.days : [{ placeIds }];
+    navigate('/map', {
+      state: {
+        tripPlaceIds: placeIds,
+        tripDays: days,
+        tripName: trip.name || t('home', 'planTitle'),
+        tripStartDate: trip.startDate || '',
+      },
+    });
+  }, [trip, dayBlocks, navigate, t]);
+
+  const handleShare = useCallback(() => {
+    if (!trip) return;
+    const name = trip.name || t('home', 'planTitle');
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({ title: name, text: name, url }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(url).catch(() => {});
+    }
+  }, [trip, t]);
+
+  const handleDeleteTrip = useCallback(() => {
+    if (!trip || deleting) return;
+    if (!window.confirm(t('home', 'deleteTrip') + '?')) return;
+    setDeleting(true);
+    setDeleteError(null);
+    api.user
+      .deleteTrip(trip.id)
+      .then(() => navigate('/plan'))
+      .catch((e) => {
+        setDeleteError(e?.message || t('home', 'tripDeleteFailed'));
+        setDeleting(false);
+      });
+  }, [trip, deleting, t, navigate]);
+
+  if (loading) {
+    return (
+      <div className="trip-detail trip-detail--loading">
+        <div className="trip-detail-loading-inner">
+          <div className="trip-detail-spinner" aria-hidden="true" />
+          <p>{t('home', 'loading')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !trip) {
+    return (
+      <div className="trip-detail trip-detail--error">
+        <div className="trip-detail-container">
+          <Link to="/plan" className="trip-detail-back">
+            <Icon name="arrow_back" size={20} /> {t('home', 'tripDetailBackPlanner')}
+          </Link>
+          <p className="trip-detail-error-msg">{error || t('home', 'tripDetailNotFound')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const rangeLabel = (() => {
+    const a = trip.startDate ? new Date(`${toDateOnly(trip.startDate)}T12:00:00`).toLocaleDateString() : '';
+    const b = trip.endDate ? new Date(`${toDateOnly(trip.endDate)}T12:00:00`).toLocaleDateString() : '';
+    if (a && b) return `${a} – ${b}`;
+    return a || b || '';
+  })();
+
+  return (
+    <div className="trip-detail">
+      <div className="trip-detail-container">
+        <nav className="trip-detail-breadcrumb" aria-label="Breadcrumb">
+          <ol>
+            <li><Link to="/">{t('nav', 'home')}</Link></li>
+            <li><Link to="/plan">{t('home', 'tripDetailBackPlanner')}</Link></li>
+            <li aria-current="page">{trip.name || t('home', 'planTitle')}</li>
+          </ol>
+        </nav>
+
+        <Link to="/plan" className="trip-detail-back">
+          <Icon name="arrow_back" size={20} /> {t('home', 'tripDetailBackPlanner')}
+        </Link>
+
+        <header className="trip-detail-hero">
+          <h1 className="trip-detail-title">{trip.name || t('home', 'planTitle')}</h1>
+          {rangeLabel && (
+            <p className="trip-detail-dates">
+              <Icon name="calendar_month" size={20} aria-hidden />
+              {rangeLabel}
+            </p>
+          )}
+          <p className="trip-detail-summary">
+            {dayBlocks.length} {dayBlocks.length === 1 ? t('home', 'tripDetailDayWord') : t('home', 'tripDetailDaysWord')}
+            {totalStops > 0 && ` · ${totalStops} ${totalStops === 1 ? t('home', 'tripDetailStopWord') : t('home', 'tripDetailStopsWord')}`}
+          </p>
+          {trip.description && (
+            <p className="trip-detail-description">{trip.description}</p>
+          )}
+          <div className="trip-detail-actions">
+            <button type="button" className="trip-detail-btn trip-detail-btn--primary" onClick={openMap} disabled={totalStops === 0}>
+              <Icon name="map" size={20} /> {t('detail', 'viewOnMap')}
+            </button>
+            <button type="button" className="trip-detail-btn trip-detail-btn--ghost" onClick={handleShare}>
+              <Icon name="share" size={20} /> {t('detail', 'share')}
+            </button>
+            <Link to={`/plan?edit=${encodeURIComponent(trip.id)}`} className="trip-detail-btn trip-detail-btn--outline">
+              <Icon name="edit" size={20} /> {t('home', 'tripDetailEdit')}
+            </Link>
+            <button
+              type="button"
+              className="trip-detail-btn trip-detail-btn--danger trip-detail-btn--icon-only"
+              onClick={handleDeleteTrip}
+              disabled={deleting}
+              aria-busy={deleting}
+              aria-label={deleting ? t('home', 'loading') : t('home', 'deleteTrip')}
+            >
+              <Icon name="delete" size={22} ariaHidden />
+            </button>
+          </div>
+          {deleteError && (
+            <p className="trip-detail-delete-error" role="alert">
+              {deleteError}
+            </p>
+          )}
+        </header>
+
+        <section className="trip-detail-section" aria-labelledby="trip-itin-head">
+          <h2 id="trip-itin-head" className="trip-detail-section-title">
+            {t('home', 'tripDetailItinerary')}
+          </h2>
+          <div className="trip-detail-days">
+            {dayBlocks.map((block) => (
+              <div key={block.index} className="trip-detail-day-card">
+                <div className="trip-detail-day-head">
+                  <span className="trip-detail-day-badge">{t('home', 'tripDetailDayLabel').replace('{n}', String(block.index + 1))}</span>
+                  {block.dateLabel && <span className="trip-detail-day-date">{block.dateLabel}</span>}
+                </div>
+                {block.slots.length === 0 ? (
+                  <p className="trip-detail-day-empty">{t('home', 'tripDetailEmptyDay')}</p>
+                ) : (
+                  <ul className="trip-detail-stop-list">
+                    {block.slots.map((slot, si) => {
+                      const pid = String(slot.placeId);
+                      const place = placesById[pid];
+                      const name = place?.name || pid;
+                      const loc = place?.location || '';
+                      const img = place ? getPlaceImageUrl(place.image || (Array.isArray(place.images) && place.images[0])) : null;
+                      const timeLine = slotTimeLabel(slot);
+                      const notes = slot.notes ? String(slot.notes).trim() : '';
+                      return (
+                        <li key={`${pid}-${si}`} className="trip-detail-stop">
+                          <Link to={`/place/${encodeURIComponent(pid)}`} className="trip-detail-stop-link">
+                            <div
+                              className="trip-detail-stop-media"
+                              style={img ? { backgroundImage: `url(${img})` } : undefined}
+                            >
+                              {!img && <Icon name="place" size={28} aria-hidden />}
+                            </div>
+                            <div className="trip-detail-stop-body">
+                              {timeLine && (
+                                <span className="trip-detail-stop-time">
+                                  <Icon name="schedule" size={16} aria-hidden />
+                                  {timeLine}
+                                </span>
+                              )}
+                              <span className="trip-detail-stop-name">{name}</span>
+                              {loc && <span className="trip-detail-stop-loc">{loc}</span>}
+                              {notes && (
+                                <span className="trip-detail-stop-notes">
+                                  <strong>{t('home', 'tripDetailSlotNotes')}:</strong> {notes}
+                                </span>
+                              )}
+                            </div>
+                            <Icon name="chevron_right" size={22} className="trip-detail-stop-chevron" aria-hidden />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}

@@ -1,10 +1,11 @@
 const express = require('express');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
+const { adminMiddleware } = require('../../middleware/admin');
 
 const router = express.Router();
 
-router.use(authMiddleware);
+router.use(authMiddleware, adminMiddleware);
 
 function safeJson(val, fallback = []) {
   if (Array.isArray(val)) return val;

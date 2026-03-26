@@ -1,11 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../api/client';
+import api, { getPlaceImageUrl } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import Icon from '../components/Icon';
-import { getPlaceImageUrl } from '../api/client';
+import { CommunityFeedStrip } from '../components/CommunityFeed';
 import { trackEvent } from '../utils/analytics';
+import { resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
+import { getHomeCategoryBrowseRows, categoryIconName, truncateText } from '../utils/homeCategoryBrowse';
+import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
+import { WAYS_CONFIG, groupPlacesByWay, countDirectoryCategoriesForWay } from '../utils/findYourWayGrouping';
 import './Explore.css';
 
 const TRIPOLI_TIMEZONE = 'Asia/Beirut';
@@ -50,6 +55,13 @@ function TripoliClock({ title, condition, locale, dateLabel, timezoneLabel }) {
       </div>
     </div>
   );
+}
+
+/** Latin digits for stat tiles (consistent with mixed-language UI). */
+function formatDirectoryCount(n, lang) {
+  const safe = Number.isFinite(n) ? Math.max(0, Math.floor(Number(n))) : 0;
+  const locale = lang === 'fr' ? 'fr' : 'en';
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(safe);
 }
 
 const TRIPOLI_LAT = 34.4367;
@@ -354,43 +366,93 @@ function TopPicksCarousel({ places, t }) {
   );
 }
 
-export function ExperienceTripoliSection({ t, basePath }) {
+/** How many distinct directory categories appear in a theme bucket (via listing metadata). */
+function themeCategoryStats(bucket, categories) {
+  const ids = new Set();
+  for (const p of bucket || []) {
+    const id = p.categoryId ?? p.category_id;
+    if (id != null) ids.add(String(id));
+  }
+  const known = new Set((categories || []).map((c) => String(c.id)));
+  let resolved = 0;
+  ids.forEach((id) => {
+    if (known.has(id)) resolved += 1;
+  });
+  return { categoryCount: resolved, listingCount: (bucket || []).length };
+}
+
+/** Home “Find your way” — themes + indirect category framing (no named places). */
+export function ExperienceTripoliSection({ t, lang, places = [], categories = [] }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
-  const ways = [
-    { wayKey: 'explorer', titleKey: 'wayExplorer', descKey: 'wayExplorerDesc', icon: 'explore', size: 'large' },
-    { wayKey: 'food', titleKey: 'wayFood', descKey: 'wayFoodDesc', icon: 'restaurant', size: 'small' },
-    { wayKey: 'history', titleKey: 'wayHistory', descKey: 'wayHistoryDesc', icon: 'account_balance', size: 'small' },
-    { wayKey: 'sea', titleKey: 'waySea', descKey: 'waySeaDesc', icon: 'waves', size: 'small' },
-    { wayKey: 'family', titleKey: 'wayFamily', descKey: 'wayFamilyDesc', icon: 'family_restroom', size: 'small' },
-  ];
-  const getCardTo = (way) => (basePath ? `${basePath}#${way.wayKey}` : '/#experience');
+  const placesByWay = groupPlacesByWay(places, categories);
+  const stepClass = ['vd-find-your-way-row--a', 'vd-find-your-way-row--b', 'vd-find-your-way-row--c', 'vd-find-your-way-row--d'];
   return (
-    <section id="experience" className="vd-section vd-experience-tripoli vd-find-your-way">
+    <section id="experience" className="vd-section vd-experience-tripoli vd-find-your-way vd-find-your-way--deck">
       <div className="vd-container">
         <header className="vd-find-your-way-header">
           <h2 className="vd-find-your-way-title">{safeT('home', 'findYourWayTitle')}</h2>
           <p className="vd-find-your-way-sub">{safeT('home', 'findYourWaySub')}</p>
         </header>
-        <div className="vd-find-your-way-bento">
-          {ways.map((way) => (
-            <Link
-              key={way.wayKey}
-              to={getCardTo(way)}
-              className={`vd-find-your-way-card vd-find-your-way-card--${way.size}`}
-            >
-              <span className="vd-find-your-way-icon" aria-hidden="true">
-                <Icon name={way.icon} size={way.size === 'large' ? 32 : 24} />
-              </span>
-              <h3 className="vd-find-your-way-card-title">{safeT('home', way.titleKey)}</h3>
-              <p className="vd-find-your-way-card-desc">{safeT('home', way.descKey)}</p>
-              <span className="vd-find-your-way-arrow" aria-hidden="true">
-                <Icon name="arrow_forward" size={20} />
-              </span>
-            </Link>
-          ))}
+        <div className="vd-find-your-way-deck" role="list">
+          {WAYS_CONFIG.map((way, i) => {
+            const bucket = placesByWay.get(way.wayKey) || [];
+            const { categoryCount: categoriesWithListings, listingCount } = themeCategoryStats(bucket, categories);
+            const directoryCategoryCount = countDirectoryCategoriesForWay(way.wayKey, categories);
+            const categoryCount = Math.max(directoryCategoryCount, categoriesWithListings);
+            const idx = String(i + 1).padStart(2, '0');
+            const stagger = stepClass[i % stepClass.length];
+            const asideNumber =
+              categoryCount > 0
+                ? formatDirectoryCount(categoryCount, lang)
+                : listingCount > 0
+                  ? formatDirectoryCount(listingCount, lang)
+                  : null;
+            const asideLabel =
+              categoryCount > 0
+                ? safeT('home', 'findYourWayCategoriesUnit')
+                : listingCount > 0
+                  ? safeT('home', 'findYourWayThemeEntriesLabel')
+                  : null;
+            return (
+              <Link
+                key={way.wayKey}
+                to={PLACES_DISCOVER_PATH}
+                className={`vd-find-your-way-row ${stagger}`}
+                role="listitem"
+              >
+                <span className="vd-find-your-way-row-index" aria-hidden="true">
+                  {idx}
+                </span>
+                <span className="vd-find-your-way-row-glyph" aria-hidden="true">
+                  <Icon name={way.icon} size={26} />
+                </span>
+                <div className="vd-find-your-way-row-copy">
+                  <span className="vd-find-your-way-row-theme">{safeT('home', 'findYourWayRowKicker')}</span>
+                  <h3 className="vd-find-your-way-row-title">{safeT('home', way.titleKey)}</h3>
+                  <p className="vd-find-your-way-row-desc">{safeT('home', way.descKey)}</p>
+                  <p className="vd-find-your-way-row-detail">{safeT('home', way.detailKey)}</p>
+                </div>
+                <div className="vd-find-your-way-row-aside">
+                  {asideNumber != null ? (
+                    <span className="vd-find-your-way-count">
+                      <strong>{asideNumber}</strong>
+                      <span className="vd-find-your-way-count-label">{asideLabel}</span>
+                    </span>
+                  ) : (
+                    <span className="vd-find-your-way-count vd-find-your-way-count--empty">
+                      {safeT('home', 'findYourWayComingSoon')}
+                    </span>
+                  )}
+                  <span className="vd-find-your-way-row-chevron" aria-hidden="true">
+                    <Icon name="arrow_forward" size={22} />
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
         <div className="vd-find-your-way-cta-wrap">
-          <Link to="/ways" className="vd-find-your-way-cta">
+          <Link to={PLACES_DISCOVER_PATH} className="vd-find-your-way-cta">
             {safeT('home', 'seeAllWays')}
             <Icon name="arrow_forward" size={20} />
           </Link>
@@ -400,58 +462,59 @@ export function ExperienceTripoliSection({ t, basePath }) {
   );
 }
 
-const WHY_CARD_COUNT = 6;
-const WHY_AUTO_SWIPE_MS = 5000;
-
 export default function Explore() {
   const { t, lang } = useLanguage();
   const { user } = useAuth();
+  const { settings } = useSiteSettings();
   const [places, setPlaces] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [categoryCount, setCategoryCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [whyIndex, setWhyIndex] = useState(0);
-  const whyScrollRef = useRef(null);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setWhyIndex((i) => (i + 1) % WHY_CARD_COUNT);
-    }, WHY_AUTO_SWIPE_MS);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    const el = whyScrollRef.current;
-    if (!el || el.scrollWidth <= el.clientWidth) return;
-    const safeWhyIndex = Math.max(0, Math.min(whyIndex, WHY_CARD_COUNT - 1));
-    const child = el.children[safeWhyIndex];
-    if (!child) return;
-    const isTouchOrNarrow = window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(max-width: 768px)').matches;
-    if (isTouchOrNarrow) {
-      el.scrollLeft = child.offsetLeft;
-    } else {
-      child.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
-    }
-  }, [whyIndex]);
+  const [communityPosts, setCommunityPosts] = useState([]);
 
   useEffect(() => {
     const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
-    Promise.all([
-      api.places.list({ lang: langParam }).then((r) => r.popular || r.locations || []),
-      api.categories.list({ lang: langParam }).then((r) => r.categories || []),
-    ])
-      .then(([p, c]) => {
-        setPlaces(Array.isArray(p) ? p : []);
-        setCategories(Array.isArray(c) ? c : []);
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    Promise.allSettled([api.places.list({ lang: langParam }), api.categories.list({ lang: langParam })])
+      .then((results) => {
+        if (cancelled) return;
+        const [pRes, cRes] = results;
+        if (pRes.status === 'rejected') {
+          const err = pRes.reason;
+          const apiErr = err?.data?.error || err?.message;
+          const detail =
+            import.meta.env.DEV && err?.data?.detail ? `\n\n${err.data.detail}` : '';
+          setError(String(apiErr || err || 'Failed to load') + detail);
+          return;
+        }
+        const pr = pRes.value;
+        const pl = pr.popular || pr.locations || [];
+        setPlaces(Array.isArray(pl) ? pl : []);
+        if (cRes.status === 'fulfilled') {
+          const cats = cRes.value?.categories || [];
+          const arr = Array.isArray(cats) ? cats : [];
+          setCategories(arr);
+          setCategoryCount(arr.length);
+        } else {
+          setCategories([]);
+          setCategoryCount(0);
+        }
       })
-      .catch((err) => setError(String(err?.message ?? err ?? 'Failed to load')))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [lang]);
 
   useEffect(() => {
     if (loading || error) return;
     const hash = window.location.hash;
-    const allowedHashes = ['#plan', '#experience', '#why', '#plan-trip', '#download-app'];
+    const allowedHashes = ['#plan', '#experience', '#why', '#plan-trip', '#download-app', '#community'];
     if (hash && allowedHashes.includes(hash)) {
       const el = document.querySelector(hash);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -462,11 +525,44 @@ export default function Explore() {
     trackEvent(user, 'page_view', { page: 'home' });
   }, [user]);
 
+  useEffect(() => {
+    const d = settings.metaDescription?.trim();
+    if (!d) return;
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'description');
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute('content', d);
+  }, [settings.metaDescription]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .communityFeed({ limit: 48, sort: 'popular' })
+      .then((r) => {
+        if (!cancelled) setCommunityPosts(Array.isArray(r.posts) ? r.posts : []);
+      })
+      .catch(() => {
+        if (!cancelled) setCommunityPosts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const heroTitle = settings.siteName?.trim() || t('home', 'heroTitle');
+  const heroTagline = settings.siteTagline?.trim() || t('home', 'heroTagline');
+  const appStoreHref = settings.appStoreUrl?.trim() || 'https://apps.apple.com';
+  const playStoreHref = settings.playStoreUrl?.trim() || 'https://play.google.com';
+  const showMap = settings.showMap !== false;
+
   if (loading) {
     return (
-      <div className="vd">
+      <div className="vd vd-home">
         <section className="vd-hero">
-          <h1 className="vd-hero-title">{t('home', 'heroTitle')}</h1>
+          <h1 className="vd-hero-title">{heroTitle}</h1>
         </section>
         <div className="vd-loading">
           <div className="vd-loading-spinner" aria-hidden="true" />
@@ -478,9 +574,9 @@ export default function Explore() {
 
   if (error) {
     return (
-      <div className="vd">
+      <div className="vd vd-home">
         <section className="vd-hero">
-          <h1 className="vd-hero-title">{t('home', 'heroTitle')}</h1>
+          <h1 className="vd-hero-title">{heroTitle}</h1>
         </section>
         <div className="vd-error">{error}</div>
       </div>
@@ -488,107 +584,206 @@ export default function Explore() {
   }
 
   const placesList = Array.isArray(places) ? places : [];
+  const placeCountStr = formatDirectoryCount(placesList.length, lang);
+  const categoryCountStr = formatDirectoryCount(categoryCount, lang);
   const topPicks = placesList.slice().sort((a, b) => (Number(b?.rating) || 0) - (Number(a?.rating) || 0)).slice(0, 6);
+  const bentoV = resolveHomeBentoVisuals(settings);
+  const bentoAvatarSlots = resolveBentoAvatarSlots(settings, placesList, (p) =>
+    getPlaceImageUrl(p?.image || (Array.isArray(p?.images) && p.images[0]))
+  );
+  const showBentoAvatarStack = bentoAvatarSlots.some((s) => s.href || s.placeId);
 
   return (
-    <div className="vd">
-      {/* Hero + app download – single section */}
-      <section id="download-app" className="vd-hero vd-hero--unified">
-        <div className="vd-hero-bg" />
-        <div className="vd-hero-unified-inner">
-          <div className="vd-hero-content">
-            <h1 className="vd-hero-title">{t('home', 'heroTitle')}</h1>
-            <p className="vd-hero-tagline">{t('home', 'heroTagline')}</p>
-            <div className="vd-hero-ctas">
-              <Link to="/plan" className="vd-btn vd-btn--primary">
-                {t('home', 'webTripPlannerCta')}
-                <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
-              </Link>
-            </div>
-          </div>
-          <div className="vd-hero-app-block">
-            <div className="vd-download-app-content">
-              <h2 className="vd-download-app-title">{t('home', 'downloadAppTitle')}</h2>
-              <p className="vd-download-app-sub">{t('home', 'downloadAppSub')}</p>
-              <div className="vd-download-app-badges">
-                <a href="https://apps.apple.com" target="_blank" rel="noopener noreferrer" className="vd-download-app-badge vd-download-app-badge--apple" aria-label={t('home', 'getOnAppStore')}>
-                  <Icon name="phone_iphone" size={28} />
-                  <span>{t('home', 'getOnAppStore')}</span>
-                </a>
-                <a href="https://play.google.com" target="_blank" rel="noopener noreferrer" className="vd-download-app-badge vd-download-app-badge--google" aria-label={t('home', 'getOnGooglePlay')}>
-                  <Icon name="android" size={24} />
-                  <span>{t('home', 'getOnGooglePlay')}</span>
-                </a>
-              </div>
-            </div>
-            <div className="vd-download-app-phone" aria-hidden="true">
-              <div className="vd-download-app-phone-mock">
-                <span className="vd-download-app-phone-screen" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Why Visit Tripoli – reference layout: title, swipeable cards (icon, title, desc, arrow), dots, CTA */}
-      <section id="why" className="vd-section vd-why">
-        <div className="vd-container">
-          <header className="vd-why-header vd-why-header--layout">
-            <h2 className="vd-why-title vd-why-title--layout">{t('home', 'whyVisitTitle')}</h2>
-            <p className="vd-why-subtitle">{t('home', 'whyVisitSub')}</p>
-          </header>
-          <div className="vd-highlights" ref={whyScrollRef} aria-label="Why Visit Tripoli reasons">
-            {[
-              { icon: 'account_balance', titleKey: 'whyCulture', descKey: 'whyCultureDesc', to: '/experiences' },
-              { icon: 'restaurant', titleKey: 'whyFood', descKey: 'whyFoodDesc', to: '/spots' },
-              { icon: 'waves', titleKey: 'whyCoast', descKey: 'whyCoastDesc', to: '/spots' },
-              { icon: 'favorite', titleKey: 'whyHospitality', descKey: 'whyHospitalityDesc', to: '/ways' },
-              { icon: 'store', titleKey: 'whyShopping', descKey: 'whyShoppingDesc', to: '/spots' },
-              { icon: 'celebration', titleKey: 'whyEvents', descKey: 'whyEventsDesc', to: '/events' },
-            ].map((item, i) => (
-              <Link
-                key={item.titleKey}
-                to={item.to}
-                className={`vd-highlight-card vd-highlight-card--${i % 2 === 0 ? 'primary' : 'light'}`}
-              >
-                <div className="vd-highlight-icon-wrap vd-highlight-icon-wrap--circle">
-                  <Icon name={item.icon} className="vd-highlight-icon" size={24} />
-                </div>
-                <h3 className="vd-highlight-title">{t('home', item.titleKey)}</h3>
-                <p className="vd-highlight-desc">{t('home', item.descKey)}</p>
-                <span className="vd-highlight-arrow" aria-hidden="true">
-                  <Icon name="arrow_forward" size={20} />
-                </span>
-              </Link>
-            ))}
-          </div>
-          <div className="vd-why-footer">
-            <div className="vd-why-dots" aria-hidden="true">
-              {Array.from({ length: WHY_CARD_COUNT }).map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className={`vd-why-dot ${i === whyIndex ? 'vd-why-dot--active' : ''}`}
-onClick={() => setWhyIndex(i)}
-                aria-label={`Go to slide ${i + 1}`}
+    <div className="vd vd-home">
+      {/* Gateway — bento (hero, discover, why, directory snapshot) */}
+      <section id="download-app" className="vd-home-bento">
+        <div className="vd-container vd-home-bento-inner">
+          <div className="vd-home-bento-grid">
+            <div className="vd-bento-hero-why-bundle">
+              <div className="vd-bento-card vd-bento-hero-main">
+                <img
+                  className="vd-bento-hero-main-photo"
+                  src={bentoV.hero}
+                  alt=""
+                  loading="eager"
+                  decoding="async"
+                  draggable={false}
                 />
-              ))}
+                <div className="vd-bento-hero-main-scrim" aria-hidden="true" />
+                <div className="vd-bento-hero-main-content">
+                  <h1 className="vd-bento-hero-title">{heroTitle}</h1>
+                  <p className="vd-bento-hero-tagline">{heroTagline}</p>
+                  <div className="vd-bento-hero-ctas">
+                    <Link to="/plan" className="vd-bento-btn vd-bento-btn--primary">
+                      {t('home', 'webTripPlannerCta')}
+                      <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
+                    </Link>
+                  </div>
+                  {showBentoAvatarStack && (
+                    <div className="vd-bento-avatar-stack" aria-label={t('home', 'bentoAvatarStackAria')}>
+                      {bentoAvatarSlots.map((slot, i) => {
+                        const to = slot.placeId ? `/place/${slot.placeId}` : COMMUNITY_PATH;
+                        const key = slot.placeId ? `bento-av-${slot.placeId}` : `bento-av-${i}`;
+                        return (
+                          <Link
+                            key={key}
+                            to={to}
+                            className="vd-bento-avatar"
+                            style={slot.href ? { backgroundImage: bentoCssUrl(slot.href) } : undefined}
+                          >
+                            {!slot.href && <Icon name="travel_explore" size={22} />}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="vd-bento-card vd-bento-why-intro">
+                <h2 className="vd-bento-why-intro-title">{t('home', 'whyVisitTitle')}</h2>
+                <p className="vd-bento-why-intro-sub">{t('home', 'whyVisitSub')}</p>
+                <div className="vd-bento-why-intro-footer">
+                  <Link to={PLACES_DISCOVER_PATH} className="vd-bento-why-intro-link">
+                    <span>{t('home', 'seeAllWays')}</span>
+                    <Icon name="arrow_forward" size={20} aria-hidden="true" />
+                  </Link>
+                </div>
+              </div>
             </div>
-            <Link to="/#experience" className="vd-btn vd-btn--primary vd-why-cta">
-              {t('home', 'viewAllServices')}
-              <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
+
+            <Link
+              to="/plan"
+              className="vd-bento-card vd-bento-hero-side vd-bento-web-hub"
+            >
+              <div className="vd-bento-web-hub-inner">
+                <p className="vd-bento-web-hub-kicker">{t('home', 'useWebCta')}</p>
+                <div className="vd-bento-web-hub-header">
+                  <div className="vd-bento-web-hub-icon" aria-hidden="true">
+                    <Icon name="map" size={26} />
+                  </div>
+                  <div className="vd-bento-web-hub-titles">
+                    <p className="vd-bento-web-hub-name">{t('home', 'bentoWebHubTitle')}</p>
+                    <p className="vd-bento-web-hub-sub">{t('home', 'bentoWebHubSub')}</p>
+                    <p className="vd-bento-web-hub-footnote">{t('home', 'bentoWebHubFootnote')}</p>
+                  </div>
+                </div>
+                <span className="vd-bento-web-hub-cta">
+                  <span className="vd-bento-web-hub-cta-label">{t('home', 'bentoWebHubCta')}</span>
+                  <Icon name="arrow_forward" size={20} aria-hidden="true" />
+                </span>
+              </div>
             </Link>
+
+            <div
+              id="why"
+              className="vd-bento-card vd-bento-mosaic"
+              style={{ '--bento-mosaic-img': bentoCssUrl(bentoV.mosaic) }}
+            >
+              <div className="vd-bento-mosaic-bg" aria-hidden="true" />
+              <div className="vd-bento-mosaic-top">
+                <Link
+                  to={COMMUNITY_PATH}
+                  className="vd-bento-mosaic-snap vd-bento-mosaic-snap--phone"
+                  aria-label={`${t('home', 'bentoMosaicSnapAria')}: ${placeCountStr} ${t('home', 'bentoMosaicSnapPlacesUnit')}, ${categoryCountStr} ${t('home', 'bentoMosaicSnapCategoriesUnit')}`}
+                >
+                  <span className="vd-bento-mosaic-snap-glow" aria-hidden="true" />
+                  <span className="vd-bento-mosaic-snap-body">
+                    <span className="vd-bento-mosaic-snap-line">
+                      <strong className="vd-bento-mosaic-snap-n">{placeCountStr}</strong>
+                      <span className="vd-bento-mosaic-snap-u">{t('home', 'bentoMosaicSnapPlacesUnit')}</span>
+                      <span className="vd-bento-mosaic-snap-sep" aria-hidden="true">
+                        ·
+                      </span>
+                      <strong className="vd-bento-mosaic-snap-n">{categoryCountStr}</strong>
+                      <span className="vd-bento-mosaic-snap-u">{t('home', 'bentoMosaicSnapCategoriesUnit')}</span>
+                    </span>
+                    <span className="vd-bento-mosaic-snap-sub">{t('home', 'bentoMosaicSnapSub')}</span>
+                  </span>
+                  <span className="vd-bento-mosaic-snap-arrow" aria-hidden="true">
+                    <Icon name="arrow_forward" size={18} />
+                  </span>
+                </Link>
+                <div className="vd-bento-stat-grid vd-bento-mosaic-stats-desktop">
+                  <Link
+                    to={COMMUNITY_PATH}
+                    className="vd-bento-stat vd-bento-stat--dark vd-bento-stat--link"
+                    aria-label={`${placeCountStr} ${t('home', 'bentoStatPlaces')}`}
+                  >
+                    <strong className="vd-bento-stat-num">{placeCountStr}</strong>
+                    <span className="vd-bento-stat-label">{t('home', 'bentoStatPlaces')}</span>
+                  </Link>
+                  <Link
+                    to={PLACES_DISCOVER_PATH}
+                    className="vd-bento-stat vd-bento-stat--light vd-bento-stat--link"
+                    aria-label={`${categoryCountStr} ${t('home', 'bentoStatCategories')}`}
+                  >
+                    <strong className="vd-bento-stat-num">{categoryCountStr}</strong>
+                    <span className="vd-bento-stat-label">{t('home', 'bentoStatCategories')}</span>
+                    <span className="vd-bento-stat-cta" aria-hidden="true">
+                      <Icon name="arrow_forward" size={16} />
+                    </span>
+                  </Link>
+                </div>
+              </div>
+
+              <div className="vd-bento-mosaic-panel">
+                <p className="vd-bento-panel-kicker vd-bento-panel-kicker--desktop">{t('home', 'bentoMosaicKicker')}</p>
+                <div className="vd-bento-mosaic-panel-grid">
+                  <div className="vd-bento-mosaic-panel-copy">
+                    <p className="vd-bento-panel-lead vd-bento-panel-lead--desktop">{t('home', 'bentoSiteGuideLead')}</p>
+                    <p className="vd-bento-panel-note vd-bento-panel-note--desktop">{t('home', 'bentoSiteGuideAppNote')}</p>
+                    <p className="vd-bento-panel-lead-short">{t('home', 'bentoSiteGuideLeadShort')}</p>
+                  </div>
+                  <div className="vd-bento-mosaic-panel-apps">
+                    <p className="vd-bento-panel-badges-label">{t('home', 'bentoSiteGuideAppStoreLabel')}</p>
+                    <div className="vd-bento-panel-badges">
+                      <a
+                        href={appStoreHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="vd-download-app-badge vd-download-app-badge--apple"
+                        aria-label={t('home', 'getOnAppStore')}
+                      >
+                        <Icon name="phone_iphone" size={24} />
+                        <span>{t('home', 'getOnAppStore')}</span>
+                      </a>
+                      <a
+                        href={playStoreHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="vd-download-app-badge vd-download-app-badge--google"
+                        aria-label={t('home', 'getOnGooglePlay')}
+                      >
+                        <Icon name="android" size={22} />
+                        <span>{t('home', 'getOnGooglePlay')}</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="vd-bento-mosaic-footer">
+                <Link to={PLACES_DISCOVER_PATH} className="vd-bento-mosaic-cta">
+                  {t('home', 'seeAllWays')}
+                  <Icon name="arrow_forward" className="vd-btn-arrow" size={16} />
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Top picks – one card at a time, name + description + details, auto-swipe every 10s */}
+      {/* Highlights — curated picks before thematic browsing (DMO-style flow) */}
       {topPicks.length > 0 && (
         <TopPicksCarousel places={topPicks} t={t} />
       )}
 
-      {/* Experience Tripoli – visitor type pills + 2x3 grid + Curate button (reference design) */}
-      <ExperienceTripoliSection t={t} basePath="/ways" />
+      <ExperienceTripoliSection t={t} lang={lang} places={placesList} categories={categories} />
+
+      {communityPosts.length > 0 && (
+        <CommunityFeedStrip posts={communityPosts} t={t} moreTo={COMMUNITY_PATH} layout="bento" />
+      )}
 
       {/* Plan your trip – one section: areas, getting there, stay, tips */}
       <section id="plan-trip" className="vd-section vd-plan-trip-one">
@@ -627,7 +822,7 @@ onClick={() => setWhyIndex(i)}
             <div className="vd-plan-trip-block">
               <h3 className="vd-plan-trip-block-title">{t('home', 'stayTitle')}</h3>
               <p className="vd-plan-trip-block-desc">{t('home', 'staySub')}</p>
-              <Link to="/map" className="vd-plan-trip-cta vd-btn vd-btn--primary">
+              <Link to={showMap ? '/map' : '/plan'} className="vd-plan-trip-cta vd-btn vd-btn--primary">
                 {t('home', 'stayCta')}
                 <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
               </Link>
@@ -671,22 +866,26 @@ onClick={() => setWhyIndex(i)}
             </div>
           </div>
           <p className="vd-plan-text">{t('home', 'planText')}</p>
-          <div className="vd-plan-ctas">
-            <Link to="/map" className="vd-btn vd-btn--primary">
-              {t('home', 'viewMapCta')}
-              <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
-            </Link>
-          </div>
+          {showMap && (
+            <div className="vd-plan-ctas">
+              <Link to="/map" className="vd-btn vd-btn--primary">
+                {t('home', 'viewMapCta')}
+                <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
       {/* Slim utility bar – Map, Plan, accessibility */}
       <div className="vd-utility-bar">
         <div className="vd-container vd-utility-inner">
-          <Link to="/map" className="vd-utility-link">
-            <Icon name="location_on" className="vd-utility-icon" size={20} />
-            {t('home', 'map')}
-          </Link>
+          {showMap && (
+            <Link to="/map" className="vd-utility-link">
+              <Icon name="location_on" className="vd-utility-icon" size={20} />
+              {t('home', 'map')}
+            </Link>
+          )}
           <a href="#plan" className="vd-utility-link">
             <Icon name="schedule" className="vd-utility-icon" size={20} />
             {t('home', 'planTitle')}
@@ -701,16 +900,51 @@ onClick={() => setWhyIndex(i)}
       <footer className="vd-footer">
         <div className="vd-container vd-footer-inner">
           <div className="vd-footer-brand">
-            <Link to="/" className="vd-footer-logo">{t('nav', 'visitTripoli')}</Link>
-            <span className="vd-footer-tagline">{t('nav', 'tripoliLebanon')}</span>
+            <Link to="/" className="vd-footer-logo">{settings.siteName?.trim() || t('nav', 'visitTripoli')}</Link>
+            <span className="vd-footer-tagline">{settings.siteTagline?.trim() || t('nav', 'tripoliLebanon')}</span>
           </div>
+          {(settings.contactEmail || settings.contactPhone) && (
+            <p className="vd-footer-contact-line">
+              {settings.contactEmail?.trim() && (
+                <a href={`mailto:${settings.contactEmail.trim()}`}>{settings.contactEmail.trim()}</a>
+              )}
+              {settings.contactEmail?.trim() && settings.contactPhone?.trim() && ' · '}
+              {settings.contactPhone?.trim() && <span>{settings.contactPhone.trim()}</span>}
+            </p>
+          )}
+          {(settings.socialFacebook?.trim() || settings.socialInstagram?.trim() || settings.socialTwitterX?.trim()) && (
+            <div className="vd-footer-social">
+              {settings.socialFacebook?.trim() && (
+                <a href={settings.socialFacebook.trim()} target="_blank" rel="noopener noreferrer">
+                  Facebook
+                </a>
+              )}
+              {settings.socialInstagram?.trim() && (
+                <a href={settings.socialInstagram.trim()} target="_blank" rel="noopener noreferrer">
+                  Instagram
+                </a>
+              )}
+              {settings.socialTwitterX?.trim() && (
+                <a href={settings.socialTwitterX.trim()} target="_blank" rel="noopener noreferrer">
+                  X
+                </a>
+              )}
+            </div>
+          )}
           <div className="vd-footer-links">
-            <Link to="/map">{t('home', 'map')}</Link>
-            <Link to="/#experience">{t('nav', 'discoverTripoli')}</Link>
+            {showMap && <Link to="/map">{t('home', 'map')}</Link>}
+            <Link to={COMMUNITY_PATH}>{t('nav', 'discoverTripoli')}</Link>
             <Link to="/login">{t('nav', 'signIn')}</Link>
             <Link to="/register">{t('nav', 'signUp')}</Link>
+            {settings.supportUrl?.trim() && (
+              <a href={settings.supportUrl.trim()} target="_blank" rel="noopener noreferrer">
+                {t('home', 'contactUs')}
+              </a>
+            )}
           </div>
-          <p className="vd-footer-copy">© {new Date().getFullYear()} {t('nav', 'visitTripoli')}. {t('home', 'copyright')}</p>
+          <p className="vd-footer-copy">
+            © {new Date().getFullYear()} {settings.siteName?.trim() || t('nav', 'visitTripoli')}. {t('home', 'copyright')}
+          </p>
         </div>
       </footer>
     </div>
