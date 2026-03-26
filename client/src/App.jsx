@@ -31,6 +31,7 @@ import {
   SouksGuide,
   SweetsGuide,
   TravelTipsTripoli,
+  AboutTripoli,
 } from './pages/SeoLanding';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -188,6 +189,7 @@ function AppRoutes() {
         <Route path="tripoli-souks-guide" element={<SouksGuide />} />
         <Route path="best-sweets-in-tripoli" element={<SweetsGuide />} />
         <Route path="tripoli-travel-tips" element={<TravelTipsTripoli />} />
+        <Route path="about-tripoli" element={<AboutTripoli />} />
         <Route path="partner-link-kit" element={<BacklinkKit />} />
         <Route path="trips/:tripId" element={<ProtectedRoute><TripDetail /></ProtectedRoute>} />
         <Route path="trips" element={<ProtectedRoute><Trips /></ProtectedRoute>} />

@@ -39,6 +39,7 @@ export default function Layout() {
   const isMapPage = location.pathname === '/map';
   const isPlaceDiscoverPage =
     location.pathname === PLACES_DISCOVER_PATH || location.pathname.startsWith(`${PLACES_DISCOVER_PATH}/`);
+  const isAboutTripoliPage = location.pathname === '/about-tripoli';
   const isAiPlannerPage = location.pathname === '/plan/ai';
 
   const handleLogout = () => {
@@ -146,6 +147,13 @@ export default function Layout() {
                 onClick={closeMenu}
               >
                 {t('nav', 'activitiesHubNav')}
+              </Link>
+              <Link
+                to="/about-tripoli"
+                className={`nav-link nav-link--about ${isAboutTripoliPage ? 'nav-link--active' : ''}`}
+                onClick={closeMenu}
+              >
+                {t('nav', 'megaAboutTripoli') || 'About Tripoli'}
               </Link>
               <Link to="/plan" className={`nav-link ${isPlan ? 'nav-link--active' : ''}`} onClick={closeMenu}>
                 {t('nav', 'planYourVisit')}
@@ -263,6 +271,13 @@ export default function Layout() {
               onClick={closeMenu}
             >
               {t('nav', 'activitiesHubNav')}
+            </Link>
+            <Link
+              to="/about-tripoli"
+              className={`nav-link nav-link--about ${isAboutTripoliPage ? 'nav-link--active' : ''}`}
+              onClick={closeMenu}
+            >
+              {t('nav', 'megaAboutTripoli') || 'About Tripoli'}
             </Link>
             <Link to="/plan" className={`nav-link ${isPlan ? 'nav-link--active' : ''}`} onClick={closeMenu}>
               {t('nav', 'planYourVisit')}
