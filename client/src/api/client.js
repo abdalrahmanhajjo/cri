@@ -434,6 +434,7 @@ export const api = {
         const q = qs.toString();
         return api.get(`/api/admin/feed${q ? `?${q}` : ''}`);
       },
+      create: (body) => api.post('/api/admin/feed', body),
       get: (id) => api.get(`/api/admin/feed/${id}`),
       update: (id, body) => api.patch(`/api/admin/feed/${id}`, body),
       delete: (id) => api.delete(`/api/admin/feed/${id}`),

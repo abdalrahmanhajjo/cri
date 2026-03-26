@@ -56,6 +56,18 @@ export default function AdminFeed() {
 
   const [editPost, setEditPost] = useState(null);
 
+  const [placeSearch, setPlaceSearch] = useState('');
+  const [placeOptions, setPlaceOptions] = useState([]);
+  const [composerPlaceId, setComposerPlaceId] = useState('');
+  const [composerContentKind, setComposerContentKind] = useState('post');
+  const [composerCaption, setComposerCaption] = useState('');
+  const [composerImage, setComposerImage] = useState('');
+  const [composerVideo, setComposerVideo] = useState('');
+  const [composerModeration, setComposerModeration] = useState('approved');
+  const [composerDiscoverable, setComposerDiscoverable] = useState(true);
+  const [composerUploading, setComposerUploading] = useState(false);
+  const [composerSaving, setComposerSaving] = useState(false);
+
   const load = useCallback((silent) => {
     if (!silent) {
       setLoading(true);
@@ -90,6 +102,79 @@ export default function AdminFeed() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const t = setTimeout(() => {
+      api.admin.places
+        .list({ q: placeSearch.trim() || undefined, limit: 100 })
+        .then((r) => {
+          if (cancelled) return;
+          const list = r.places || [];
+          setPlaceOptions(list);
+          setComposerPlaceId((prev) => {
+            if (prev && list.some((p) => p.id === prev)) return prev;
+            return list[0]?.id || '';
+          });
+        })
+        .catch(() => {
+          if (!cancelled) setPlaceOptions([]);
+        });
+    }, 280);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [placeSearch]);
+
+  const submitComposer = async (e) => {
+    e.preventDefault();
+    if (!composerPlaceId || !composerCaption.trim()) {
+      setError('Choose a place and enter a caption.');
+      return;
+    }
+    if (composerContentKind === 'reel' && !composerVideo.trim()) {
+      setError('Reels need a direct video URL (https://…).');
+      return;
+    }
+    setComposerSaving(true);
+    setError(null);
+    try {
+      await api.admin.feed.create({
+        placeId: composerPlaceId,
+        caption: composerCaption.trim(),
+        image_url: composerImage.trim() || undefined,
+        video_url: composerVideo.trim() || undefined,
+        type: composerContentKind === 'reel' ? 'video' : 'post',
+        moderation_status: composerModeration,
+        discoverable: composerDiscoverable,
+      });
+      setComposerCaption('');
+      setComposerImage('');
+      setComposerVideo('');
+      await load(true);
+    } catch (err) {
+      setError(err.message || 'Could not create post');
+    } finally {
+      setComposerSaving(false);
+    }
+  };
+
+  const onComposerImageUpload = async (ev) => {
+    const file = ev.target.files?.[0];
+    ev.target.value = '';
+    if (!file) return;
+    setComposerUploading(true);
+    setError(null);
+    try {
+      const url = await api.admin.upload(file);
+      if (url) setComposerImage(url);
+    } catch (err) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setComposerUploading(false);
+    }
+  };
 
   const loadComments = async (postId) => {
     if (comments[postId]) return;
@@ -199,6 +284,135 @@ export default function AdminFeed() {
         <div className="admin-feed-stat">
           <span className="admin-feed-stat-value">{posts.length}</span>
           <span className="admin-feed-stat-label">Listed (this filter)</span>
+        </div>
+      </div>
+
+      <div className="admin-card admin-feed-composer">
+        <div className="admin-card-header">
+          <h2 className="admin-card-title">Create post or reel (any place)</h2>
+          <p className="admin-subtitle" style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', opacity: 0.9 }}>
+            Publish to the community feed on behalf of any listing. Image uploads use Supabase; reels need a direct video URL (e.g. MP4).
+          </p>
+        </div>
+        <div className="admin-card-body">
+          <form onSubmit={submitComposer} className="admin-feed-composer-form">
+            <div className="admin-form-row">
+              <div className="admin-form-group">
+                <label htmlFor="admin-feed-place-search">Find place</label>
+                <input
+                  id="admin-feed-place-search"
+                  type="search"
+                  value={placeSearch}
+                  onChange={(e) => setPlaceSearch(e.target.value)}
+                  placeholder="Search by name, id, or location…"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="admin-form-group">
+                <label htmlFor="admin-feed-place-select">Place *</label>
+                <select
+                  id="admin-feed-place-select"
+                  value={composerPlaceId}
+                  onChange={(e) => setComposerPlaceId(e.target.value)}
+                  required
+                >
+                  {!placeOptions.length && <option value="">No places — adjust search</option>}
+                  {placeOptions.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {(p.name || p.id) + (p.location ? ` — ${p.location}` : '')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="admin-form-row admin-form-row--3">
+              <div className="admin-form-group">
+                <label htmlFor="admin-feed-kind">Content</label>
+                <select
+                  id="admin-feed-kind"
+                  value={composerContentKind}
+                  onChange={(e) => setComposerContentKind(e.target.value)}
+                >
+                  <option value="post">Feed post</option>
+                  <option value="reel">Reel (short video)</option>
+                </select>
+              </div>
+              <div className="admin-form-group">
+                <label htmlFor="admin-feed-mod-new">Moderation</label>
+                <select
+                  id="admin-feed-mod-new"
+                  value={composerModeration}
+                  onChange={(e) => setComposerModeration(e.target.value)}
+                >
+                  <option value="approved">approved (live if discoverable)</option>
+                  <option value="pending">pending (review first)</option>
+                  <option value="rejected">rejected (hidden)</option>
+                </select>
+              </div>
+              <div className="admin-form-group" style={{ display: 'flex', alignItems: 'flex-end' }}>
+                <label style={{ marginBottom: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={composerDiscoverable}
+                    onChange={(e) => setComposerDiscoverable(e.target.checked)}
+                  />
+                  <span>Show in public discovery</span>
+                </label>
+              </div>
+            </div>
+            <div className="admin-form-group">
+              <label htmlFor="admin-feed-cap">Caption *</label>
+              <textarea
+                id="admin-feed-cap"
+                rows={4}
+                value={composerCaption}
+                onChange={(e) => setComposerCaption(e.target.value)}
+                placeholder="Caption for this post…"
+                maxLength={8000}
+                required
+              />
+            </div>
+            <div className="admin-form-row">
+              <div className="admin-form-group">
+                <label htmlFor="admin-feed-img-url">Image URL (optional)</label>
+                <input
+                  id="admin-feed-img-url"
+                  value={composerImage}
+                  onChange={(e) => setComposerImage(e.target.value)}
+                  placeholder="https://… or upload below"
+                />
+              </div>
+              <div className="admin-form-group">
+                <label htmlFor="admin-feed-vid-url">Video URL {composerContentKind === 'reel' ? '(required for reel)' : '(optional)'}</label>
+                <input
+                  id="admin-feed-vid-url"
+                  value={composerVideo}
+                  onChange={(e) => setComposerVideo(e.target.value)}
+                  placeholder="https://… (direct MP4 or hosted file)"
+                />
+              </div>
+            </div>
+            <div className="admin-form-group">
+              <label htmlFor="admin-feed-img-file">Upload image</label>
+              <input
+                id="admin-feed-img-file"
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={onComposerImageUpload}
+                disabled={composerUploading}
+              />
+              {composerUploading && <span className="admin-form-hint"> Uploading…</span>}
+            </div>
+            <div className="admin-page-header-actions" style={{ marginTop: '0.5rem' }}>
+              <button
+                type="submit"
+                className="admin-btn admin-btn--primary"
+                disabled={composerSaving || composerUploading || !composerPlaceId}
+              >
+                {composerSaving ? 'Publishing…' : 'Publish'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
 

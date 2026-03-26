@@ -1,7 +1,9 @@
 const express = require('express');
+const crypto = require('crypto');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
+const { parsePlaceId, safeUrl } = require('../../utils/validate');
 
 const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
@@ -96,6 +98,70 @@ router.get('/', async (req, res) => {
     if (err.code === '42P01') return res.json({ posts: [], pendingCount: 0 });
     console.error(err);
     res.status(500).json({ error: 'Failed to list feed posts' });
+  }
+});
+
+/**
+ * POST /api/admin/feed
+ * Create a feed post or reel for any place (admin).
+ * Body: { placeId, caption, image_url?, video_url?, type? ('post' | 'video' | 'reel'),
+ *         moderation_status?, discoverable? }
+ */
+router.post('/', async (req, res) => {
+  const userId = req.user.userId;
+  const pid = parsePlaceId(req.body?.placeId);
+  if (!pid.valid) return res.status(400).json({ error: 'placeId is required' });
+
+  const body = req.body || {};
+  const caption = typeof body.caption === 'string' ? body.caption.trim() : '';
+  if (!caption || caption.length > 8000) {
+    return res.status(400).json({ error: 'caption is required (max 8000 characters)' });
+  }
+  const imageUrl = safeUrl(body.image_url) || null;
+  const videoUrl = safeUrl(body.video_url) || null;
+  const rawType = typeof body.type === 'string' ? body.type.trim().toLowerCase() : 'post';
+  const type = rawType === 'reel' || rawType === 'video' ? 'video' : 'post';
+  if (type === 'video' && !videoUrl) {
+    return res.status(400).json({ error: 'Video posts require a valid video URL' });
+  }
+
+  let moderation_status = 'approved';
+  if (body.moderation_status !== undefined) {
+    const s = String(body.moderation_status);
+    if (!MODERATION.has(s)) return res.status(400).json({ error: 'Invalid moderation_status' });
+    moderation_status = s;
+  }
+  let discoverable = true;
+  if (body.discoverable !== undefined) discoverable = Boolean(body.discoverable);
+
+  try {
+    const { rows: placeRows } = await query('SELECT id FROM places WHERE id = $1 LIMIT 1', [pid.value]);
+    if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
+
+    const { rows: uRows } = await query('SELECT name, email FROM users WHERE id = $1', [userId]);
+    const u = uRows[0];
+    const authorName = (u?.name && String(u.name).trim()) || (u?.email && String(u.email).split('@')[0]) || 'Admin';
+    const authorShort = authorName.slice(0, 255);
+
+    const id = crypto.randomUUID();
+
+    await query(
+      `INSERT INTO feed_posts (
+         id, user_id, author_name, place_id, caption, image_url, video_url, type, author_role,
+         moderation_status, discoverable
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'admin', $9, $10)`,
+      [id, userId, authorShort, pid.value, caption, imageUrl, videoUrl, type, moderation_status, discoverable]
+    );
+
+    const { rows } = await query('SELECT * FROM feed_posts WHERE id = $1', [id]);
+    res.status(201).json({ post: rows[0] });
+  } catch (err) {
+    if (err.code === '42703') {
+      return res.status(503).json({ error: 'Run migration 006_feed_moderation.sql' });
+    }
+    if (err.code === '42P01') return res.status(503).json({ error: 'Feed not available' });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create post' });
   }
 });
 
