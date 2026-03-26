@@ -114,7 +114,7 @@ router.get('/sitemap.xml', async (req, res) => {
   const baseUrl = getBaseUrl(req);
   const now = Date.now();
   if (sitemapCache.xml && now - sitemapCache.ts < SITEMAP_TTL_MS) {
-    return res.type('application/xml').send(sitemapCache.xml.replaceAll('__BASE__', baseUrl));
+    return res.type('application/xml').send(sitemapCache.xml.replace(/__BASE__/g, baseUrl));
   }
 
   const urls = new Set();
@@ -148,7 +148,7 @@ router.get('/sitemap.xml', async (req, res) => {
     `\n</urlset>\n`;
 
   sitemapCache = { xml, ts: now };
-  return res.type('application/xml').send(xml.replaceAll('__BASE__', baseUrl));
+  return res.type('application/xml').send(xml.replace(/__BASE__/g, baseUrl));
 });
 
 // --- SEO HTML for key public routes ---
