@@ -46,6 +46,8 @@ export default function AiPlanner() {
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const messagesEndRef = useRef(null);
   const chipsBarRef = useRef(null);
+  /** Lifts composer above mobile on-screen keyboard (visualViewport gap). */
+  const [keyboardInsetPx, setKeyboardInsetPx] = useState(0);
 
   const [places, setPlaces] = useState([]);
   const [interestsList, setInterestsList] = useState([]);
@@ -101,6 +103,22 @@ export default function AiPlanner() {
     });
     return m;
   }, [places]);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return undefined;
+    const updateInset = () => {
+      const gap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardInsetPx(gap);
+    };
+    updateInset();
+    vv.addEventListener('resize', updateInset);
+    vv.addEventListener('scroll', updateInset);
+    return () => {
+      vv.removeEventListener('resize', updateInset);
+      vv.removeEventListener('scroll', updateInset);
+    };
+  }, []);
 
   useEffect(() => {
     const base = apiBase();
@@ -886,7 +904,10 @@ export default function AiPlanner() {
         </div>
       </div>
 
-      <div className="ai-planner__composer">
+      <div
+        className="ai-planner__composer"
+        style={keyboardInsetPx > 0 ? { bottom: keyboardInsetPx } : undefined}
+      >
         <div className="ai-planner__composer-inner">
           <textarea
             className="ai-planner__input"
@@ -902,6 +923,8 @@ export default function AiPlanner() {
             placeholder={t('aiPlanner', 'placeholder')}
             aria-label={t('aiPlanner', 'placeholder')}
             disabled={!aiConfigured || dataLoading}
+            enterKeyHint="send"
+            autoComplete="off"
           />
           <button
             type="button"
@@ -910,7 +933,8 @@ export default function AiPlanner() {
             onClick={() => sendMessage(input)}
             aria-label={t('aiPlanner', 'send')}
           >
-            <Icon name="send" size={22} />
+            <Icon name="send" size={22} aria-hidden />
+            <span className="ai-planner__send-label">{t('aiPlanner', 'send')}</span>
           </button>
         </div>
       </div>
