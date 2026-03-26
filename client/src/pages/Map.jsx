@@ -1010,6 +1010,12 @@ export default function MapPage() {
       setLiveNavError('noGeolocation');
       return;
     }
+    // iOS Safari only shows geolocation permission in a secure context (https).
+    if (typeof window !== 'undefined' && window.isSecureContext === false) {
+      setLiveNavRequestingPermission(false);
+      setLiveNavError('insecureContext');
+      return;
+    }
     setLiveNavRequestingPermission(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -1307,7 +1313,9 @@ export default function MapPage() {
                       ? t('home', 'liveNavDenied')
                       : liveNavError === 'unavailable'
                         ? t('home', 'liveNavLocationFailed')
-                        : t('home', 'liveNavNoGeo')}
+                        : liveNavError === 'insecureContext'
+                          ? t('home', 'liveNavInsecureContext')
+                          : t('home', 'liveNavNoGeo')}
                   </p>
                   <span className="map-live-nav-peek-hint">{t('home', 'liveNavPeekExpand')}</span>
                   <Icon name="keyboard_arrow_up" size={26} className="map-live-nav-peek-chevron" />
@@ -1379,7 +1387,9 @@ export default function MapPage() {
                       ? t('home', 'liveNavLocationFailed')
                       : liveNavError === 'noGeolocation'
                         ? t('home', 'liveNavNoGeo')
-                        : t('home', 'liveNavLocationFailed')}
+                        : liveNavError === 'insecureContext'
+                          ? t('home', 'liveNavInsecureContext')
+                          : t('home', 'liveNavLocationFailed')}
                 </p>
               )}
 
