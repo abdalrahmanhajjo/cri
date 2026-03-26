@@ -375,12 +375,12 @@ button.nav-icon {
   background: transparent;
 }
 
-.nav--vd .nav-link--about {
+.nav--vd .nav-link--plan {
   border: 1px solid color-mix(in oklab, var(--color-primary) 36%, transparent);
   background: color-mix(in oklab, var(--color-primary) 10%, transparent);
 }
 
-.nav--vd .nav-link--about:hover {
+.nav--vd .nav-link--plan:hover {
   background: color-mix(in oklab, var(--color-primary) 16%, transparent);
 }
 
