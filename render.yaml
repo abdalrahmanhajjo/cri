@@ -1,7 +1,8 @@
 # Render Blueprint (free web service): https://dashboard.render.com/select-repo?type=blueprint
-# After first deploy: add secrets in the Render dashboard (Environment):
-#   DATABASE_URL, JWT_SECRET, CORS_ORIGIN (your https://….onrender.com URL),
-#   SMTP_*, SUPABASE_* as in server/.env.example
+# Required in dashboard (Render → your web service → Environment):
+#   DATABASE_URL (Supabase Postgres), CORS_ORIGIN (https://YOUR-SERVICE.onrender.com)
+#   SMTP_*, SUPABASE_* — see server/.env.example
+# JWT_SECRET is auto-generated below (generateValue). To set your own, remove that block and add JWT_SECRET in the dashboard.
 # Run DB migrations once from your machine: DATABASE_URL="…" npm run db:migrate
 # Free tier: service sleeps after ~15 min idle (first request may take ~1 min). Disk is ephemeral — prefer Supabase Storage for uploads.
 
@@ -20,3 +21,5 @@ services:
         value: 0.0.0.0
       - key: SERVE_CLIENT_DIST
         value: true
+      - key: JWT_SECRET
+        generateValue: true

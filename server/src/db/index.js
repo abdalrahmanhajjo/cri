@@ -6,6 +6,9 @@ let connectionString = process.env.DATABASE_URL || '';
 const isSupabase = connectionString.includes('supabase');
 const isProd = process.env.NODE_ENV === 'production';
 const acceptSelfSigned = !isProd || process.env.DB_ACCEPT_SELF_SIGNED === '1';
+/** Supabase + node-pg in Docker/cloud often hits SELF_SIGNED_CERT_IN_CHAIN; TLS is still on. Set DB_VERIFY_SSL=1 to enforce full chain verify. */
+const verifySupabaseCertChain =
+  process.env.DB_VERIFY_SSL === '1' || process.env.DB_VERIFY_SSL === 'true';
 
 if (connectionString) {
   try {
@@ -58,11 +61,10 @@ const pool = new Pool({
   allowExitOnIdle: false,
   ssl: isSupabase
     ? {
-        // Encrypted session to Supabase; relax chain verify in dev or when opted in (corporate proxies).
-        rejectUnauthorized: !acceptSelfSigned,
+        rejectUnauthorized: verifySupabaseCertChain,
       }
     : isProd
-      ? { rejectUnauthorized: true }
+      ? { rejectUnauthorized: !acceptSelfSigned }
       : false,
 });
 
