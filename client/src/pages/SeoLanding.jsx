@@ -392,12 +392,12 @@ export function AboutTripoli() {
     {
       title: 'Historic Souks',
       text: 'Layered markets, arches, and daily life in the old city core.',
-      image: '/home-bento/hero-tripoli-coast.jpg',
+      image: '/home-bento/oldsouk.png',
     },
     {
       title: 'Coastal Identity',
       text: 'A Mediterranean city where heritage and sea routes shaped commerce.',
-      image: '/home-bento/hero-ocean-dramatic.jpg',
+      image: '/home-bento/sea.png',
     },
     {
       title: 'Cultural Continuity',
@@ -410,7 +410,7 @@ export function AboutTripoli() {
     { value: '1000+', label: 'Years of urban history' },
     { value: '50+', label: 'Notable heritage landmarks' },
     { value: '4', label: 'Core visitor themes: culture, souks, food, coast' },
-    { value: '1 day', label: 'Minimum to experience old city highlights' },
+    { value: 'Half-day+', label: 'Suggested time for old city highlights' },
   ];
 
   return (
