@@ -108,6 +108,8 @@ export default function FeedPostCard({
   const [ownerEditUploading, setOwnerEditUploading] = useState(null);
   const [ownerEditShowAdvanced, setOwnerEditShowAdvanced] = useState(false);
   const [ownerSaving, setOwnerSaving] = useState(false);
+  const [imageZoomOpen, setImageZoomOpen] = useState(false);
+  const [imageZoomSrc, setImageZoomSrc] = useState('');
 
   const liked = post.liked_by_me === true;
   const saved = post.saved_by_me === true;
@@ -274,6 +276,15 @@ export default function FeedPostCard({
     setFeedHeaderMoreOpen(false);
     setOwnerEditOpen(false);
   }, [post.id]);
+
+  useEffect(() => {
+    if (!imageZoomOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setImageZoomOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [imageZoomOpen]);
 
   useEffect(() => {
     if (!reelMoreOpen) return undefined;
@@ -1078,12 +1089,19 @@ export default function FeedPostCard({
                 playsInline
                 muted={reelMuted}
                 loop
+                autoPlay={isActiveReel && !reelPaused}
                 preload="metadata"
                 onTimeUpdate={(e) => {
                   const el = e.currentTarget;
                   if (el.duration) setReelProgress(el.currentTime / el.duration);
                 }}
                 onLoadedData={() => {
+                  const v = reelVideoRef.current;
+                  if (!v || !isActiveReel || reelPaused) return;
+                  const p = v.play();
+                  if (p && typeof p.catch === 'function') p.catch(() => {});
+                }}
+                onCanPlay={() => {
                   const v = reelVideoRef.current;
                   if (!v || !isActiveReel || reelPaused) return;
                   const p = v.play();
@@ -1409,6 +1427,10 @@ export default function FeedPostCard({
                           className="ig-feed-img"
                           loading={i === 0 ? 'eager' : 'lazy'}
                           decoding="async"
+                          onClick={() => {
+                            setImageZoomSrc(src);
+                            setImageZoomOpen(true);
+                          }}
                         />
                       </div>
                     ))}
@@ -1423,7 +1445,17 @@ export default function FeedPostCard({
                   </div>
                 </div>
               ) : gallerySrcs.length === 1 ? (
-                <img src={gallerySrcs[0]} alt="" className="ig-feed-img" loading="lazy" decoding="async" />
+                <img
+                  src={gallerySrcs[0]}
+                  alt=""
+                  className="ig-feed-img"
+                  loading="lazy"
+                  decoding="async"
+                  onClick={() => {
+                    setImageZoomSrc(gallerySrcs[0]);
+                    setImageZoomOpen(true);
+                  }}
+                />
               ) : externalVideo ? (
                 <a href={String(post.video_url).trim()} target="_blank" rel="noopener noreferrer" className="ig-feed-ext">
                   {t('home', 'communityWatchVideo')}
@@ -1531,6 +1563,26 @@ export default function FeedPostCard({
       )}
 
       {!showReelTheater && !commentsDisabled ? renderCommentsPanel() : null}
+
+      {imageZoomOpen && imageZoomSrc ? (
+        <div
+          className="ig-feed-image-zoom-backdrop"
+          role="presentation"
+          onClick={() => setImageZoomOpen(false)}
+        >
+          <div className="ig-feed-image-zoom-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="ig-feed-image-zoom-close"
+              aria-label="Close image"
+              onClick={() => setImageZoomOpen(false)}
+            >
+              <Icon name="close" size={20} />
+            </button>
+            <img src={imageZoomSrc} alt="" className="ig-feed-image-zoom-img" />
+          </div>
+        </div>
+      ) : null}
 
       {ownerEditOpen && (
         <div
