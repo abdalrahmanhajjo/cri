@@ -20,6 +20,20 @@ const TABS = [
 /** Paginated feed (Instagram-style: small first page + infinite scroll). */
 const FEED_PAGE_SIZE = 12;
 const REEL_PAGE_SIZE = 10;
+const SEEN_FEED_KEY = 'discover_seen_feed_v1';
+const SEEN_REEL_KEY = 'discover_seen_reel_v1';
+
+function loadSeenIds(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((x) => String(x)).filter(Boolean).slice(-4000);
+  } catch {
+    return [];
+  }
+}
 
 function DiscoverSkeleton({ tab }) {
   if (tab === 'feed' || tab === 'reel') {
@@ -461,6 +475,8 @@ export default function Discover() {
   const [reelNextOffset, setReelNextOffset] = useState(0);
   const [reelHasMore, setReelHasMore] = useState(true);
   const [reelLoadingMore, setReelLoadingMore] = useState(false);
+  const [seenFeedIds, setSeenFeedIds] = useState(() => loadSeenIds(SEEN_FEED_KEY));
+  const [seenReelIds, setSeenReelIds] = useState(() => loadSeenIds(SEEN_REEL_KEY));
   const feedSentinelRef = useRef(null);
   const reelSentinelRef = useRef(null);
   const [promotions, setPromotions] = useState([]);
@@ -510,6 +526,54 @@ export default function Discover() {
     setReels((prev) => prev.filter((p) => String(p.id) !== sid));
   }, []);
 
+  const markFeedSeen = useCallback((id) => {
+    if (!id) return;
+    const sid = String(id);
+    setSeenFeedIds((prev) => (prev.includes(sid) ? prev : [...prev, sid].slice(-4000)));
+  }, []);
+
+  const markReelSeen = useCallback((id) => {
+    if (!id) return;
+    const sid = String(id);
+    setSeenReelIds((prev) => (prev.includes(sid) ? prev : [...prev, sid].slice(-4000)));
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SEEN_FEED_KEY, JSON.stringify(seenFeedIds));
+    } catch (_) {}
+  }, [seenFeedIds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SEEN_REEL_KEY, JSON.stringify(seenReelIds));
+    } catch (_) {}
+  }, [seenReelIds]);
+
+  const orderedFeedPosts = useMemo(() => {
+    if (!feedPosts.length) return feedPosts;
+    const seen = new Set(seenFeedIds);
+    const unseen = [];
+    const seenList = [];
+    for (const p of feedPosts) {
+      if (seen.has(String(p.id))) seenList.push(p);
+      else unseen.push(p);
+    }
+    return [...unseen, ...seenList];
+  }, [feedPosts, seenFeedIds]);
+
+  const orderedReels = useMemo(() => {
+    if (!reels.length) return reels;
+    const seen = new Set(seenReelIds);
+    const unseen = [];
+    const seenList = [];
+    for (const p of reels) {
+      if (seen.has(String(p.id))) seenList.push(p);
+      else unseen.push(p);
+    }
+    return [...unseen, ...seenList];
+  }, [reels, seenReelIds]);
+
   const loadMoreFeed = useCallback(async () => {
     if (!feedHasMore || feedLoadingMore) return;
     setFeedLoadingMore(true);
@@ -519,7 +583,7 @@ export default function Discover() {
         format: 'post',
         limit: FEED_PAGE_SIZE,
         offset: feedNextOffset,
-        sort: 'smart',
+        sort: 'recent',
         ...(placeScopeId ? { placeId: placeScopeId } : {}),
       });
       const list = Array.isArray(r.posts) ? r.posts : [];
@@ -555,7 +619,7 @@ export default function Discover() {
         format: 'reel',
         limit: REEL_PAGE_SIZE,
         offset: reelNextOffset,
-        sort: 'smart',
+        sort: 'recent',
         ...(placeScopeId ? { placeId: placeScopeId } : {}),
       });
       const list = Array.isArray(r.posts) ? r.posts : [];
@@ -614,7 +678,7 @@ export default function Discover() {
   }, [user, placeScopeId]);
 
   useEffect(() => {
-    const posts = tab === 'feed' ? feedPosts : reels;
+    const posts = tab === 'feed' ? orderedFeedPosts : orderedReels;
     if (loading || (tab !== 'feed' && tab !== 'reel') || posts.length === 0) return undefined;
     const hash = window.location.hash;
     if (!hash.startsWith('#feed-post-')) return undefined;
@@ -628,7 +692,7 @@ export default function Discover() {
       cancelled = true;
       cancelAnimationFrame(raf);
     };
-  }, [loading, tab, feedPosts, reels]);
+  }, [loading, tab, orderedFeedPosts, orderedReels]);
 
   useEffect(() => {
     if (!user) {
@@ -666,7 +730,7 @@ export default function Discover() {
         format: 'post',
         limit: FEED_PAGE_SIZE,
         offset: 0,
-        sort: 'smart',
+        sort: 'recent',
         ...(placeScopeId ? { placeId: placeScopeId } : {}),
       })
       .then((r) => {
@@ -703,7 +767,7 @@ export default function Discover() {
         format: 'reel',
         limit: REEL_PAGE_SIZE,
         offset: 0,
-        sort: 'smart',
+        sort: 'recent',
         ...(placeScopeId ? { placeId: placeScopeId } : {}),
       })
       .then((r) => {
@@ -828,10 +892,44 @@ export default function Discover() {
     return () => obs.disconnect();
   }, [tab, reelHasMore, reelLoadingMore, reels.length, loadMoreReels]);
 
+  useEffect(() => {
+    if (tab !== 'feed' || orderedFeedPosts.length === 0) return undefined;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((en) => {
+          if (!en.isIntersecting) return;
+          const id = en.target.getAttribute('data-post-id');
+          if (id) markFeedSeen(id);
+        });
+      },
+      { threshold: 0.6 }
+    );
+    const nodes = document.querySelectorAll('[data-feed-kind="feed"][data-post-id]');
+    nodes.forEach((n) => obs.observe(n));
+    return () => obs.disconnect();
+  }, [tab, orderedFeedPosts, markFeedSeen]);
+
+  useEffect(() => {
+    if (tab !== 'reel' || orderedReels.length === 0) return undefined;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((en) => {
+          if (!en.isIntersecting) return;
+          const id = en.target.getAttribute('data-post-id');
+          if (id) markReelSeen(id);
+        });
+      },
+      { threshold: 0.6 }
+    );
+    const nodes = document.querySelectorAll('[data-feed-kind="reel"][data-post-id]');
+    nodes.forEach((n) => obs.observe(n));
+    return () => obs.disconnect();
+  }, [tab, orderedReels, markReelSeen]);
+
   const emptyFeed =
-    !loading && !error && !feedLoadingMore && tab === 'feed' && feedPosts.length === 0;
+    !loading && !error && !feedLoadingMore && tab === 'feed' && orderedFeedPosts.length === 0;
   const emptyReels =
-    !loading && !error && !reelLoadingMore && tab === 'reel' && reels.length === 0;
+    !loading && !error && !reelLoadingMore && tab === 'reel' && orderedReels.length === 0;
   const emptyOffers = !loading && !error && tab === 'offers' && promotions.length === 0;
   const emptyPlaces = !loading && !error && tab === 'proposals' && places.length === 0;
 
@@ -924,11 +1022,17 @@ export default function Discover() {
         {emptyOffers && <DiscoverEmpty icon="sell" message={t('discover', 'emptyOffers')} t={t} />}
         {emptyPlaces && <DiscoverEmpty icon="send" message={t('discover', 'emptyProposals')} t={t} />}
 
-        {!loading && !error && tab === 'feed' && feedPosts.length > 0 && (
+        {!loading && !error && tab === 'feed' && orderedFeedPosts.length > 0 && (
           <>
             <div className="ig-feed-stack">
-              {feedPosts.map((p, i) => (
-                <div key={p.id} className="ig-feed-stagger" style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}>
+              {orderedFeedPosts.map((p, i) => (
+                <div
+                  key={p.id}
+                  className="ig-feed-stagger"
+                  style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}
+                  data-feed-kind="feed"
+                  data-post-id={String(p.id)}
+                >
                   <FeedPostCard
                     post={p}
                     user={user}
@@ -950,11 +1054,17 @@ export default function Discover() {
           </>
         )}
 
-        {!loading && !error && tab === 'reel' && reels.length > 0 && (
+        {!loading && !error && tab === 'reel' && orderedReels.length > 0 && (
           <>
             <div className="ig-feed-stack">
-              {reels.map((p, i) => (
-                <div key={p.id} className="ig-feed-stagger" style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}>
+              {orderedReels.map((p, i) => (
+                <div
+                  key={p.id}
+                  className="ig-feed-stagger"
+                  style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}
+                  data-feed-kind="reel"
+                  data-post-id={String(p.id)}
+                >
                   <FeedPostCard
                     post={p}
                     user={user}

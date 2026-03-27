@@ -1158,11 +1158,23 @@ export default function FeedPostCard({
           <div className={`ig-reel-bottom${commentsOpen ? ' ig-reel-bottom--hidden' : ''}`}>
             <div className="ig-reel-user-row">
               {placeId && venueFeedPath ? (
-                <Link to={venueFeedPath} className="ig-reel-handle ig-reel-handle--link">
-                  {reelOverlayPrimary}
+                <Link to={venueFeedPath} className="ig-reel-place-meta ig-reel-handle--link">
+                  <span className="ig-reel-place-avatar" aria-hidden="true">
+                    {placeAvatarUrl ? (
+                      <img src={placeAvatarUrl} alt="" width={24} height={24} />
+                    ) : (
+                      <Icon name="storefront" size={14} />
+                    )}
+                  </span>
+                  <span className="ig-reel-handle">{reelOverlayPrimary}</span>
                 </Link>
               ) : (
-                <span className="ig-reel-handle">{reelOverlayPrimary}</span>
+                <span className="ig-reel-place-meta">
+                  <span className="ig-reel-place-avatar" aria-hidden="true">
+                    <Icon name="person" size={14} />
+                  </span>
+                  <span className="ig-reel-handle">{reelOverlayPrimary}</span>
+                </span>
               )}
               {showVerified && (
                 <span className="ig-reel-verified" title={t('discover', 'feedVerifiedBusiness')} aria-label={t('discover', 'feedVerifiedBusiness')}>
@@ -1170,7 +1182,7 @@ export default function FeedPostCard({
                 </span>
               )}
             </div>
-            {post.caption && <p className="ig-reel-caption">{String(post.caption)}</p>}
+            {post.caption && <p className="ig-reel-caption ig-reel-caption--clean">{String(post.caption)}</p>}
             {commentsDisabled && (
               <p className="ig-reel-comments-off-hint" role="note">
                 {t('discover', 'feedCommentsDisabledNote')}
@@ -1186,7 +1198,7 @@ export default function FeedPostCard({
               onClick={() => setCommentsOpen(false)}
             />
           )}
-          {!commentsDisabled ? renderCommentsPanel() : null}
+          {!commentsDisabled && commentsOpen ? renderCommentsPanel() : null}
 
           {showVideo && (
             <div
