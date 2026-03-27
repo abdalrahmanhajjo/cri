@@ -1123,7 +1123,7 @@ export default function Discover() {
                     t={t}
                     variant="reel"
                     discoverBasePath={discoverBasePath}
-                    isActiveReel={activeReelId === String(p.id)}
+                    isActiveReel
                   />
                 </div>
               ))}
