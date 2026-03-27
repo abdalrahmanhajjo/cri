@@ -970,6 +970,12 @@ export default function Discover() {
     if (tab !== 'reel') setActiveReelId(null);
   }, [tab]);
 
+  useEffect(() => {
+    if (tab !== 'reel') return;
+    if (!orderedReels.length) return;
+    setActiveReelId((prev) => prev || String(orderedReels[0].id));
+  }, [tab, orderedReels]);
+
   const emptyFeed =
     !loading && !error && !feedLoadingMore && tab === 'feed' && orderedFeedPosts.length === 0;
   const emptyReels =

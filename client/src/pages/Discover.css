@@ -1903,7 +1903,7 @@ a.ig-feed-avatar--link:focus-visible {
 }
 
 .ig-feed-img {
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .ig-feed-ext {
@@ -1950,7 +1950,7 @@ a.ig-feed-avatar--link:focus-visible {
 .ig-feed-gallery-slide .ig-feed-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .ig-feed-gallery-dots {
