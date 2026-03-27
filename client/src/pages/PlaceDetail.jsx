@@ -358,7 +358,7 @@ export default function PlaceDetail() {
           };
       api.places
         .inquiry(place.id, body)
-        .then((r) => {
+        .then(() => {
           setInqStatus('sent');
           setInqMessage('');
           setGuestName('');

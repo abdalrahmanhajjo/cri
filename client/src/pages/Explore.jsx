@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
@@ -8,7 +8,6 @@ import Icon from '../components/Icon';
 import { CommunityFeedStrip } from '../components/CommunityFeed';
 import { trackEvent } from '../utils/analytics';
 import { resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
-import { getHomeCategoryBrowseRows, categoryIconName, truncateText } from '../utils/homeCategoryBrowse';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import { WAYS_CONFIG, groupPlacesByWay, countDirectoryCategoriesForWay } from '../utils/findYourWayGrouping';
 import './Explore.css';

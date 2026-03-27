@@ -45,8 +45,6 @@ export function DateRangeCalendar({
   const last = new Date(year, month + 1, 0);
   const startPad = first.getDay();
   const daysInMonth = last.getDate();
-  const totalCells = startPad + daysInMonth;
-  const rows = Math.ceil(totalCells / 7);
 
   const days = [];
   for (let i = 0; i < startPad; i++) days.push(null);
@@ -123,7 +121,6 @@ export function DateRangeCalendar({
       </div>
       <div ref={gridRef} className="calendar-grid" role="grid" aria-labelledby="calendar-month" aria-readonly="false">
         {days.map((date, i) => {
-          const str = date ? toDateStr(date) : '';
           const disabled = date ? isDisabled(date) : true;
           const inRange = date && isInRange(date);
           const selected = date && isSelected(date);

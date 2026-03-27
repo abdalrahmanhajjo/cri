@@ -56,6 +56,13 @@ function formatCompactCount(n) {
   return `${(x / 1_000_000).toFixed(1)}M`;
 }
 
+/** Match admin/business feed: reel vs post for upload limits. */
+function contentKind(t) {
+  const x = String(t || '').toLowerCase();
+  if (x === 'reel' || x === 'video') return 'reel';
+  return 'post';
+}
+
 export default function FeedPostCard({
   post,
   user,

@@ -437,7 +437,6 @@ export async function chatForTripPlan(params) {
     activityContext = '',
     responseLanguage = 'en',
     previousSlots = null,
-    previousPlaces = null,
     singleReplaceSlotIndex = null,
   } = params;
 

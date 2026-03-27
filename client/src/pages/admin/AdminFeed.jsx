@@ -408,7 +408,9 @@ export default function AdminFeed() {
                 const next = !prev;
                 try {
                   localStorage.setItem('admin-feed-composer-collapsed', next ? '1' : '0');
-                } catch (_) {}
+                } catch (_err) {
+                  /* ignore */
+                }
                 return next;
               });
             }}

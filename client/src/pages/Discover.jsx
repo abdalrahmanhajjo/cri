@@ -543,13 +543,17 @@ export default function Discover() {
   useEffect(() => {
     try {
       localStorage.setItem(SEEN_FEED_KEY, JSON.stringify(seenFeedIds));
-    } catch (_) {}
+    } catch (_err) {
+      /* ignore */
+    }
   }, [seenFeedIds]);
 
   useEffect(() => {
     try {
       localStorage.setItem(SEEN_REEL_KEY, JSON.stringify(seenReelIds));
-    } catch (_) {}
+    } catch (_err) {
+      /* ignore */
+    }
   }, [seenReelIds]);
 
   const orderedFeedPosts = useMemo(() => {
