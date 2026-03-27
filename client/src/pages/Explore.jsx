@@ -540,7 +540,7 @@ export default function Explore() {
   useEffect(() => {
     let cancelled = false;
     api
-      .communityFeed({ limit: 48, sort: 'popular' })
+      .communityFeed({ limit: 48, sort: 'smart' })
       .then((r) => {
         if (!cancelled) setCommunityPosts(Array.isArray(r.posts) ? r.posts : []);
       })

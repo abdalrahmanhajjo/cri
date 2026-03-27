@@ -1336,6 +1336,36 @@
   width: 100%;
 }
 
+.ig-feed-sentinel {
+  height: 1px;
+  width: 100%;
+  pointer-events: none;
+}
+
+.ig-feed-load-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0 1.5rem;
+  max-width: var(--ig-feed-max);
+  margin: 0 auto;
+}
+
+.ig-feed-load-more-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--ig-border, #dbdbdb);
+  border-top-color: var(--ig-accent, #1e5631);
+  border-radius: 50%;
+  animation: ig-feed-spin 0.7s linear infinite;
+}
+
+@keyframes ig-feed-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .ig-feed-post {
   background: var(--ig-surface);
   border: 1px solid var(--ig-border);
@@ -1812,6 +1842,58 @@ a.ig-feed-avatar--link:focus-visible {
 .ig-feed-media-empty {
   min-height: 200px;
   background: #1a1a1a;
+}
+
+.ig-feed-gallery {
+  position: relative;
+  width: 100%;
+}
+
+.ig-feed-gallery-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  aspect-ratio: 4 / 5;
+}
+
+.ig-feed-gallery-track::-webkit-scrollbar {
+  display: none;
+}
+
+.ig-feed-gallery-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  min-width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.ig-feed-gallery-slide .ig-feed-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ig-feed-gallery-dots {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 0 4px;
+  pointer-events: none;
+}
+
+.ig-feed-gallery-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.ig-feed-gallery-dot--active {
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .ig-feed-actions {

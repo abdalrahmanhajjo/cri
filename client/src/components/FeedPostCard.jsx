@@ -1,10 +1,11 @@
-import { useState, useRef, useCallback, useEffect, Fragment } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension, getPlaceImageUrl, API_ERROR_NETWORK } from '../api/client';
 import Icon from './Icon';
 import { isCommunityFeedVideo } from './CommunityFeed';
 import { useLanguage } from '../context/LanguageContext';
 import { formatFeedTime } from '../utils/feedTime';
+import { rawFeedImageUrls } from '../utils/feedPostImages';
 import { COMMUNITY_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
 
 function mediaUrl(url) {
@@ -99,6 +100,8 @@ export default function FeedPostCard({
   const [ownerEditOpen, setOwnerEditOpen] = useState(false);
   const [ownerEditCaption, setOwnerEditCaption] = useState('');
   const [ownerEditImageUrl, setOwnerEditImageUrl] = useState('');
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const galleryRef = useRef(null);
   const [ownerEditVideoUrl, setOwnerEditVideoUrl] = useState('');
   const [ownerSaving, setOwnerSaving] = useState(false);
 
@@ -124,7 +127,11 @@ export default function FeedPostCard({
     return getPlaceImageUrl(String(raw).trim());
   })();
   const isVideo = isCommunityFeedVideo(post);
-  const img = post.image_url ? mediaUrl(post.image_url) : '';
+  const gallerySrcs = useMemo(() => {
+    const raw = rawFeedImageUrls(post);
+    return raw.map((u) => mediaUrl(u)).filter(Boolean);
+  }, [post.id, post.image_url, post.image_urls]);
+  const img = gallerySrcs[0] || '';
   const vid = post.video_url ? mediaUrl(post.video_url) : '';
   const showVideo = isVideo && vid && isLikelyStreamableVideoUrl(post.video_url);
   const externalVideo = isVideo && post.video_url && !showVideo;
@@ -177,6 +184,11 @@ export default function FeedPostCard({
       count: Number(post.likes_count) || 0,
     };
   }, [post.id, post.liked_by_me, post.likes_count]);
+
+  useEffect(() => {
+    setGalleryIndex(0);
+    if (galleryRef.current) galleryRef.current.scrollLeft = 0;
+  }, [post.id]);
 
   useEffect(() => {
     if (commentsDisabled) {
@@ -581,7 +593,8 @@ export default function FeedPostCard({
 
   const openOwnerEdit = () => {
     setOwnerEditCaption(String(post.caption || ''));
-    setOwnerEditImageUrl(post.image_url != null ? String(post.image_url) : '');
+    const imgLines = rawFeedImageUrls(post);
+    setOwnerEditImageUrl(imgLines.length ? imgLines.join('\n') : '');
     setOwnerEditVideoUrl(post.video_url != null ? String(post.video_url) : '');
     setOwnerEditOpen(true);
     setFeedHeaderMoreOpen(false);
@@ -593,9 +606,15 @@ export default function FeedPostCard({
     if (!cap || !requireAuth()) return;
     setOwnerSaving(true);
     try {
+      const lines = ownerEditImageUrl
+        .split(/[\n\r]+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 10);
       const r = await api.business.feed.update(post.id, {
         caption: cap,
-        image_url: ownerEditImageUrl.trim() || null,
+        image_urls: lines.length ? lines : null,
+        image_url: lines[0] || null,
         video_url: ownerEditVideoUrl.trim() || null,
       });
       const p = r?.post;
@@ -603,6 +622,7 @@ export default function FeedPostCard({
         onPatch?.(post.id, {
           caption: p.caption,
           image_url: p.image_url,
+          image_urls: p.image_urls,
           video_url: p.video_url,
           updated_at: p.updated_at,
           type: p.type,
@@ -1253,8 +1273,41 @@ export default function FeedPostCard({
             <div className="ig-feed-media">
               {showVideo ? (
                 <video className="ig-feed-video" src={vid} controls playsInline preload="metadata" poster={img || undefined} />
-              ) : img ? (
-                <img src={img} alt="" className="ig-feed-img" loading="lazy" decoding="async" />
+              ) : gallerySrcs.length > 1 ? (
+                <div className="ig-feed-gallery">
+                  <div
+                    ref={galleryRef}
+                    className="ig-feed-gallery-track"
+                    onScroll={(e) => {
+                      const el = e.currentTarget;
+                      const w = el.clientWidth || 1;
+                      const i = Math.round(el.scrollLeft / w);
+                      setGalleryIndex(Math.min(gallerySrcs.length - 1, Math.max(0, i)));
+                    }}
+                  >
+                    {gallerySrcs.map((src, i) => (
+                      <div key={i} className="ig-feed-gallery-slide">
+                        <img
+                          src={src}
+                          alt=""
+                          className="ig-feed-img"
+                          loading={i === 0 ? 'eager' : 'lazy'}
+                          decoding="async"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="ig-feed-gallery-dots" aria-hidden="true">
+                    {gallerySrcs.map((_, i) => (
+                      <span
+                        key={i}
+                        className={`ig-feed-gallery-dot${i === galleryIndex ? ' ig-feed-gallery-dot--active' : ''}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : gallerySrcs.length === 1 ? (
+                <img src={gallerySrcs[0]} alt="" className="ig-feed-img" loading="lazy" decoding="async" />
               ) : externalVideo ? (
                 <a href={String(post.video_url).trim()} target="_blank" rel="noopener noreferrer" className="ig-feed-ext">
                   {t('home', 'communityWatchVideo')}
@@ -1405,13 +1458,14 @@ export default function FeedPostCard({
             </label>
             <label className="ig-feed-owner-edit-label">
               {t('discover', 'feedOwnerImageUrl')}
-              <input
-                type="url"
-                className="ig-feed-owner-edit-input"
+              <textarea
+                className="ig-feed-owner-edit-textarea"
                 value={ownerEditImageUrl}
                 onChange={(e) => setOwnerEditImageUrl(e.target.value)}
                 disabled={ownerSaving}
                 autoComplete="off"
+                rows={3}
+                placeholder="One image URL per line (optional)"
               />
             </label>
             <label className="ig-feed-owner-edit-label">

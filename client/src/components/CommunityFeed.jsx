@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { getImageUrl, fixImageUrlExtension, getPlaceImageUrl } from '../api/client';
 import Icon from './Icon';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
+import { rawFeedImageUrls } from '../utils/feedPostImages';
 
 /** Reels / video items: explicit type, or legacy rows stored as `post` with video and no cover image (matches business portal). */
 export function isCommunityFeedVideo(post) {
   const t = String(post?.type || '').toLowerCase();
   if (t === 'reel' || t === 'video') return true;
-  const hasImage = !!(post?.image_url && String(post.image_url).trim());
+  const hasImage = rawFeedImageUrls(post).length > 0;
   const hasVideo = !!(post?.video_url && String(post.video_url).trim());
   return hasVideo && !hasImage;
 }
@@ -71,7 +72,8 @@ export function CommunityFeedCard({ post, t }) {
   const caption = fullCap.slice(0, 160);
   const placeId = post.place_id != null ? String(post.place_id) : '';
   const placeName = post.place_name != null ? String(post.place_name).trim() : '';
-  const img = post.image_url ? feedMediaUrl(post.image_url) : '';
+  const firstRaw = rawFeedImageUrls(post)[0];
+  const img = firstRaw ? feedMediaUrl(firstRaw) : '';
   const vid = post.video_url ? feedMediaUrl(post.video_url) : '';
   const showVideo = isVideo && vid && isLikelyStreamableVideoUrl(post.video_url);
   const externalVideo = isVideo && post.video_url && !showVideo;
@@ -164,7 +166,7 @@ export function CommunityFeedCard({ post, t }) {
 }
 
 function showcaseThumbSrc(post) {
-  const raw = post?.image_url != null ? String(post.image_url).trim() : '';
+  const raw = rawFeedImageUrls(post)[0];
   return raw ? feedMediaUrl(fixImageUrlExtension(raw)) : '';
 }
 

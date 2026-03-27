@@ -109,14 +109,26 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
       : format === 'post'
         ? " AND (fp.type IS NULL OR (fp.type <> 'reel' AND fp.type <> 'video'))"
         : '';
-  const orderSql =
-    sort === 'popular' || sort === 'engagement'
-      ? `ORDER BY (
+  /** Instagram-style: engagement (log-scaled) weighted by recency (days since post). */
+  const orderSql = (() => {
+    if (sort === 'popular' || sort === 'engagement') {
+      return `ORDER BY (
            (SELECT COUNT(*)::int FROM feed_likes fl WHERE fl.post_id = fp.id) +
            (SELECT COUNT(*)::int FROM feed_comments fc WHERE fc.post_id = fp.id)
          ) DESC,
-         fp.created_at DESC`
-      : 'ORDER BY fp.created_at DESC';
+         fp.created_at DESC`;
+    }
+    if (sort === 'smart' || sort === 'for_you') {
+      return `ORDER BY (
+         (LN(1 + COALESCE((SELECT COUNT(*)::float FROM feed_likes fl WHERE fl.post_id = fp.id), 0)) +
+          LN(1 + COALESCE((SELECT COUNT(*)::float FROM feed_comments fc WHERE fc.post_id = fp.id), 0)))
+         / NULLIF(1.0 + GREATEST(0, EXTRACT(EPOCH FROM (NOW() - fp.created_at)) / 86400.0), 0)
+       ) DESC NULLS LAST,
+       fp.created_at DESC,
+       fp.id DESC`;
+    }
+    return 'ORDER BY fp.created_at DESC';
+  })();
   const userId = userIdFromReq(req);
 
   try {
@@ -146,7 +158,7 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
     const placeSql = placeParamIdx ? ` AND fp.place_id = $${placeParamIdx}` : '';
 
     const { rows } = await query(
-      `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.video_url,
+      `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.image_urls, fp.video_url,
               fp.type, fp.created_at, fp.author_role,
               (SELECT COUNT(*)::int FROM feed_likes fl WHERE fl.post_id = fp.id) AS likes_count,
               (SELECT COUNT(*)::int FROM feed_comments fc WHERE fc.post_id = fp.id) AS comments_count,
@@ -166,7 +178,7 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
        LIMIT $1 OFFSET $2`,
       params
     );
-    res.json({ posts: rows });
+    res.json({ posts: rows, hasMore: rows.length === limit, offset, limit });
   } catch (err) {
     if (err.code === '42703' || err.code === '42P01') {
       try {
@@ -186,7 +198,13 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
            LIMIT $1 OFFSET $2`,
           legParams
         );
-        return res.json({ posts: rows, _warning: 'Run migration 006_feed_moderation.sql for moderation filters.' });
+        return res.json({
+          posts: rows,
+          hasMore: rows.length === limit,
+          offset,
+          limit,
+          _warning: 'Run migration 006_feed_moderation.sql for moderation filters.',
+        });
       } catch (e2) {
         if (e2.code === '42P01') return res.json({ posts: [] });
         throw e2;
