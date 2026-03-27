@@ -163,4 +163,31 @@ export const apiBase = {
   put: (path, body, opts) => request(path, { ...opts, method: 'PUT', body: JSON.stringify(body ?? {}) }),
   patch: (path, body, opts) => request(path, { ...opts, method: 'PATCH', body: JSON.stringify(body ?? {}) }),
   delete: (path, opts) => request(path, { ...opts, method: 'DELETE' }),
+  upload: async (path, file, opts = {}) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = getToken();
+    const headers = { ...opts.headers };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const sc = getSessionCode();
+    if (sc) headers['X-Session-Code'] = sc;
+    const res = await fetchWithNetworkRetry(`${getBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`, {
+      ...opts,
+      method: 'POST',
+      body: formData,
+      headers
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error(data.error || res.statusText || 'Upload failed');
+      err.status = res.status; err.data = data; throw err;
+    }
+    return data.url || data;
+  }
+};
+
+export {
+  request,
+  fetchWithNetworkRetry,
+  clearAuthStorageAndNotify
 };

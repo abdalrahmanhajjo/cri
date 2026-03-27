@@ -1,4 +1,9 @@
-import { apiBase, getImageUrl, getPlaceImageUrl, getToken, setToken, getSessionCode, setSessionCode, getStoredUser, setStoredUser, generateSessionCode, API_ERROR_NETWORK, DEFAULT_NETWORK_ERROR_MESSAGE } from './base';
+import { 
+  apiBase, getImageUrl, getPlaceImageUrl, getToken, setToken, getSessionCode, 
+  setSessionCode, getStoredUser, setStoredUser, generateSessionCode, 
+  API_ERROR_NETWORK, DEFAULT_NETWORK_ERROR_MESSAGE, fixImageUrlExtension, 
+  getBaseUrl, getImageUrlAlternate, clearAuthStorageAndNotify, request 
+} from './base';
 
 export const authApi = {
   login: (email, password) => apiBase.post('/api/auth/login', { email, password }),
@@ -65,10 +70,62 @@ const api = {
     },
   },
   admin: {
-    // ... all admin methods included here for now
+    stats: () => apiBase.get('/api/admin/stats'),
+    upload: (file) => apiBase.upload('/api/admin/upload', file),
+    places: {
+      list: (p) => apiBase.get('/api/admin/places', { params: p }),
+      create: (body) => apiBase.post('/api/admin/places', body),
+      update: (id, body) => apiBase.patch(`/api/admin/places/${id}`, body),
+      delete: (id) => apiBase.delete(`/api/admin/places/${id}`),
+      reviews: (id) => apiBase.get(`/api/admin/places/${id}/reviews`),
+    },
+    users: {
+      list: (params) => {
+        const q = new URLSearchParams(params).toString();
+        return apiBase.get(`/api/admin/users${q ? `?${q}` : ''}`);
+      },
+      update: (id, body) => apiBase.patch(`/api/admin/users/${id}`, body),
+      delete: (id) => apiBase.delete(`/api/admin/users/${id}`),
+    },
+    categories: {
+      update: (id, body) => apiBase.patch(`/api/admin/categories/${id}`, body),
+      create: (body) => apiBase.post('/api/admin/categories', body),
+      delete: (id) => apiBase.delete(`/api/admin/categories/${id}`),
+    },
+    events: {
+      list: () => apiBase.get('/api/admin/events'),
+      update: (id, body) => apiBase.patch(`/api/admin/events/${id}`, body),
+      create: (body) => apiBase.post('/api/admin/events', body),
+      delete: (id) => apiBase.delete(`/api/admin/events/${id}`),
+    },
+    tours: {
+      list: () => apiBase.get('/api/admin/tours'),
+      update: (id, body) => apiBase.patch(`/api/admin/tours/${id}`, body),
+      create: (body) => apiBase.post('/api/admin/tours', body),
+      delete: (id) => apiBase.delete(`/api/admin/tours/${id}`),
+    },
+    content: {
+      update: (id, body) => apiBase.patch(`/api/admin/content/${id}`, body),
+    },
+    siteSettings: {
+      get: () => apiBase.get('/api/admin/site-settings'),
+      update: (body) => apiBase.patch('/api/admin/site-settings', body),
+    }
   },
   business: {
-    // ... all business methods included here for now
+    upload: (file, placeId) => {
+      const path = `/api/admin/upload?placeId=${placeId || ''}`;
+      return apiBase.upload(path, file);
+    },
+    places: {
+      get: (id) => apiBase.get(`/api/business/places/${id}`),
+      update: (id, body) => apiBase.patch(`/api/business/places/${id}`, body),
+      reviews: (id) => apiBase.get(`/api/business/places/${id}/reviews`),
+    },
+    translations: {
+      list: (id) => apiBase.get(`/api/business/translations/${id}`),
+      save: (id, lang, body) => apiBase.post(`/api/business/translations/${id}/${lang}`, body),
+    }
   },
   user: {
     profile: () => apiBase.get('/api/user/profile'),
@@ -124,7 +181,12 @@ export {
   setStoredUser,
   generateSessionCode,
   API_ERROR_NETWORK,
-  DEFAULT_NETWORK_ERROR_MESSAGE
+  DEFAULT_NETWORK_ERROR_MESSAGE,
+  fixImageUrlExtension,
+  getBaseUrl,
+  getImageUrlAlternate,
+  clearAuthStorageAndNotify,
+  request
 };
 
 export default api;
