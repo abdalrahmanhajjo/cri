@@ -27,7 +27,7 @@ export default function ForgotPassword() {
   const canReset = code.trim().length === 6 && newPasswordValid && passwordsMatch;
 
   async function handleSendCode(e) {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     setError('');
     const trimmed = email.trim();
     if (!trimmed) return;
@@ -39,7 +39,12 @@ export default function ForgotPassword() {
       setCode('');
       setStep('reset');
     } catch (err) {
-      setError(err.message || 'Failed to send code. Try again.');
+      const retryAfter = Number(err?.data?.retryAfter);
+      if (Number.isFinite(retryAfter) && retryAfter > 0) {
+        setError(`${err.message || 'Too many requests.'} Try again in ${Math.ceil(retryAfter / 60)} minute(s).`);
+      } else {
+        setError(err.message || 'Failed to send code. Try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -54,7 +59,12 @@ export default function ForgotPassword() {
       await api.auth.resetPassword(email, code.trim(), newPassword);
       setStep('success');
     } catch (err) {
-      setError(err.message || 'Failed to reset password. Check the code and try again.');
+      const retryAfter = Number(err?.data?.retryAfter);
+      if (Number.isFinite(retryAfter) && retryAfter > 0) {
+        setError(`${err.message || 'Too many attempts.'} Try again in ${Math.ceil(retryAfter / 60)} minute(s).`);
+      } else {
+        setError(err.message || 'Failed to reset password. Check the code and try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -215,6 +225,16 @@ export default function ForgotPassword() {
                 onClick={() => { setStep('email'); setError(''); setCode(''); setNewPassword(''); setConfirmPassword(''); }}
               >
                 ← Use a different email
+              </button>
+              {' · '}
+              <button
+                type="button"
+                className="auth-link"
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit' }}
+                onClick={handleSendCode}
+                disabled={loading}
+              >
+                Resend code
               </button>
             </p>
           </div>
