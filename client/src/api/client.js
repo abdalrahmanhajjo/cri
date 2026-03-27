@@ -1,4 +1,4 @@
-import { apiBase, getImageUrl, getPlaceImageUrl, getToken, setToken, getSessionCode, setSessionCode, getStoredUser, setStoredUser, generateSessionCode } from './base';
+import { apiBase, getImageUrl, getPlaceImageUrl, getToken, setToken, getSessionCode, setSessionCode, getStoredUser, setStoredUser, generateSessionCode, API_ERROR_NETWORK, DEFAULT_NETWORK_ERROR_MESSAGE } from './base';
 
 export const authApi = {
   login: (email, password) => apiBase.post('/api/auth/login', { email, password }),
@@ -122,7 +122,9 @@ export {
   setSessionCode,
   getStoredUser,
   setStoredUser,
-  generateSessionCode
+  generateSessionCode,
+  API_ERROR_NETWORK,
+  DEFAULT_NETWORK_ERROR_MESSAGE
 };
 
 export default api;
