@@ -5,7 +5,7 @@ import Icon from './Icon';
 import { isCommunityFeedVideo } from './CommunityFeed';
 import { useLanguage } from '../context/LanguageContext';
 import { formatFeedTime } from '../utils/feedTime';
-import { rawFeedImageUrls } from '../utils/feedPostImages';
+import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../utils/feedPostImages';
 import { COMMUNITY_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
 
 function mediaUrl(url) {
@@ -99,10 +99,12 @@ export default function FeedPostCard({
   const feedHeaderMoreRef = useRef(null);
   const [ownerEditOpen, setOwnerEditOpen] = useState(false);
   const [ownerEditCaption, setOwnerEditCaption] = useState('');
-  const [ownerEditImageUrl, setOwnerEditImageUrl] = useState('');
+  const [ownerEditImages, setOwnerEditImages] = useState([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const galleryRef = useRef(null);
   const [ownerEditVideoUrl, setOwnerEditVideoUrl] = useState('');
+  const [ownerEditUploading, setOwnerEditUploading] = useState(null);
+  const [ownerEditShowAdvanced, setOwnerEditShowAdvanced] = useState(false);
   const [ownerSaving, setOwnerSaving] = useState(false);
 
   const liked = post.liked_by_me === true;
@@ -594,11 +596,60 @@ export default function FeedPostCard({
   const openOwnerEdit = () => {
     setOwnerEditCaption(String(post.caption || ''));
     const imgLines = rawFeedImageUrls(post);
-    setOwnerEditImageUrl(imgLines.length ? imgLines.join('\n') : '');
+    setOwnerEditImages(imgLines);
     setOwnerEditVideoUrl(post.video_url != null ? String(post.video_url) : '');
+    setOwnerEditShowAdvanced(false);
+    setOwnerEditUploading(null);
     setOwnerEditOpen(true);
     setFeedHeaderMoreOpen(false);
     setReelMoreOpen(false);
+  };
+
+  const uploadOwnerEditImages = async (files) => {
+    if (!files?.length) return;
+    if (!placeId) {
+      setFeedActionMsg('This post is not linked to a place. Upload from Business dashboard.');
+      return;
+    }
+    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    if (!list.length) return;
+    setOwnerEditUploading('image');
+    try {
+      for (const file of list) {
+        const url = await api.business.upload(file, placeId);
+        if (!url) continue;
+        setOwnerEditImages((prev) => {
+          if (contentKind(post.type) === 'reel') return [url];
+          if (prev.includes(url)) return prev;
+          return [...prev, url].slice(0, MAX_FEED_POST_IMAGES);
+        });
+      }
+    } catch (e) {
+      showFeedActionError(e);
+    } finally {
+      setOwnerEditUploading(null);
+    }
+  };
+
+  const uploadOwnerEditVideo = async (file) => {
+    if (!file) return;
+    if (!placeId) {
+      setFeedActionMsg('This post is not linked to a place. Upload from Business dashboard.');
+      return;
+    }
+    if (!/^video\//i.test(file.type)) {
+      setFeedActionMsg('Choose a video file (MP4, WebM, MOV).');
+      return;
+    }
+    setOwnerEditUploading('video');
+    try {
+      const url = await api.business.upload(file, placeId);
+      if (url) setOwnerEditVideoUrl(url);
+    } catch (e) {
+      showFeedActionError(e);
+    } finally {
+      setOwnerEditUploading(null);
+    }
   };
 
   const saveOwnerEdit = async () => {
@@ -606,11 +657,10 @@ export default function FeedPostCard({
     if (!cap || !requireAuth()) return;
     setOwnerSaving(true);
     try {
-      const lines = ownerEditImageUrl
-        .split(/[\n\r]+/)
-        .map((s) => s.trim())
+      const lines = ownerEditImages
+        .map((s) => String(s).trim())
         .filter(Boolean)
-        .slice(0, 10);
+        .slice(0, MAX_FEED_POST_IMAGES);
       const r = await api.business.feed.update(post.id, {
         caption: cap,
         image_urls: lines.length ? lines : null,
@@ -1468,34 +1518,140 @@ export default function FeedPostCard({
                 disabled={ownerSaving}
               />
             </label>
-            <label className="ig-feed-owner-edit-label">
-              {t('discover', 'feedOwnerImageUrl')}
-              <textarea
-                className="ig-feed-owner-edit-textarea"
-                value={ownerEditImageUrl}
-                onChange={(e) => setOwnerEditImageUrl(e.target.value)}
+            <div className="ig-feed-owner-edit-label">
+              <span>{t('discover', 'feedOwnerImageUrl')}</span>
+              <div
+                className="ig-feed-owner-edit-upload-zone"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.add('ig-feed-owner-edit-upload-zone--drag');
+                }}
+                onDragLeave={(e) => e.currentTarget.classList.remove('ig-feed-owner-edit-upload-zone--drag')}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove('ig-feed-owner-edit-upload-zone--drag');
+                  void uploadOwnerEditImages(e.dataTransfer?.files);
+                }}
+              >
+                <input
+                  id={`owner-edit-images-${post.id}`}
+                  type="file"
+                  accept="image/*"
+                  multiple={contentKind(post.type) !== 'reel'}
+                  style={{ display: 'none' }}
+                  disabled={ownerSaving || ownerEditUploading !== null}
+                  onChange={(e) => {
+                    void uploadOwnerEditImages(e.target.files);
+                    e.target.value = '';
+                  }}
+                />
+                <label htmlFor={`owner-edit-images-${post.id}`}>
+                  {ownerEditUploading === 'image' ? 'Uploading images…' : 'Drop images here or click to upload'}
+                </label>
+              </div>
+              {ownerEditImages.length > 0 && (
+                <div className="ig-feed-owner-edit-image-grid">
+                  {ownerEditImages.map((url, idx) => (
+                    <div key={`${url}-${idx}`} className="ig-feed-owner-edit-image-tile">
+                      {mediaUrl(url) ? <img src={mediaUrl(url)} alt="" /> : null}
+                      <div className="ig-feed-owner-edit-image-actions">
+                        {idx > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOwnerEditImages((prev) => {
+                                const next = [...prev];
+                                [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                                return next;
+                              })
+                            }
+                          >
+                            Up
+                          </button>
+                        ) : null}
+                        <button type="button" onClick={() => setOwnerEditImages((prev) => prev.filter((_, i) => i !== idx))}>
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="ig-feed-owner-edit-label">
+              <span>{t('discover', 'feedOwnerVideoUrl')}</span>
+              <div
+                className="ig-feed-owner-edit-upload-zone"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.add('ig-feed-owner-edit-upload-zone--drag');
+                }}
+                onDragLeave={(e) => e.currentTarget.classList.remove('ig-feed-owner-edit-upload-zone--drag')}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove('ig-feed-owner-edit-upload-zone--drag');
+                  void uploadOwnerEditVideo(e.dataTransfer?.files?.[0]);
+                }}
+              >
+                <input
+                  id={`owner-edit-video-${post.id}`}
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                  style={{ display: 'none' }}
+                  disabled={ownerSaving || ownerEditUploading !== null}
+                  onChange={(e) => {
+                    void uploadOwnerEditVideo(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
+                />
+                <label htmlFor={`owner-edit-video-${post.id}`}>
+                  {ownerEditUploading === 'video' ? 'Uploading video…' : 'Drop video here or click to upload'}
+                </label>
+              </div>
+              <button
+                type="button"
+                className="ig-feed-owner-edit-btn"
+                style={{ marginTop: 8, width: 'fit-content' }}
+                onClick={() => setOwnerEditShowAdvanced((x) => !x)}
                 disabled={ownerSaving}
-                autoComplete="off"
-                rows={3}
-                placeholder="One image URL per line (optional)"
-              />
-            </label>
-            <label className="ig-feed-owner-edit-label">
-              {t('discover', 'feedOwnerVideoUrl')}
-              <input
-                type="url"
-                className="ig-feed-owner-edit-input"
-                value={ownerEditVideoUrl}
-                onChange={(e) => setOwnerEditVideoUrl(e.target.value)}
-                disabled={ownerSaving}
-                autoComplete="off"
-              />
-            </label>
+              >
+                {ownerEditShowAdvanced ? 'Hide' : 'Show'} advanced URL fields
+              </button>
+              {ownerEditShowAdvanced && (
+                <div className="ig-feed-owner-edit-advanced">
+                  <textarea
+                    className="ig-feed-owner-edit-textarea"
+                    value={ownerEditImages.join('\n')}
+                    onChange={(e) =>
+                      setOwnerEditImages(
+                        e.target.value
+                          .split(/[\n\r]+/)
+                          .map((s) => s.trim())
+                          .filter(Boolean)
+                          .slice(0, contentKind(post.type) === 'reel' ? 1 : MAX_FEED_POST_IMAGES)
+                      )
+                    }
+                    disabled={ownerSaving}
+                    rows={3}
+                    placeholder="Image URLs, one per line"
+                  />
+                  <input
+                    type="url"
+                    className="ig-feed-owner-edit-input"
+                    value={ownerEditVideoUrl}
+                    onChange={(e) => setOwnerEditVideoUrl(e.target.value)}
+                    disabled={ownerSaving}
+                    autoComplete="off"
+                    placeholder="Video URL"
+                  />
+                </div>
+              )}
+            </div>
             <div className="ig-feed-owner-edit-actions">
               <button
                 type="button"
                 className="ig-feed-owner-edit-btn ig-feed-owner-edit-btn--primary"
-                disabled={ownerSaving || !ownerEditCaption.trim()}
+                disabled={ownerSaving || ownerEditUploading !== null || !ownerEditCaption.trim()}
                 onClick={() => void saveOwnerEdit()}
               >
                 {ownerSaving ? t('discover', 'feedOwnerSaving') : t('discover', 'feedOwnerSave')}

@@ -16,9 +16,11 @@ const {
 const router = express.Router();
 const loginAttempts = new Map();
 const forgotAttempts = new Map();
+const resetAttempts = new Map();
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 const FORGOT_MAX_ATTEMPTS = 3;
+const RESET_MAX_ATTEMPTS = 12;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-dev-only';
 
 function checkRateLimit(ip) {
@@ -56,6 +58,32 @@ function recordForgotAttempt(ip) {
   if (!entry) forgotAttempts.set(ip, { count: 1, firstAttempt: now });
   else if (now - entry.firstAttempt <= RATE_LIMIT_WINDOW) entry.count++;
   else forgotAttempts.set(ip, { count: 1, firstAttempt: now });
+}
+
+function checkResetRateLimit(key) {
+  const now = Date.now();
+  const entry = resetAttempts.get(key);
+  if (!entry) return { ok: true };
+  if (now - entry.firstAttempt > RATE_LIMIT_WINDOW) {
+    resetAttempts.delete(key);
+    return { ok: true };
+  }
+  if (entry.count >= RESET_MAX_ATTEMPTS) {
+    return { ok: false, retryAfter: Math.ceil((entry.firstAttempt + RATE_LIMIT_WINDOW - now) / 1000) };
+  }
+  return { ok: true };
+}
+
+function recordResetAttempt(key) {
+  const now = Date.now();
+  const entry = resetAttempts.get(key);
+  if (!entry) resetAttempts.set(key, { count: 1, firstAttempt: now });
+  else if (now - entry.firstAttempt <= RATE_LIMIT_WINDOW) entry.count++;
+  else resetAttempts.set(key, { count: 1, firstAttempt: now });
+}
+
+function clearResetAttempts(key) {
+  resetAttempts.delete(key);
 }
 
 /** Cooldown per email so repeated login taps do not flood the inbox. */
@@ -298,12 +326,24 @@ router.post('/reset-password', async (req, res) => {
     if (!email || !code || code.length !== 6 || !newPassword) {
       return res.status(400).json({ error: 'Email, 6-digit code, and new password are required' });
     }
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    const resetKey = `${ip}:${email}`;
+    const rate = checkResetRateLimit(resetKey);
+    if (!rate.ok) {
+      return res.status(429).json({
+        error: 'Too many reset attempts. Please wait before trying again.',
+        retryAfter: rate.retryAfter,
+      });
+    }
     const pv = validatePassword(newPassword);
     if (!pv.valid) return res.status(400).json({ error: pv.error });
 
     const userRow = await query('SELECT id FROM users WHERE LOWER(email) = $1 AND auth_provider = \'email\' AND password_hash IS NOT NULL', [email]);
     const user = userRow.rows[0];
-    if (!user) return res.status(400).json({ error: 'Invalid or expired code. Request a new one.' });
+    if (!user) {
+      recordResetAttempt(resetKey);
+      return res.status(400).json({ error: 'Invalid or expired code. Request a new one.' });
+    }
 
     const tokenHash = crypto.createHash('sha256').update(code).digest('hex');
     const tokenRow = await query(
@@ -311,12 +351,14 @@ router.post('/reset-password', async (req, res) => {
       [user.id, tokenHash]
     );
     if (tokenRow.rows.length === 0) {
+      recordResetAttempt(resetKey);
       return res.status(400).json({ error: 'Invalid or expired code. Request a new one.' });
     }
 
     const hash = await bcrypt.hash(newPassword, 12);
     await query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, user.id]);
     await query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
+    clearResetAttempts(resetKey);
     res.json({ message: 'Password has been reset. You can now sign in with your new password.' });
   } catch (err) {
     console.error(err);
