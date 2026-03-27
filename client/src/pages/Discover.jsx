@@ -946,18 +946,11 @@ export default function Discover() {
     if (tab !== 'reel' || orderedReels.length === 0) return undefined;
     const obs = new IntersectionObserver(
       (entries) => {
-        let bestId = null;
-        let bestRatio = 0;
         entries.forEach((en) => {
-          if (en.isIntersecting && en.intersectionRatio >= bestRatio) {
-            bestRatio = en.intersectionRatio;
-            bestId = en.target.getAttribute('data-post-id');
-          }
           if (!en.isIntersecting) return;
           const id = en.target.getAttribute('data-post-id');
           if (id) markReelSeen(id);
         });
-        setActiveReelId(bestRatio > 0 ? bestId : null);
       },
       { threshold: [0.2, 0.4, 0.6, 0.8] }
     );
@@ -965,6 +958,45 @@ export default function Discover() {
     nodes.forEach((n) => obs.observe(n));
     return () => obs.disconnect();
   }, [tab, orderedReels, markReelSeen]);
+
+  useEffect(() => {
+    if (tab !== 'reel' || orderedReels.length === 0) return undefined;
+    let rafId = 0;
+    const pickActive = () => {
+      const nodes = document.querySelectorAll('[data-feed-kind="reel"][data-post-id]');
+      const vpH = window.innerHeight || 1;
+      const vpCenter = vpH / 2;
+      let bestId = null;
+      let bestScore = Number.POSITIVE_INFINITY;
+      nodes.forEach((node) => {
+        const rect = node.getBoundingClientRect();
+        const visible = Math.max(0, Math.min(rect.bottom, vpH) - Math.max(rect.top, 0));
+        if (visible <= 0) return;
+        const center = rect.top + rect.height / 2;
+        const distance = Math.abs(center - vpCenter);
+        const visibilityPenalty = 1 - visible / Math.max(1, rect.height);
+        const score = distance + visibilityPenalty * 200;
+        if (score < bestScore) {
+          bestScore = score;
+          bestId = node.getAttribute('data-post-id');
+        }
+      });
+      setActiveReelId(bestId);
+      rafId = 0;
+    };
+    const schedulePick = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(pickActive);
+    };
+    schedulePick();
+    window.addEventListener('scroll', schedulePick, { passive: true });
+    window.addEventListener('resize', schedulePick);
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', schedulePick);
+      window.removeEventListener('resize', schedulePick);
+    };
+  }, [tab, orderedReels]);
 
   useEffect(() => {
     if (tab !== 'reel') setActiveReelId(null);
@@ -1123,7 +1155,7 @@ export default function Discover() {
                     t={t}
                     variant="reel"
                     discoverBasePath={discoverBasePath}
-                    isActiveReel
+                    isActiveReel={activeReelId === String(p.id)}
                   />
                 </div>
               ))}
