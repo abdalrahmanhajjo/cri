@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 const { parsePlaceId } = require('../utils/validate');
 const { sendDbAwareError } = require('../utils/dbHttpError');
@@ -35,7 +35,7 @@ function rowToTour(row) {
 router.get('/', async (req, res) => {
   try {
     const lang = getRequestLang(req);
-    const result = await query(
+    const result = await dbQuery(
       `SELECT t.id, t.duration_hours, t.locations, t.rating, t.reviews, t.price, t.currency, t.image, t.place_ids,
               COALESCE(tt.name, t.name) AS name, COALESCE(tt.duration, t.duration) AS duration,
               COALESCE(tt.price_display, t.price_display) AS price_display,
@@ -64,7 +64,7 @@ router.get('/:id', async (req, res) => {
   if (!idResult.valid) return res.status(400).json({ error: 'Invalid tour id' });
   try {
     const lang = getRequestLang(req);
-    const result = await query(
+    const result = await dbQuery(
       `SELECT t.id, t.duration_hours, t.locations, t.rating, t.reviews, t.price, t.currency, t.image, t.place_ids,
               COALESCE(tt.name, t.name) AS name, COALESCE(tt.duration, t.duration) AS duration,
               COALESCE(tt.price_display, t.price_display) AS price_display,

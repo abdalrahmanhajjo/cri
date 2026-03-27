@@ -1,6 +1,6 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware/auth');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 const { parsePlaceId, parseTripId } = require('../utils/validate');
 const { validate } = require('../middleware/validation');
 const { createTripSchema, updateTripSchema } = require('../schemas/trips');
@@ -23,7 +23,7 @@ function toYmdDb(val) {
 
 async function findOverlappingTrips(userId, startYmd, endYmd, excludeTripId) {
   const exclude = excludeTripId ?? null;
-  const result = await query(
+  const result = await dbQuery(
     `SELECT id, name FROM trips
      WHERE user_id = $1
        AND ($4::text IS NULL OR id <> $4)
@@ -79,7 +79,7 @@ function normalizeDays(raw) {
 router.get('/', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const result = await query(
+    const result = await dbQuery(
       'SELECT id, name, start_date, end_date, description, days, created_at FROM trips WHERE user_id = $1 ORDER BY start_date DESC',
       [userId]
     );
@@ -104,7 +104,7 @@ router.get('/:id', async (req, res) => {
     const userId = req.user.userId;
     const idResult = parseTripId(req.params.id);
     if (!idResult.valid) return res.status(400).json({ error: 'Invalid trip id' });
-    const result = await query(
+    const result = await dbQuery(
       'SELECT id, name, start_date, end_date, description, days, created_at FROM trips WHERE id = $1 AND user_id = $2',
       [idResult.value, userId]
     );
@@ -149,7 +149,7 @@ router.post('/', validate(createTripSchema), async (req, res) => {
   }
   const id = generateTripId();
   try {
-    const result = await query(
+    const result = await dbQuery(
       'INSERT INTO trips (id, user_id, name, start_date, end_date, description, days) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, start_date, end_date, description, days, created_at',
       [id, userId, name, startDate, endDate, description, JSON.stringify(initialDays)]
     );
@@ -205,7 +205,7 @@ router.patch('/:id', validate(updateTripSchema), async (req, res) => {
   }
   if (updates.length === 0) return res.status(400).json({ error: 'No updates provided' });
   if (startDate != null || endDate != null) {
-    const cur = await query('SELECT start_date, end_date FROM trips WHERE id = $1 AND user_id = $2', [
+    const cur = await dbQuery('SELECT start_date, end_date FROM trips WHERE id = $1 AND user_id = $2', [
       idResult.value,
       userId,
     ]);
@@ -229,7 +229,7 @@ router.patch('/:id', validate(updateTripSchema), async (req, res) => {
   }
   values.push(idResult.value, userId);
   try {
-    const result = await query(
+    const result = await dbQuery(
       `UPDATE trips SET ${updates.join(', ')} WHERE id = $${pos} AND user_id = $${pos + 1} RETURNING id, name, start_date, end_date, description, days, created_at`,
       values
     );
@@ -255,7 +255,7 @@ router.delete('/:id', async (req, res) => {
   const idResult = parseTripId(req.params.id);
   if (!idResult.valid) return res.status(400).json({ error: 'Invalid trip id' });
   try {
-    const result = await query('DELETE FROM trips WHERE id = $1 AND user_id = $2 RETURNING id', [idResult.value, userId]);
+    const result = await dbQuery('DELETE FROM trips WHERE id = $1 AND user_id = $2 RETURNING id', [idResult.value, userId]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Trip not found' });
     res.json({ ok: true });
   } catch (err) {
@@ -268,7 +268,7 @@ router.delete('/:id', async (req, res) => {
 router.get('/favourites', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const result = await query('SELECT place_id FROM saved_places WHERE user_id = $1', [userId]);
+    const result = await dbQuery('SELECT place_id FROM saved_places WHERE user_id = $1', [userId]);
     res.json({ placeIds: result.rows.map((r) => r.place_id) });
   } catch (err) {
     if (err.code === '42P01') return res.json({ placeIds: [] });
@@ -283,7 +283,7 @@ router.post('/favourites', async (req, res) => {
   const placeIdResult = parsePlaceId(placeIdRaw);
   if (!placeIdResult.valid) return res.status(400).json({ error: 'placeId required (string or number, max 255 chars)' });
   try {
-    await query(
+    await dbQuery(
       'INSERT INTO saved_places (user_id, place_id) VALUES ($1, $2) ON CONFLICT (user_id, place_id) DO NOTHING',
       [userId, placeIdResult.value]
     );
@@ -300,7 +300,7 @@ router.delete('/favourites/:placeId', async (req, res) => {
   if (!placeIdResult.valid) return res.status(400).json({ error: 'Invalid place id' });
   const userId = req.user.userId;
   try {
-    await query('DELETE FROM saved_places WHERE user_id = $1 AND place_id = $2', [userId, placeIdResult.value]);
+    await dbQuery('DELETE FROM saved_places WHERE user_id = $1 AND place_id = $2', [userId, placeIdResult.value]);
     res.json({ ok: true });
   } catch (err) {
     if (err.code === '42P01') return res.json({ ok: true });

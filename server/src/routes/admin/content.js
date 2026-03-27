@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { validate } = require('../../middleware/validation');
@@ -11,7 +11,7 @@ const ROW_ID = 'default';
 /** GET /api/admin/content - fetch all translation overrides (public) */
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       'SELECT data FROM translation_overrides WHERE id = $1',
       [ROW_ID]
     );
@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
 router.put('/', authMiddleware, adminMiddleware, validate(adminContentSchema), async (req, res) => {
   try {
     const data = req.body.overrides || {};
-    await query(
+    await dbQuery(
       `INSERT INTO translation_overrides (id, data, updated_at) VALUES ($1, $2::jsonb, NOW())
        ON CONFLICT (id) DO UPDATE SET data = $2::jsonb, updated_at = NOW()`,
       [ROW_ID, JSON.stringify(data)]

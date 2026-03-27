@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware } = require('../../middleware/placeOwner');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { parsePlaceId } = require('../../utils/validate');
 
 const router = express.Router();
@@ -84,7 +84,7 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
   if (!parsed.valid) return res.status(400).json({ error: 'placeId is required' });
   const placeId = parsed.value;
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
       [req.user.userId, placeId]
     );

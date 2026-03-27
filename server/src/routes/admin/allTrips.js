@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 
@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
   params.push(limit);
   const limIdx = params.length;
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT t.id, t.user_id, t.name, t.start_date, t.end_date, t.description, t.days, t.created_at,
               u.email AS user_email, u.name AS user_name
        FROM trips t

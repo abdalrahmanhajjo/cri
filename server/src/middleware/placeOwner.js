@@ -1,5 +1,7 @@
-const { query } = require('../db');
+const db = require('../db');
 const { parsePlaceId } = require('../utils/validate');
+
+const dbQuery = db.query;
 
 /**
  * After authMiddleware. Allows business portal if users.is_business_owner
@@ -9,7 +11,7 @@ async function businessPortalMiddleware(req, res, next) {
   const userId = req.user?.userId;
   if (!userId) return res.status(401).json({ error: 'Authentication required' });
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT COALESCE(u.is_business_owner, false) AS is_business_owner,
               (SELECT COUNT(*)::int FROM place_owners po WHERE po.user_id = u.id) AS owned_places
        FROM users u WHERE u.id = $1`,
@@ -44,7 +46,8 @@ function requirePlaceOwnerParam(paramName = 'placeId') {
     if (!parsed.valid) return res.status(400).json({ error: 'Invalid place id' });
     const placeId = parsed.value;
     try {
-      const { rows } = await query(
+      if (!dbQuery) throw new Error('dbQuery is undefined in requirePlaceOwnerParam');
+      const { rows } = await dbQuery(
         'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
         [userId, placeId]
       );

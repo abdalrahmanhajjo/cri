@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 const {
   clampText,
@@ -203,9 +203,9 @@ router.get('/sitemap.xml', async (req, res) => {
     // Dynamic pages from DB
     try {
       const [places, tours, events] = await Promise.all([
-        query('SELECT id FROM places ORDER BY id ASC'),
-        query('SELECT id FROM tours ORDER BY id ASC'),
-        query('SELECT id FROM events ORDER BY id ASC'),
+        dbQuery('SELECT id FROM places ORDER BY id ASC'),
+        dbQuery('SELECT id FROM tours ORDER BY id ASC'),
+        dbQuery('SELECT id FROM events ORDER BY id ASC'),
       ]);
       for (const r of places.rows || []) add(`/place/${encodeURIComponent(normalizeSlugSegment(String(r.id)))}`);
       for (const r of tours.rows || []) add(`/tour/${encodeURIComponent(normalizeSlugSegment(String(r.id)))}`);
@@ -277,7 +277,7 @@ function makeSeoResponder({ clientDistPath }) {
       } else if (p.startsWith('/place/')) {
         const raw = decodeURIComponent(p.slice('/place/'.length));
         const id = normalizeSlugSegment(raw);
-        const { rows } = await query(
+        const { rows } = await dbQuery(
           `SELECT p.id, p.latitude, p.longitude, p.images,
                   p.search_name,
                   COALESCE(pt.name, p.name) AS name,
@@ -322,7 +322,7 @@ function makeSeoResponder({ clientDistPath }) {
       } else if (p.startsWith('/tour/')) {
         const raw = decodeURIComponent(p.slice('/tour/'.length));
         const id = normalizeSlugSegment(raw);
-        const { rows } = await query(
+        const { rows } = await dbQuery(
           `SELECT t.id, t.image,
                   COALESCE(t.id::text, '') AS slug,
                   COALESCE(tt.name, t.name) AS name,
@@ -363,7 +363,7 @@ function makeSeoResponder({ clientDistPath }) {
         }
       } else if (p.startsWith('/event/')) {
         const id = decodeURIComponent(p.slice('/event/'.length));
-        const { rows } = await query(
+        const { rows } = await dbQuery(
           `SELECT e.id, e.start_date, e.end_date, e.image,
                   COALESCE(et.name, e.name) AS name,
                   COALESCE(et.description, e.description) AS description,

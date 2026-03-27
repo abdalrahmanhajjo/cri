@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 
@@ -24,7 +24,7 @@ router.post('/', async (req, res) => {
     const tags = safeJson(body.tags, []);
     const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
 
-    await query(
+    await dbQuery(
       `INSERT INTO interests (id, name, icon, description, color, count, popularity, tags)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
        ON CONFLICT (id) DO UPDATE SET
@@ -55,7 +55,7 @@ router.put('/:id', async (req, res) => {
     const tags = body.tags !== undefined ? safeJson(body.tags, []) : null;
     const tagsJson = tags !== null ? JSON.stringify(Array.isArray(tags) ? tags : []) : null;
 
-    const result = await query(
+    const result = await dbQuery(
       `UPDATE interests SET
          name = COALESCE($2, name), icon = COALESCE($3, icon), description = COALESCE($4, description),
          color = COALESCE($5, color), count = COALESCE($6, count), popularity = COALESCE($7, popularity),
@@ -83,7 +83,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await query('DELETE FROM interests WHERE id = $1', [id]);
+    const result = await dbQuery('DELETE FROM interests WHERE id = $1', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Interest not found' });
     res.json({ message: 'Interest deleted' });
   } catch (err) {

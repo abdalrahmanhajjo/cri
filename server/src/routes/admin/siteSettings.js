@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 
@@ -17,7 +17,7 @@ function stripDeprecatedSiteSettings(obj) {
 /** GET /api/admin/site-settings — public-ish payload for web (also used by app if you point it here) */
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await query('SELECT data FROM site_settings WHERE id = $1', [ROW_ID]);
+    const { rows } = await dbQuery('SELECT data FROM site_settings WHERE id = $1', [ROW_ID]);
     const data = rows[0]?.data;
     const settings = stripDeprecatedSiteSettings(data && typeof data === 'object' ? data : {});
     res.json({ settings });
@@ -39,14 +39,14 @@ router.put('/', async (req, res) => {
   try {
     let existing = {};
     try {
-      const prev = await query('SELECT data FROM site_settings WHERE id = $1', [ROW_ID]);
+      const prev = await dbQuery('SELECT data FROM site_settings WHERE id = $1', [ROW_ID]);
       const row = prev.rows[0]?.data;
       if (row && typeof row === 'object') existing = row;
     } catch (_) {
       /* ignore */
     }
     const data = stripDeprecatedSiteSettings({ ...existing, ...incoming });
-    await query(
+    await dbQuery(
       `INSERT INTO site_settings (id, data, updated_at) VALUES ($1, $2::jsonb, NOW())
        ON CONFLICT (id) DO UPDATE SET data = $2::jsonb, updated_at = NOW()`,
       [ROW_ID, JSON.stringify(data)]

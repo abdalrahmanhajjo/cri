@@ -1,5 +1,5 @@
 const express = require('express');
-const pool = require('../db');
+const { query: dbQuery } = require('../db');
 
 const router = express.Router();
 
@@ -19,7 +19,7 @@ router.get('/health', (req, res) => {
 router.get('/ready', async (req, res) => {
   try {
     // Attempt a simple query to verify DB connectivity
-    await pool.query('SELECT 1');
+    await dbQuery('SELECT 1');
     res.json({
       status: 'ready',
       database: 'connected',

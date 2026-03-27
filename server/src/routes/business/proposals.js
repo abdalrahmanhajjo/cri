@@ -1,7 +1,7 @@
 const express = require('express');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware } = require('../../middleware/placeOwner');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { parsePlaceId } = require('../../utils/validate');
 const { visitorFollowupsFromDb } = require('../../utils/inquiryFollowups');
 
@@ -9,7 +9,7 @@ const router = express.Router();
 router.use(authMiddleware, businessPortalMiddleware);
 
 async function assertOwnsPlace(userId, placeId) {
-  const { rows } = await query(
+  const { rows } = await dbQuery(
     'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
     [userId, placeId]
   );
@@ -58,22 +58,22 @@ const INQUIRY_ROW_SELECT_NO_PHONE = `SELECT i.id, i.place_id, i.user_id, i.guest
 /** Load one inquiry row; tolerate DB without `guest_phone` or `visitor_followups`. */
 async function fetchInquiryRowById(id) {
   try {
-    const { rows } = await query(`${INQUIRY_ROW_SELECT_FULL} WHERE i.id = $1`, [id]);
+    const { rows } = await dbQuery(`${INQUIRY_ROW_SELECT_FULL} WHERE i.id = $1`, [id]);
     return rows[0] || null;
   } catch (e) {
     if (e.code === '42P01' && String(e.message || '').includes('place_messaging_blocks')) {
       try {
-        const { rows } = await query(`${INQUIRY_ROW_SELECT_FULL_NO_MBLOCK} WHERE i.id = $1`, [id]);
+        const { rows } = await dbQuery(`${INQUIRY_ROW_SELECT_FULL_NO_MBLOCK} WHERE i.id = $1`, [id]);
         return rows[0] || null;
       } catch (e2) {
         if (e2.code === '42703' && String(e2.message || '').includes('guest_phone')) {
           try {
-            const { rows } = await query(`${INQUIRY_ROW_SELECT_NO_PHONE_NO_MBLOCK} WHERE i.id = $1`, [id]);
+            const { rows } = await dbQuery(`${INQUIRY_ROW_SELECT_NO_PHONE_NO_MBLOCK} WHERE i.id = $1`, [id]);
             return rows[0] || null;
           } catch (e3) {
             if (e3.code === '42703' && String(e3.message || '').includes('visitor_followups')) {
               const sel = INQUIRY_ROW_SELECT_NO_PHONE_NO_MBLOCK.replace(', i.visitor_followups', '');
-              const { rows } = await query(`${sel} WHERE i.id = $1`, [id]);
+              const { rows } = await dbQuery(`${sel} WHERE i.id = $1`, [id]);
               return rows[0] || null;
             }
             throw e3;
@@ -81,7 +81,7 @@ async function fetchInquiryRowById(id) {
         }
         if (e2.code === '42703' && String(e2.message || '').includes('visitor_followups')) {
           const sel = INQUIRY_ROW_SELECT_FULL_NO_MBLOCK.replace(', i.visitor_followups', '');
-          const { rows } = await query(`${sel} WHERE i.id = $1`, [id]);
+          const { rows } = await dbQuery(`${sel} WHERE i.id = $1`, [id]);
           return rows[0] || null;
         }
         throw e2;
@@ -89,12 +89,12 @@ async function fetchInquiryRowById(id) {
     }
     if (e.code === '42703' && String(e.message || '').includes('guest_phone')) {
       try {
-        const { rows } = await query(`${INQUIRY_ROW_SELECT_NO_PHONE} WHERE i.id = $1`, [id]);
+        const { rows } = await dbQuery(`${INQUIRY_ROW_SELECT_NO_PHONE} WHERE i.id = $1`, [id]);
         return rows[0] || null;
       } catch (e2) {
         if (e2.code === '42703' && String(e2.message || '').includes('visitor_followups')) {
           const sel = INQUIRY_ROW_SELECT_NO_PHONE.replace(', i.visitor_followups', '');
-          const { rows } = await query(`${sel} WHERE i.id = $1`, [id]);
+          const { rows } = await dbQuery(`${sel} WHERE i.id = $1`, [id]);
           return rows[0] || null;
         }
         throw e2;
@@ -103,12 +103,12 @@ async function fetchInquiryRowById(id) {
     if (e.code === '42703' && String(e.message || '').includes('visitor_followups')) {
       try {
         const sel = INQUIRY_ROW_SELECT_FULL.replace(', i.visitor_followups', '');
-        const { rows } = await query(`${sel} WHERE i.id = $1`, [id]);
+        const { rows } = await dbQuery(`${sel} WHERE i.id = $1`, [id]);
         return rows[0] || null;
       } catch (e2) {
         if (e2.code === '42703' && String(e2.message || '').includes('guest_phone')) {
           const sel2 = INQUIRY_ROW_SELECT_NO_PHONE.replace(', i.visitor_followups', '');
-          const { rows } = await query(`${sel2} WHERE i.id = $1`, [id]);
+          const { rows } = await dbQuery(`${sel2} WHERE i.id = $1`, [id]);
           return rows[0] || null;
         }
         throw e2;
@@ -154,25 +154,25 @@ router.get('/', async (req, res) => {
   try {
     let rows;
     try {
-      ({ rows } = await query(LIST_FULL, [placeId]));
+      ({ rows } = await dbQuery(LIST_FULL, [placeId]));
     } catch (e) {
       if (e.code === '42P01' && String(e.message || '').includes('place_messaging_blocks')) {
-        ({ rows } = await query(`${INQUIRY_ROW_SELECT_FULL_NO_MBLOCK} WHERE i.place_id = $1 ORDER BY i.created_at DESC LIMIT 300`, [placeId]));
+        ({ rows } = await dbQuery(`${INQUIRY_ROW_SELECT_FULL_NO_MBLOCK} WHERE i.place_id = $1 ORDER BY i.created_at DESC LIMIT 300`, [placeId]));
       } else if (e.code === '42703' && String(e.message || '').includes('visitor_followups')) {
         const sel = INQUIRY_ROW_SELECT_FULL.replace(', i.visitor_followups', '');
-        ({ rows } = await query(`${sel} WHERE i.place_id = $1 ORDER BY i.created_at DESC LIMIT 300`, [placeId]));
+        ({ rows } = await dbQuery(`${sel} WHERE i.place_id = $1 ORDER BY i.created_at DESC LIMIT 300`, [placeId]));
       } else if (e.code === '42703' && String(e.message || '').includes('guest_phone')) {
         try {
-          ({ rows } = await query(LIST_NO_PHONE, [placeId]));
+          ({ rows } = await dbQuery(LIST_NO_PHONE, [placeId]));
         } catch (e2) {
           if (e2.code === '42P01' && String(e2.message || '').includes('place_messaging_blocks')) {
-            ({ rows } = await query(
+            ({ rows } = await dbQuery(
               `${INQUIRY_ROW_SELECT_NO_PHONE_NO_MBLOCK} WHERE i.place_id = $1 ORDER BY i.created_at DESC LIMIT 300`,
               [placeId]
             ));
           } else if (e2.code === '42703' && String(e2.message || '').includes('visitor_followups')) {
             const sel = INQUIRY_ROW_SELECT_NO_PHONE.replace(', i.visitor_followups', '');
-            ({ rows } = await query(`${sel} WHERE i.place_id = $1 ORDER BY i.created_at DESC LIMIT 300`, [placeId]));
+            ({ rows } = await dbQuery(`${sel} WHERE i.place_id = $1 ORDER BY i.created_at DESC LIMIT 300`, [placeId]));
           } else {
             throw e2;
           }
@@ -213,7 +213,7 @@ router.patch('/:id', async (req, res) => {
   const userId = req.user.userId;
 
   try {
-    const found = await query(
+    const found = await dbQuery(
       `SELECT i.id, i.place_id FROM place_inquiries i
        INNER JOIN place_owners po ON po.place_id = i.place_id AND po.user_id = $2
        WHERE i.id = $1`,
@@ -222,9 +222,9 @@ router.patch('/:id', async (req, res) => {
     if (!found.rows.length) return res.status(404).json({ error: 'Inquiry not found or not your place' });
 
     if (statusIn === 'archived') {
-      await query('UPDATE place_inquiries SET status = \'archived\' WHERE id = $1', [idResult]);
+      await dbQuery('UPDATE place_inquiries SET status = \'archived\' WHERE id = $1', [idResult]);
     } else {
-      await query(
+      await dbQuery(
         `UPDATE place_inquiries
          SET response = $2, status = 'answered', responded_at = COALESCE(responded_at, NOW())
          WHERE id = $1`,

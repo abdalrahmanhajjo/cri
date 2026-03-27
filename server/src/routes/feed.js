@@ -13,7 +13,7 @@ const router = express.Router();
 /** Concurrent toggles can race two INSERTs; second hits unique_violation (23505) — row already in desired state. */
 async function insertFeedLikeOrConcurrent(client, postId, userId) {
   try {
-    await client.query('INSERT INTO feed_likes (post_id, user_id) VALUES ($1::uuid, $2::uuid)', [postId, userId]);
+    await client.dbQuery('INSERT INTO feed_likes (post_id, user_id) VALUES ($1::uuid, $2::uuid)', [postId, userId]);
   } catch (e) {
     if (e.code === '23505') return;
     throw e;
@@ -22,7 +22,7 @@ async function insertFeedLikeOrConcurrent(client, postId, userId) {
 
 async function insertCommentLikeOrConcurrent(client, commentId, userId) {
   try {
-    await client.query(
+    await client.dbQuery(
       'INSERT INTO feed_comment_likes (comment_id, user_id) VALUES ($1::uuid, $2::uuid)',
       [commentId, userId]
     );
@@ -64,7 +64,7 @@ function normalizeFeedPlaceId(raw) {
  */
 async function getPublicPostRow(postId) {
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT fp.id,
               COALESCE(fp.hide_likes, false) AS hide_likes,
               COALESCE(fp.comments_disabled, false) AS comments_disabled
@@ -76,7 +76,7 @@ async function getPublicPostRow(postId) {
   } catch (err) {
     if (err.code === '42703') {
       try {
-        const { rows } = await query(
+        const { rows } = await dbQuery(
           `SELECT id FROM feed_posts fp
            WHERE fp.id = $1 AND fp.moderation_status = 'approved' AND fp.discoverable = true`,
           [postId]
@@ -84,7 +84,7 @@ async function getPublicPostRow(postId) {
         if (!rows[0]) return null;
         return { id: rows[0].id, hide_likes: false, comments_disabled: false };
       } catch {
-        const { rows } = await query('SELECT id FROM feed_posts WHERE id = $1', [postId]);
+        const { rows } = await dbQuery('SELECT id FROM feed_posts WHERE id = $1', [postId]);
         if (!rows[0]) return null;
         return { id: rows[0].id, hide_likes: false, comments_disabled: false };
       }
@@ -157,7 +157,7 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
 
     const placeSql = placeParamIdx ? ` AND fp.place_id = $${placeParamIdx}` : '';
 
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.image_urls, fp.video_url,
               fp.type, fp.created_at, fp.author_role,
               (SELECT COUNT(*)::int FROM feed_likes fl WHERE fl.post_id = fp.id) AS likes_count,
@@ -189,7 +189,7 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
           legParams.push(placeIdFilter);
         }
         const legWhere = legPlaceIdx ? ` WHERE fp.place_id = $${legPlaceIdx}` : '';
-        const { rows } = await query(
+        const { rows } = await dbQuery(
           `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.video_url,
                   fp.type, fp.created_at, fp.author_role,
                   (SELECT p.name FROM places p WHERE p.id = fp.place_id LIMIT 1) AS place_name
@@ -233,7 +233,7 @@ router.get('/post/:postId', optionalAuthMiddleware, async (req, res) => {
       : ', false AS i_manage_post';
     const socialSql = `, COALESCE(fp.hide_likes, false) AS hide_likes,
               COALESCE(fp.comments_disabled, false) AS comments_disabled`;
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.image_urls, fp.video_url,
               fp.type, fp.created_at, fp.author_role,
               (SELECT COUNT(*)::int FROM feed_likes fl WHERE fl.post_id = fp.id) AS likes_count,
@@ -288,7 +288,7 @@ router.get('/post/:postId/comments', optionalAuthMiddleware, async (req, res) =>
          ORDER BY fc.created_at ASC
          LIMIT 200`;
     const params = userId ? [postId, userId] : [postId];
-    const { rows } = await query(sql, params);
+    const { rows } = await dbQuery(sql, params);
     const comments = rows.map((r) => ({
       id: r.id,
       authorName: r.author_name,
@@ -304,7 +304,7 @@ router.get('/post/:postId/comments', optionalAuthMiddleware, async (req, res) =>
   } catch (err) {
     if (isMissingSocialColumn(err)) {
       try {
-        const { rows } = await query(
+        const { rows } = await dbQuery(
           `SELECT fc.id, fc.author_name, fc.body, fc.created_at, fc.user_id
            FROM feed_comments fc
            WHERE fc.post_id = $1
@@ -349,7 +349,7 @@ router.post('/post/:postId/comments/:commentId/like', authMiddleware, async (req
   const userId = userIdFromReq(req);
   if (!userId) return res.status(401).json({ error: 'Invalid token payload' });
   try {
-    const { rows: crow } = await query('SELECT id FROM feed_comments WHERE id = $1::uuid AND post_id = $2::uuid', [
+    const { rows: crow } = await dbQuery('SELECT id FROM feed_comments WHERE id = $1::uuid AND post_id = $2::uuid', [
       commentId,
       postId,
     ]);
@@ -358,32 +358,32 @@ router.post('/post/:postId/comments/:commentId/like', authMiddleware, async (req
     let client;
     try {
       client = await pool.connect();
-      await client.query('BEGIN');
-      const existing = await client.query(
+      await client.dbQuery('BEGIN');
+      const existing = await client.dbQuery(
         'SELECT 1 FROM feed_comment_likes WHERE comment_id = $1::uuid AND user_id = $2::uuid',
         [commentId, userId]
       );
       if (existing.rows.length) {
-        await client.query('DELETE FROM feed_comment_likes WHERE comment_id = $1::uuid AND user_id = $2::uuid', [
+        await client.dbQuery('DELETE FROM feed_comment_likes WHERE comment_id = $1::uuid AND user_id = $2::uuid', [
           commentId,
           userId,
         ]);
       } else {
         await insertCommentLikeOrConcurrent(client, commentId, userId);
       }
-      const { rows: cnt } = await client.query('SELECT COUNT(*)::int AS c FROM feed_comment_likes WHERE comment_id = $1::uuid', [
+      const { rows: cnt } = await client.dbQuery('SELECT COUNT(*)::int AS c FROM feed_comment_likes WHERE comment_id = $1::uuid', [
         commentId,
       ]);
-      const liked = await client.query(
+      const liked = await client.dbQuery(
         'SELECT 1 FROM feed_comment_likes WHERE comment_id = $1::uuid AND user_id = $2::uuid',
         [commentId, userId]
       );
-      await client.query('COMMIT');
+      await client.dbQuery('COMMIT');
       res.json({ liked: liked.rows.length > 0, likes_count: Number(cnt[0]?.c) || 0 });
     } catch (e) {
       if (client) {
         try {
-          await client.query('ROLLBACK');
+          await client.dbQuery('ROLLBACK');
         } catch (_) {}
       }
       throw e;
@@ -417,7 +417,7 @@ router.patch('/post/:postId/comments/:commentId', authMiddleware, async (req, re
   const userId = userIdFromReq(req);
   if (!userId) return res.status(401).json({ error: 'Invalid token payload' });
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `UPDATE feed_comments SET body = $1, updated_at = NOW()
        WHERE id = $2 AND post_id = $3 AND user_id = $4
        RETURNING id, author_name, body, created_at, updated_at, user_id, parent_id`,
@@ -456,13 +456,13 @@ router.delete('/post/:postId/comments/:commentId', authMiddleware, async (req, r
   const userId = userIdFromReq(req);
   if (!userId) return res.status(401).json({ error: 'Invalid token payload' });
   try {
-    const { rowCount } = await query('DELETE FROM feed_comments WHERE id = $1 AND post_id = $2 AND user_id = $3', [
+    const { rowCount } = await dbQuery('DELETE FROM feed_comments WHERE id = $1 AND post_id = $2 AND user_id = $3', [
       commentId,
       postId,
       userId,
     ]);
     if (!rowCount) return res.status(403).json({ error: 'Cannot delete this comment' });
-    const { rows: cnt } = await query('SELECT COUNT(*)::int AS c FROM feed_comments WHERE post_id = $1', [postId]);
+    const { rows: cnt } = await dbQuery('SELECT COUNT(*)::int AS c FROM feed_comments WHERE post_id = $1', [postId]);
     res.json({ deleted: true, comments_count: Number(cnt[0]?.c) || 0 });
   } catch (err) {
     console.error(err);
@@ -497,7 +497,7 @@ router.post('/post/:postId/comments', authMiddleware, async (req, res) => {
   if (!userId) return res.status(401).json({ error: 'Invalid token payload' });
   try {
     if (parentId) {
-      const { rows: prow } = await query(
+      const { rows: prow } = await dbQuery(
         'SELECT parent_id FROM feed_comments WHERE id = $1 AND post_id = $2',
         [parentId, postId]
       );
@@ -507,16 +507,16 @@ router.post('/post/:postId/comments', authMiddleware, async (req, res) => {
       }
     }
 
-    const { rows: urows } = await query('SELECT name FROM users WHERE id = $1', [userId]);
+    const { rows: urows } = await dbQuery('SELECT name FROM users WHERE id = $1', [userId]);
     const authorName = (urows[0]?.name && String(urows[0].name).trim()) || 'Guest';
 
     const { rows } = parentId
-      ? await query(
+      ? await dbQuery(
         `INSERT INTO feed_comments (post_id, user_id, author_name, body, parent_id) VALUES ($1, $2, $3, $4, $5)
            RETURNING id, author_name, body, created_at, parent_id`,
         [postId, userId, authorName.slice(0, 255), body, parentId]
       )
-      : await query(
+      : await dbQuery(
         `INSERT INTO feed_comments (post_id, user_id, author_name, body) VALUES ($1, $2, $3, $4)
            RETURNING id, author_name, body, created_at`,
         [postId, userId, authorName.slice(0, 255), body]
@@ -539,9 +539,9 @@ router.post('/post/:postId/comments', authMiddleware, async (req, res) => {
     if (err.code === '42P01') return res.status(503).json({ error: 'Comments not available' });
     if (err.code === '42703') {
       try {
-        const { rows: urows } = await query('SELECT name FROM users WHERE id = $1', [userId]);
+        const { rows: urows } = await dbQuery('SELECT name FROM users WHERE id = $1', [userId]);
         const authorName = (urows[0]?.name && String(urows[0].name).trim()) || 'Guest';
-        const { rows } = await query(
+        const { rows } = await dbQuery(
           `INSERT INTO feed_comments (post_id, user_id, author_name, body) VALUES ($1, $2, $3, $4)
            RETURNING id, author_name, body, created_at`,
           [postId, userId, authorName.slice(0, 255), body]
@@ -593,24 +593,24 @@ router.post('/post/:postId/like', authMiddleware, async (req, res) => {
     let client;
     try {
       client = await pool.connect();
-      await client.query('BEGIN');
-      const existing = await client.query(
+      await client.dbQuery('BEGIN');
+      const existing = await client.dbQuery(
         'SELECT 1 FROM feed_likes WHERE post_id = $1::uuid AND user_id = $2::uuid',
         [postId, userId]
       );
       if (existing.rows.length) {
-        await client.query('DELETE FROM feed_likes WHERE post_id = $1::uuid AND user_id = $2::uuid', [postId, userId]);
+        await client.dbQuery('DELETE FROM feed_likes WHERE post_id = $1::uuid AND user_id = $2::uuid', [postId, userId]);
       } else {
         await insertFeedLikeOrConcurrent(client, postId, userId);
       }
-      const { rows: cntRows } = await client.query('SELECT COUNT(*)::int AS c FROM feed_likes WHERE post_id = $1::uuid', [
+      const { rows: cntRows } = await client.dbQuery('SELECT COUNT(*)::int AS c FROM feed_likes WHERE post_id = $1::uuid', [
         postId,
       ]);
-      const liked = await client.query(
+      const liked = await client.dbQuery(
         'SELECT 1 FROM feed_likes WHERE post_id = $1::uuid AND user_id = $2::uuid',
         [postId, userId]
       );
-      await client.query('COMMIT');
+      await client.dbQuery('COMMIT');
       return res.json({
         liked: liked.rows.length > 0,
         likes_count: Number(cntRows[0]?.c) || 0,
@@ -618,7 +618,7 @@ router.post('/post/:postId/like', authMiddleware, async (req, res) => {
     } catch (err) {
       if (client) {
         try {
-          await client.query('ROLLBACK');
+          await client.dbQuery('ROLLBACK');
         } catch (_) {}
       }
       if (err.code === '40P01' && attempt === 0) {
@@ -654,20 +654,20 @@ router.post('/post/:postId/save', authMiddleware, async (req, res) => {
   const userId = userIdFromReq(req);
   if (!userId) return res.status(401).json({ error: 'Invalid token payload' });
   try {
-    const existing = await query('SELECT 1 FROM feed_saves WHERE post_id = $1::uuid AND user_id = $2::uuid', [
+    const existing = await dbQuery('SELECT 1 FROM feed_saves WHERE post_id = $1::uuid AND user_id = $2::uuid', [
       postId,
       userId,
     ]);
     if (existing.rows.length) {
-      await query('DELETE FROM feed_saves WHERE post_id = $1::uuid AND user_id = $2::uuid', [postId, userId]);
+      await dbQuery('DELETE FROM feed_saves WHERE post_id = $1::uuid AND user_id = $2::uuid', [postId, userId]);
     } else {
       try {
-        await query('INSERT INTO feed_saves (post_id, user_id) VALUES ($1::uuid, $2::uuid)', [postId, userId]);
+        await dbQuery('INSERT INTO feed_saves (post_id, user_id) VALUES ($1::uuid, $2::uuid)', [postId, userId]);
       } catch (e) {
         if (e.code !== '23505') throw e;
       }
     }
-    const saved = await query('SELECT 1 FROM feed_saves WHERE post_id = $1::uuid AND user_id = $2::uuid', [
+    const saved = await dbQuery('SELECT 1 FROM feed_saves WHERE post_id = $1::uuid AND user_id = $2::uuid', [
       postId,
       userId,
     ]);

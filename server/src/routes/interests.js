@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 
 const router = express.Router();
@@ -27,7 +27,7 @@ function rowToInterest(row) {
 router.get('/', async (req, res) => {
   try {
     const lang = getRequestLang(req);
-    const result = await query(
+    const result = await dbQuery(
       `SELECT i.id, i.icon, i.color, i.count, i.popularity,
               COALESCE(it.name, i.name) AS name,
               COALESCE(it.description, i.description) AS description,

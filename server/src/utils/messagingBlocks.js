@@ -1,4 +1,4 @@
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 
 /**
  * Whether this visitor is blocked from new messages to the place (new inquiries + follow-ups).
@@ -13,7 +13,7 @@ async function isMessagingBlocked(placeId, userId, emailLower) {
 
   try {
     if (uid && email) {
-      const { rows } = await query(
+      const { rows } = await dbQuery(
         `SELECT 1 FROM place_messaging_blocks
          WHERE place_id = $1
            AND (
@@ -26,13 +26,13 @@ async function isMessagingBlocked(placeId, userId, emailLower) {
       return rows.length > 0;
     }
     if (uid) {
-      const { rows } = await query(
+      const { rows } = await dbQuery(
         'SELECT 1 FROM place_messaging_blocks WHERE place_id = $1 AND blocked_user_id = $2::uuid LIMIT 1',
         [placeId, uid]
       );
       return rows.length > 0;
     }
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT 1 FROM place_messaging_blocks
        WHERE place_id = $1 AND blocked_email IS NOT NULL AND lower(trim(blocked_email)) = $2
        LIMIT 1`,

@@ -1,14 +1,14 @@
 const express = require('express');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware } = require('../../middleware/placeOwner');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 
 const router = express.Router();
 
 router.get('/me', authMiddleware, businessPortalMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT p.id, p.name, p.location, p.category, p.images, p.rating, p.latitude, p.longitude
        FROM places p
        INNER JOIN place_owners po ON po.place_id = p.id AND po.user_id = $1

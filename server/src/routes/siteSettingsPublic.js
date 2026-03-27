@@ -2,7 +2,7 @@
  * GET /api/site-settings — same payload as GET /api/admin/site-settings (alias for mobile app / CDNs).
  */
 const express = require('express');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 
 const router = express.Router();
 const ROW_ID = 'default';
@@ -16,7 +16,7 @@ function stripDeprecatedSiteSettings(obj) {
 
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await query('SELECT data, updated_at FROM site_settings WHERE id = $1', [ROW_ID]);
+    const { rows } = await dbQuery('SELECT data, updated_at FROM site_settings WHERE id = $1', [ROW_ID]);
     const data = rows[0]?.data;
     const settings = stripDeprecatedSiteSettings(data && typeof data === 'object' ? data : {});
     res.json({ settings, updatedAt: rows[0]?.updated_at ?? null });

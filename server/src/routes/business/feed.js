@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware } = require('../../middleware/placeOwner');
 const { parsePlaceId, safeUrl } = require('../../utils/validate');
@@ -12,7 +12,7 @@ router.use(authMiddleware, businessPortalMiddleware);
 /** Resolve feed post id and ensure place is owned by this user. */
 async function loadOwnedPost(userId, postId) {
   if (!postId || String(postId).length > 64) return null;
-  const { rows } = await query(
+  const { rows } = await dbQuery(
     `SELECT fp.* FROM feed_posts fp
      INNER JOIN place_owners po ON po.place_id = fp.place_id AND po.user_id = $1
      WHERE fp.id = $2`,
@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
       extra = ' AND fp.place_id = $2';
     }
     extra += formatExtra;
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.image_urls, fp.video_url,
               fp.type, fp.created_at, fp.author_role,
               fp.moderation_status, fp.discoverable, fp.updated_at,
@@ -99,20 +99,20 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const { rows: own } = await query(
+    const { rows: own } = await dbQuery(
       'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
       [userId, pid.value]
     );
     if (!own.length) return res.status(403).json({ error: 'You do not manage this place' });
 
-    const { rows: uRows } = await query('SELECT name, email FROM users WHERE id = $1', [userId]);
+    const { rows: uRows } = await dbQuery('SELECT name, email FROM users WHERE id = $1', [userId]);
     const u = uRows[0];
     const authorName = (u?.name && String(u.name).trim()) || (u?.email && String(u.email).split('@')[0]) || 'Partner';
     const authorShort = authorName.slice(0, 255);
 
     const id = crypto.randomUUID();
 
-    await query(
+    await dbQuery(
       `INSERT INTO feed_posts (
          id, user_id, author_name, place_id, caption, image_url, image_urls, video_url, type, author_role,
          moderation_status, discoverable
@@ -130,7 +130,7 @@ router.post('/', async (req, res) => {
       ]
     );
 
-    const { rows } = await query('SELECT * FROM feed_posts WHERE id = $1', [id]);
+    const { rows } = await dbQuery('SELECT * FROM feed_posts WHERE id = $1', [id]);
     res.status(201).json({ post: rows[0] });
   } catch (err) {
     if (err.code === '42703') {
@@ -219,7 +219,7 @@ router.patch('/:id', async (req, res) => {
 
   try {
     const sql = `UPDATE feed_posts SET ${updates.join(', ')} WHERE id = $${n} RETURNING *`;
-    const result = await query(sql, vals);
+    const result = await dbQuery(sql, vals);
     res.json({ post: result.rows[0] });
   } catch (err) {
     if (err.code === '42703') return res.status(503).json({ error: 'Migration required for feed fields' });
@@ -236,10 +236,10 @@ router.delete('/:id', async (req, res) => {
 
   const id = req.params.id;
   try {
-    await query('DELETE FROM feed_comments WHERE post_id = $1', [id]);
-    await query('DELETE FROM feed_likes WHERE post_id = $1', [id]);
-    await query('DELETE FROM feed_saves WHERE post_id = $1', [id]);
-    const result = await query('DELETE FROM feed_posts WHERE id = $1', [id]);
+    await dbQuery('DELETE FROM feed_comments WHERE post_id = $1', [id]);
+    await dbQuery('DELETE FROM feed_likes WHERE post_id = $1', [id]);
+    await dbQuery('DELETE FROM feed_saves WHERE post_id = $1', [id]);
+    const result = await dbQuery('DELETE FROM feed_posts WHERE id = $1', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Post not found' });
     res.json({ ok: true });
   } catch (err) {

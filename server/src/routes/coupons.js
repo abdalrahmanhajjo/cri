@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 const { sendDbAwareError } = require('../utils/dbHttpError');
 const { COUPON_ACTIVE } = require('../utils/activeOfferFilters');
@@ -27,7 +27,7 @@ function parseCouponPromotionId(promotionId) {
 router.get('/redeemed', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       'SELECT coupon_id::text AS id FROM coupon_redemptions WHERE user_id = $1',
       [userId]
     );
@@ -58,7 +58,7 @@ router.post('/redeem', async (req, res) => {
   const { uuid } = parsed;
 
   try {
-    const existing = await query(
+    const existing = await dbQuery(
       'SELECT redeemed_at FROM coupon_redemptions WHERE user_id = $1 AND coupon_id = $2::uuid',
       [userId, uuid]
     );
@@ -70,14 +70,14 @@ router.post('/redeem', async (req, res) => {
       });
     }
 
-    const active = await query(
+    const active = await dbQuery(
       `SELECT c.id, c.code FROM coupons c
        WHERE c.id = $1::uuid AND (${COUPON_ACTIVE})`,
       [uuid]
     );
 
     if (!active.rows.length) {
-      const exists = await query('SELECT 1 FROM coupons WHERE id = $1::uuid', [uuid]);
+      const exists = await dbQuery('SELECT 1 FROM coupons WHERE id = $1::uuid', [uuid]);
       if (!exists.rows.length) {
         return res.status(404).json({ error: 'Coupon not found.', code: 'NOT_FOUND' });
       }
@@ -89,7 +89,7 @@ router.post('/redeem', async (req, res) => {
       return res.status(400).json({ error: 'Code does not match.', code: 'INVALID_CODE' });
     }
 
-    const ins = await query(
+    const ins = await dbQuery(
       `INSERT INTO coupon_redemptions (user_id, coupon_id) VALUES ($1, $2::uuid)
        RETURNING id, redeemed_at`,
       [userId, uuid]
@@ -102,7 +102,7 @@ router.post('/redeem', async (req, res) => {
     });
   } catch (err) {
     if (err.code === '23505') {
-      const again = await query(
+      const again = await dbQuery(
         'SELECT redeemed_at FROM coupon_redemptions WHERE user_id = $1 AND coupon_id = $2::uuid',
         [userId, uuid]
       );

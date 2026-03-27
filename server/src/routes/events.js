@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 const { parsePositiveInt } = require('../utils/validate');
 const { sendDbAwareError } = require('../utils/dbHttpError');
@@ -27,7 +27,7 @@ function rowToEvent(row) {
 router.get('/', async (req, res) => {
   try {
     const lang = getRequestLang(req);
-    const result = await query(
+    const result = await dbQuery(
       `SELECT e.id, e.start_date, e.end_date, e.image, e.price, e.place_id,
               COALESCE(et.name, e.name) AS name, COALESCE(et.description, e.description) AS description,
               COALESCE(et.location, e.location) AS location, COALESCE(et.category, e.category) AS category,
@@ -51,7 +51,7 @@ router.get('/:id', async (req, res) => {
   if (!idResult.valid) return res.status(400).json({ error: 'Invalid event id' });
   try {
     const lang = getRequestLang(req);
-    const result = await query(
+    const result = await dbQuery(
       `SELECT e.id, e.start_date, e.end_date, e.image, e.price, e.place_id,
               COALESCE(et.name, e.name) AS name, COALESCE(et.description, e.description) AS description,
               COALESCE(et.location, e.location) AS location, COALESCE(et.category, e.category) AS category,

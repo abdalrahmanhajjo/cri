@@ -1,6 +1,7 @@
 const express = require('express');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
+const { validate } = require('../../middleware/validation');
 const { businessPortalMiddleware, requirePlaceOwnerParam } = require('../../middleware/placeOwner');
 const { businessPlaceSchema, businessTranslationSchema } = require('../../schemas/business');
 
@@ -48,7 +49,7 @@ function rowToEditorPlace(row) {
 router.get('/', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT p.id, p.name, p.location, p.category, p.images, p.rating, p.latitude, p.longitude
        FROM places p
        INNER JOIN place_owners po ON po.place_id = p.id AND po.user_id = $1
@@ -90,7 +91,7 @@ router.get('/:placeId/reviews', requirePlaceOwnerParam('placeId'), async (req, r
   try {
     let rows;
     try {
-      ({ rows } = await query(
+      ({ rows } = await dbQuery(
         `SELECT r.id, r.rating, r.title, r.review, r.created_at, r.hidden_at,
                 u.name AS user_name, u.email AS user_email
          FROM place_reviews r
@@ -103,7 +104,7 @@ router.get('/:placeId/reviews', requirePlaceOwnerParam('placeId'), async (req, r
     } catch (err) {
       if (err.code === '42P01') return res.json({ placeId, reviews: [] });
       if (err.code === '42703' && String(err.message || '').includes('hidden_at')) {
-        ({ rows } = await query(
+        ({ rows } = await dbQuery(
           `SELECT r.id, r.rating, r.title, r.review, r.created_at, NULL::timestamptz AS hidden_at,
                   u.name AS user_name, u.email AS user_email
            FROM place_reviews r
@@ -138,7 +139,7 @@ router.get('/:placeId/reviews', requirePlaceOwnerParam('placeId'), async (req, r
 /** Per-language copy (must be registered before /:placeId). */
 router.get('/:placeId/translations', requirePlaceOwnerParam('placeId'), async (req, res) => {
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       'SELECT place_id, lang, name, description, location, category, duration, price, best_time, tags FROM place_translations WHERE place_id = $1 ORDER BY lang',
       [req.params.placeId]
     );
@@ -173,7 +174,7 @@ router.put('/:placeId/translations/:lang', requirePlaceOwnerParam('placeId'), va
   const tagsJson = JSON.stringify(Array.isArray(b.tags) ? b.tags : []);
 
   try {
-    await query(
+    await dbQuery(
       `INSERT INTO place_translations (place_id, lang, name, description, location, category, duration, price, best_time, tags)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
        ON CONFLICT (lang, place_id) DO UPDATE SET
@@ -204,7 +205,7 @@ router.put('/:placeId/translations/:lang', requirePlaceOwnerParam('placeId'), va
 /** Full place row for editing (base language / catalogue fields). */
 router.get('/:placeId', requirePlaceOwnerParam('placeId'), async (req, res) => {
   try {
-    const { rows } = await query('SELECT * FROM places WHERE id = $1', [req.params.placeId]);
+    const { rows } = await dbQuery('SELECT * FROM places WHERE id = $1', [req.params.placeId]);
     if (!rows.length) return res.status(404).json({ error: 'Place not found' });
     res.json(rowToEditorPlace(rows[0]));
   } catch (err) {
@@ -222,7 +223,7 @@ router.put('/:placeId', requirePlaceOwnerParam('placeId'), validate(businessPlac
     const imagesJson = s.images !== undefined ? JSON.stringify(s.images) : null;
     const tagsJson = s.tags !== undefined ? JSON.stringify(s.tags) : null;
 
-    const result = await query(
+    const result = await dbQuery(
       `UPDATE places SET
          name = COALESCE($2, name), description = COALESCE($3, description), location = COALESCE($4, location),
          latitude = COALESCE($5, latitude), longitude = COALESCE($6, longitude), search_name = COALESCE($7, search_name),

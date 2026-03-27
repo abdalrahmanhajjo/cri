@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { parsePlaceId } = require('../../utils/validate');
@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
     )`;
   }
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT po.user_id, po.place_id, u.email, u.name AS user_name
        FROM place_owners po
        JOIN users u ON u.id = po.user_id
@@ -60,7 +60,7 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'placeId is too long' });
   }
   try {
-    const { rows: uRows } = await query(
+    const { rows: uRows } = await dbQuery(
       'SELECT id, COALESCE(is_blocked, false) AS is_blocked FROM users WHERE id = $1',
       [userId]
     );
@@ -70,11 +70,11 @@ router.post('/', async (req, res) => {
     if (uRows[0].is_blocked === true) {
       return res.status(403).json({ error: 'Cannot link a blocked account to a place' });
     }
-    const { rows: pRows } = await query('SELECT id FROM places WHERE id = $1', [placeId]);
+    const { rows: pRows } = await dbQuery('SELECT id FROM places WHERE id = $1', [placeId]);
     if (!pRows.length) {
       return res.status(404).json({ error: 'Place not found' });
     }
-    const ins = await query(
+    const ins = await dbQuery(
       `INSERT INTO place_owners (user_id, place_id) VALUES ($1, $2)
        ON CONFLICT DO NOTHING
        RETURNING user_id, place_id`,
@@ -105,7 +105,7 @@ router.delete('/', async (req, res) => {
     return res.status(400).json({ error: 'placeId is too long' });
   }
   try {
-    const result = await query('DELETE FROM place_owners WHERE user_id = $1 AND place_id = $2', [userId, placeId]);
+    const result = await dbQuery('DELETE FROM place_owners WHERE user_id = $1 AND place_id = $2', [userId, placeId]);
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Link not found' });
     }

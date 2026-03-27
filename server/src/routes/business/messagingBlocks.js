@@ -1,14 +1,14 @@
 const express = require('express');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware } = require('../../middleware/placeOwner');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { parsePlaceId } = require('../../utils/validate');
 
 const router = express.Router();
 router.use(authMiddleware, businessPortalMiddleware);
 
 async function assertOwnsPlace(userId, placeId) {
-  const { rows } = await query(
+  const { rows } = await dbQuery(
     'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
     [userId, placeId]
   );
@@ -33,7 +33,7 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const { rows: invRows } = await query(
+    const { rows: invRows } = await dbQuery(
       'SELECT id, user_id, guest_email FROM place_inquiries WHERE id = $1 AND place_id = $2',
       [inquiryId, placeId]
     );
@@ -47,14 +47,14 @@ router.post('/', async (req, res) => {
 
     if (uid) {
       const uidStr = String(uid);
-      const ex = await query(
+      const ex = await dbQuery(
         'SELECT id FROM place_messaging_blocks WHERE place_id = $1 AND blocked_user_id = $2::uuid LIMIT 1',
         [placeId, uidStr]
       );
       if (ex.rows.length) {
         return res.json({ ok: true, blocked: true, already: true, blockId: ex.rows[0].id });
       }
-      const ins = await query(
+      const ins = await dbQuery(
         `INSERT INTO place_messaging_blocks (place_id, blocked_user_id, blocked_email)
          VALUES ($1, $2::uuid, NULL) RETURNING id`,
         [placeId, uidStr]
@@ -66,7 +66,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Cannot block this visitor (no email on inquiry)' });
     }
 
-    const ex = await query(
+    const ex = await dbQuery(
       `SELECT id FROM place_messaging_blocks
        WHERE place_id = $1 AND blocked_user_id IS NULL AND lower(trim(blocked_email)) = $2
        LIMIT 1`,
@@ -75,7 +75,7 @@ router.post('/', async (req, res) => {
     if (ex.rows.length) {
       return res.json({ ok: true, blocked: true, already: true, blockId: ex.rows[0].id });
     }
-    const ins = await query(
+    const ins = await dbQuery(
       `INSERT INTO place_messaging_blocks (place_id, blocked_user_id, blocked_email)
        VALUES ($1, NULL, $2) RETURNING id`,
       [placeId, em]
@@ -109,7 +109,7 @@ router.delete('/', async (req, res) => {
   }
 
   try {
-    const { rows: invRows } = await query(
+    const { rows: invRows } = await dbQuery(
       'SELECT id, user_id, guest_email FROM place_inquiries WHERE id = $1 AND place_id = $2',
       [inquiryId, placeId]
     );
@@ -122,12 +122,12 @@ router.delete('/', async (req, res) => {
         : '';
 
     if (uid) {
-      await query(
+      await dbQuery(
         'DELETE FROM place_messaging_blocks WHERE place_id = $1 AND blocked_user_id = $2::uuid',
         [placeId, String(uid)]
       );
     } else if (em) {
-      await query(
+      await dbQuery(
         `DELETE FROM place_messaging_blocks
          WHERE place_id = $1 AND blocked_user_id IS NULL AND lower(trim(blocked_email)) = $2`,
         [placeId, em]

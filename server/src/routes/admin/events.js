@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { validate } = require('../../middleware/validation');
@@ -17,7 +17,7 @@ router.post('/', validate(adminEventSchema), async (req, res) => {
     const startDate = body.startDate || body.start_date || new Date().toISOString();
     const endDate = body.endDate || body.end_date || new Date(Date.now() + 3600000).toISOString();
 
-    await query(
+    await dbQuery(
       `INSERT INTO events (id, name, description, start_date, end_date, location, image, category, organizer, price, price_display, status, place_id)
        VALUES ($1, $2, $3, $4::timestamptz, $5::timestamptz, $6, $7, $8, $9, $10, $11, $12, $13)
        ON CONFLICT (id) DO UPDATE SET
@@ -54,7 +54,7 @@ router.put('/:id', validate(adminEventSchema.partial()), async (req, res) => {
     const startDate = body.startDate !== undefined || body.start_date !== undefined ? (body.startDate ?? body.start_date) : null;
     const endDate = body.endDate !== undefined || body.end_date !== undefined ? (body.endDate ?? body.end_date) : null;
 
-    const result = await query(
+    const result = await dbQuery(
       `UPDATE events SET
          name = COALESCE($2, name), description = COALESCE($3, description),
          start_date = COALESCE($4::timestamptz, start_date), end_date = COALESCE($5::timestamptz, end_date),
@@ -89,7 +89,7 @@ router.put('/:id', validate(adminEventSchema.partial()), async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await query('DELETE FROM events WHERE id = $1', [id]);
+    const result = await dbQuery('DELETE FROM events WHERE id = $1', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Event not found' });
     res.json({ message: 'Event deleted' });
   } catch (err) {

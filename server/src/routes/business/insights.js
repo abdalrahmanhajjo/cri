@@ -1,14 +1,14 @@
 const express = require('express');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware } = require('../../middleware/placeOwner');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { parsePlaceId } = require('../../utils/validate');
 
 const router = express.Router();
 router.use(authMiddleware, businessPortalMiddleware);
 
 async function assertOwnsPlace(userId, placeId) {
-  const { rows } = await query(
+  const { rows } = await dbQuery(
     'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
     [userId, placeId]
   );
@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
   let checkinsUnavailable = false;
 
   try {
-    const tripsResult = await query(
+    const tripsResult = await dbQuery(
       `SELECT t.id AS trip_id,
               t.name AS trip_name,
               t.user_id,
@@ -74,7 +74,7 @@ router.get('/', async (req, res) => {
   }
 
   try {
-    const checkinsResult = await query(
+    const checkinsResult = await dbQuery(
       `SELECT c.id, c.user_id, u.name AS user_name, u.email AS user_email, c.note, c.created_at
        FROM place_checkins c
        INNER JOIN users u ON u.id = c.user_id

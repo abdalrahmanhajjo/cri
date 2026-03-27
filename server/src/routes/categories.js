@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 const { sendDbAwareError } = require('../utils/dbHttpError');
 
@@ -20,7 +20,7 @@ function rowToCategory(row) {
 router.get('/', async (req, res) => {
   try {
     const lang = getRequestLang(req);
-    const result = await query(
+    const result = await dbQuery(
       `SELECT c.id, c.icon, c.count, c.color,
               COALESCE(ct.name, c.name) AS name,
               COALESCE(ct.description, c.description) AS description,

@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { authMiddleware } = require('../middleware/auth');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 const { validatePassword } = require('../utils/passwordValidator');
 const { validate } = require('../middleware/validation');
 const { updateProfileSchema, updateAccountSchema } = require('../schemas/profile');
@@ -15,7 +15,7 @@ const { visitorFollowupsFromDb } = require('../utils/inquiryFollowups');
 router.get('/profile', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const userResult = await query(
+    const userResult = await dbQuery(
       `SELECT u.id, u.email, u.name, u.avatar_url, u.created_at,
               COALESCE(u.is_admin, false) AS is_admin,
               COALESCE(u.is_business_owner, false) AS is_business_owner,
@@ -25,7 +25,7 @@ router.get('/profile', async (req, res) => {
     );
     if (userResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
     const user = userResult.rows[0];
-    const profileResult = await query('SELECT * FROM profiles WHERE user_id = $1', [userId]);
+    const profileResult = await dbQuery('SELECT * FROM profiles WHERE user_id = $1', [userId]);
     const profile = profileResult.rows[0] || {};
     const baseUrl = (req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http')) + '://' + (req.get('x-forwarded-host') || req.get('host') || 'localhost:' + (process.env.PORT || 3000));
     const avatarUrl = user.avatar_url && !user.avatar_url.startsWith('http') ? baseUrl + user.avatar_url : (user.avatar_url || null);
@@ -61,22 +61,22 @@ router.patch('/profile', validate(updateProfileSchema), async (req, res) => {
     if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
 
     if (updates.name !== undefined) {
-      await query('UPDATE users SET name = $1 WHERE id = $2', [updates.name, userId]);
+      await dbQuery('UPDATE users SET name = $1 WHERE id = $2', [updates.name, userId]);
     }
     if (updates.bio !== undefined || updates.city !== undefined || updates.analytics !== undefined || updates.showTips !== undefined) {
-      const existing = await query('SELECT bio, city, analytics, show_tips FROM profiles WHERE user_id = $1', [userId]);
+      const existing = await dbQuery('SELECT bio, city, analytics, show_tips FROM profiles WHERE user_id = $1', [userId]);
       const row = existing.rows[0];
       const bio = updates.bio !== undefined ? updates.bio : (row?.bio ?? null);
       const city = updates.city !== undefined ? updates.city : (row?.city ?? null);
       const analytics = updates.analytics !== undefined ? updates.analytics : (row?.analytics ?? true);
       const showTips = updates.showTips !== undefined ? updates.showTips : (row?.show_tips ?? true);
       if (row) {
-        await query('UPDATE profiles SET bio = $1, city = $2, analytics = $3, show_tips = $4 WHERE user_id = $5', [bio, city, analytics, showTips, userId]);
+        await dbQuery('UPDATE profiles SET bio = $1, city = $2, analytics = $3, show_tips = $4 WHERE user_id = $5', [bio, city, analytics, showTips, userId]);
       } else {
-        await query('INSERT INTO profiles (user_id, bio, city, analytics, show_tips) VALUES ($1, $2, $3, $4, $5)', [userId, bio, city, analytics, showTips]);
+        await dbQuery('INSERT INTO profiles (user_id, bio, city, analytics, show_tips) VALUES ($1, $2, $3, $4, $5)', [userId, bio, city, analytics, showTips]);
       }
     }
-    const userResult = await query(
+    const userResult = await dbQuery(
       `SELECT u.id, u.email, u.name, u.created_at,
               COALESCE(u.is_admin, false) AS is_admin,
               COALESCE(u.is_business_owner, false) AS is_business_owner,
@@ -84,7 +84,7 @@ router.patch('/profile', validate(updateProfileSchema), async (req, res) => {
        FROM users u WHERE u.id = $1`,
       [userId]
     );
-    const profileResult = await query('SELECT bio, city, analytics, show_tips FROM profiles WHERE user_id = $1', [userId]);
+    const profileResult = await dbQuery('SELECT bio, city, analytics, show_tips FROM profiles WHERE user_id = $1', [userId]);
     const user = userResult.rows[0];
     const profile = profileResult.rows[0] || {};
     res.json({
@@ -113,7 +113,7 @@ router.get('/inquiries', async (req, res) => {
   try {
     let rows;
     try {
-      ({ rows } = await query(
+      ({ rows } = await dbQuery(
         `SELECT i.id, i.place_id, i.message, i.status, i.response, i.responded_at, i.created_at,
                 p.name AS place_name,
                 COALESCE(i.visitor_followups, '[]'::jsonb) AS visitor_followups
@@ -126,7 +126,7 @@ router.get('/inquiries', async (req, res) => {
       ));
     } catch (e) {
       if (e.code === '42703' && String(e.message || '').includes('visitor_followups')) {
-        ({ rows } = await query(
+        ({ rows } = await dbQuery(
           `SELECT i.id, i.place_id, i.message, i.status, i.response, i.responded_at, i.created_at,
                   p.name AS place_name
            FROM place_inquiries i
@@ -169,13 +169,13 @@ router.post('/change-password', validate(updateAccountSchema), async (req, res) 
     const pv = validatePassword(newPassword);
     if (!pv.valid) return res.status(400).json({ error: pv.error });
 
-    const row = await query('SELECT password_hash FROM users WHERE id = $1 AND auth_provider = \'email\'', [userId]);
+    const row = await dbQuery('SELECT password_hash FROM users WHERE id = $1 AND auth_provider = \'email\'', [userId]);
     if (row.rows.length === 0 || !row.rows[0].password_hash) return res.status(400).json({ error: 'Password change not available for this account' });
     const match = await bcrypt.compare(currentPassword, row.rows[0].password_hash);
     if (!match) return res.status(401).json({ error: 'Current password is incorrect' });
 
     const hash = await bcrypt.hash(newPassword, 12);
-    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, userId]);
+    await dbQuery('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, userId]);
     res.json({ message: 'Password updated successfully' });
   } catch (err) {
     console.error(err);

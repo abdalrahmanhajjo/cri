@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 
 const isProd = process.env.NODE_ENV === 'production';
 const JWT_SECRET = process.env.JWT_SECRET || (isProd ? '' : 'fallback-dev-only');
@@ -13,7 +13,7 @@ const JWT_OPTIONS = {
 /** Returns false if response already sent (blocked / missing user / error). */
 async function assertUserNotBlocked(userId, res) {
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       'SELECT COALESCE(is_blocked, false) AS is_blocked FROM users WHERE id = $1',
       [userId]
     );

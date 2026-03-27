@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { validate } = require('../../middleware/validation');
@@ -30,7 +30,7 @@ router.post('/', validate(adminTourSchema), async (req, res) => {
     const itinerary = safeJson(body.itinerary, []);
     const placeIds = safeJson(body.placeIds || body.place_ids, []);
 
-    await query(
+    await dbQuery(
       `INSERT INTO tours (id, name, duration, duration_hours, locations, rating, reviews, price, currency, price_display, badge, badge_color, description, image, difficulty, languages, includes, excludes, highlights, itinerary, place_ids)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::jsonb, $17::jsonb, $18::jsonb, $19::jsonb, $20::jsonb, $21::jsonb)
        ON CONFLICT (id) DO UPDATE SET
@@ -83,7 +83,7 @@ router.put('/:id', validate(adminTourSchema.partial()), async (req, res) => {
     const itinerary = body.itinerary !== undefined ? safeJson(body.itinerary, []) : null;
     const placeIds = body.placeIds !== undefined || body.place_ids !== undefined ? safeJson(body.placeIds ?? body.place_ids, []) : null;
 
-    const result = await query(
+    const result = await dbQuery(
       `UPDATE tours SET
          name = COALESCE($2, name), duration = COALESCE($3, duration), duration_hours = COALESCE($4, duration_hours),
          locations = COALESCE($5, locations), rating = COALESCE($6, rating), reviews = COALESCE($7, reviews),
@@ -129,7 +129,7 @@ router.put('/:id', validate(adminTourSchema.partial()), async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await query('DELETE FROM tours WHERE id = $1', [id]);
+    const result = await dbQuery('DELETE FROM tours WHERE id = $1', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Tour not found' });
     res.json({ message: 'Tour deleted' });
   } catch (err) {

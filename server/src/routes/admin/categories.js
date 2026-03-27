@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { validate } = require('../../middleware/validation');
@@ -26,7 +26,7 @@ router.post('/', validate(adminCategorySchema), async (req, res) => {
     const tags = safeJson(body.tags, []);
     const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
 
-    await query(
+    await dbQuery(
       `INSERT INTO categories (id, name, icon, description, tags, count, color)
        VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
        ON CONFLICT (id) DO UPDATE SET
@@ -56,7 +56,7 @@ router.put('/:id', validate(adminCategorySchema.partial()), async (req, res) => 
     const tags = body.tags !== undefined ? safeJson(body.tags, []) : null;
     const tagsJson = tags !== null ? JSON.stringify(Array.isArray(tags) ? tags : []) : null;
 
-    const result = await query(
+    const result = await dbQuery(
       `UPDATE categories SET
          name = COALESCE($2, name), icon = COALESCE($3, icon), description = COALESCE($4, description),
          tags = COALESCE($5::jsonb, tags), count = COALESCE($6, count), color = COALESCE($7, color)
@@ -82,7 +82,7 @@ router.put('/:id', validate(adminCategorySchema.partial()), async (req, res) => 
 router.delete('/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await query('DELETE FROM categories WHERE id = $1', [id]);
+    const result = await dbQuery('DELETE FROM categories WHERE id = $1', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Category not found' });
     res.json({ message: 'Category deleted' });
   } catch (err) {

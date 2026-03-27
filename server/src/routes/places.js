@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 const { parsePositiveInt } = require('../utils/validate');
 const { optionalAuthMiddleware } = require('../middleware/auth');
@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
     const baseUrl = getUploadsBaseUrl(req);
     const lang = getRequestLang(req);
     const { statsJoinSql } = await getPlaceReviewMeta();
-    const result = await query(
+    const result = await dbQuery(
       `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
               pr_stats.app_avg_rating, pr_stats.app_review_count,
               COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,
@@ -40,16 +40,16 @@ router.get('/', async (req, res) => {
 router.get('/:id/promotions', async (req, res) => {
   const rawId = req.params.id;
   try {
-    const { rows: placeRows } = await query('SELECT id FROM places WHERE id = $1', [rawId]);
+    const { rows: placeRows } = await dbQuery('SELECT id FROM places WHERE id = $1', [rawId]);
     if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
     const placeId = placeRows[0].id;
     let rows;
     try {
-      ({ rows } = await query(SQL_PLACE_PROMOTIONS, [placeId, 200]));
+      ({ rows } = await dbQuery(SQL_PLACE_PROMOTIONS, [placeId, 200]));
     } catch (err) {
       if (err.code !== '42P01') throw err;
       try {
-        ({ rows } = await query(SQL_PLACE_PROMOTIONS_FALLBACK, [placeId, 200]));
+        ({ rows } = await dbQuery(SQL_PLACE_PROMOTIONS_FALLBACK, [placeId, 200]));
       } catch (e2) {
         rows = [];
       }
@@ -72,12 +72,12 @@ router.get('/:id/reviews', optionalAuthMiddleware, async (req, res) => {
   const rawId = req.params.id;
   const viewerId = req.user?.userId || null;
   try {
-    const { rows: placeRows } = await query('SELECT id FROM places WHERE id = $1', [rawId]);
+    const { rows: placeRows } = await dbQuery('SELECT id FROM places WHERE id = $1', [rawId]);
     if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
     const placeId = placeRows[0].id;
     const { hasHiddenAt } = await getPlaceReviewMeta();
     const hiddenClause = hasHiddenAt ? 'AND r.hidden_at IS NULL' : '';
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT r.id, r.rating, r.title, r.review, r.created_at, r.user_id, u.name AS user_name, u.email AS user_email
        FROM place_reviews r
        INNER JOIN users u ON u.id = r.user_id
@@ -111,7 +111,7 @@ router.get('/:id', async (req, res) => {
     const slugNorm = rawId.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
     
     let result = bySlug
-      ? await query(
+      ? await dbQuery(
         `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
                 pr_stats.app_avg_rating, pr_stats.app_review_count,
                 COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,
@@ -126,7 +126,7 @@ router.get('/:id', async (req, res) => {
             OR LOWER(REPLACE(REPLACE(COALESCE(p.name, ''), ' ', '_'), '-', '_')) = $3`,
         [lang, rawId, slugNorm]
       )
-      : await query(
+      : await dbQuery(
         `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
                 pr_stats.app_avg_rating, pr_stats.app_review_count,
                 COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,

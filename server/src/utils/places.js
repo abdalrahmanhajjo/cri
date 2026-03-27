@@ -1,4 +1,4 @@
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 
 /** Fix malformed extension (e.g. xxxjpg -> xxx.jpg) from old upload bug */
 function fixImageUrlExtension(url) {
@@ -85,7 +85,7 @@ async function getPlaceReviewMeta() {
   if (!placeReviewMetaPromise) {
     placeReviewMetaPromise = (async () => {
       try {
-        const { rows } = await query(
+        const { rows } = await dbQuery(
           `SELECT 1 AS ok FROM information_schema.columns
            WHERE table_schema = 'public' AND table_name = 'place_reviews' AND column_name = 'hidden_at'
            LIMIT 1`
@@ -110,7 +110,7 @@ async function userIsAdmin(userId) {
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       'SELECT email, COALESCE(is_admin, false) AS is_admin FROM users WHERE id = $1',
       [userId]
     );
@@ -126,7 +126,7 @@ async function userIsAdmin(userId) {
 
 async function userManagesPlace(userId, placeId) {
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
       [userId, placeId]
     );

@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { validate } = require('../../middleware/validation');
@@ -31,7 +31,7 @@ router.get('/', async (req, res) => {
   const limIdx = params.length + 1;
   params.push(limit);
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT id, name, COALESCE(location, '') AS location
        FROM places
        ${whereSql}
@@ -64,7 +64,7 @@ router.post('/', validate(adminPlaceSchema), async (req, res) => {
     const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
     const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
 
-    await query(
+    await dbQuery(
       `INSERT INTO places (id, name, description, location, latitude, longitude, search_name, images, category, category_id, duration, price, best_time, rating, review_count, hours, tags)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, $13, $14, $15, $16::jsonb, $17::jsonb)
        ON CONFLICT (id) DO UPDATE SET
@@ -115,12 +115,12 @@ function displayReviewAuthorName(name, email) {
 router.get('/:id/reviews', async (req, res) => {
   const placeId = req.params.id;
   try {
-    const { rows: placeRows } = await query('SELECT id FROM places WHERE id = $1', [placeId]);
+    const { rows: placeRows } = await dbQuery('SELECT id FROM places WHERE id = $1', [placeId]);
     if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
     const pid = placeRows[0].id;
     let rows;
     try {
-      ({ rows } = await query(
+      ({ rows } = await dbQuery(
         `SELECT r.id, r.rating, r.title, r.review, r.created_at, r.hidden_at,
                 u.name AS user_name, u.email AS user_email
          FROM place_reviews r
@@ -133,7 +133,7 @@ router.get('/:id/reviews', async (req, res) => {
     } catch (err) {
       if (err.code === '42P01') return res.json({ placeId: pid, reviews: [] });
       if (err.code === '42703' && String(err.message || '').includes('hidden_at')) {
-        ({ rows } = await query(
+        ({ rows } = await dbQuery(
           `SELECT r.id, r.rating, r.title, r.review, r.created_at, NULL::timestamptz AS hidden_at,
                   u.name AS user_name, u.email AS user_email
            FROM place_reviews r
@@ -174,7 +174,7 @@ router.put('/:id', validate(adminPlaceSchema.partial()), async (req, res) => {
     const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
     const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
 
-    const result = await query(
+    const result = await dbQuery(
       `UPDATE places SET
          name = COALESCE($2, name), description = COALESCE($3, description), location = COALESCE($4, location),
          latitude = COALESCE($5, latitude), longitude = COALESCE($6, longitude), search_name = COALESCE($7, search_name),
@@ -213,7 +213,7 @@ router.put('/:id', validate(adminPlaceSchema.partial()), async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await query('DELETE FROM places WHERE id = $1', [id]);
+    const result = await dbQuery('DELETE FROM places WHERE id = $1', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Place not found' });
     res.json({ message: 'Place deleted' });
   } catch (err) {

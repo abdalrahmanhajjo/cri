@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 const { sendDbAwareError } = require('../utils/dbHttpError');
 const {
   PLACE_PROMO_SELECT,
@@ -26,12 +26,12 @@ const SQL_MERGED = `
 router.get('/', async (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), 200);
   try {
-    const { rows } = await query(SQL_MERGED, [limit, null]);
+    const { rows } = await dbQuery(SQL_MERGED, [limit, null]);
     res.json({ promotions: rows });
   } catch (err) {
     if (err.code === '42P01') {
       try {
-        const { rows } = await query(SQL_PROMOTIONS_ONLY, [limit, null]);
+        const { rows } = await dbQuery(SQL_PROMOTIONS_ONLY, [limit, null]);
         return res.json({ promotions: rows });
       } catch (e2) {
         if (e2.code === '42P01') return res.json({ promotions: [] });

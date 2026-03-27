@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { validate } = require('../../middleware/validation');
@@ -59,7 +59,7 @@ router.get('/', async (req, res) => {
   const limIdx = params.length + 1;
   const offIdx = params.length + 2;
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT id, email, name, created_at, auth_provider, email_verified, phone_verified,
               COALESCE(is_admin, false) AS is_admin, COALESCE(is_business_owner, false) AS is_business_owner,
               COALESCE(is_blocked, false) AS is_blocked
@@ -69,7 +69,7 @@ router.get('/', async (req, res) => {
        LIMIT $${limIdx} OFFSET $${offIdx}`,
       [...params, limit, offset]
     );
-    const countRes = await query(`SELECT COUNT(*)::int AS c FROM users ${whereSql}`, params);
+    const countRes = await dbQuery(`SELECT COUNT(*)::int AS c FROM users ${whereSql}`, params);
     const total = countRes.rows[0]?.c ?? 0;
     res.json({
       users: rows.map((r) => ({
@@ -128,7 +128,7 @@ router.patch('/:id', validate(adminUserSchema.partial()), async (req, res) => {
       vals.push(isBlocked);
     }
     vals.push(id);
-    const result = await query(
+    const result = await dbQuery(
       `UPDATE users SET ${updates.join(', ')} WHERE id = $${p} RETURNING id, email, name, is_admin, is_business_owner, COALESCE(is_blocked, false) AS is_blocked`,
       vals
     );
@@ -156,7 +156,7 @@ router.delete('/:id', async (req, res) => {
     return res.status(400).json({ error: 'You cannot delete your own account from here' });
   }
   try {
-    const result = await query('DELETE FROM users WHERE id = $1', [id]);
+    const result = await dbQuery('DELETE FROM users WHERE id = $1', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'User not found' });
     res.status(204).send();
   } catch (err) {

@@ -1,4 +1,4 @@
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 
 /**
  * Requires authMiddleware first. Allows access if users.is_admin is true
@@ -16,7 +16,7 @@ async function adminMiddleware(req, res, next) {
     .filter(Boolean);
 
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       'SELECT id, email, COALESCE(is_admin, false) AS is_admin FROM users WHERE id = $1',
       [userId]
     );

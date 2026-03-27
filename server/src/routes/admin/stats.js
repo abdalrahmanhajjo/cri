@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { assertAllowedTableName } = require('../../utils/sqlIdentifiers');
@@ -23,7 +23,7 @@ const STATS_COUNT_TABLES = new Set([
 async function countTable(name) {
   try {
     const safe = assertAllowedTableName(name, STATS_COUNT_TABLES);
-    const { rows } = await query(`SELECT COUNT(*)::int AS c FROM ${safe}`);
+    const { rows } = await dbQuery(`SELECT COUNT(*)::int AS c FROM ${safe}`);
     return rows[0]?.c ?? 0;
   } catch {
     return 0;

@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { parsePlaceId, safeUrl } = require('../../utils/validate');
@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
   const allParams = [...params, limit, offset];
 
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.image_urls, fp.video_url,
               fp.type, fp.created_at, fp.author_role, fp.moderation_status, fp.discoverable, fp.admin_notes, fp.updated_at,
               u.email AS user_email,
@@ -80,7 +80,7 @@ router.get('/', async (req, res) => {
 
     let pendingCount = 0;
     try {
-      const pc = await query(
+      const pc = await dbQuery(
         'SELECT COUNT(*)::int AS n FROM feed_posts WHERE moderation_status = \'pending\''
       );
       pendingCount = pc.rows[0]?.n ?? 0;
@@ -136,17 +136,17 @@ router.post('/', async (req, res) => {
   if (body.discoverable !== undefined) discoverable = Boolean(body.discoverable);
 
   try {
-    const { rows: placeRows } = await query('SELECT id FROM places WHERE id = $1 LIMIT 1', [pid.value]);
+    const { rows: placeRows } = await dbQuery('SELECT id FROM places WHERE id = $1 LIMIT 1', [pid.value]);
     if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
 
-    const { rows: uRows } = await query('SELECT name, email FROM users WHERE id = $1', [userId]);
+    const { rows: uRows } = await dbQuery('SELECT name, email FROM users WHERE id = $1', [userId]);
     const u = uRows[0];
     const authorName = (u?.name && String(u.name).trim()) || (u?.email && String(u.email).split('@')[0]) || 'Admin';
     const authorShort = authorName.slice(0, 255);
 
     const id = crypto.randomUUID();
 
-    await query(
+    await dbQuery(
       `INSERT INTO feed_posts (
          id, user_id, author_name, place_id, caption, image_url, image_urls, video_url, type, author_role,
          moderation_status, discoverable
@@ -166,7 +166,7 @@ router.post('/', async (req, res) => {
       ]
     );
 
-    const { rows } = await query('SELECT * FROM feed_posts WHERE id = $1', [id]);
+    const { rows } = await dbQuery('SELECT * FROM feed_posts WHERE id = $1', [id]);
     res.status(201).json({ post: rows[0] });
   } catch (err) {
     if (err.code === '42703') {
@@ -183,7 +183,7 @@ router.get('/:id/comments', async (req, res) => {
   const postId = req.params.id;
   if (!postId || postId.length > 64) return res.status(400).json({ error: 'Invalid post id' });
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT fc.id, fc.post_id, fc.user_id, fc.author_name, fc.body, fc.created_at, u.email AS user_email
        FROM feed_comments fc
        LEFT JOIN users u ON u.id = fc.user_id
@@ -204,7 +204,7 @@ router.delete('/comments/:commentId', async (req, res) => {
   const commentId = req.params.commentId;
   if (!commentId || commentId.length > 64) return res.status(400).json({ error: 'Invalid comment id' });
   try {
-    const result = await query('DELETE FROM feed_comments WHERE id = $1', [commentId]);
+    const result = await dbQuery('DELETE FROM feed_comments WHERE id = $1', [commentId]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Comment not found' });
     res.json({ ok: true });
   } catch (err) {
@@ -272,7 +272,7 @@ router.patch('/:id', async (req, res) => {
 
   try {
     const sql = `UPDATE feed_posts SET ${updates.join(', ')} WHERE id = $${n} RETURNING *`;
-    const result = await query(sql, vals);
+    const result = await dbQuery(sql, vals);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Post not found' });
     res.json({ post: result.rows[0] });
   } catch (err) {
@@ -289,7 +289,7 @@ router.get('/:id', async (req, res) => {
   const id = req.params.id;
   if (!id || id.length > 64) return res.status(400).json({ error: 'Invalid post id' });
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT fp.*, u.email AS user_email,
               (SELECT COUNT(*)::int FROM feed_likes fl WHERE fl.post_id = fp.id) AS likes_count,
               (SELECT COUNT(*)::int FROM feed_comments fc WHERE fc.post_id = fp.id) AS comments_count
@@ -312,10 +312,10 @@ router.delete('/:id', async (req, res) => {
   const id = req.params.id;
   if (!id || id.length > 64) return res.status(400).json({ error: 'Invalid post id' });
   try {
-    await query('DELETE FROM feed_comments WHERE post_id = $1', [id]);
-    await query('DELETE FROM feed_likes WHERE post_id = $1', [id]);
-    await query('DELETE FROM feed_saves WHERE post_id = $1', [id]);
-    const result = await query('DELETE FROM feed_posts WHERE id = $1', [id]);
+    await dbQuery('DELETE FROM feed_comments WHERE post_id = $1', [id]);
+    await dbQuery('DELETE FROM feed_likes WHERE post_id = $1', [id]);
+    await dbQuery('DELETE FROM feed_saves WHERE post_id = $1', [id]);
+    const result = await dbQuery('DELETE FROM feed_posts WHERE id = $1', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Post not found' });
     res.json({ ok: true });
   } catch (err) {

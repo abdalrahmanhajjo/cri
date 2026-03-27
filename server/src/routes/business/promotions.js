@@ -1,14 +1,14 @@
 const express = require('express');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware } = require('../../middleware/placeOwner');
-const { query } = require('../../db');
+const { query: dbQuery } = require('../../db');
 const { parsePlaceId } = require('../../utils/validate');
 
 const router = express.Router();
 router.use(authMiddleware, businessPortalMiddleware);
 
 async function assertOwnsPlace(userId, placeId) {
-  const { rows } = await query(
+  const { rows } = await dbQuery(
     'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
     [userId, placeId]
   );
@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
     return res.status(403).json({ error: 'You do not manage this place' });
   }
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `SELECT id, place_id, title, subtitle, code, discount_label, terms, starts_at, ends_at, active, created_at, updated_at
        FROM place_promotions
        WHERE place_id = $1
@@ -82,7 +82,7 @@ router.post('/', async (req, res) => {
   const active = req.body?.active !== false;
 
   try {
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `INSERT INTO place_promotions (place_id, title, subtitle, code, discount_label, terms, starts_at, ends_at, active)
        VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8::timestamptz, $9)
        RETURNING id, place_id, title, subtitle, code, discount_label, terms, starts_at, ends_at, active, created_at, updated_at`,
@@ -101,7 +101,7 @@ router.patch('/:id', async (req, res) => {
   if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Invalid id' });
 
   try {
-    const own = await query(
+    const own = await dbQuery(
       `SELECT p.id FROM place_promotions p
        INNER JOIN place_owners po ON po.place_id = p.place_id AND po.user_id = $2
        WHERE p.id = $1`,
@@ -150,7 +150,7 @@ router.patch('/:id', async (req, res) => {
     vals.push(id);
     const idParam = n;
 
-    const { rows } = await query(
+    const { rows } = await dbQuery(
       `UPDATE place_promotions SET ${fields.join(', ')}, updated_at = NOW()
        WHERE id = $${idParam}
        RETURNING id, place_id, title, subtitle, code, discount_label, terms, starts_at, ends_at, active, created_at, updated_at`,
@@ -168,7 +168,7 @@ router.delete('/:id', async (req, res) => {
   const id = parseInt(String(req.params.id), 10);
   if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Invalid id' });
   try {
-    const { rowCount } = await query(
+    const { rowCount } = await dbQuery(
       `DELETE FROM place_promotions p
        USING place_owners po
        WHERE p.id = $1 AND po.place_id = p.place_id AND po.user_id = $2`,

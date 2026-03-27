@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { query } = require('../db');
+const { query: dbQuery } = require('../db');
 const { validatePassword } = require('../utils/passwordValidator');
 const { validateUsername } = require('../utils/usernameValidator');
 const {
@@ -114,8 +114,8 @@ async function issueEmailVerification(userId, email) {
   const code = String(Math.floor(100000 + Math.random() * 900000));
   const tokenHash = crypto.createHash('sha256').update(code).digest('hex');
   const expiresAt = new Date(Date.now() + VERIFICATION_LINK_EXPIRY_MINUTES * 60 * 1000);
-  await query('DELETE FROM email_verification_tokens WHERE user_id = $1', [userId]);
-  await query('INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)', [userId, tokenHash, expiresAt]);
+  await dbQuery('DELETE FROM email_verification_tokens WHERE user_id = $1', [userId]);
+  await dbQuery('INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)', [userId, tokenHash, expiresAt]);
   const { delivered } = await sendVerificationCode(email, code);
   return delivered;
 }
@@ -127,7 +127,7 @@ router.post('/register', validate(registerSchema), async (req, res) => {
     const { name, username, email, password } = req.body;
     const u = validateUsername(username);
     if (!u.ok) return res.status(400).json({ error: u.error });
-    const taken = await query(
+    const taken = await dbQuery(
       `SELECT 1 FROM profiles WHERE username IS NOT NULL
        AND REGEXP_REPLACE(LOWER(TRIM(username)), '^@', '') = $1
        LIMIT 1`,
@@ -139,12 +139,12 @@ router.post('/register', validate(registerSchema), async (req, res) => {
     const pv = validatePassword(password);
     if (!pv.valid) return res.status(400).json({ error: pv.error });
     const hash = await bcrypt.hash(password, 12);
-    const result = await query(
+    const result = await dbQuery(
       'INSERT INTO users (email, password_hash, name, auth_provider, email_verified) VALUES ($1, $2, $3, \'email\', false) RETURNING id, email, name',
       [email, hash, name || null]
     );
     const user = result.rows[0];
-    await query(
+    await dbQuery(
       `INSERT INTO profiles (user_id, username, onboarding_completed) VALUES ($1, $2, false)
        ON CONFLICT (user_id) DO UPDATE SET username = EXCLUDED.username`,
       [user.id, u.stored]
@@ -152,7 +152,7 @@ router.post('/register', validate(registerSchema), async (req, res) => {
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const tokenHash = crypto.createHash('sha256').update(code).digest('hex');
     const expiresAt = new Date(Date.now() + VERIFICATION_LINK_EXPIRY_MINUTES * 60 * 1000);
-    await query('INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)', [user.id, tokenHash, expiresAt]);
+    await dbQuery('INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)', [user.id, tokenHash, expiresAt]);
     let verificationEmailDelivered = false;
     try {
       const r = await sendVerificationCode(email, code);
@@ -190,7 +190,7 @@ router.post('/login', validate(loginSchema), async (req, res) => {
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const rate = checkRateLimit(ip);
     if (!rate.ok) return res.status(429).json({ error: 'Too many attempts.', retryAfter: rate.retryAfter });
-    const result = await query(
+    const result = await dbQuery(
       `SELECT u.id, u.email, u.name, u.password_hash, u.email_verified, u.is_business_owner,
               COALESCE(u.is_admin, false) AS is_admin,
               COALESCE(u.is_blocked, false) AS is_blocked,
@@ -282,15 +282,15 @@ router.post('/forgot-password', validate(resetPasswordRequestSchema), async (req
     if (!rate.ok) return res.status(429).json({ error: 'Too many requests.', retryAfter: rate.retryAfter });
     recordForgotAttempt(ip);
     const expiryMs = RESET_LINK_EXPIRY_MINUTES * 60 * 1000;
-    const result = await query('SELECT id FROM users WHERE LOWER(email) = $1 AND auth_provider = \'email\' AND password_hash IS NOT NULL', [email]);
+    const result = await dbQuery('SELECT id FROM users WHERE LOWER(email) = $1 AND auth_provider = \'email\' AND password_hash IS NOT NULL', [email]);
     const user = result.rows[0];
     let emailDelivered = false;
     if (user) {
-      await query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
+      await dbQuery('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
       const code = String(Math.floor(100000 + Math.random() * 900000));
       const tokenHash = crypto.createHash('sha256').update(code).digest('hex');
       const expiresAt = new Date(Date.now() + expiryMs);
-      await query('INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)', [user.id, tokenHash, expiresAt]);
+      await dbQuery('INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)', [user.id, tokenHash, expiresAt]);
       try {
         const r = await sendPasswordResetCode(email, code);
         emailDelivered = r.delivered;
@@ -332,7 +332,7 @@ router.post('/reset-password', validate(resetPasswordConfirmSchema), async (req,
     const pv = validatePassword(newPassword);
     if (!pv.valid) return res.status(400).json({ error: pv.error });
 
-    const userRow = await query('SELECT id FROM users WHERE LOWER(email) = $1 AND auth_provider = \'email\' AND password_hash IS NOT NULL', [email]);
+    const userRow = await dbQuery('SELECT id FROM users WHERE LOWER(email) = $1 AND auth_provider = \'email\' AND password_hash IS NOT NULL', [email]);
     const user = userRow.rows[0];
     if (!user) {
       recordResetAttempt(resetKey);
@@ -340,7 +340,7 @@ router.post('/reset-password', validate(resetPasswordConfirmSchema), async (req,
     }
 
     const tokenHash = crypto.createHash('sha256').update(code).digest('hex');
-    const tokenRow = await query(
+    const tokenRow = await dbQuery(
       'SELECT id FROM password_reset_tokens WHERE user_id = $1 AND token_hash = $2 AND expires_at > NOW()',
       [user.id, tokenHash]
     );
@@ -350,8 +350,8 @@ router.post('/reset-password', validate(resetPasswordConfirmSchema), async (req,
     }
 
     const hash = await bcrypt.hash(newPassword, 12);
-    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, user.id]);
-    await query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
+    await dbQuery('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, user.id]);
+    await dbQuery('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
     clearResetAttempts(resetKey);
     res.json({ message: 'Password has been reset. You can now sign in with your new password.' });
   } catch (err) {
@@ -372,7 +372,7 @@ router.post('/verify-email', async (req, res) => {
       return res.status(400).json({ error: 'Valid email and 6-digit code are required' });
     }
 
-    const result = await query(
+    const result = await dbQuery(
       `SELECT u.id, u.email, u.name, u.email_verified, u.is_business_owner,
               COALESCE(u.is_admin, false) AS is_admin,
               COALESCE(u.is_blocked, false) AS is_blocked,
@@ -398,7 +398,7 @@ router.post('/verify-email', async (req, res) => {
     }
 
     const tokenHash = crypto.createHash('sha256').update(code).digest('hex');
-    const tok = await query(
+    const tok = await dbQuery(
       'SELECT id FROM email_verification_tokens WHERE user_id = $1 AND token_hash = $2 AND expires_at > NOW()',
       [user.id, tokenHash]
     );
@@ -408,8 +408,8 @@ router.post('/verify-email', async (req, res) => {
       });
     }
 
-    await query('UPDATE users SET email_verified = true WHERE id = $1', [user.id]);
-    await query('DELETE FROM email_verification_tokens WHERE user_id = $1', [user.id]);
+    await dbQuery('UPDATE users SET email_verified = true WHERE id = $1', [user.id]);
+    await dbQuery('DELETE FROM email_verification_tokens WHERE user_id = $1', [user.id]);
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({
