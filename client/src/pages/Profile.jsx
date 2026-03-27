@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
+import HciSettingsPanel from '../components/HciSettingsPanel';
 import api from '../api/client';
 import {
   checkPasswordRequirements,
@@ -21,6 +23,7 @@ function formatMemberSince(date) {
 }
 
 export default function Profile() {
+  const { t } = useLanguage();
   const { user, logout, refreshUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -264,6 +267,15 @@ export default function Profile() {
             Save preferences
           </button>
         </div>
+      </section>
+
+      {/* Experience design & feedback (HCI) */}
+      <section className="profile-section" aria-labelledby="profile-hci-heading">
+        <h2 id="profile-hci-heading" className="profile-section-title">
+          <Icon name="psychology" size={18} />
+          {t('profilePage', 'hciFeedbackHeading')}
+        </h2>
+        <HciSettingsPanel />
       </section>
 
       {/* Security */}
