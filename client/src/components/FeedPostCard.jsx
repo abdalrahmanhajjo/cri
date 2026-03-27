@@ -64,6 +64,7 @@ export default function FeedPostCard({
   t,
   variant = 'feed',
   discoverBasePath = COMMUNITY_PATH,
+  isActiveReel = false,
 }) {
   const navigate = useNavigate();
   const { lang } = useLanguage();
@@ -722,6 +723,18 @@ export default function FeedPostCard({
   const reelOverlayPrimary = placeId && placeName ? placeName : `@${reelHandle}`;
   const showVerified = post.author_role === 'business_owner';
 
+  useEffect(() => {
+    if (!showReelTheater || !showVideo) return;
+    const v = reelVideoRef.current;
+    if (!v) return;
+    if (isActiveReel) {
+      const p = v.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+      return;
+    }
+    v.pause();
+  }, [isActiveReel, showReelTheater, showVideo, post.id]);
+
   const onReelProgressClick = (e) => {
     const v = reelVideoRef.current;
     if (!v || !v.duration) return;
@@ -1033,7 +1046,6 @@ export default function FeedPostCard({
                 playsInline
                 muted={reelMuted}
                 loop
-                autoPlay
                 preload="metadata"
                 onTimeUpdate={(e) => {
                   const el = e.currentTarget;

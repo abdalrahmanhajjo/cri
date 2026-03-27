@@ -475,6 +475,7 @@ export default function Discover() {
   const [reelNextOffset, setReelNextOffset] = useState(0);
   const [reelHasMore, setReelHasMore] = useState(true);
   const [reelLoadingMore, setReelLoadingMore] = useState(false);
+  const [activeReelId, setActiveReelId] = useState(null);
   const [seenFeedIds, setSeenFeedIds] = useState(() => loadSeenIds(SEEN_FEED_KEY));
   const [seenReelIds, setSeenReelIds] = useState(() => loadSeenIds(SEEN_REEL_KEY));
   const feedSentinelRef = useRef(null);
@@ -913,18 +914,29 @@ export default function Discover() {
     if (tab !== 'reel' || orderedReels.length === 0) return undefined;
     const obs = new IntersectionObserver(
       (entries) => {
+        let bestId = null;
+        let bestRatio = 0;
         entries.forEach((en) => {
+          if (en.isIntersecting && en.intersectionRatio >= bestRatio) {
+            bestRatio = en.intersectionRatio;
+            bestId = en.target.getAttribute('data-post-id');
+          }
           if (!en.isIntersecting) return;
           const id = en.target.getAttribute('data-post-id');
           if (id) markReelSeen(id);
         });
+        setActiveReelId(bestRatio > 0 ? bestId : null);
       },
-      { threshold: 0.6 }
+      { threshold: [0.2, 0.4, 0.6, 0.8] }
     );
     const nodes = document.querySelectorAll('[data-feed-kind="reel"][data-post-id]');
     nodes.forEach((n) => obs.observe(n));
     return () => obs.disconnect();
   }, [tab, orderedReels, markReelSeen]);
+
+  useEffect(() => {
+    if (tab !== 'reel') setActiveReelId(null);
+  }, [tab]);
 
   const emptyFeed =
     !loading && !error && !feedLoadingMore && tab === 'feed' && orderedFeedPosts.length === 0;
@@ -1073,6 +1085,7 @@ export default function Discover() {
                     t={t}
                     variant="reel"
                     discoverBasePath={discoverBasePath}
+                    isActiveReel={activeReelId === String(p.id)}
                   />
                 </div>
               ))}
