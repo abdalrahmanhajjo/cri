@@ -754,43 +754,12 @@ export default function FeedPostCard({
     const v = reelVideoRef.current;
     if (!v) return;
     if (isActiveReel) {
-      if (isDesktop) {
-        v.poster = '';
-        v.removeAttribute('poster');
-      }
       const p = v.play();
       if (p && typeof p.catch === 'function') p.catch(() => {});
       return;
     }
     v.pause();
-  }, [isActiveReel, showReelTheater, showVideo, post.id, isDesktop]);
-
-  useEffect(() => {
-    if (!isDesktop || !isActiveReel || !showReelTheater || !showVideo) return undefined;
-    const v = reelVideoRef.current;
-    if (!v) return undefined;
-    let cancelled = false;
-    const tryStart = () => {
-      if (cancelled) return;
-      v.poster = '';
-      v.removeAttribute('poster');
-      const p = v.play();
-      if (p && typeof p.catch === 'function') p.catch(() => {});
-    };
-    const t1 = window.setTimeout(tryStart, 40);
-    const t2 = window.setTimeout(() => {
-      if (cancelled) return;
-      if (v.paused || v.readyState < 2) {
-        v.load();
-        tryStart();
-      }
-    }, 220);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
-  }, [isDesktop, isActiveReel, showReelTheater, showVideo, post.id]);
+  }, [isActiveReel, showReelTheater, showVideo, post.id]);
 
   const onReelProgressClick = (e) => {
     const v = reelVideoRef.current;
@@ -1100,7 +1069,7 @@ export default function FeedPostCard({
                 ref={reelVideoRef}
                 className="ig-reel-video"
                 src={vid}
-                poster={isDesktop ? undefined : isActiveReel ? undefined : img || undefined}
+                poster={img || undefined}
                 playsInline
                 muted={reelMuted}
                 loop
