@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://visit-tripoli.com/sitemap.xml
