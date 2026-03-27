@@ -91,6 +91,72 @@ export const translations = {
       megaNeighbourhoods: 'Neighbourhoods',
       megaNeighbourhoodsDesc: 'Explore districts and areas of the city.',
     },
+    aboutTripoli: {
+      title: 'The history of Tripoli, Lebanon',
+      intro:
+        'Tripoli is one of the Levant’s great historic cities — a place where Mediterranean routes, medieval power, and craft traditions shaped a dense old city that still works today. This page is a lightweight, readable history you can scroll without heavy loading.',
+      cta_explore: 'Explore places',
+      cta_community: 'See community',
+      lead_title: 'A city built from trade and stone',
+      lead_text:
+        'Tripoli’s old city is best understood as a system: markets connect to khans, which connect to courtyards, which connect to major landmarks. Each era added layers — but the walk remains coherent.',
+      jump_timeline: 'Jump to timeline',
+      jump_notes: 'Visitor notes',
+      metrics_1_value: 'Walkable core',
+      metrics_1_label: 'History is experienced on foot',
+      metrics_2_value: 'Medieval density',
+      metrics_2_label: 'Souks + khans + mosques',
+      metrics_3_value: 'Mamluk imprint',
+      metrics_3_label: 'Key shaping era for the old city',
+      metrics_4_value: 'Living city',
+      metrics_4_label: 'Not a museum — daily life continues',
+      highlights_layered_title: 'A city of layered eras',
+      highlights_layered_text:
+        'Tripoli’s identity was shaped by port routes, medieval states, Mamluk architecture, Ottoman commerce, and modern Lebanese life — all visible within a compact walk.',
+      highlights_arch_title: 'Architecture that tells stories',
+      highlights_arch_text:
+        'Courtyards, stone arches, khans, mosques, and hammams are not “ruins” — they’re living urban rooms that still guide movement and community rhythm.',
+      highlights_markets_title: 'Markets that never stopped',
+      highlights_markets_text:
+        'Souks remain functional and human-scale. The city’s merchant tradition continues through craft, food, and micro‑businesses passed down across generations.',
+      highlights_continuity_title: 'Culture with continuity',
+      highlights_continuity_text:
+        'Tripoli’s past is not behind glass: it’s heard in workshops, tasted in sweets, and seen in daily prayer, trade, and neighborhood hospitality.',
+      timeline_heading: 'Timeline: the eras that shaped Tripoli',
+      timeline_sub: 'This isn’t a textbook — it’s a scrollable story. Expand the eras you care about.',
+      timeline_1_range: 'Antiquity → Early Medieval',
+      timeline_1_title: 'Port routes and coastal city life',
+      timeline_1_body:
+        'Long before modern borders, Tripoli belonged to the rhythm of the Mediterranean: trade, movement, and coastal exchange. The city’s story begins with geography — a place where routes meet.',
+      timeline_2_range: 'Crusader period (12th century)',
+      timeline_2_title: 'Fortification, conflict, and changing power',
+      timeline_2_body:
+        'Like many Levantine cities, Tripoli’s medieval centuries included conflict, strategic fortification, and shifting rule — a chapter that left layers of memory around the old city.',
+      timeline_3_range: 'Mamluk era (13th–15th centuries)',
+      timeline_3_title: 'Urban golden age: khans, mosques, and stone craft',
+      timeline_3_body:
+        'This is the era that most visibly shaped the old city. The layout of markets, major religious architecture, and civic buildings formed a dense walkable core that still holds today.',
+      timeline_4_range: 'Ottoman era (16th–early 20th centuries)',
+      timeline_4_title: 'Commerce, neighborhoods, and everyday institutions',
+      timeline_4_body:
+        'Trade networks and local institutions matured. The city’s “daily-life” architecture — workshops, food culture, neighborhood spaces — deepened and became tradition.',
+      timeline_5_range: 'Modern Lebanon (20th century → today)',
+      timeline_5_title: 'Continuity through craft, food, and community',
+      timeline_5_body:
+        'Tripoli remains a working city, not a staged set. The best way to feel it is to walk, listen, and follow the markets — where the past is carried forward by people.',
+      notes_heading: 'How to feel the history (without a guide)',
+      notes_p1:
+        'Start at the Clock Tower, then follow the lanes until you hit a khan or courtyard. When you see a change in stone texture or a sudden shaded passage, slow down — that’s the city showing its age through craft.',
+      notes_p2:
+        'A good “history walk” is simple: one landmark mosque, one khan, one market loop, and one sweets stop. The rhythm is the lesson.',
+      link_old_city: 'Old City guide',
+      link_souks: 'Souks guide',
+      link_sweets: 'Sweets guide',
+      facts_1: 'A major historic city on the eastern Mediterranean (North Lebanon)',
+      facts_2: 'A dense medieval core shaped strongly in the Mamluk era',
+      facts_3: 'Known for active souks, khans, hammams, and landmark mosques',
+      facts_4: 'Famous across Lebanon for traditional sweets and craft heritage',
+    },
     errors: {
       networkError: 'Unable to reach the server. Check your connection and try again.',
     },
@@ -964,6 +1030,72 @@ export const translations = {
       megaNeighbourhoods: 'الأحياء',
       megaNeighbourhoodsDesc: 'استكشف أحياء ومناطق المدينة.',
     },
+    aboutTripoli: {
+      title: 'تاريخ طرابلس، لبنان',
+      intro:
+        'طرابلس واحدة من أبرز المدن التاريخية في المشرق — مدينة شكّلتها طرق البحر المتوسط، وقوى العصور الوسطى، وتقاليد الحِرَف، فنتج عنها قلبٌ قديم كثيف ما زال يعمل حتى اليوم. هذه صفحة تاريخ خفيفة وسهلة القراءة يمكنك تصفحها دون تحميل ثقيل.',
+      cta_explore: 'استكشف الأماكن',
+      cta_community: 'شاهد المجتمع',
+      lead_title: 'مدينة بُنيت من التجارة والحجر',
+      lead_text:
+        'أفضل طريقة لفهم المدينة القديمة في طرابلس هي كنظام مترابط: الأسواق تقود إلى الخانات، والخانات إلى الأفنية، والأفنية إلى المعالم. كل عصر أضاف طبقات — لكن المسار بقي منسجمًا.',
+      jump_timeline: 'اذهب إلى الخط الزمني',
+      jump_notes: 'ملاحظات للزائر',
+      metrics_1_value: 'قلب قابل للمشي',
+      metrics_1_label: 'التاريخ يُعاش على الأقدام',
+      metrics_2_value: 'كثافة مَدِينية',
+      metrics_2_label: 'أسواق + خانات + مساجد',
+      metrics_3_value: 'بصمة مملوكية',
+      metrics_3_label: 'عصرٌ شكّل المدينة القديمة',
+      metrics_4_value: 'مدينة حيّة',
+      metrics_4_label: 'ليست متحفًا — الحياة اليومية مستمرة',
+      highlights_layered_title: 'مدينة بطبقات من العصور',
+      highlights_layered_text:
+        'تكوّنت هوية طرابلس عبر طرق الموانئ، ودول العصور الوسطى، وعمارة المماليك، وتجارة العثمانيين، وحياة لبنان الحديثة — وكلها تظهر في مشيٍ قصير.',
+      highlights_arch_title: 'عمارة تحكي قصصًا',
+      highlights_arch_text:
+        'الأفنية والأقواس الحجرية والخانات والمساجد والحمّامات ليست “أطلالًا” — بل غرفٌ حضرية حيّة ما زالت تنظّم الحركة وإيقاع المجتمع.',
+      highlights_markets_title: 'أسواق لم تتوقف',
+      highlights_markets_text:
+        'الأسواق ما زالت تعمل وبمقياسٍ إنساني. تقاليد التجارة تستمر عبر الحِرَف والطعام ومشاريع صغيرة تتوارثها الأجيال.',
+      highlights_continuity_title: 'ثقافة متصلة',
+      highlights_continuity_text:
+        'ماضي طرابلس ليس خلف الزجاج: يُسمع في الورش، ويُذاق في الحلويات، ويُرى في الصلاة والتجارة وكرم الأحياء.',
+      timeline_heading: 'الخط الزمني: عصور شكّلت طرابلس',
+      timeline_sub: 'ليس كتابًا مدرسيًا — بل قصة قابلة للتمرير. افتح العصور التي تهمك.',
+      timeline_1_range: 'العصور القديمة → بدايات العصور الوسطى',
+      timeline_1_title: 'طرق الميناء وحياة المدينة الساحلية',
+      timeline_1_body:
+        'قبل الحدود الحديثة بوقت طويل، كانت طرابلس جزءًا من إيقاع البحر المتوسط: تجارة وحركة وتبادل ساحلي. تبدأ حكاية المدينة من الجغرافيا — مكان تلتقي فيه الطرق.',
+      timeline_2_range: 'الفترة الصليبية (القرن 12)',
+      timeline_2_title: 'تحصين وصراع وتبدّل سلطة',
+      timeline_2_body:
+        'مثل مدنٍ كثيرة في بلاد الشام، شهدت طرابلس صراعًا وتحصينات استراتيجية وتبدّلًا في الحكم — فصلٌ ترك طبقات من الذاكرة حول المدينة القديمة.',
+      timeline_3_range: 'العصر المملوكي (القرنان 13–15)',
+      timeline_3_title: 'عصر ذهبي حضري: خانات ومساجد وحِرفة حجر',
+      timeline_3_body:
+        'هذا هو العصر الذي شكّل المدينة القديمة بشكلٍ واضح. تخطيط الأسواق والعمارة الدينية الكبرى والمباني المدنية أنشأ قلبًا كثيفًا قابلًا للمشي ما زال قائمًا حتى اليوم.',
+      timeline_4_range: 'العصر العثماني (القرن 16–بدايات القرن 20)',
+      timeline_4_title: 'تجارة وأحياء ومؤسسات يومية',
+      timeline_4_body:
+        'نضجت شبكات التجارة والمؤسسات المحلية. وتعزّزت عمارة “الحياة اليومية” — الورش وثقافة الطعام ومساحات الأحياء — لتصبح تقليدًا.',
+      timeline_5_range: 'لبنان الحديث (القرن 20 → اليوم)',
+      timeline_5_title: 'استمرار عبر الحِرفة والطعام والمجتمع',
+      timeline_5_body:
+        'طرابلس مدينة تعمل بالفعل وليست مشهدًا مُعدًّا. أفضل طريقة للشعور بها هي المشي والإنصات واتباع الأسواق — حيث يحمل الناس الماضي إلى الحاضر.',
+      notes_heading: 'كيف تشعر بالتاريخ (دون دليل)',
+      notes_p1:
+        'ابدأ من برج الساعة، ثم اتبع الأزقة حتى تصل إلى خان أو فناء. عندما تلاحظ تغيّرًا في ملمس الحجر أو ممرًا مظللًا فجأة، تمهّل — هنا يظهر عمر المدينة عبر الحِرفة.',
+      notes_p2:
+        '“مشية تاريخ” جيدة بسيطة: مسجدٌ بارز، وخانٌ واحد، ودورة في السوق، وتوقّف للحلويات. الإيقاع هو الدرس.',
+      link_old_city: 'دليل المدينة القديمة',
+      link_souks: 'دليل الأسواق',
+      link_sweets: 'دليل الحلويات',
+      facts_1: 'مدينة تاريخية كبرى على شرق المتوسط (شمال لبنان)',
+      facts_2: 'قلبٌ من العصور الوسطى تشكّل بقوة في العصر المملوكي',
+      facts_3: 'معروفة بأسواق نشطة وخانات وحمّامات ومساجد بارزة',
+      facts_4: 'مشهورّة في لبنان بحلوياتها التقليدية وتراث الحِرَف',
+    },
     errors: {
       networkError: 'تعذّر الاتصال بالخادم. تحقّق من اتصالك وحاول مرة أخرى.',
     },
@@ -1830,6 +1962,72 @@ export const translations = {
       megaGettingThereDesc: 'Options de transport et accès à Tripoli.',
       megaNeighbourhoods: 'Quartiers',
       megaNeighbourhoodsDesc: 'Explorez les quartiers et zones de la ville.',
+    },
+    aboutTripoli: {
+      title: 'L’histoire de Tripoli, Liban',
+      intro:
+        'Tripoli est l’une des grandes villes historiques du Levant — un lieu où les routes méditerranéennes, les pouvoirs médiévaux et les traditions artisanales ont façonné une vieille ville dense, toujours bien vivante. Cette page propose une histoire légère et agréable à lire, sans chargement lourd.',
+      cta_explore: 'Découvrir les lieux',
+      cta_community: 'Voir la communauté',
+      lead_title: 'Une ville née du commerce et de la pierre',
+      lead_text:
+        'La vieille ville de Tripoli se comprend comme un système : les souks mènent aux khans, les khans aux cours, les cours aux grands monuments. Chaque époque a ajouté des couches — mais la marche reste cohérente.',
+      jump_timeline: 'Aller à la chronologie',
+      jump_notes: 'Notes de visite',
+      metrics_1_value: 'Cœur piéton',
+      metrics_1_label: 'L’histoire se vit à pied',
+      metrics_2_value: 'Densité médiévale',
+      metrics_2_label: 'Souks + khans + mosquées',
+      metrics_3_value: 'Empreinte mamelouke',
+      metrics_3_label: 'Époque clé de la vieille ville',
+      metrics_4_value: 'Ville vivante',
+      metrics_4_label: 'Pas un musée — la vie quotidienne continue',
+      highlights_layered_title: 'Une ville aux époques superposées',
+      highlights_layered_text:
+        'L’identité de Tripoli s’est construite entre routes portuaires, états médiévaux, architecture mamelouke, commerce ottoman et vie libanaise moderne — visibles en une seule promenade.',
+      highlights_arch_title: 'Une architecture qui raconte',
+      highlights_arch_text:
+        'Cours, arcs de pierre, khans, mosquées et hammams ne sont pas des “ruines” — ce sont des pièces urbaines vivantes qui structurent encore les parcours et le rythme social.',
+      highlights_markets_title: 'Des marchés jamais interrompus',
+      highlights_markets_text:
+        'Les souks restent fonctionnels et à taille humaine. La tradition marchande continue grâce à l’artisanat, la cuisine et de petites activités transmises de génération en génération.',
+      highlights_continuity_title: 'Une culture en continuité',
+      highlights_continuity_text:
+        'Le passé de Tripoli n’est pas derrière une vitrine : il se rencontre dans les ateliers, se goûte dans les douceurs et se voit dans la prière, le commerce et l’hospitalité des quartiers.',
+      timeline_heading: 'Chronologie : les époques qui ont façonné Tripoli',
+      timeline_sub: 'Ce n’est pas un manuel — c’est une histoire à faire défiler. Ouvrez les périodes qui vous intéressent.',
+      timeline_1_range: 'Antiquité → Haut Moyen Âge',
+      timeline_1_title: 'Routes portuaires et vie côtière',
+      timeline_1_body:
+        'Bien avant les frontières modernes, Tripoli suivait le rythme de la Méditerranée : commerce, mouvement et échanges côtiers. L’histoire commence par la géographie — un point de rencontre des routes.',
+      timeline_2_range: 'Période des Croisés (XIIe siècle)',
+      timeline_2_title: 'Fortifications, conflits et changements de pouvoir',
+      timeline_2_body:
+        'Comme beaucoup de villes du Levant, Tripoli a connu conflits, fortifications stratégiques et alternances de domination — une couche de mémoire autour de la vieille ville.',
+      timeline_3_range: 'Époque mamelouke (XIIIe–XVe siècles)',
+      timeline_3_title: 'Âge d’or urbain : khans, mosquées et pierre',
+      timeline_3_body:
+        'C’est l’époque la plus lisible dans la vieille ville. Le plan des souks, l’architecture religieuse majeure et les bâtiments civiques ont formé un noyau dense et walkable qui tient encore aujourd’hui.',
+      timeline_4_range: 'Époque ottomane (XVIe–début XXe siècle)',
+      timeline_4_title: 'Commerce, quartiers et institutions du quotidien',
+      timeline_4_body:
+        'Les réseaux commerciaux et les institutions locales se consolidèrent. L’architecture du quotidien — ateliers, culture culinaire, espaces de quartier — s’approfondit et devint tradition.',
+      timeline_5_range: 'Liban moderne (XXe siècle → aujourd’hui)',
+      timeline_5_title: 'Continuité par l’artisanat, la cuisine et la communauté',
+      timeline_5_body:
+        'Tripoli reste une ville qui travaille, pas un décor. Pour la sentir, marchez, écoutez, suivez les souks — là où le passé est porté par les gens.',
+      notes_heading: 'Comment ressentir l’histoire (sans guide)',
+      notes_p1:
+        'Commencez à la Tour de l’Horloge, puis suivez les ruelles jusqu’à un khan ou une cour. Quand la texture de la pierre change ou qu’un passage devient soudain ombragé, ralentissez : la ville montre son âge par le geste artisanal.',
+      notes_p2:
+        'Une bonne “marche historique” est simple : une grande mosquée, un khan, une boucle de marché, puis une pause douceurs. Le rythme est la leçon.',
+      link_old_city: 'Guide de la vieille ville',
+      link_souks: 'Guide des souks',
+      link_sweets: 'Guide des douceurs',
+      facts_1: 'Grande ville historique de la Méditerranée orientale (Nord Liban)',
+      facts_2: 'Noyau médiéval dense marqué par l’époque mamelouke',
+      facts_3: 'Souks actifs, khans, hammams et mosquées majeures',
+      facts_4: 'Réputée au Liban pour ses douceurs et son artisanat',
     },
     errors: {
       networkError: 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.',

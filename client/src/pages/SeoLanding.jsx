@@ -362,6 +362,7 @@ export function TravelTipsTripoli() {
 
 export function AboutTripoli() {
   const { t } = useLanguage();
+  const tt = (key, fallback) => t('aboutTripoli', key) || fallback;
   // Lightweight scroll reveal (no big libraries)
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -389,68 +390,90 @@ export function AboutTripoli() {
 
   const highlights = [
     {
-      title: 'A city of layered eras',
-      text: 'Tripoli’s identity was shaped by port routes, medieval states, Mamluk architecture, Ottoman commerce, and modern Lebanese life — all visible within a compact walk.',
+      title: tt('highlights_layered_title', 'A city of layered eras'),
+      text: tt(
+        'highlights_layered_text',
+        'Tripoli’s identity was shaped by port routes, medieval states, Mamluk architecture, Ottoman commerce, and modern Lebanese life — all visible within a compact walk.'
+      ),
     },
     {
-      title: 'Architecture that tells stories',
-      text: 'Courtyards, stone arches, khans, mosques, and hammams are not “ruins” — they’re living urban rooms that still guide movement and community rhythm.',
+      title: tt('highlights_arch_title', 'Architecture that tells stories'),
+      text: tt(
+        'highlights_arch_text',
+        'Courtyards, stone arches, khans, mosques, and hammams are not “ruins” — they’re living urban rooms that still guide movement and community rhythm.'
+      ),
     },
     {
-      title: 'Markets that never stopped',
-      text: 'Souks remain functional and human-scale. The city’s merchant tradition continues through craft, food, and micro‑businesses passed down across generations.',
+      title: tt('highlights_markets_title', 'Markets that never stopped'),
+      text: tt(
+        'highlights_markets_text',
+        'Souks remain functional and human-scale. The city’s merchant tradition continues through craft, food, and micro‑businesses passed down across generations.'
+      ),
     },
     {
-      title: 'Culture with continuity',
-      text: 'Tripoli’s past is not behind glass: it’s heard in workshops, tasted in sweets, and seen in daily prayer, trade, and neighborhood hospitality.',
+      title: tt('highlights_continuity_title', 'Culture with continuity'),
+      text: tt(
+        'highlights_continuity_text',
+        'Tripoli’s past is not behind glass: it’s heard in workshops, tasted in sweets, and seen in daily prayer, trade, and neighborhood hospitality.'
+      ),
     },
   ];
 
   const quickFacts = [
-    'A major historic city on the eastern Mediterranean (North Lebanon)',
-    'A dense medieval core shaped strongly in the Mamluk era',
-    'Known for active souks, khans, hammams, and landmark mosques',
-    'Famous across Lebanon for traditional sweets and craft heritage',
+    tt('facts_1', 'A major historic city on the eastern Mediterranean (North Lebanon)'),
+    tt('facts_2', 'A dense medieval core shaped strongly in the Mamluk era'),
+    tt('facts_3', 'Known for active souks, khans, hammams, and landmark mosques'),
+    tt('facts_4', 'Famous across Lebanon for traditional sweets and craft heritage'),
   ];
 
   const timeline = [
     {
-      range: 'Antiquity → Early Medieval',
-      title: 'Port routes and coastal city life',
-      body:
-        'Long before modern borders, Tripoli belonged to the rhythm of the Mediterranean: trade, movement, and coastal exchange. The city’s story begins with geography — a place where routes meet.',
+      range: tt('timeline_1_range', 'Antiquity → Early Medieval'),
+      title: tt('timeline_1_title', 'Port routes and coastal city life'),
+      body: tt(
+        'timeline_1_body',
+        'Long before modern borders, Tripoli belonged to the rhythm of the Mediterranean: trade, movement, and coastal exchange. The city’s story begins with geography — a place where routes meet.'
+      ),
     },
     {
-      range: 'Crusader period (12th century)',
-      title: 'Fortification, conflict, and changing power',
-      body:
-        'Like many Levantine cities, Tripoli’s medieval centuries included conflict, strategic fortification, and shifting rule — a chapter that left layers of memory around the old city.',
+      range: tt('timeline_2_range', 'Crusader period (12th century)'),
+      title: tt('timeline_2_title', 'Fortification, conflict, and changing power'),
+      body: tt(
+        'timeline_2_body',
+        'Like many Levantine cities, Tripoli’s medieval centuries included conflict, strategic fortification, and shifting rule — a chapter that left layers of memory around the old city.'
+      ),
     },
     {
-      range: 'Mamluk era (13th–15th centuries)',
-      title: 'Urban golden age: khans, mosques, and stone craft',
-      body:
-        'This is the era that most visibly shaped the old city. The layout of markets, major religious architecture, and civic buildings formed a dense walkable core that still holds today.',
+      range: tt('timeline_3_range', 'Mamluk era (13th–15th centuries)'),
+      title: tt('timeline_3_title', 'Urban golden age: khans, mosques, and stone craft'),
+      body: tt(
+        'timeline_3_body',
+        'This is the era that most visibly shaped the old city. The layout of markets, major religious architecture, and civic buildings formed a dense walkable core that still holds today.'
+      ),
     },
     {
-      range: 'Ottoman era (16th–early 20th centuries)',
-      title: 'Commerce, neighborhoods, and everyday institutions',
-      body:
-        'Trade networks and local institutions matured. The city’s “daily-life” architecture — workshops, food culture, neighborhood spaces — deepened and became tradition.',
+      range: tt('timeline_4_range', 'Ottoman era (16th–early 20th centuries)'),
+      title: tt('timeline_4_title', 'Commerce, neighborhoods, and everyday institutions'),
+      body: tt(
+        'timeline_4_body',
+        'Trade networks and local institutions matured. The city’s “daily-life” architecture — workshops, food culture, neighborhood spaces — deepened and became tradition.'
+      ),
     },
     {
-      range: 'Modern Lebanon (20th century → today)',
-      title: 'Continuity through craft, food, and community',
-      body:
-        'Tripoli remains a working city, not a staged set. The best way to feel it is to walk, listen, and follow the markets — where the past is carried forward by people.',
+      range: tt('timeline_5_range', 'Modern Lebanon (20th century → today)'),
+      title: tt('timeline_5_title', 'Continuity through craft, food, and community'),
+      body: tt(
+        'timeline_5_body',
+        'Tripoli remains a working city, not a staged set. The best way to feel it is to walk, listen, and follow the markets — where the past is carried forward by people.'
+      ),
     },
   ];
 
   const keyMetrics = [
-    { value: 'Walkable core', label: 'History is experienced on foot' },
-    { value: 'Medieval density', label: 'Souks + khans + mosques' },
-    { value: 'Mamluk imprint', label: 'Key shaping era for the old city' },
-    { value: 'Living city', label: 'Not a museum — daily life continues' },
+    { value: tt('metrics_1_value', 'Walkable core'), label: tt('metrics_1_label', 'History is experienced on foot') },
+    { value: tt('metrics_2_value', 'Medieval density'), label: tt('metrics_2_label', 'Souks + khans + mosques') },
+    { value: tt('metrics_3_value', 'Mamluk imprint'), label: tt('metrics_3_label', 'Key shaping era for the old city') },
+    { value: tt('metrics_4_value', 'Living city'), label: tt('metrics_4_label', 'Not a museum — daily life continues') },
   ];
 
   return (
@@ -458,15 +481,20 @@ export function AboutTripoli() {
       <div className="seo-landing__container">
         <header className="seo-landing__aboutHero" data-reveal>
           <p className="seo-landing__aboutEyebrow">{t('nav', 'megaAboutTripoli') || 'About Tripoli'}</p>
-          <h1 className="seo-landing__title">The history of Tripoli, Lebanon</h1>
+          <h1 className="seo-landing__title">{tt('title', 'The history of Tripoli, Lebanon')}</h1>
           <p className="seo-landing__intro">
-            Tripoli is one of the Levant’s great historic cities — a place where Mediterranean routes, medieval power,
-            and craft traditions shaped a dense old city that still works today. This page is a lightweight, readable
-            history you can scroll without heavy loading.
+            {tt(
+              'intro',
+              'Tripoli is one of the Levant’s great historic cities — a place where Mediterranean routes, medieval power, and craft traditions shaped a dense old city that still works today. This page is a lightweight, readable history you can scroll without heavy loading.'
+            )}
           </p>
           <div className="seo-landing__aboutHeroActions" role="navigation" aria-label="Quick actions">
-            <Link className="seo-landing__aboutHeroBtn" to="/discover">Explore places</Link>
-            <Link className="seo-landing__aboutHeroBtn seo-landing__aboutHeroBtn--ghost" to="/community">See community</Link>
+            <Link className="seo-landing__aboutHeroBtn" to="/discover">
+              {tt('cta_explore', 'Explore places')}
+            </Link>
+            <Link className="seo-landing__aboutHeroBtn seo-landing__aboutHeroBtn--ghost" to="/community">
+              {tt('cta_community', 'See community')}
+            </Link>
           </div>
         </header>
 
@@ -481,14 +509,20 @@ export function AboutTripoli() {
             />
           </div>
           <div className="seo-landing__aboutLeadBody">
-            <h2 className="seo-landing__h2">A city built from trade and stone</h2>
+            <h2 className="seo-landing__h2">{tt('lead_title', 'A city built from trade and stone')}</h2>
             <p className="seo-landing__p">
-              Tripoli’s old city is best understood as a system: markets connect to khans, which connect to courtyards,
-              which connect to major landmarks. Each era added layers — but the walk remains coherent.
+              {tt(
+                'lead_text',
+                'Tripoli’s old city is best understood as a system: markets connect to khans, which connect to courtyards, which connect to major landmarks. Each era added layers — but the walk remains coherent.'
+              )}
             </p>
             <div className="seo-landing__aboutJump">
-              <a className="seo-landing__aboutJumpLink" href="#tripoli-timeline">Jump to timeline</a>
-              <a className="seo-landing__aboutJumpLink" href="#tripoli-visit-notes">Visitor notes</a>
+              <a className="seo-landing__aboutJumpLink" href="#tripoli-timeline">
+                {tt('jump_timeline', 'Jump to timeline')}
+              </a>
+              <a className="seo-landing__aboutJumpLink" href="#tripoli-visit-notes">
+                {tt('jump_notes', 'Visitor notes')}
+              </a>
             </div>
           </div>
         </section>
@@ -512,9 +546,9 @@ export function AboutTripoli() {
         </section>
 
         <section className="seo-landing__aboutTimeline" aria-labelledby="tripoli-timeline" data-reveal>
-          <h2 id="tripoli-timeline" className="seo-landing__h2">Timeline: the eras that shaped Tripoli</h2>
+          <h2 id="tripoli-timeline" className="seo-landing__h2">{tt('timeline_heading', 'Timeline: the eras that shaped Tripoli')}</h2>
           <p className="seo-landing__p">
-            This isn’t a textbook — it’s a scrollable story. Expand the eras you care about.
+            {tt('timeline_sub', 'This isn’t a textbook — it’s a scrollable story. Expand the eras you care about.')}
           </p>
           <ol className="seo-landing__timeline">
             {timeline.map((item) => (
@@ -534,19 +568,29 @@ export function AboutTripoli() {
         </section>
 
         <section className="seo-landing__aboutNarrative" aria-labelledby="tripoli-visit-notes" data-reveal>
-          <h2 id="tripoli-visit-notes" className="seo-landing__h2">How to feel the history (without a guide)</h2>
+          <h2 id="tripoli-visit-notes" className="seo-landing__h2">{tt('notes_heading', 'How to feel the history (without a guide)')}</h2>
           <p className="seo-landing__p">
-            Start at the Clock Tower, then follow the lanes until you hit a khan or courtyard. When you see a change in
-            stone texture or a sudden shaded passage, slow down — that’s the city showing its age through craft.
+            {tt(
+              'notes_p1',
+              'Start at the Clock Tower, then follow the lanes until you hit a khan or courtyard. When you see a change in stone texture or a sudden shaded passage, slow down — that’s the city showing its age through craft.'
+            )}
           </p>
           <p className="seo-landing__p">
-            A good “history walk” is simple: one landmark mosque, one khan, one market loop, and one sweets stop. The
-            rhythm is the lesson.
+            {tt(
+              'notes_p2',
+              'A good “history walk” is simple: one landmark mosque, one khan, one market loop, and one sweets stop. The rhythm is the lesson.'
+            )}
           </p>
           <div className="seo-landing__aboutNext">
-            <Link to="/tripoli-old-city-guide" className="seo-landing__aboutNextLink">Old City guide</Link>
-            <Link to="/tripoli-souks-guide" className="seo-landing__aboutNextLink">Souks guide</Link>
-            <Link to="/best-sweets-in-tripoli" className="seo-landing__aboutNextLink">Sweets guide</Link>
+            <Link to="/tripoli-old-city-guide" className="seo-landing__aboutNextLink">
+              {tt('link_old_city', 'Old City guide')}
+            </Link>
+            <Link to="/tripoli-souks-guide" className="seo-landing__aboutNextLink">
+              {tt('link_souks', 'Souks guide')}
+            </Link>
+            <Link to="/best-sweets-in-tripoli" className="seo-landing__aboutNextLink">
+              {tt('link_sweets', 'Sweets guide')}
+            </Link>
           </div>
         </section>
 
