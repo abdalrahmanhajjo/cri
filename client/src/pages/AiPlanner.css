@@ -98,6 +98,100 @@
   max-width: 52ch;
 }
 
+/* HCI principles — contextual, on the planner page (not a global FAB) */
+.ai-planner__hci {
+  margin: 0 var(--page-padding, 16px) 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-primary, #0f766e) 28%, var(--color-border, #e7e5e4));
+  background: color-mix(in srgb, var(--color-primary, #0f766e) 6%, var(--color-surface, #fff));
+}
+
+.ai-planner__hci-summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-primary, #0f766e);
+  list-style: none;
+}
+
+.ai-planner__hci-summary::-webkit-details-marker {
+  display: none;
+}
+
+.ai-planner__hci-summary::marker {
+  content: '';
+}
+
+.ai-planner__hci-summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-inline-end: 8px;
+  transition: transform 0.15s ease;
+}
+
+.ai-planner__hci[open] .ai-planner__hci-summary::before {
+  transform: rotate(90deg);
+}
+
+.ai-planner__hci-lead {
+  margin: 10px 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #57534e);
+}
+
+.ai-planner__hci-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .ai-planner__hci-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.ai-planner__hci-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #e7e5e4);
+  background: var(--color-surface, #fff);
+}
+
+.ai-planner__hci-card--feedback {
+  border-color: color-mix(in srgb, var(--color-primary, #0f766e) 40%, var(--color-border, #e7e5e4));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary, #0f766e) 15%, transparent);
+}
+
+.ai-planner__hci-badge {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  background: var(--color-primary, #0f766e);
+  color: #fff;
+}
+
+.ai-planner__hci-card-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-text-primary, #1c1917);
+}
+
+.ai-planner__hci-card-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-secondary, #57534e);
+}
+
 .ai-planner__moods {
   display: flex;
   gap: 10px;

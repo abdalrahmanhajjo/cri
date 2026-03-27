@@ -234,6 +234,11 @@ export const translations = {
       chipEditPlacesPerDay: 'Edit stops per day',
       chipEditDate: 'Edit start date',
       chipEditBudget: 'Edit budget',
+      chatDockLabel: 'AI trip planner',
+      chatDockAria: 'Open the AI trip planner chat',
+      hciPrinciplesSummary: 'How this planner is built for you (human–computer interaction)',
+      hciPrinciplesLead:
+        'You are using human-centered design in practice: you speak, the assistant replies with clear plans, and you stay in control. Below are five ideas that shape this experience — especially feedback when something updates.',
     },
     placeDiscover: {
       eyebrow: 'Places',
@@ -1208,6 +1213,11 @@ export const translations = {
       chipEditPlacesPerDay: 'تعديل عدد التوقفات يوميًا',
       chipEditDate: 'تعديل تاريخ البداية',
       chipEditBudget: 'تعديل الميزانية',
+      chatDockLabel: 'مخطط الرحلة بالذكاء الاصطناعي',
+      chatDockAria: 'فتح محادثة مخطط الرحلة بالذكاء الاصطناعي',
+      hciPrinciplesSummary: 'كيف صُمم هذا المساعد من أجلك (التفاعل الإنساني–الحاسوبي)',
+      hciPrinciplesLead:
+        'هنا تلمس التصميم المنسّق مع الإنسان: تتكلم، تردّ الأداة بخطط واضحة، وتبقى أنت المتحكم. فيما يلي خمسة مفاهيم تدعم التجربة — وخاصة التغذية الراجعة عند كل تحديث.',
     },
     placeDiscover: {
       eyebrow: 'الأماكن',
@@ -2176,6 +2186,11 @@ export const translations = {
       chipEditPlacesPerDay: 'Modifier le nombre d’étapes par jour',
       chipEditDate: 'Modifier la date de début',
       chipEditBudget: 'Modifier le budget',
+      chatDockLabel: 'Planificateur IA',
+      chatDockAria: 'Ouvrir le chat du planificateur IA',
+      hciPrinciplesSummary: 'Comment ce planificateur est pensé pour vous (interaction humain–machine)',
+      hciPrinciplesLead:
+        'Ici vous vivez le design centré utilisateur : vous parlez, l’assistant répond avec des itinéraires clairs, et vous gardez la main. Voici cinq idées qui structurent l’expérience — surtout le retour (feedback) après chaque changement.',
     },
     placeDiscover: {
       eyebrow: 'Lieux',

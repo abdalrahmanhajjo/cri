@@ -1,0 +1,43 @@
+/* Floating entry to AI trip planner — replaces global HCI FAB */
+.ai-planner-chat-dock {
+  position: fixed;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  inset-inline-end: calc(1rem + env(safe-area-inset-end, 0px));
+  z-index: 150;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 22px rgba(15, 118, 110, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ai-planner-chat-dock:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 28px rgba(15, 118, 110, 0.42);
+  color: #fff;
+}
+
+.ai-planner-chat-dock:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.ai-planner-chat-dock__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+}
