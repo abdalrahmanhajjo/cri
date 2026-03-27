@@ -38,9 +38,26 @@ const adminEventSchema = z.object({
   status: z.string().optional(),
 });
 
+const adminContentSchema = z.object({
+  body: z.object({
+    overrides: z.record(z.any()),
+  }),
+});
+
+const adminUserSchema = z.object({
+  body: z.object({
+    name: z.string().min(2).max(100).optional(),
+    email: z.string().email(),
+    is_admin: z.boolean().optional(),
+    is_business: z.boolean().optional(),
+  }),
+});
+
 module.exports = {
   adminPlaceSchema,
   adminCategorySchema,
   adminTourSchema,
   adminEventSchema,
+  adminContentSchema,
+  adminUserSchema,
 };

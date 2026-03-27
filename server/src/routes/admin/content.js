@@ -2,6 +2,8 @@ const express = require('express');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
+const { validate } = require('../../middleware/validation');
+const { adminContentSchema } = require('../../schemas/admin');
 
 const router = express.Router();
 const ROW_ID = 'default';
@@ -24,13 +26,9 @@ router.get('/', async (req, res) => {
 });
 
 /** PUT /api/admin/content - save translation overrides (admin: web + app CMS) */
-router.put('/', authMiddleware, adminMiddleware, async (req, res) => {
+router.put('/', authMiddleware, adminMiddleware, validate(adminContentSchema), async (req, res) => {
   try {
-    const overrides = req.body?.overrides;
-    if (overrides !== undefined && typeof overrides !== 'object') {
-      return res.status(400).json({ error: 'Invalid overrides' });
-    }
-    const data = overrides || {};
+    const data = req.body.overrides || {};
     await query(
       `INSERT INTO translation_overrides (id, data, updated_at) VALUES ($1, $2::jsonb, NOW())
        ON CONFLICT (id) DO UPDATE SET data = $2::jsonb, updated_at = NOW()`,

@@ -22,7 +22,7 @@ graph TD
 ## Components
 
 ### 1. Frontend (Client)
-- **Tech Stack**: React 18, Vite, React Router, Vanilla CSS.
+- **Tech Stack**: React 19, Vite, React Router, Vanilla CSS.
 - **Role**: Handles UI/UX, routing, and user interactions.
 - **Data Fetching**: Custom `api/client.js` with deduplication and retry logic.
 - **State Management**: React Context (`AuthContext`, `LanguageContext`).

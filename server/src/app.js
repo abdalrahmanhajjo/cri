@@ -15,6 +15,7 @@ const { sanitizeBody } = require('./middleware/security');
 const authRoutes = require('./routes/auth');
 const healthRoutes = require('./routes/health');
 const placesRoutes = require('./routes/places');
+const placesActionsRoutes = require('./routes/places.actions');
 const toursRoutes = require('./routes/tours');
 const eventsRoutes = require('./routes/events');
 const categoriesRoutes = require('./routes/categories');
@@ -57,6 +58,10 @@ app.disable('x-powered-by');
 
 // Logging & Request ID
 app.use(requestLogger);
+app.use((req, res, next) => {
+  if (req.id) res.set('X-Request-Id', req.id);
+  next();
+});
 
 // Security Headers
 app.use(helmet({
@@ -137,6 +142,7 @@ app.use('/api/auth', rateLimit({
   max: config.RATE_LIMITS.AUTH.MAX,
   message: { error: 'Too many auth attempts. Try again later.' },
   standardHeaders: true,
+  legacyHeaders: false,
 }));
 
 // ... other rate limits (omitted for brevity in this step, but I should include them all)
@@ -151,6 +157,7 @@ app.use('/uploads', express.static(config.PATHS.UPLOADS));
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/places', placesRoutes);
+app.use('/api/places', placesActionsRoutes);
 app.use('/api/tours', toursRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/categories', categoriesRoutes);

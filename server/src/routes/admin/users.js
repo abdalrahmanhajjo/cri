@@ -1,7 +1,5 @@
-const express = require('express');
-const { query } = require('../../db');
-const { authMiddleware } = require('../../middleware/auth');
-const { adminMiddleware } = require('../../middleware/admin');
+const { validate } = require('../../middleware/validation');
+const { adminUserSchema } = require('../../schemas/admin');
 
 const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
@@ -91,7 +89,7 @@ router.get('/', async (req, res) => {
 });
 
 /** PATCH /api/admin/users/:id — roles + block flag */
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', validate(adminUserSchema.partial()), async (req, res) => {
   const id = req.params.id;
   if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid user id' });
   const { isAdmin, isBusinessOwner, isBlocked } = req.body || {};

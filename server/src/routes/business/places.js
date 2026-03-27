@@ -2,8 +2,7 @@ const express = require('express');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware, requirePlaceOwnerParam } = require('../../middleware/placeOwner');
-const { parsePlaceId } = require('../../utils/validate');
-const { validateBusinessPlacePut, validateTranslationPut } = require('../../utils/businessPlaceValidation');
+const { businessPlaceSchema, businessTranslationSchema } = require('../../schemas/business');
 
 const router = express.Router();
 router.use(authMiddleware, businessPortalMiddleware);
@@ -165,14 +164,12 @@ router.get('/:placeId/translations', requirePlaceOwnerParam('placeId'), async (r
 
 const LANG_RE = /^[a-z]{2}(-[a-z]{2})?$/i;
 
-router.put('/:placeId/translations/:lang', requirePlaceOwnerParam('placeId'), async (req, res) => {
+router.put('/:placeId/translations/:lang', requirePlaceOwnerParam('placeId'), validate(businessTranslationSchema), async (req, res) => {
   const lang = (req.params.lang || '').trim().toLowerCase();
   if (!LANG_RE.test(lang)) return res.status(400).json({ error: 'Invalid language code' });
   const placeId = req.ownsPlaceId || req.params.placeId;
 
-  const v = validateTranslationPut(req.body || {});
-  if (!v.ok) return res.status(400).json({ error: v.error });
-  const b = v.body;
+  const b = req.body;
   const tagsJson = JSON.stringify(Array.isArray(b.tags) ? b.tags : []);
 
   try {
@@ -217,12 +214,10 @@ router.get('/:placeId', requirePlaceOwnerParam('placeId'), async (req, res) => {
 });
 
 /** Same field set as admin PUT /api/admin/places/:id — only for owned places. */
-router.put('/:placeId', requirePlaceOwnerParam('placeId'), async (req, res) => {
+router.put('/:placeId', requirePlaceOwnerParam('placeId'), validate(businessPlaceSchema), async (req, res) => {
   try {
     const id = req.ownsPlaceId || req.params.placeId;
-    const v = validateBusinessPlacePut(req.body || {});
-    if (!v.ok) return res.status(400).json({ error: v.error });
-    const s = v.body;
+    const s = req.body;
 
     const imagesJson = s.images !== undefined ? JSON.stringify(s.images) : null;
     const tagsJson = s.tags !== undefined ? JSON.stringify(s.tags) : null;
