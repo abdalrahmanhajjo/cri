@@ -1088,7 +1088,7 @@ export default function Discover() {
       <main
         className={`ig-discover-main ${
           tab === 'feed' || tab === 'reel' ? 'ig-discover-main--stage' : 'ig-discover-main--browse'
-        }`}
+        } ig-discover-main--${tab}`}
       >
         {loading && (
           <div className="ig-discover-loading-wrap">
@@ -1138,7 +1138,7 @@ export default function Discover() {
 
         {!loading && !error && tab === 'reel' && orderedReels.length > 0 && (
           <>
-            <div className="ig-feed-stack">
+            <div className="ig-feed-stack ig-feed-stack--reels">
               {orderedReels.map((p, i) => (
                 <div
                   key={p.id}

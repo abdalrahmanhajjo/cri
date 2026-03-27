@@ -3368,6 +3368,32 @@ a.ig-reel-handle--link:hover {
     padding: 0 6px 14px;
   }
 
+  /* More readable feed spacing on phones (posts only, not reels). */
+  .ig-discover-main--feed {
+    padding: 0 12px 14px;
+  }
+
+  /* Instagram-like reels: one reel per full screen with snap. */
+  .ig-feed-stack--reels {
+    gap: 0;
+    height: 100dvh;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    padding-bottom: 14px; /* room so the last reel isn't hard-clipped */
+  }
+
+  .ig-feed-stack--reels .ig-feed-stagger[data-feed-kind='reel'] {
+    height: 100dvh;
+    scroll-snap-align: start;
+  }
+
+  .ig-feed-stack--reels .ig-reel-theater {
+    max-height: none;
+    min-height: 100%;
+    height: 100%;
+    border-radius: 12px;
+  }
+
   .ig-reel-top {
     padding: calc(env(safe-area-inset-top, 0px) + 8px) 10px 8px;
   }
