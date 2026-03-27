@@ -11,9 +11,15 @@ if (fs.existsSync(rootEnvPath)) {
 const config = require('./config');
 const { logger } = require('./middleware/logging');
 
-if (config.NODE_ENV === 'production' && !config.JWT_SECRET) {
-  logger.error('Fatal: JWT_SECRET is required in production.');
-  process.exit(1);
+if (config.NODE_ENV === 'production') {
+  if (!config.DATABASE_URL) {
+    logger.error('Fatal: DATABASE_URL is missing in production.');
+    process.exit(1);
+  }
+  if (!config.JWT_SECRET || config.JWT_SECRET === 'fallback-dev-only') {
+    logger.error('Fatal: A strong JWT_SECRET is required in production.');
+    process.exit(1);
+  }
 }
 
 const app = require('./app');

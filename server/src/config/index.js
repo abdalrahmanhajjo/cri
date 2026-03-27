@@ -18,6 +18,7 @@ module.exports = {
   JSON_BODY_LIMIT: process.env.JSON_BODY_LIMIT?.trim() || '512kb',
   CORS_ORIGIN: process.env.CORS_ORIGIN?.trim(),
   SERVE_CLIENT_DIST: ['1', 'true', 'yes'].includes(process.env.SERVE_CLIENT_DIST?.trim().toLowerCase()),
+  DATABASE_URL: process.env.DATABASE_URL,
   JWT_SECRET: process.env.JWT_SECRET,
   RATE_LIMITS: {
     API: envInt('RATE_LIMIT_API_PER_MIN', 500, 10),

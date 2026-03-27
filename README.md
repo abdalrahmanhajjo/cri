@@ -54,8 +54,19 @@ Open http://localhost:5173. Log in with the same account as the app; data comes 
 - **Vite (Client)**: Variables prefixed with `VITE_` are inlined into the frontend bundle at **build time**. If you are using Docker, these must be passed as `--build-arg` or set in the environment during `npm run build`.
 - **Node (Server)**: Environment variables are read at **runtime** from `.env` or the host system.
 
-## Tech
+## Production Hardening
 
-- **Frontend:** React 19, Vite, React Router, CSS (theme variables).
-- **Backend:** Node.js, Express, pg, JWT, bcrypt – same API shape as mobile backend.
-- **DB:** Same Postgres/Supabase as the mobile app; no separate DB for web.
+This version of the API includes several stability enhancements for production (Render/Docker):
+- **Strict Env Validation**: Fatal error at boot if `DATABASE_URL` or `JWT_SECRET` are missing.
+- **Graceful Error Handling**: Database connectivity issues are logged with rate-limiting to prevent log flooding.
+- **Request Tracing**: All requests include a unique `X-Request-Id` header for easier debugging in production logs.
+- **Security**: Hardened `Helmet` CSP and CORS policies for "fail-closed" production security.
+
+## Tech Stack
+
+- **Frontend:** React 19, Vite, React Router, CSS Variables (Premium Dark/Light Theme).
+- **Backend:** Node.js, Express, pg (Pooler-aware), JWT (SHA-256), bcrypt (12 rounds).
+- **Deployment:** Docker (Alpine), optimized for Render.com.
+
+---
+*Hardening and Production Deployment: PROJECT COMPLETED*

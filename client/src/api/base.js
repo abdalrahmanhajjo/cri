@@ -147,6 +147,9 @@ export async function request(path, options = {}) {
     if (!res.ok) {
       if ((res.status === 401 || (res.status === 403 && data.code === 'ACCOUNT_BLOCKED')) && token) clearAuthStorageAndNotify();
       if (res.status >= 500 && retries > 0) { await sleepAbortable(RETRY_DELAY_MS, options.signal); return run(retries - 1); }
+      if (import.meta.env.DEV) {
+        console.error(`[API Error] ${method} ${path} (${res.status}):`, data.error || res.statusText);
+      }
       const err = new Error(data.error || res.statusText || 'Request failed');
       err.status = res.status; err.data = data; throw err;
     }
