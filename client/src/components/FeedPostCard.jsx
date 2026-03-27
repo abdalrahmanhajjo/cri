@@ -1083,6 +1083,12 @@ export default function FeedPostCard({
                   const el = e.currentTarget;
                   if (el.duration) setReelProgress(el.currentTime / el.duration);
                 }}
+                onLoadedData={() => {
+                  const v = reelVideoRef.current;
+                  if (!v || !isActiveReel || reelPaused) return;
+                  const p = v.play();
+                  if (p && typeof p.catch === 'function') p.catch(() => {});
+                }}
                 onClick={toggleReelPlayback}
               />
             ) : img ? (
