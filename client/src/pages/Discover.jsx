@@ -480,6 +480,7 @@ export default function Discover() {
   const [seenReelIds, setSeenReelIds] = useState(() => loadSeenIds(SEEN_REEL_KEY));
   const feedSentinelRef = useRef(null);
   const reelSentinelRef = useRef(null);
+  const reelsStackRef = useRef(null);
   const [promotions, setPromotions] = useState([]);
   const [redeemedPromotionIds, setRedeemedPromotionIds] = useState([]);
   const [places, setPlaces] = useState([]);
@@ -952,7 +953,7 @@ export default function Discover() {
           if (id) markReelSeen(id);
         });
       },
-      { threshold: [0.2, 0.4, 0.6, 0.8] }
+      { threshold: [0.2, 0.4, 0.6, 0.8], root: reelsStackRef.current || null }
     );
     const nodes = document.querySelectorAll('[data-feed-kind="reel"][data-post-id]');
     nodes.forEach((n) => obs.observe(n));
@@ -964,13 +965,17 @@ export default function Discover() {
     let rafId = 0;
     const pickActive = () => {
       const nodes = document.querySelectorAll('[data-feed-kind="reel"][data-post-id]');
-      const vpH = window.innerHeight || 1;
-      const vpCenter = vpH / 2;
+      const rootEl = reelsStackRef.current;
+      const rootRect = rootEl ? rootEl.getBoundingClientRect() : null;
+      const vpH = rootRect ? rootRect.height : window.innerHeight || 1;
+      const vpTop = rootRect ? rootRect.top : 0;
+      const vpBottom = rootRect ? rootRect.bottom : vpH;
+      const vpCenter = vpTop + vpH / 2;
       let bestId = null;
       let bestScore = Number.POSITIVE_INFINITY;
       nodes.forEach((node) => {
         const rect = node.getBoundingClientRect();
-        const visible = Math.max(0, Math.min(rect.bottom, vpH) - Math.max(rect.top, 0));
+        const visible = Math.max(0, Math.min(rect.bottom, vpBottom) - Math.max(rect.top, vpTop));
         if (visible <= 0) return;
         const center = rect.top + rect.height / 2;
         const distance = Math.abs(center - vpCenter);
@@ -989,11 +994,13 @@ export default function Discover() {
       rafId = window.requestAnimationFrame(pickActive);
     };
     schedulePick();
-    window.addEventListener('scroll', schedulePick, { passive: true });
+    const rootEl = reelsStackRef.current;
+    const scrollTarget = rootEl || window;
+    scrollTarget.addEventListener('scroll', schedulePick, { passive: true });
     window.addEventListener('resize', schedulePick);
     return () => {
       if (rafId) window.cancelAnimationFrame(rafId);
-      window.removeEventListener('scroll', schedulePick);
+      scrollTarget.removeEventListener('scroll', schedulePick);
       window.removeEventListener('resize', schedulePick);
     };
   }, [tab, orderedReels]);
@@ -1138,7 +1145,7 @@ export default function Discover() {
 
         {!loading && !error && tab === 'reel' && orderedReels.length > 0 && (
           <>
-            <div className="ig-feed-stack ig-feed-stack--reels">
+            <div ref={reelsStackRef} className="ig-feed-stack ig-feed-stack--reels">
               {orderedReels.map((p, i) => (
                 <div
                   key={p.id}

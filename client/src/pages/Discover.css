@@ -3373,6 +3373,10 @@ a.ig-reel-handle--link:hover {
     padding: 0 12px 14px;
   }
 
+  .ig-discover-main--feed .ig-feed-stack > .ig-feed-stagger:first-child {
+    margin-top: 10px;
+  }
+
   /* Instagram-like reels: one reel per full screen with snap. */
   .ig-feed-stack--reels {
     gap: 0;
