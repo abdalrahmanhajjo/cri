@@ -698,6 +698,31 @@ export default function AiPlanner() {
         </div>
       </div>
 
+      <details className="ai-planner__hci">
+        <summary className="ai-planner__hci-summary">{t('aiPlanner', 'hciPrinciplesSummary')}</summary>
+        <p className="ai-planner__hci-lead">{t('aiPlanner', 'hciPrinciplesLead')}</p>
+        <div className="ai-planner__hci-grid">
+          {[
+            { id: 'feedback', highlight: true },
+            { id: 'input' },
+            { id: 'output' },
+            { id: 'memory' },
+            { id: 'context' },
+          ].map(({ id, highlight }) => (
+            <div
+              key={id}
+              className={`ai-planner__hci-card${highlight ? ' ai-planner__hci-card--feedback' : ''}`}
+            >
+              {highlight ? (
+                <span className="ai-planner__hci-badge">{t('hci', 'feedbackBadge')}</span>
+              ) : null}
+              <h3 className="ai-planner__hci-card-title">{t('hci', `${id}Title`)}</h3>
+              <p className="ai-planner__hci-card-text">{t('hci', `${id}Desc`)}</p>
+            </div>
+          ))}
+        </div>
+      </details>
+
       <div className="ai-planner__chat">
         <div className="ai-planner__messages">
           {messages.map((m, i) => (
