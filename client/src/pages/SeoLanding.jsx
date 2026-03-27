@@ -362,32 +362,7 @@ export function TravelTipsTripoli() {
 
 export function AboutTripoli() {
   const { t } = useLanguage();
-  const [vibe, setVibe] = useState('heritage');
-  const [quizStep, setQuizStep] = useState(0);
-  const [quizDone, setQuizDone] = useState(false);
-  const [quizAnswers, setQuizAnswers] = useState(() => ({ pace: null, focus: null, time: null }));
-  const [checklist, setChecklist] = useState(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const raw = window.localStorage.getItem('aboutTripoliChecklistV1');
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object') return null;
-      return parsed;
-    } catch {
-      return null;
-    }
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !checklist) return;
-    try {
-      window.localStorage.setItem('aboutTripoliChecklistV1', JSON.stringify(checklist));
-    } catch {
-      // ignore
-    }
-  }, [checklist]);
-
+  // Lightweight scroll reveal (no big libraries)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const els = Array.from(document.querySelectorAll('[data-reveal]'));
@@ -412,156 +387,70 @@ export function AboutTripoli() {
     return () => obs.disconnect();
   }, []);
 
-  const vibeCards = [
-    {
-      id: 'heritage',
-      title: 'Heritage walk',
-      kicker: 'Stone, shade, courtyards',
-      bullets: ['Clock Tower → old city alleys', 'One landmark mosque', 'Craft stops: soap + copper'],
-    },
-    {
-      id: 'food',
-      title: 'Sweets & bites',
-      kicker: 'Crisp, syrup, coffee',
-      bullets: ['Sweets tasting (Hallab or your pick)', 'Spice market aromas', 'Small bakery detour'],
-    },
-    {
-      id: 'markets',
-      title: 'Souks deep-dive',
-      kicker: 'Traders, tools, stories',
-      bullets: ['Follow the covered lanes', 'Ask one shopkeeper for a “loop”', 'Buy one tiny thing as a souvenir'],
-    },
-    {
-      id: 'coast',
-      title: 'Coast & calm',
-      kicker: 'Sea air, soft hours',
-      bullets: ['Start early for light', 'Pair the core with a coastal pause', 'Finish with sunset colors'],
-    },
-  ];
-
-  const quiz = [
-    {
-      id: 'pace',
-      q: 'Your ideal pace?',
-      a: [
-        { id: 'slow', label: 'Slow & curious' },
-        { id: 'balanced', label: 'Balanced' },
-        { id: 'fast', label: 'Fast highlights' },
-      ],
-    },
-    {
-      id: 'focus',
-      q: 'What pulls you in?',
-      a: [
-        { id: 'architecture', label: 'Architecture' },
-        { id: 'food', label: 'Food' },
-        { id: 'markets', label: 'Markets' },
-      ],
-    },
-    {
-      id: 'time',
-      q: 'How much time today?',
-      a: [
-        { id: '2h', label: '2 hours' },
-        { id: 'half', label: 'Half-day' },
-        { id: 'full', label: 'Full day' },
-      ],
-    },
-  ];
-
-  const quizPick = (step, answerId) => {
-    const k = quiz[step]?.id;
-    if (!k) return;
-    setQuizAnswers((prev) => ({ ...prev, [k]: answerId }));
-    if (step >= quiz.length - 1) {
-      setQuizDone(true);
-      return;
-    }
-    setQuizStep(step + 1);
-  };
-
-  const quizSummary = useMemo(() => {
-    if (!quizDone) return null;
-    const pace = quizAnswers.pace;
-    const focus = quizAnswers.focus;
-    const time = quizAnswers.time;
-    const vibeHint = focus === 'food' ? 'food' : focus === 'markets' ? 'markets' : 'heritage';
-    const duration = time === '2h' ? 'a sharp 2‑hour loop' : time === 'half' ? 'a half‑day story‑walk' : 'a full‑day deep dive';
-    const tempo = pace === 'slow' ? 'slow, with pauses for details' : pace === 'fast' ? 'fast, with just the icons' : 'balanced, with one surprise stop';
-    const next = vibeCards.find((c) => c.id === vibeHint) || vibeCards[0];
-    return {
-      title: `Your Tripoli plan: ${duration}`,
-      subtitle: `Keep it ${tempo}.`,
-      suggestId: next.id,
-    };
-  }, [quizDone, quizAnswers]);
-
-  const defaultChecklist = useMemo(
-    () => ({
-      comfyShoes: false,
-      modestWear: false,
-      smallCash: false,
-      water: false,
-      askPermission: false,
-      sweetsBox: false,
-    }),
-    []
-  );
-  const effectiveChecklist = checklist || defaultChecklist;
-  const checkedCount = Object.values(effectiveChecklist).filter(Boolean).length;
-  const setCheck = (key, val) => {
-    setChecklist((prev) => ({ ...(prev || defaultChecklist), [key]: Boolean(val) }));
-  };
-
   const highlights = [
     {
-      title: 'Historic Core',
-      text: 'A living old city with Mamluk-era streets, mosques, khans, and markets still active today.',
+      title: 'A city of layered eras',
+      text: 'Tripoli’s identity was shaped by port routes, medieval states, Mamluk architecture, Ottoman commerce, and modern Lebanese life — all visible within a compact walk.',
     },
     {
-      title: 'Craft & Trade Heritage',
-      text: 'Soap, spices, sweets, and small workshops preserve Tripoli’s long merchant tradition.',
+      title: 'Architecture that tells stories',
+      text: 'Courtyards, stone arches, khans, mosques, and hammams are not “ruins” — they’re living urban rooms that still guide movement and community rhythm.',
     },
     {
-      title: 'Authentic Urban Energy',
-      text: 'Tripoli blends heritage with everyday life: not a museum city, but a real city to experience.',
+      title: 'Markets that never stopped',
+      text: 'Souks remain functional and human-scale. The city’s merchant tradition continues through craft, food, and micro‑businesses passed down across generations.',
     },
     {
-      title: 'Gateway of North Lebanon',
-      text: 'A strategic base for exploring culture, coast, and communities across northern Lebanon.',
+      title: 'Culture with continuity',
+      text: 'Tripoli’s past is not behind glass: it’s heard in workshops, tasted in sweets, and seen in daily prayer, trade, and neighborhood hospitality.',
     },
   ];
 
   const quickFacts = [
-    'One of the oldest continuously inhabited cities on the Mediterranean',
-    'Known for landmark mosques, khans, and Ottoman/Mamluk urban fabric',
-    'Famous across Lebanon for traditional sweets and old souk culture',
-    'A walkable destination for history-led cultural travel',
+    'A major historic city on the eastern Mediterranean (North Lebanon)',
+    'A dense medieval core shaped strongly in the Mamluk era',
+    'Known for active souks, khans, hammams, and landmark mosques',
+    'Famous across Lebanon for traditional sweets and craft heritage',
   ];
 
-  const visualPanels = [
+  const timeline = [
     {
-      title: 'Historic Souks',
-      text: 'Layered markets, arches, and daily life in the old city core.',
-      image: '/home-bento/oldsouk.png',
+      range: 'Antiquity → Early Medieval',
+      title: 'Port routes and coastal city life',
+      body:
+        'Long before modern borders, Tripoli belonged to the rhythm of the Mediterranean: trade, movement, and coastal exchange. The city’s story begins with geography — a place where routes meet.',
     },
     {
-      title: 'Coastal Identity',
-      text: 'A Mediterranean city where heritage and sea routes shaped commerce.',
-      image: '/home-bento/sea.png',
+      range: 'Crusader period (12th century)',
+      title: 'Fortification, conflict, and changing power',
+      body:
+        'Like many Levantine cities, Tripoli’s medieval centuries included conflict, strategic fortification, and shifting rule — a chapter that left layers of memory around the old city.',
     },
     {
-      title: 'Cultural Continuity',
-      text: 'Tripoli keeps traditions alive through craft, food, and neighborhood rhythm.',
-      image: '/city.png',
+      range: 'Mamluk era (13th–15th centuries)',
+      title: 'Urban golden age: khans, mosques, and stone craft',
+      body:
+        'This is the era that most visibly shaped the old city. The layout of markets, major religious architecture, and civic buildings formed a dense walkable core that still holds today.',
+    },
+    {
+      range: 'Ottoman era (16th–early 20th centuries)',
+      title: 'Commerce, neighborhoods, and everyday institutions',
+      body:
+        'Trade networks and local institutions matured. The city’s “daily-life” architecture — workshops, food culture, neighborhood spaces — deepened and became tradition.',
+    },
+    {
+      range: 'Modern Lebanon (20th century → today)',
+      title: 'Continuity through craft, food, and community',
+      body:
+        'Tripoli remains a working city, not a staged set. The best way to feel it is to walk, listen, and follow the markets — where the past is carried forward by people.',
     },
   ];
 
   const keyMetrics = [
-    { value: '1000+', label: 'Years of urban history' },
-    { value: '50+', label: 'Notable heritage landmarks' },
-    { value: '4', label: 'Core visitor themes: culture, souks, food, coast' },
-    { value: 'Half-day+', label: 'Suggested time for old city highlights' },
+    { value: 'Walkable core', label: 'History is experienced on foot' },
+    { value: 'Medieval density', label: 'Souks + khans + mosques' },
+    { value: 'Mamluk imprint', label: 'Key shaping era for the old city' },
+    { value: 'Living city', label: 'Not a museum — daily life continues' },
   ];
 
   return (
@@ -569,11 +458,11 @@ export function AboutTripoli() {
       <div className="seo-landing__container">
         <header className="seo-landing__aboutHero" data-reveal>
           <p className="seo-landing__aboutEyebrow">{t('nav', 'megaAboutTripoli') || 'About Tripoli'}</p>
-          <h1 className="seo-landing__title">About Tripoli, Lebanon</h1>
+          <h1 className="seo-landing__title">The history of Tripoli, Lebanon</h1>
           <p className="seo-landing__intro">
-            Tripoli is a Mediterranean city of memory and movement. Its old streets carry deep history, while its
-            souks, workshops, and neighborhoods keep the city present-tense and alive. This overview introduces the
-            spirit, heritage, and visitor value of Tripoli in one page.
+            Tripoli is one of the Levant’s great historic cities — a place where Mediterranean routes, medieval power,
+            and craft traditions shaped a dense old city that still works today. This page is a lightweight, readable
+            history you can scroll without heavy loading.
           </p>
           <div className="seo-landing__aboutHeroActions" role="navigation" aria-label="Quick actions">
             <Link className="seo-landing__aboutHeroBtn" to="/discover">Explore places</Link>
@@ -581,21 +470,27 @@ export function AboutTripoli() {
           </div>
         </header>
 
-        <section className="seo-landing__aboutVisualGrid" aria-label="Tripoli visual overview" data-reveal>
-          {visualPanels.map((panel) => (
-            <article key={panel.title} className="seo-landing__aboutVisualCard">
-              <div
-                className="seo-landing__aboutVisualMedia"
-                style={{ backgroundImage: `url(${panel.image})` }}
-                role="img"
-                aria-label={panel.title}
-              />
-              <div className="seo-landing__aboutVisualBody">
-                <h2>{panel.title}</h2>
-                <p>{panel.text}</p>
-              </div>
-            </article>
-          ))}
+        <section className="seo-landing__aboutLead" aria-label="Tripoli lead image and summary" data-reveal>
+          <div className="seo-landing__aboutLeadMedia" aria-hidden="true">
+            <img
+              className="seo-landing__aboutLeadImg"
+              src="/home-bento/oldsouk.png"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+          <div className="seo-landing__aboutLeadBody">
+            <h2 className="seo-landing__h2">A city built from trade and stone</h2>
+            <p className="seo-landing__p">
+              Tripoli’s old city is best understood as a system: markets connect to khans, which connect to courtyards,
+              which connect to major landmarks. Each era added layers — but the walk remains coherent.
+            </p>
+            <div className="seo-landing__aboutJump">
+              <a className="seo-landing__aboutJumpLink" href="#tripoli-timeline">Jump to timeline</a>
+              <a className="seo-landing__aboutJumpLink" href="#tripoli-visit-notes">Visitor notes</a>
+            </div>
+          </div>
         </section>
 
         <section className="seo-landing__aboutMetrics" aria-label="Tripoli at a glance" data-reveal>
@@ -616,162 +511,43 @@ export function AboutTripoli() {
           ))}
         </section>
 
-        <section className="seo-landing__aboutPlay" aria-label="Interactive activities" data-reveal>
-          <div className="seo-landing__aboutPlayHead">
-            <h2 className="seo-landing__h2">Make it your Tripoli</h2>
-            <p className="seo-landing__p">
-              Pick a vibe, answer a 2‑minute quiz, and save a tiny checklist. These small choices keep the day smooth.
-            </p>
-          </div>
-
-          <div className="seo-landing__aboutPlayGrid">
-            <div className="seo-landing__aboutPlayCard">
-              <div className="seo-landing__aboutPlayTop">
-                <h3>Choose your vibe</h3>
-                <p>Tap a card. We’ll keep it as your suggested flow.</p>
-              </div>
-              <div className="seo-landing__aboutVibeRow" role="tablist" aria-label="Tripoli vibes">
-                {vibeCards.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={`seo-landing__aboutVibe ${vibe === c.id ? 'is-active' : ''}`}
-                    onClick={() => setVibe(c.id)}
-                    role="tab"
-                    aria-selected={vibe === c.id}
-                  >
-                    <span className="seo-landing__aboutVibeKicker">{c.kicker}</span>
-                    <span className="seo-landing__aboutVibeTitle">{c.title}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="seo-landing__aboutVibeBody" role="tabpanel">
-                {(() => {
-                  const picked = vibeCards.find((c) => c.id === vibe) || vibeCards[0];
-                  return (
-                    <ul className="seo-landing__aboutVibeBullets">
-                      {picked.bullets.map((b) => (
-                        <li key={b}>{b}</li>
-                      ))}
-                    </ul>
-                  );
-                })()}
-                <div className="seo-landing__aboutMiniCtas">
-                  <Link to="/plan" className="seo-landing__aboutMiniBtn">Build a plan</Link>
-                  <Link to="/discover" className="seo-landing__aboutMiniBtn seo-landing__aboutMiniBtn--ghost">Browse places</Link>
-                </div>
-              </div>
-            </div>
-
-            <div className="seo-landing__aboutPlayCard">
-              <div className="seo-landing__aboutPlayTop">
-                <h3>2‑minute quiz</h3>
-                <p>Answer 3 quick questions and get a suggested loop.</p>
-              </div>
-              {!quizDone ? (
-                <div className="seo-landing__aboutQuiz">
-                  <div className="seo-landing__aboutQuizMeta" aria-label="Quiz progress">
-                    <span>Step {quizStep + 1} / {quiz.length}</span>
-                    <span className="seo-landing__aboutQuizBar" aria-hidden>
-                      <span style={{ width: `${Math.round(((quizStep + 1) / quiz.length) * 100)}%` }} />
-                    </span>
+        <section className="seo-landing__aboutTimeline" aria-labelledby="tripoli-timeline" data-reveal>
+          <h2 id="tripoli-timeline" className="seo-landing__h2">Timeline: the eras that shaped Tripoli</h2>
+          <p className="seo-landing__p">
+            This isn’t a textbook — it’s a scrollable story. Expand the eras you care about.
+          </p>
+          <ol className="seo-landing__timeline">
+            {timeline.map((item) => (
+              <li key={item.title} className="seo-landing__timelineItem">
+                <details className="seo-landing__timelineDetails">
+                  <summary className="seo-landing__timelineSummary">
+                    <span className="seo-landing__timelineRange">{item.range}</span>
+                    <span className="seo-landing__timelineTitle">{item.title}</span>
+                  </summary>
+                  <div className="seo-landing__timelineBody">
+                    <p className="seo-landing__p">{item.body}</p>
                   </div>
-                  <h4 className="seo-landing__aboutQuizQ">{quiz[quizStep].q}</h4>
-                  <div className="seo-landing__aboutQuizA">
-                    {quiz[quizStep].a.map((a) => (
-                      <button
-                        key={a.id}
-                        type="button"
-                        className="seo-landing__aboutQuizBtn"
-                        onClick={() => quizPick(quizStep, a.id)}
-                      >
-                        {a.label}
-                      </button>
-                    ))}
-                  </div>
-                  {quizStep > 0 && (
-                    <button type="button" className="seo-landing__aboutQuizBack" onClick={() => setQuizStep((s) => Math.max(0, s - 1))}>
-                      Back
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="seo-landing__aboutQuizDone">
-                  <h4 className="seo-landing__aboutQuizQ">{quizSummary?.title || 'Your Tripoli plan'}</h4>
-                  <p>{quizSummary?.subtitle || 'A clean loop with time for one surprise stop.'}</p>
-                  <div className="seo-landing__aboutMiniCtas">
-                    <button
-                      type="button"
-                      className="seo-landing__aboutMiniBtn"
-                      onClick={() => {
-                        const suggested = quizSummary?.suggestId;
-                        if (suggested) setVibe(suggested);
-                        setQuizDone(false);
-                        setQuizStep(0);
-                        setQuizAnswers({ pace: null, focus: null, time: null });
-                      }}
-                    >
-                      Retake
-                    </button>
-                    <Link to="/plan" className="seo-landing__aboutMiniBtn seo-landing__aboutMiniBtn--ghost">Go to planner</Link>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="seo-landing__aboutPlayCard seo-landing__aboutPlayCard--wide">
-              <div className="seo-landing__aboutPlayTop">
-                <h3>Saveable checklist</h3>
-                <p>Small things that make the old city feel effortless. Saved on this device.</p>
-              </div>
-              <div className="seo-landing__aboutChecklist">
-                <div className="seo-landing__aboutChecklistMeta">
-                  <span>{checkedCount} / {Object.keys(effectiveChecklist).length} done</span>
-                  <button type="button" className="seo-landing__aboutChecklistReset" onClick={() => setChecklist(defaultChecklist)}>
-                    Reset
-                  </button>
-                </div>
-                <label className="seo-landing__aboutCheck">
-                  <input type="checkbox" checked={Boolean(effectiveChecklist.comfyShoes)} onChange={(e) => setCheck('comfyShoes', e.target.checked)} />
-                  <span>Comfortable shoes</span>
-                </label>
-                <label className="seo-landing__aboutCheck">
-                  <input type="checkbox" checked={Boolean(effectiveChecklist.modestWear)} onChange={(e) => setCheck('modestWear', e.target.checked)} />
-                  <span>Modest layers for sacred sites</span>
-                </label>
-                <label className="seo-landing__aboutCheck">
-                  <input type="checkbox" checked={Boolean(effectiveChecklist.smallCash)} onChange={(e) => setCheck('smallCash', e.target.checked)} />
-                  <span>Small cash for markets</span>
-                </label>
-                <label className="seo-landing__aboutCheck">
-                  <input type="checkbox" checked={Boolean(effectiveChecklist.water)} onChange={(e) => setCheck('water', e.target.checked)} />
-                  <span>Water bottle</span>
-                </label>
-                <label className="seo-landing__aboutCheck">
-                  <input type="checkbox" checked={Boolean(effectiveChecklist.askPermission)} onChange={(e) => setCheck('askPermission', e.target.checked)} />
-                  <span>Ask before photographing people</span>
-                </label>
-                <label className="seo-landing__aboutCheck">
-                  <input type="checkbox" checked={Boolean(effectiveChecklist.sweetsBox)} onChange={(e) => setCheck('sweetsBox', e.target.checked)} />
-                  <span>Leave space for sweets</span>
-                </label>
-              </div>
-            </div>
-          </div>
+                </details>
+              </li>
+            ))}
+          </ol>
         </section>
 
-        <section className="seo-landing__aboutNarrative" aria-labelledby="tripoli-overview-story" data-reveal>
-          <h2 id="tripoli-overview-story" className="seo-landing__h2">City overview</h2>
+        <section className="seo-landing__aboutNarrative" aria-labelledby="tripoli-visit-notes" data-reveal>
+          <h2 id="tripoli-visit-notes" className="seo-landing__h2">How to feel the history (without a guide)</h2>
           <p className="seo-landing__p">
-            Tripoli has long connected people, craft, scholarship, and trade. Its historic center is known for layered
-            architecture and civic landmarks, but what makes the city special is continuity: markets still function,
-            families still produce local foods, and neighborhoods still carry identity through everyday routines.
+            Start at the Clock Tower, then follow the lanes until you hit a khan or courtyard. When you see a change in
+            stone texture or a sudden shaded passage, slow down — that’s the city showing its age through craft.
           </p>
           <p className="seo-landing__p">
-            For visitors, Tripoli offers high cultural density in a compact urban footprint. You can discover landmark
-            spaces, traditional streets, and strong local hospitality in a single day, then return for deeper
-            exploration through food, craft, and community life.
+            A good “history walk” is simple: one landmark mosque, one khan, one market loop, and one sweets stop. The
+            rhythm is the lesson.
           </p>
+          <div className="seo-landing__aboutNext">
+            <Link to="/tripoli-old-city-guide" className="seo-landing__aboutNextLink">Old City guide</Link>
+            <Link to="/tripoli-souks-guide" className="seo-landing__aboutNextLink">Souks guide</Link>
+            <Link to="/best-sweets-in-tripoli" className="seo-landing__aboutNextLink">Sweets guide</Link>
+          </div>
         </section>
 
         <section className="seo-landing__aboutFacts" aria-label="Quick facts" data-reveal>
