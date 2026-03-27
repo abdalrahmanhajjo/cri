@@ -1175,7 +1175,11 @@ export default function FeedPostCard({
 
           <div className="ig-reel-rail" aria-label={t('discover', 'feedReelActions')}>
             {placeId ? (
-              <div className="ig-reel-rail-avatar-link" role="presentation">
+              <Link
+                to={`/place/${encodeURIComponent(placeId)}`}
+                className="ig-reel-rail-avatar-link"
+                title={t('discover', 'feedVenueHubTitle')}
+              >
                 <span className="ig-reel-rail-avatar">
                   {placeAvatarUrl ? (
                     <img src={placeAvatarUrl} alt="" width={48} height={48} />
@@ -1183,7 +1187,7 @@ export default function FeedPostCard({
                     <Icon name="person" size={28} />
                   )}
                 </span>
-              </div>
+              </Link>
             ) : (
               <div className="ig-reel-rail-avatar-link ig-reel-rail-avatar-link--static" aria-hidden="true">
                 <span className="ig-reel-rail-avatar">
@@ -1256,20 +1260,10 @@ export default function FeedPostCard({
             <div className="ig-reel-user-row">
               {placeId && venueFeedPath ? (
                 <Link to={venueFeedPath} className="ig-reel-place-meta ig-reel-handle--link">
-                  <span className="ig-reel-place-avatar" aria-hidden="true">
-                    {placeAvatarUrl ? (
-                      <img src={placeAvatarUrl} alt="" width={24} height={24} />
-                    ) : (
-                      <Icon name="storefront" size={14} />
-                    )}
-                  </span>
                   <span className="ig-reel-handle">{reelOverlayPrimary}</span>
                 </Link>
               ) : (
                 <span className="ig-reel-place-meta">
-                  <span className="ig-reel-place-avatar" aria-hidden="true">
-                    <Icon name="person" size={14} />
-                  </span>
                   <span className="ig-reel-handle">{reelOverlayPrimary}</span>
                 </span>
               )}
