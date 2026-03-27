@@ -3296,7 +3296,7 @@ a.ig-reel-handle--link:hover {
   }
 
   .ig-discover-main--stage {
-    max-width: min(692px, 100vw - 24px);
+    max-width: min(692px, 100vw - 12px);
   }
 
   .ig-discover-main--browse {
@@ -3365,7 +3365,7 @@ a.ig-reel-handle--link:hover {
   .ig-discover-main--stage {
     width: 100%;
     max-width: 100%;
-    padding: 0 8px 14px;
+    padding: 0 6px 14px;
   }
 
   .ig-reel-top {
