@@ -502,7 +502,7 @@ export function AboutTripoli() {
           <div className="seo-landing__aboutLeadMedia" aria-hidden="true">
             <img
               className="seo-landing__aboutLeadImg"
-              src="/home-bento/oldsouk.png"
+              src="/tripoli-history-hero.png"
               alt=""
               loading="lazy"
               decoding="async"
