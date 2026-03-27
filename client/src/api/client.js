@@ -75,7 +75,7 @@ const api = {
     places: {
       list: (p) => apiBase.get('/api/admin/places', { params: p }),
       create: (body) => apiBase.post('/api/admin/places', body),
-      update: (id, body) => apiBase.patch(`/api/admin/places/${id}`, body),
+      update: (id, body) => apiBase.put(`/api/admin/places/${id}`, body),
       delete: (id) => apiBase.delete(`/api/admin/places/${id}`),
       reviews: (id) => apiBase.get(`/api/admin/places/${id}/reviews`),
     },
@@ -88,43 +88,41 @@ const api = {
       delete: (id) => apiBase.delete(`/api/admin/users/${id}`),
     },
     categories: {
-      update: (id, body) => apiBase.patch(`/api/admin/categories/${id}`, body),
+      update: (id, body) => apiBase.put(`/api/admin/categories/${id}`, body),
       create: (body) => apiBase.post('/api/admin/categories', body),
       delete: (id) => apiBase.delete(`/api/admin/categories/${id}`),
     },
     events: {
       list: () => apiBase.get('/api/admin/events'),
-      update: (id, body) => apiBase.patch(`/api/admin/events/${id}`, body),
+      update: (id, body) => apiBase.put(`/api/admin/events/${id}`, body),
       create: (body) => apiBase.post('/api/admin/events', body),
       delete: (id) => apiBase.delete(`/api/admin/events/${id}`),
     },
     tours: {
       list: () => apiBase.get('/api/admin/tours'),
-      update: (id, body) => apiBase.patch(`/api/admin/tours/${id}`, body),
+      update: (id, body) => apiBase.put(`/api/admin/tours/${id}`, body),
       create: (body) => apiBase.post('/api/admin/tours', body),
       delete: (id) => apiBase.delete(`/api/admin/tours/${id}`),
     },
     content: {
-      update: (id, body) => apiBase.patch(`/api/admin/content/${id}`, body),
+      get: () => apiBase.get('/api/admin/content'),
+      update: (body) => apiBase.put('/api/admin/content', body),
     },
     siteSettings: {
       get: () => apiBase.get('/api/admin/site-settings'),
-      update: (body) => apiBase.patch('/api/admin/site-settings', body),
+      update: (body) => apiBase.put('/api/admin/site-settings', body),
     }
   },
   business: {
-    upload: (file, placeId) => {
-      const path = `/api/admin/upload?placeId=${placeId || ''}`;
-      return apiBase.upload(path, file);
-    },
+    upload: (file, placeId) => apiBase.upload('/api/business/upload', file, { placeId }),
     places: {
       get: (id) => apiBase.get(`/api/business/places/${id}`),
-      update: (id, body) => apiBase.patch(`/api/business/places/${id}`, body),
+      update: (id, body) => apiBase.put(`/api/business/places/${id}`, body),
       reviews: (id) => apiBase.get(`/api/business/places/${id}/reviews`),
     },
     translations: {
-      list: (id) => apiBase.get(`/api/business/translations/${id}`),
-      save: (id, lang, body) => apiBase.post(`/api/business/translations/${id}/${lang}`, body),
+      list: (id) => apiBase.get(`/api/business/places/${id}/translations`),
+      save: (id, lang, body) => apiBase.put(`/api/business/places/${id}/translations/${lang}`, body),
     }
   },
   user: {
@@ -137,9 +135,9 @@ const api = {
     createTrip: (data) => apiBase.post('/api/user/trips', data),
     updateTrip: (id, data) => apiBase.patch(`/api/user/trips/${id}`, data),
     deleteTrip: (id) => apiBase.delete(`/api/user/trips/${id}`),
-    favourites: () => apiBase.get('/api/user/favourites'),
-    addFavourite: (placeId) => apiBase.post('/api/user/favourites', { placeId }),
-    removeFavourite: (placeId) => apiBase.delete(`/api/user/favourites/${placeId}`),
+    favourites: () => apiBase.get('/api/user/trips/favourites'),
+    addFavourite: (placeId) => apiBase.post('/api/user/trips/favourites', { placeId }),
+    removeFavourite: (placeId) => apiBase.delete(`/api/user/trips/favourites/${placeId}`),
   },
   siteSettings: () => apiBase.get('/api/site-settings'),
   communityFeed: (params) => {

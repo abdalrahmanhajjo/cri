@@ -163,9 +163,12 @@ export const apiBase = {
   put: (path, body, opts) => request(path, { ...opts, method: 'PUT', body: JSON.stringify(body ?? {}) }),
   patch: (path, body, opts) => request(path, { ...opts, method: 'PATCH', body: JSON.stringify(body ?? {}) }),
   delete: (path, opts) => request(path, { ...opts, method: 'DELETE' }),
-  upload: async (path, file, opts = {}) => {
+  upload: async (path, file, additionalFields = {}, opts = {}) => {
     const formData = new FormData();
     formData.append('file', file);
+    Object.entries(additionalFields).forEach(([k, v]) => {
+      if (v != null) formData.append(k, v);
+    });
     const token = getToken();
     const headers = { ...opts.headers };
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -182,7 +185,7 @@ export const apiBase = {
       const err = new Error(data.error || res.statusText || 'Upload failed');
       err.status = res.status; err.data = data; throw err;
     }
-    return data.url || data;
+    return data;
   }
 };
 
