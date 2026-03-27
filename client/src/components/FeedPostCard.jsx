@@ -95,6 +95,7 @@ export default function FeedPostCard({
   const editTextareaRef = useRef(null);
   const reelVideoRef = useRef(null);
   const [reelMuted, setReelMuted] = useState(true);
+  const [reelPaused, setReelPaused] = useState(false);
   const [reelProgress, setReelProgress] = useState(0);
   const [feedHeaderMoreOpen, setFeedHeaderMoreOpen] = useState(false);
   const feedHeaderMoreRef = useRef(null);
@@ -121,8 +122,7 @@ export default function FeedPostCard({
     post.author_name != null && String(post.author_name).trim()
       ? String(post.author_name).trim()
       : '';
-  const authorMatchesPlace =
-    Boolean(placeName) && authorName.toLowerCase() === placeName.toLowerCase();
+  const displayName = placeName || authorName || '—';
   const venueFeedPath = placeId ? discoverPlaceFeedPath(placeId) : '';
   const placeAvatarUrl = (() => {
     const raw = post.place_image_url;
@@ -269,6 +269,7 @@ export default function FeedPostCard({
   useEffect(() => {
     setReelProgress(0);
     setReelMuted(true);
+    setReelPaused(false);
     setReelMoreOpen(false);
     setFeedHeaderMoreOpen(false);
     setOwnerEditOpen(false);
@@ -727,13 +728,44 @@ export default function FeedPostCard({
     if (!showReelTheater || !showVideo) return;
     const v = reelVideoRef.current;
     if (!v) return;
-    if (isActiveReel) {
+    if (isActiveReel && !reelPaused) {
       const p = v.play();
       if (p && typeof p.catch === 'function') p.catch(() => {});
       return;
     }
     v.pause();
-  }, [isActiveReel, showReelTheater, showVideo, post.id]);
+  }, [isActiveReel, reelPaused, showReelTheater, showVideo, post.id]);
+
+  const toggleReelPlayback = useCallback(() => {
+    const v = reelVideoRef.current;
+    if (!showReelTheater || !showVideo || !v) return;
+    if (v.paused) {
+      const p = v.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+      setReelPaused(false);
+      return;
+    }
+    v.pause();
+    setReelPaused(true);
+  }, [showReelTheater, showVideo]);
+
+  useEffect(() => {
+    if (!showReelTheater || !showVideo || !isActiveReel) return undefined;
+    const onKey = (e) => {
+      const k = String(e.key || '').toLowerCase();
+      if (k === ' ' || k === 'k') {
+        e.preventDefault();
+        toggleReelPlayback();
+        return;
+      }
+      if (k === 'm') {
+        e.preventDefault();
+        setReelMuted((m) => !m);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [showReelTheater, showVideo, isActiveReel, toggleReelPlayback]);
 
   const onReelProgressClick = (e) => {
     const v = reelVideoRef.current;
@@ -1051,6 +1083,7 @@ export default function FeedPostCard({
                   const el = e.currentTarget;
                   if (el.duration) setReelProgress(el.currentTime / el.duration);
                 }}
+                onClick={toggleReelPlayback}
               />
             ) : img ? (
               <img src={img} alt="" className="ig-reel-img" loading="lazy" decoding="async" />
@@ -1072,6 +1105,18 @@ export default function FeedPostCard({
           </div>
 
           <div className={`ig-reel-top${showVideo ? '' : ' ig-reel-top--solo-more'}`}>
+            {showVideo && (
+              <button
+                type="button"
+                className="ig-reel-top-btn ig-reel-top-btn--desktop-only"
+                onClick={toggleReelPlayback}
+                aria-pressed={!reelPaused}
+                aria-label={reelPaused ? 'Play video' : 'Pause video'}
+                title={reelPaused ? 'Play video' : 'Pause video'}
+              >
+                <Icon name={reelPaused ? 'play_arrow' : 'pause'} size={22} />
+              </button>
+            )}
             {showVideo && (
               <button
                 type="button"
@@ -1297,7 +1342,7 @@ export default function FeedPostCard({
             </div>
             <div className="ig-feed-post-meta">
               <div className="ig-feed-post-meta-row">
-                {placeId && venueFeedPath && placeName && authorMatchesPlace ? (
+                {placeId && venueFeedPath && placeName ? (
                   <Link
                     to={venueFeedPath}
                     className="ig-feed-author ig-feed-place-name ig-feed-place-name--row"
@@ -1306,19 +1351,10 @@ export default function FeedPostCard({
                     {placeName}
                   </Link>
                 ) : (
-                  <span className="ig-feed-author">{authorName || '—'}</span>
+                  <span className="ig-feed-author">{displayName}</span>
                 )}
                 {timeLabel && <time className="ig-feed-time" dateTime={post.created_at || undefined}>{timeLabel}</time>}
               </div>
-              {placeId && venueFeedPath && placeName && !authorMatchesPlace && (
-                <Link
-                  to={venueFeedPath}
-                  className="ig-feed-place-name"
-                  title={t('discover', 'feedVenueHubTitle')}
-                >
-                  {placeName}
-                </Link>
-              )}
             </div>
             {iManagePost ? (
               <div className="ig-feed-header-tools">
@@ -1472,7 +1508,7 @@ export default function FeedPostCard({
 
       {!showReelTheater && post.caption && (
         <p className="ig-feed-caption">
-          <strong>{post.author_name}</strong> {String(post.caption)}
+          <strong>{displayName}</strong> {String(post.caption)}
         </p>
       )}
 

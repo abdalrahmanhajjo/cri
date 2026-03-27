@@ -1902,6 +1902,10 @@ a.ig-feed-avatar--link:focus-visible {
   display: block;
 }
 
+.ig-feed-img {
+  object-fit: contain;
+}
+
 .ig-feed-ext {
   display: flex;
   align-items: center;
@@ -1946,7 +1950,7 @@ a.ig-feed-avatar--link:focus-visible {
 .ig-feed-gallery-slide .ig-feed-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .ig-feed-gallery-dots {
@@ -2933,6 +2937,10 @@ a.ig-feed-avatar--link:focus-visible {
   transition: background 0.2s ease, transform 0.15s ease;
 }
 
+.ig-reel-top-btn--desktop-only {
+  display: none;
+}
+
 .ig-reel-top-btn:hover {
   background: rgba(0, 0, 0, 0.5);
 }
@@ -3261,9 +3269,102 @@ a.ig-reel-handle--link:hover {
     padding-right: 12px;
   }
 
+  .ig-feed-post--reel {
+    border-radius: 18px;
+    box-shadow: 0 22px 64px rgba(0, 0, 0, 0.45);
+  }
+
+  .ig-reel-theater {
+    max-height: min(90vh, 980px);
+  }
+
+  .ig-reel-top {
+    padding: 12px 14px;
+  }
+
+  .ig-reel-top-btn--desktop-only {
+    display: inline-flex;
+  }
+
+  .ig-reel-rail {
+    right: 12px;
+    bottom: 102px;
+    gap: 16px;
+  }
+
+  .ig-reel-bottom {
+    right: 72px;
+    bottom: 44px;
+    padding-left: 16px;
+    padding-right: 10px;
+  }
+
+  .ig-reel-caption--clean {
+    font-size: 0.9rem;
+    line-height: 1.45;
+    -webkit-line-clamp: 4;
+  }
+
+  .ig-feed-comments-panel--reel {
+    max-height: min(60vh, 560px);
+    border-radius: 18px 18px 0 0;
+  }
+
   body:has(.ig-discover) .back-to-top {
     right: max(1rem, calc((100vw - min(692px, 100vw - 32px)) / 2 - 3.5rem));
     bottom: 2rem;
     box-shadow: 0 4px 16px rgba(28, 25, 23, 0.12);
+  }
+}
+
+@media (max-width: 767px) {
+  .ig-discover-main--stage {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .ig-feed-post--reel {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .ig-reel-theater {
+    max-height: 100dvh;
+    min-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .ig-reel-top {
+    padding: calc(env(safe-area-inset-top, 0px) + 8px) 10px 8px;
+  }
+
+  .ig-reel-rail {
+    right: 8px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+    gap: 12px;
+  }
+
+  .ig-reel-rail-btn,
+  .ig-reel-rail-avatar {
+    width: 46px;
+    height: 46px;
+  }
+
+  .ig-reel-bottom {
+    right: 58px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 26px);
+    padding-left: 12px;
+    padding-right: 8px;
+  }
+
+  .ig-reel-caption--clean {
+    font-size: 0.82rem;
+    line-height: 1.33;
+    -webkit-line-clamp: 3;
+  }
+
+  .ig-reel-progress-track {
+    height: 4px;
   }
 }
