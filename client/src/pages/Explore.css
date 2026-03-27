@@ -6770,3 +6770,175 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
     gap: 32px;
   }
 }
+
+/* Plan your visit — redesign v2 (desktop + mobile specific layouts) */
+.vd-plan {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(1200px 520px at 10% -18%, rgba(90, 212, 193, 0.22), transparent 60%),
+    radial-gradient(900px 460px at 92% 18%, rgba(38, 166, 154, 0.16), transparent 62%),
+    linear-gradient(160deg, #0a5c56 0%, #0f766e 45%, #0a4d48 100%);
+  color: #f8fafc;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 88px;
+}
+
+.vd-plan::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(100deg, rgba(255, 255, 255, 0.07) 0%, transparent 36%),
+    linear-gradient(280deg, rgba(255, 255, 255, 0.05) 0%, transparent 34%);
+  mix-blend-mode: soft-light;
+}
+
+.vd-plan-inner {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 44px 22px 42px;
+}
+
+.vd-plan-title {
+  color: #f8fafc;
+  letter-spacing: 0.01em;
+  text-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+}
+
+.vd-plan-card {
+  position: relative;
+  margin: 26px auto 0;
+  max-width: 980px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(246, 250, 252, 0.93));
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.2),
+    0 2px 10px rgba(255, 255, 255, 0.22) inset;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 30px 22px;
+}
+
+.vd-widgets-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.vd-widget--open {
+  grid-template-columns: 1fr;
+  gap: 14px;
+  align-content: start;
+  padding: 18px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(15, 118, 110, 0.14);
+  box-shadow: 0 8px 22px rgba(15, 118, 110, 0.08);
+}
+
+.vd-plan-card .vd-widget-title {
+  margin-bottom: 4px;
+}
+
+.vd-plan-card .vd-widget-main {
+  justify-content: center;
+}
+
+.vd-plan-card .vd-widget-condition {
+  margin-bottom: 6px;
+}
+
+.vd-plan-text {
+  margin: 20px auto 0;
+  max-width: 660px;
+  color: rgba(255, 255, 255, 0.94);
+  text-wrap: balance;
+}
+
+.vd-plan-ctas {
+  margin-top: 18px;
+}
+
+.vd-plan-ctas .vd-btn {
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+@media (min-width: 900px) {
+  .vd-plan-inner {
+    padding: 54px 30px 50px;
+  }
+
+  .vd-plan-card {
+    padding: 34px 30px;
+  }
+
+  .vd-widgets-row {
+    gap: 18px;
+  }
+
+  .vd-widget--open {
+    padding: 22px 20px;
+  }
+}
+
+@media (max-width: 767px) {
+  .vd-plan {
+    padding-bottom: 64px;
+    background:
+      radial-gradient(620px 260px at 18% -10%, rgba(90, 212, 193, 0.22), transparent 58%),
+      linear-gradient(175deg, #0b6a63 0%, #0a5751 62%, #094845 100%);
+  }
+
+  .vd-plan-inner {
+    padding: 28px 14px 24px;
+  }
+
+  .vd-plan-card {
+    margin-top: 16px;
+    border-radius: 18px;
+    padding: 14px 10px;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .vd-widgets-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .vd-widget--open {
+    padding: 14px 12px;
+    border-radius: 14px;
+    gap: 10px;
+  }
+
+  .vd-plan-card .vd-widget-main {
+    gap: 12px;
+  }
+
+  .vd-plan-card .vd-widget-value {
+    font-size: clamp(26px, 8vw, 34px);
+  }
+
+  .vd-plan-text {
+    margin-top: 14px;
+    max-width: 34ch;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .vd-plan-ctas {
+    margin-top: 14px;
+  }
+
+  .vd-plan-ctas .vd-btn {
+    min-height: 46px;
+    padding-inline: 20px;
+    border-radius: 999px;
+  }
+}
