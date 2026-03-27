@@ -3369,18 +3369,18 @@ a.ig-reel-handle--link:hover {
   .ig-discover-main--stage {
     width: 100%;
     max-width: 100%;
-    padding: 0;
+    padding: 0 8px 14px;
   }
 
   .ig-feed-post--reel {
-    border-radius: 0;
-    box-shadow: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
   }
 
   .ig-reel-theater {
     max-height: 100dvh;
     min-height: 100dvh;
-    border-radius: 0;
+    border-radius: 12px;
   }
 
   .ig-reel-top {
