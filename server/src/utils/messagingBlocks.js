@@ -27,7 +27,7 @@ async function isMessagingBlocked(placeId, userId, emailLower) {
     }
     if (uid) {
       const { rows } = await query(
-        `SELECT 1 FROM place_messaging_blocks WHERE place_id = $1 AND blocked_user_id = $2::uuid LIMIT 1`,
+        'SELECT 1 FROM place_messaging_blocks WHERE place_id = $1 AND blocked_user_id = $2::uuid LIMIT 1',
         [placeId, uid]
       );
       return rows.length > 0;

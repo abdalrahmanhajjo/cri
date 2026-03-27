@@ -16,17 +16,7 @@ Use the **same database** as your Tripoli Explorer mobile app:
 - If you use **Figma1 backend**: run migrations and seed from `Figma1/backend` once (`npm run db:migrate`, `npm run db:seed`). The web server only connects; it does not run migrations.
 - Or use any Postgres/Supabase instance that has the Tripoli Explorer schema (users, profiles, places, place_translations, tours, tour_translations, events, event_translations, categories, category_translations, trips, email_verification_tokens, password_reset_tokens).
 
-### 2. Web API (Node – this repo)
-
-```bash
-cd server
-cp .env.example .env
-# Edit .env: set DATABASE_URL (same as mobile app), JWT_SECRET, CORS_ORIGIN=http://localhost:5173
-npm install
-npm run dev
-```
-
-API runs at http://localhost:3000. Uses the same `DATABASE_URL` and (optionally) same `JWT_SECRET` as the mobile backend so accounts and data are shared.
+API runs at http://localhost:3095. Uses the same `DATABASE_URL` and (optionally) same `JWT_SECRET` as the mobile backend so accounts and data are shared.
 
 ### 3. Web client
 
@@ -44,11 +34,25 @@ Open http://localhost:5173. Log in with the same account as the app; data comes 
 
 | Variable        | Description |
 |----------------|-------------|
-| `PORT`         | API port (default 3000). |
+| `PORT`         | API port (default 3095). |
 | `DATABASE_URL` | Postgres connection string – **same DB as mobile app** (e.g. Supabase). |
 | `JWT_SECRET`   | Secret for JWT (min 32 chars in production). Use same as Figma1 backend to share sessions. |
-| `CORS_ORIGIN`  | Allowed origin(s), e.g. `http://localhost:5173`. |
+| `CORS_ORIGIN`  | Allowed origin(s), e.g. `http://localhost:5173`. In production, this must be set (fail-closed). |
 | `UPLOADS_BASE_URL` | Optional: base URL for place/tour images. |
+| `SERVE_CLIENT_DIST` | Set to `true` to serve the built React app from the Node server (Docker/Production). |
+
+## Database Ownership
+
+> [!IMPORTANT]
+> This repository **does not own** the primary database schema. The schema is shared with the [Tripoli Explorer Mobile App](https://github.com/abdalrahmanhajjo/VisitTripoliApp).
+> - **Schema updates**: Should be performed in the mobile app / Figma1 backend repository.
+> - **Migrations**: This repo contains migrations for web-specific features, but core tables are shared.
+
+## Environment Variables
+
+### Build-time vs. Runtime
+- **Vite (Client)**: Variables prefixed with `VITE_` are inlined into the frontend bundle at **build time**. If you are using Docker, these must be passed as `--build-arg` or set in the environment during `npm run build`.
+- **Node (Server)**: Environment variables are read at **runtime** from `.env` or the host system.
 
 ## Tech
 

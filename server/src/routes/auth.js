@@ -13,6 +13,14 @@ const {
   isSmtpConfigured,
 } = require('../services/emailService');
 
+const { validate } = require('../middleware/validation');
+const { 
+  loginSchema, 
+  registerSchema, 
+  resetPasswordRequestSchema, 
+  resetPasswordConfirmSchema 
+} = require('../schemas/auth');
+
 const router = express.Router();
 const loginAttempts = new Map();
 const forgotAttempts = new Map();
@@ -112,18 +120,11 @@ async function issueEmailVerification(userId, email) {
   return delivered;
 }
 
-function sanitizeAuthInput(req, res, next) {
-  const { email, password, name } = req.body || {};
-  if (typeof email !== 'string' || email.length > 254) return res.status(400).json({ error: 'Invalid email' });
-  if (typeof password !== 'string' || password.length > 128) return res.status(400).json({ error: 'Invalid password' });
-  if (name != null && (typeof name !== 'string' || name.length > 150)) return res.status(400).json({ error: 'Invalid name' });
-  next();
-}
 
-router.post('/register', sanitizeAuthInput, async (req, res) => {
+
+router.post('/register', validate(registerSchema), async (req, res) => {
   try {
     const { name, username, email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
     const u = validateUsername(username);
     if (!u.ok) return res.status(400).json({ error: u.error });
     const taken = await query(
@@ -183,10 +184,9 @@ router.post('/register', sanitizeAuthInput, async (req, res) => {
   }
 });
 
-router.post('/login', sanitizeAuthInput, async (req, res) => {
+router.post('/login', validate(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const rate = checkRateLimit(ip);
     if (!rate.ok) return res.status(429).json({ error: 'Too many attempts.', retryAfter: rate.retryAfter });
@@ -274,10 +274,9 @@ router.post('/login', sanitizeAuthInput, async (req, res) => {
   }
 });
 
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', validate(resetPasswordRequestSchema), async (req, res) => {
   try {
-    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-    if (!email || email.length > 254) return res.status(400).json({ error: 'Valid email required' });
+    const { email } = req.body;
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const rate = checkForgotRateLimit(ip);
     if (!rate.ok) return res.status(429).json({ error: 'Too many requests.', retryAfter: rate.retryAfter });
@@ -318,14 +317,9 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', validate(resetPasswordConfirmSchema), async (req, res) => {
   try {
-    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-    const code = typeof req.body?.code === 'string' ? req.body.code.trim().replace(/\s/g, '') : '';
-    const newPassword = typeof req.body?.newPassword === 'string' ? req.body.newPassword.slice(0, 128) : '';
-    if (!email || !code || code.length !== 6 || !newPassword) {
-      return res.status(400).json({ error: 'Email, 6-digit code, and new password are required' });
-    }
+    const { email, code, newPassword } = req.body;
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const resetKey = `${ip}:${email}`;
     const rate = checkResetRateLimit(resetKey);
@@ -405,7 +399,7 @@ router.post('/verify-email', async (req, res) => {
 
     const tokenHash = crypto.createHash('sha256').update(code).digest('hex');
     const tok = await query(
-      `SELECT id FROM email_verification_tokens WHERE user_id = $1 AND token_hash = $2 AND expires_at > NOW()`,
+      'SELECT id FROM email_verification_tokens WHERE user_id = $1 AND token_hash = $2 AND expires_at > NOW()',
       [user.id, tokenHash]
     );
     if (tok.rows.length === 0) {

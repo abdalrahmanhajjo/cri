@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
 
   try {
     const { rows: invRows } = await query(
-      `SELECT id, user_id, guest_email FROM place_inquiries WHERE id = $1 AND place_id = $2`,
+      'SELECT id, user_id, guest_email FROM place_inquiries WHERE id = $1 AND place_id = $2',
       [inquiryId, placeId]
     );
     if (!invRows.length) return res.status(404).json({ error: 'Inquiry not found' });
@@ -48,7 +48,7 @@ router.post('/', async (req, res) => {
     if (uid) {
       const uidStr = String(uid);
       const ex = await query(
-        `SELECT id FROM place_messaging_blocks WHERE place_id = $1 AND blocked_user_id = $2::uuid LIMIT 1`,
+        'SELECT id FROM place_messaging_blocks WHERE place_id = $1 AND blocked_user_id = $2::uuid LIMIT 1',
         [placeId, uidStr]
       );
       if (ex.rows.length) {
@@ -110,7 +110,7 @@ router.delete('/', async (req, res) => {
 
   try {
     const { rows: invRows } = await query(
-      `SELECT id, user_id, guest_email FROM place_inquiries WHERE id = $1 AND place_id = $2`,
+      'SELECT id, user_id, guest_email FROM place_inquiries WHERE id = $1 AND place_id = $2',
       [inquiryId, placeId]
     );
     if (!invRows.length) return res.status(404).json({ error: 'Inquiry not found' });
@@ -123,7 +123,7 @@ router.delete('/', async (req, res) => {
 
     if (uid) {
       await query(
-        `DELETE FROM place_messaging_blocks WHERE place_id = $1 AND blocked_user_id = $2::uuid`,
+        'DELETE FROM place_messaging_blocks WHERE place_id = $1 AND blocked_user_id = $2::uuid',
         [placeId, String(uid)]
       );
     } else if (em) {

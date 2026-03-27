@@ -222,7 +222,7 @@ router.patch('/:id', async (req, res) => {
     if (!found.rows.length) return res.status(404).json({ error: 'Inquiry not found or not your place' });
 
     if (statusIn === 'archived') {
-      await query(`UPDATE place_inquiries SET status = 'archived' WHERE id = $1`, [idResult]);
+      await query('UPDATE place_inquiries SET status = \'archived\' WHERE id = $1', [idResult]);
     } else {
       await query(
         `UPDATE place_inquiries

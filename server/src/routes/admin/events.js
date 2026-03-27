@@ -2,12 +2,13 @@ const express = require('express');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
+const { validate } = require('../../middleware/validation');
+const { adminEventSchema } = require('../../schemas/admin');
 
 const router = express.Router();
-
 router.use(authMiddleware, adminMiddleware);
 
-router.post('/', async (req, res) => {
+router.post('/', validate(adminEventSchema), async (req, res) => {
   try {
     const body = req.body || {};
     const id = (body.id || '').toString().trim() || ('event_' + Date.now());
@@ -46,7 +47,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(adminEventSchema.partial()), async (req, res) => {
   try {
     const id = req.params.id;
     const body = req.body || {};

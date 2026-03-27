@@ -215,24 +215,24 @@ router.get('/sitemap.xml', async (req, res) => {
     }
 
     const xml =
-      `<?xml version="1.0" encoding="UTF-8"?>\n` +
-      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
       Array.from(urls)
         .map((loc) => `  <url><loc>${loc}</loc></url>`)
         .join('\n') +
-      `\n</urlset>\n`;
+      '\n</urlset>\n';
 
     sitemapCache = { xml, ts: now };
     return res.type('application/xml').send(xml.replace(/__BASE__/g, baseUrl));
   } catch {
     // Absolute fallback: never 500.
     const xml =
-      `<?xml version="1.0" encoding="UTF-8"?>\n` +
-      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
       `  <url><loc>${safeUrlJoin(baseUrl, '/')}</loc></url>\n` +
       `  <url><loc>${safeUrlJoin(baseUrl, '/discover')}</loc></url>\n` +
       `  <url><loc>${safeUrlJoin(baseUrl, '/activities')}</loc></url>\n` +
-      `</urlset>\n`;
+      '</urlset>\n';
     return res.type('application/xml').send(xml);
   }
 });

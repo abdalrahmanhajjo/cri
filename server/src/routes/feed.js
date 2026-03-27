@@ -105,9 +105,9 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
   const placeIdFilter = normalizeFeedPlaceId(req.query.placeId);
   const formatSql =
     format === 'reel' || format === 'video'
-      ? " AND (fp.type = 'reel' OR fp.type = 'video')"
+      ? ' AND (fp.type = \'reel\' OR fp.type = \'video\')'
       : format === 'post'
-        ? " AND (fp.type IS NULL OR (fp.type <> 'reel' AND fp.type <> 'video'))"
+        ? ' AND (fp.type IS NULL OR (fp.type <> \'reel\' AND fp.type <> \'video\'))'
         : '';
   /** Instagram-style: engagement (log-scaled) weighted by recency (days since post). */
   const orderSql = (() => {
@@ -512,15 +512,15 @@ router.post('/post/:postId/comments', authMiddleware, async (req, res) => {
 
     const { rows } = parentId
       ? await query(
-          `INSERT INTO feed_comments (post_id, user_id, author_name, body, parent_id) VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO feed_comments (post_id, user_id, author_name, body, parent_id) VALUES ($1, $2, $3, $4, $5)
            RETURNING id, author_name, body, created_at, parent_id`,
-          [postId, userId, authorName.slice(0, 255), body, parentId]
-        )
+        [postId, userId, authorName.slice(0, 255), body, parentId]
+      )
       : await query(
-          `INSERT INTO feed_comments (post_id, user_id, author_name, body) VALUES ($1, $2, $3, $4)
+        `INSERT INTO feed_comments (post_id, user_id, author_name, body) VALUES ($1, $2, $3, $4)
            RETURNING id, author_name, body, created_at`,
-          [postId, userId, authorName.slice(0, 255), body]
-        );
+        [postId, userId, authorName.slice(0, 255), body]
+      );
     const c = rows[0];
     res.status(201).json({
       comment: {

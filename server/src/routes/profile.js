@@ -3,29 +3,14 @@ const bcrypt = require('bcryptjs');
 const { authMiddleware } = require('../middleware/auth');
 const { query } = require('../db');
 const { validatePassword } = require('../utils/passwordValidator');
+const { validate } = require('../middleware/validation');
+const { updateProfileSchema, updateAccountSchema } = require('../schemas/profile');
 
 const router = express.Router();
 router.use(authMiddleware);
 const { visitorFollowupsFromDb } = require('../utils/inquiryFollowups');
 
-function sanitizeProfileInput(body) {
-  const out = {};
-  if (typeof body.name === 'string') {
-    const n = body.name.trim();
-    if (n.length <= 150) out.name = n || null;
-  }
-  if (typeof body.bio === 'string') {
-    const b = body.bio.trim();
-    if (b.length <= 500) out.bio = b || null;
-  }
-  if (typeof body.city === 'string') {
-    const c = body.city.trim();
-    if (c.length <= 100) out.city = c || null;
-  }
-  if (typeof body.analytics === 'boolean') out.analytics = body.analytics;
-  if (typeof body.showTips === 'boolean') out.showTips = body.showTips;
-  return out;
-}
+
 
 router.get('/profile', async (req, res) => {
   try {
@@ -69,10 +54,10 @@ router.get('/profile', async (req, res) => {
   }
 });
 
-router.patch('/profile', async (req, res) => {
+router.patch('/profile', validate(updateProfileSchema), async (req, res) => {
   try {
     const userId = req.user.userId;
-    const updates = sanitizeProfileInput(req.body || {});
+    const updates = req.body;
     if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
 
     if (updates.name !== undefined) {
@@ -176,12 +161,10 @@ router.get('/inquiries', async (req, res) => {
   }
 });
 
-router.post('/change-password', async (req, res) => {
+router.post('/change-password', validate(updateAccountSchema), async (req, res) => {
   try {
     const userId = req.user.userId;
-    const currentPassword = typeof req.body?.currentPassword === 'string' ? req.body.currentPassword : '';
-    const newPassword = typeof req.body?.newPassword === 'string' ? req.body.newPassword : '';
-    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current password and new password required' });
+    const { currentPassword, newPassword } = req.body;
 
     const pv = validatePassword(newPassword);
     if (!pv.valid) return res.status(400).json({ error: pv.error });

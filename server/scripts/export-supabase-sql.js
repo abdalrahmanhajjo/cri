@@ -30,11 +30,11 @@ function escapeLiteral(val) {
   if (val === null || val === undefined) return 'NULL';
   if (typeof val === 'boolean') return val ? 'true' : 'false';
   if (typeof val === 'number' && Number.isFinite(val)) return String(val);
-  if (val instanceof Date) return "'" + val.toISOString().replace(/'/g, "''") + "'";
-  if (Buffer.isBuffer(val)) return "'" + val.toString('hex').replace(/'/g, "''") + "'";
-  if (typeof val === 'object') return "'" + JSON.stringify(val).replace(/'/g, "''") + "'";
+  if (val instanceof Date) return '\'' + val.toISOString().replace(/'/g, '\'\'') + '\'';
+  if (Buffer.isBuffer(val)) return '\'' + val.toString('hex').replace(/'/g, '\'\'') + '\'';
+  if (typeof val === 'object') return '\'' + JSON.stringify(val).replace(/'/g, '\'\'') + '\'';
   const s = String(val);
-  return "'" + s.replace(/\\/g, '\\\\').replace(/'/g, "''") + "'";
+  return '\'' + s.replace(/\\/g, '\\\\').replace(/'/g, '\'\'') + '\'';
 }
 
 async function exportViaPg() {

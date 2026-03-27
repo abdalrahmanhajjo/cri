@@ -44,7 +44,7 @@ function placePromoBranch(placeAndLine) {
     FROM place_promotions pr
     LEFT JOIN places pl ON pl.id = pr.place_id
     WHERE ` + PLACE_PROMOTION_ACTIVE + `
-      AND (` + placeAndLine + `)`;
+      AND (` + placeAndLine + ')';
 }
 
 function couponAsPromoBranch(placeAndLine) {
@@ -69,19 +69,19 @@ function couponAsPromoBranch(placeAndLine) {
     FROM coupons c
     LEFT JOIN places cl ON cl.id = c.place_id
     WHERE ` + COUPON_ACTIVE + `
-      AND (` + placeAndLine + `)`;
+      AND (` + placeAndLine + ')';
 }
 
 /** Inner SELECT for merged public query (Discover); $1 = limit, $2 = optional place id. */
-const PLACE_PROMO_SELECT = placePromoBranch(`$2::text IS NULL OR pr.place_id = $2::text`);
+const PLACE_PROMO_SELECT = placePromoBranch('$2::text IS NULL OR pr.place_id = $2::text');
 
 /** Inner SELECT for merged public query (Discover); coupon branch. */
-const COUPON_AS_PROMO_SELECT = couponAsPromoBranch(`$2::text IS NULL OR c.place_id = $2::text`);
+const COUPON_AS_PROMO_SELECT = couponAsPromoBranch('$2::text IS NULL OR c.place_id = $2::text');
 
 /** Single-place inner branches: $1 = place_id, $2 = limit on outer query. */
-const PLACE_PROMO_SELECT_FOR_PLACE = placePromoBranch(`pr.place_id = $1`);
+const PLACE_PROMO_SELECT_FOR_PLACE = placePromoBranch('pr.place_id = $1');
 /** Match mobile/public feed: venue-scoped coupons plus app-wide coupons (place_id IS NULL). */
-const COUPON_AS_PROMO_SELECT_FOR_PLACE = couponAsPromoBranch(`(c.place_id IS NULL OR c.place_id = $1)`);
+const COUPON_AS_PROMO_SELECT_FOR_PLACE = couponAsPromoBranch('(c.place_id IS NULL OR c.place_id = $1)');
 
 const SQL_PLACE_PROMOTIONS = `
 SELECT id, title, subtitle, code, "discountLabel", terms, "startsAt", "endsAt"

@@ -214,7 +214,7 @@ router.patch('/:id', async (req, res) => {
 
   if (updates.length === 0) return res.status(400).json({ error: 'No valid fields to update' });
 
-  updates.push(`updated_at = NOW()`);
+  updates.push('updated_at = NOW()');
   vals.push(req.params.id);
 
   try {

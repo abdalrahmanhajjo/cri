@@ -2,9 +2,10 @@ const express = require('express');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
+const { validate } = require('../../middleware/validation');
+const { adminTourSchema } = require('../../schemas/admin');
 
 const router = express.Router();
-
 router.use(authMiddleware, adminMiddleware);
 
 function safeJson(val, fallback = []) {
@@ -16,7 +17,7 @@ function safeJson(val, fallback = []) {
   return fallback;
 }
 
-router.post('/', async (req, res) => {
+router.post('/', validate(adminTourSchema), async (req, res) => {
   try {
     const body = req.body || {};
     const id = (body.id || '').toString().trim() || ('tour_' + Date.now());
@@ -71,7 +72,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(adminTourSchema.partial()), async (req, res) => {
   try {
     const id = req.params.id;
     const body = req.body || {};

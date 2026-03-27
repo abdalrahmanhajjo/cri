@@ -61,8 +61,8 @@ const pool = new Pool({
   allowExitOnIdle: false,
   ssl: isSupabase
     ? {
-        rejectUnauthorized: verifySupabaseCertChain,
-      }
+      rejectUnauthorized: verifySupabaseCertChain,
+    }
     : isProd
       ? { rejectUnauthorized: !acceptSelfSigned }
       : false,

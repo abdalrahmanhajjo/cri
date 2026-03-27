@@ -21,9 +21,9 @@ function buildListWhere(status, discoverable, q, format) {
     params.push(status);
   }
   if (discoverable === 'true') {
-    parts.push(`fp.discoverable = true`);
+    parts.push('fp.discoverable = true');
   } else if (discoverable === 'false') {
-    parts.push(`fp.discoverable = false`);
+    parts.push('fp.discoverable = false');
   }
   const reelLikeSql = `(
     fp.type IN ('reel', 'video')
@@ -81,7 +81,7 @@ router.get('/', async (req, res) => {
     let pendingCount = 0;
     try {
       const pc = await query(
-        `SELECT COUNT(*)::int AS n FROM feed_posts WHERE moderation_status = 'pending'`
+        'SELECT COUNT(*)::int AS n FROM feed_posts WHERE moderation_status = \'pending\''
       );
       pendingCount = pc.rows[0]?.n ?? 0;
     } catch (_) {
@@ -267,7 +267,7 @@ router.patch('/:id', async (req, res) => {
 
   if (updates.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
-  updates.push(`updated_at = NOW()`);
+  updates.push('updated_at = NOW()');
   vals.push(id);
 
   try {

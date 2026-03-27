@@ -13,6 +13,8 @@ const {
 const router = express.Router();
 const { visitorFollowupsFromDb } = require('../utils/inquiryFollowups');
 const { isMessagingBlocked } = require('../utils/messagingBlocks');
+const { validate } = require('../middleware/validation');
+const { reviewSchema, checkinSchema, inquirySchema, inquiryFollowupSchema } = require('../schemas/places');
 
 const MAX_VISITOR_FOLLOWUPS_PER_INQUIRY = 50;
 
@@ -283,7 +285,7 @@ router.get('/:id/reviews', optionalAuthMiddleware, async (req, res) => {
 });
 
 /** Logged-in user posts or updates their review for this place (one per user). */
-router.post('/:id/reviews', authMiddleware, async (req, res) => {
+router.post('/:id/reviews', authMiddleware, validate(reviewSchema), async (req, res) => {
   const rawId = req.params.id;
   const userId = req.user.userId;
   const ratingRaw = req.body?.rating;
@@ -477,7 +479,7 @@ function checkinMaxDistanceMeters() {
 }
 
 /** Logged-in user checks in at a venue (once per UTC day). If the place has coordinates, requires client lat/lng within geofence (same idea as the mobile app). */
-router.post('/:id/checkin', authMiddleware, async (req, res) => {
+router.post('/:id/checkin', authMiddleware, validate(checkinSchema), async (req, res) => {
   const rawId = req.params.id;
   const userId = req.user.userId;
   const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 500) : null;
@@ -535,7 +537,7 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
 });
 
 /** Visitor message / offer proposal to the venue (email + mobile required for contact). */
-router.post('/:id/inquiries', optionalAuthMiddleware, async (req, res) => {
+router.post('/:id/inquiries', optionalAuthMiddleware, validate(inquirySchema), async (req, res) => {
   const rawId = req.params.id;
   const messageRaw = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
   if (messageRaw.length < 3) return res.status(400).json({ error: 'Message is too short' });
@@ -699,7 +701,7 @@ router.get('/:id/inquiries/:inquiryId', optionalAuthMiddleware, async (req, res)
  * POST /api/places/:id/inquiries/:inquiryId/follow-up
  * Body: { message } — guests should also send { guestEmail } matching the inquiry.
  */
-router.post('/:id/inquiries/:inquiryId/follow-up', optionalAuthMiddleware, async (req, res) => {
+router.post('/:id/inquiries/:inquiryId/follow-up', optionalAuthMiddleware, validate(inquiryFollowupSchema), async (req, res) => {
   const rawId = req.params.id;
   const inquiryId = parseInt(String(req.params.inquiryId), 10);
   if (!Number.isInteger(inquiryId) || inquiryId < 1) {
@@ -817,7 +819,7 @@ router.get('/:id', async (req, res) => {
     const slugNorm = rawId.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
     let result = bySlug
       ? await query(
-          `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
+        `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
                   pr_stats.app_avg_rating, pr_stats.app_review_count,
                   COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,
                   COALESCE(pt.location, p.location) AS location, COALESCE(pt.category, p.category) AS category,
@@ -830,10 +832,10 @@ router.get('/:id', async (req, res) => {
               OR p.search_name = $2
               OR LOWER(REPLACE(REPLACE(COALESCE(p.search_name, ''), ' ', '_'), '-', '_')) = $3
               OR LOWER(REPLACE(REPLACE(COALESCE(p.name, ''), ' ', '_'), '-', '_')) = $3`,
-          [lang, rawId, slugNorm]
-        )
+        [lang, rawId, slugNorm]
+      )
       : await query(
-          `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
+        `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
                   pr_stats.app_avg_rating, pr_stats.app_review_count,
                   COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,
                   COALESCE(pt.location, p.location) AS location, COALESCE(pt.category, p.category) AS category,
@@ -843,8 +845,8 @@ router.get('/:id', async (req, res) => {
            LEFT JOIN place_translations pt ON pt.place_id = p.id AND pt.lang = $1
            ${statsJoinSql}
            WHERE p.id = $2`,
-          [lang, idResult.value]
-        );
+        [lang, idResult.value]
+      );
     if (result.rows.length === 0 && !bySlug) {
       result = await query(
         `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,

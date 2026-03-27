@@ -87,7 +87,7 @@ function injectSeoIntoIndexHtml(indexHtml, seo) {
   if (canonical) meta.push(`<link rel="canonical" href="${escapeAttr(canonical)}" />`);
 
   // OpenGraph / Twitter
-  meta.push(`<meta property="og:type" content="website" />`);
+  meta.push('<meta property="og:type" content="website" />');
   meta.push(`<meta property="og:title" content="${escapeAttr(title)}" />`);
   if (description) meta.push(`<meta property="og:description" content="${escapeAttr(clampText(description, 240))}" />`);
   if (canonical) meta.push(`<meta property="og:url" content="${escapeAttr(canonical)}" />`);

@@ -2,6 +2,8 @@ const express = require('express');
 const { authMiddleware } = require('../middleware/auth');
 const { query } = require('../db');
 const { parsePlaceId, parseTripId } = require('../utils/validate');
+const { validate } = require('../middleware/validation');
+const { createTripSchema, updateTripSchema } = require('../schemas/trips');
 
 function generateTripId() {
   const t = Date.now();
@@ -74,7 +76,7 @@ function normalizeDays(raw) {
   });
 }
 
-router.get('/trips', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const userId = req.user.userId;
     const result = await query(
@@ -97,7 +99,7 @@ router.get('/trips', async (req, res) => {
   }
 });
 
-router.get('/trips/:id', async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const userId = req.user.userId;
     const idResult = parseTripId(req.params.id);
@@ -123,21 +125,10 @@ router.get('/trips/:id', async (req, res) => {
   }
 });
 
-router.post('/trips', async (req, res) => {
+router.post('/', validate(createTripSchema), async (req, res) => {
   const userId = req.user.userId;
-  const name = req.body && typeof req.body.name === 'string' ? req.body.name.trim() : null;
-  const startDate = req.body && req.body.startDate ? String(req.body.startDate).trim().slice(0, 10) : null;
-  const endDate = req.body && req.body.endDate ? String(req.body.endDate).trim().slice(0, 10) : null;
-  let description = null;
-  if (req.body && typeof req.body.description === 'string') {
-    const t = req.body.description.trim();
-    description = t.length ? t.slice(0, 10000) : null;
-  }
-  if (!name || name.length > 200) return res.status(400).json({ error: 'Trip name required (max 200 chars)' });
-  if (!startDate || !endDate) return res.status(400).json({ error: 'startDate and endDate required' });
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-    return res.status(400).json({ error: 'Invalid dates (use YYYY-MM-DD)' });
-  }
+  const { name, startDate, endDate, description, days } = req.body;
+
   if (startDate > endDate) return res.status(400).json({ error: 'startDate must be on or before endDate' });
   const postOverlaps = await findOverlappingTrips(userId, startDate, endDate, null);
   if (postOverlaps.length > 0) {
@@ -179,32 +170,31 @@ router.post('/trips', async (req, res) => {
   }
 });
 
-router.patch('/trips/:id', async (req, res) => {
+router.patch('/:id', validate(updateTripSchema), async (req, res) => {
   const userId = req.user.userId;
   const idResult = parseTripId(req.params.id);
   if (!idResult.valid) return res.status(400).json({ error: 'Invalid trip id' });
-  const { name, startDate, endDate, days, description } = req.body || {};
+  const { name, startDate, endDate, days, description } = req.body;
   const updates = [];
   const values = [];
   let pos = 1;
-  if (typeof name === 'string' && name.trim()) {
+  if (name !== undefined) {
     updates.push(`name = $${pos++}`);
-    values.push(name.trim().slice(0, 200));
+    values.push(name.trim());
   }
-  if (typeof description === 'string') {
-    const t = description.trim();
+  if (description !== undefined) {
     updates.push(`description = $${pos++}`);
-    values.push(t.length ? t.slice(0, 10000) : null);
+    values.push(description ? description.trim() : null);
   }
-  if (startDate != null) {
+  if (startDate !== undefined) {
     updates.push(`start_date = $${pos++}`);
-    values.push(String(startDate).trim().slice(0, 10));
+    values.push(startDate.trim());
   }
-  if (endDate != null) {
+  if (endDate !== undefined) {
     updates.push(`end_date = $${pos++}`);
-    values.push(String(endDate).trim().slice(0, 10));
+    values.push(endDate.trim());
   }
-  if (Array.isArray(days)) {
+  if (days !== undefined) {
     const normalized = normalizeDays(days).map((d) => {
       const row = { slots: d.slots };
       if (d.date) row.date = d.date;
@@ -260,7 +250,7 @@ router.patch('/trips/:id', async (req, res) => {
   }
 });
 
-router.delete('/trips/:id', async (req, res) => {
+router.delete('/:id', async (req, res) => {
   const userId = req.user.userId;
   const idResult = parseTripId(req.params.id);
   if (!idResult.valid) return res.status(400).json({ error: 'Invalid trip id' });

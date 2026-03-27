@@ -126,9 +126,9 @@ router.post('/complete', aiAuthIfRequired, async (req, res) => {
   if (useGroqDirect()) {
     const messages = hasSystemUser
       ? [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ]
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ]
       : [{ role: 'user', content: prompt }];
     console.log('[AI] POST /complete (Groq direct)', hasSystemUser ? 'system+user' : 'prompt');
     try {

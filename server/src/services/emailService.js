@@ -92,7 +92,7 @@ function buildOtpEmail(kind, code) {
     `Your code: ${code}`,
     '',
     `This code expires in ${expiryLabel}.`,
-    "If you didn't request this, you can ignore this email.",
+    'If you didn\'t request this, you can ignore this email.',
     `This is the same 6-digit code flow used by the ${appName} mobile app and website.`,
     webHint,
     '',

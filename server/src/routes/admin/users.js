@@ -28,9 +28,9 @@ router.get('/', async (req, res) => {
     params.push(`%${q}%`);
   }
   if (provider === 'google') {
-    where.push(`auth_provider = 'google'`);
+    where.push('auth_provider = \'google\'');
   } else if (provider === 'email') {
-    where.push(`(auth_provider IS NULL OR auth_provider = '' OR auth_provider = 'email')`);
+    where.push('(auth_provider IS NULL OR auth_provider = \'\' OR auth_provider = \'email\')');
   }
   if (isAdmin === 'true') {
     where.push('COALESCE(is_admin, false) = true');
