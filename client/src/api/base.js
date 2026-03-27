@@ -186,8 +186,3 @@ export const apiBase = {
   }
 };
 
-export {
-  request,
-  fetchWithNetworkRetry,
-  clearAuthStorageAndNotify
-};
