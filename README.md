@@ -23,7 +23,7 @@ API runs at http://localhost:3095. Uses the same `DATABASE_URL` and (optionally)
 ```bash
 cd client
 cp .env.example .env
-# .env: VITE_API_URL=http://localhost:3000 (default)
+# .env: VITE_API_URL=http://localhost:3095 (default)
 npm install
 npm run dev
 ```
@@ -56,6 +56,6 @@ Open http://localhost:5173. Log in with the same account as the app; data comes 
 
 ## Tech
 
-- **Frontend:** React 18, Vite, React Router, CSS (theme variables).
+- **Frontend:** React 19, Vite, React Router, CSS (theme variables).
 - **Backend:** Node.js, Express, pg, JWT, bcrypt – same API shape as mobile backend.
 - **DB:** Same Postgres/Supabase as the mobile app; no separate DB for web.
