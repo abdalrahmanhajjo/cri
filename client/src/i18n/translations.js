@@ -987,6 +987,9 @@ export const translations = {
       messageTooShort: 'Please write at least a few words (4+ characters).',
       close: 'Close',
     },
+    profilePage: {
+      hciFeedbackHeading: 'Experience design & feedback',
+    },
   },
   ar: {
     nav: {
@@ -1959,6 +1962,9 @@ export const translations = {
       sendEmail: 'فتح مسودة البريد',
       messageTooShort: 'اكتب بضع كلمات على الأقل (4 أحرف أو أكثر).',
       close: 'إغلاق',
+    },
+    profilePage: {
+      hciFeedbackHeading: 'تصميم التجربة والتغذية الراجعة',
     },
   },
   fr: {
@@ -2947,6 +2953,9 @@ export const translations = {
       sendEmail: 'Ouvrir le brouillon mail',
       messageTooShort: 'Écrivez au moins quelques mots (4 caractères ou plus).',
       close: 'Fermer',
+    },
+    profilePage: {
+      hciFeedbackHeading: 'Expérience utilisateur & retour',
     },
   },
 };
