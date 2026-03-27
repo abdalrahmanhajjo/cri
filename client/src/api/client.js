@@ -573,6 +573,7 @@ export const api = {
   },
   /** Like, save, comment on feed posts (same DB as mobile app). */
   feedPublic: {
+    post: (postId) => api.get(`/api/feed/post/${encodeURIComponent(postId)}`),
     comments: (postId) => api.get(`/api/feed/post/${encodeURIComponent(postId)}/comments`),
     /** @param {string} postId @param {string | { body: string, parentId?: string }} bodyOrPayload */
     addComment: (postId, bodyOrPayload) => {
