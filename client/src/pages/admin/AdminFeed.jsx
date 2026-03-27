@@ -65,8 +65,19 @@ export default function AdminFeed() {
   const [composerVideo, setComposerVideo] = useState('');
   const [composerModeration, setComposerModeration] = useState('approved');
   const [composerDiscoverable, setComposerDiscoverable] = useState(true);
-  const [composerUploading, setComposerUploading] = useState(false);
+  /** null | 'image' | 'video' — which composer slot is uploading */
+  const [composerUploading, setComposerUploading] = useState(null);
   const [composerSaving, setComposerSaving] = useState(false);
+  const [composerCollapsed, setComposerCollapsed] = useState(() => {
+    try {
+      return typeof localStorage !== 'undefined' && localStorage.getItem('admin-feed-composer-collapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [composerShowAdvancedUrls, setComposerShowAdvancedUrls] = useState(false);
+  const [editShowAdvancedUrls, setEditShowAdvancedUrls] = useState(false);
+  const [editUploading, setEditUploading] = useState(null);
 
   const load = useCallback((silent) => {
     if (!silent) {
@@ -134,7 +145,7 @@ export default function AdminFeed() {
       return;
     }
     if (composerContentKind === 'reel' && !composerVideo.trim()) {
-      setError('Reels need a direct video URL (https://…).');
+      setError('Reels need a video: upload a file above or paste a direct video URL in advanced options.');
       return;
     }
     setComposerSaving(true);
@@ -160,19 +171,53 @@ export default function AdminFeed() {
     }
   };
 
-  const onComposerImageUpload = async (ev) => {
-    const file = ev.target.files?.[0];
-    ev.target.value = '';
+  const uploadComposerFile = async (file, kind) => {
     if (!file) return;
-    setComposerUploading(true);
+    if (kind === 'image' && !/^image\//i.test(file.type)) {
+      setError('Choose an image file (JPEG, PNG, GIF, or WebP).');
+      return;
+    }
+    if (kind === 'video' && !/^video\//i.test(file.type)) {
+      setError('Choose a video file (MP4, WebM, or MOV).');
+      return;
+    }
+    setComposerUploading(kind);
     setError(null);
     try {
       const url = await api.admin.upload(file);
-      if (url) setComposerImage(url);
+      if (!url) return;
+      if (kind === 'image') setComposerImage(url);
+      else setComposerVideo(url);
     } catch (err) {
       setError(err.message || 'Upload failed');
     } finally {
-      setComposerUploading(false);
+      setComposerUploading(null);
+    }
+  };
+
+  const uploadEditFile = async (file, kind) => {
+    if (!editPost || !file) return;
+    if (kind === 'image' && !/^image\//i.test(file.type)) {
+      setError('Choose an image file.');
+      return;
+    }
+    if (kind === 'video' && !/^video\//i.test(file.type)) {
+      setError('Choose a video file.');
+      return;
+    }
+    setEditUploading(kind);
+    setError(null);
+    try {
+      const url = await api.admin.upload(file);
+      if (!url) return;
+      setEditPost((x) => ({
+        ...x,
+        ...(kind === 'image' ? { image_url: url } : { video_url: url }),
+      }));
+    } catch (err) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setEditUploading(null);
     }
   };
 
@@ -288,132 +333,332 @@ export default function AdminFeed() {
       </div>
 
       <div className="admin-card admin-feed-composer">
-        <div className="admin-card-header">
-          <h2 className="admin-card-title">Create post or reel (any place)</h2>
-          <p className="admin-subtitle" style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', opacity: 0.9 }}>
-            Publish to the community feed on behalf of any listing. Image uploads use Supabase; reels need a direct video URL (e.g. MP4).
-          </p>
+        <div className="admin-feed-composer-header-row">
+          <div className="admin-card-header">
+            <h2 className="admin-card-title">Create post or reel (any place)</h2>
+            <p className="admin-subtitle" style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', opacity: 0.9 }}>
+              Same upload pipeline as place photos (Supabase or local dev). Drop an image for posts; reels use a video file (MP4, WebM, MOV). Optional cover image for reels.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="admin-btn admin-btn--secondary admin-feed-composer-toggle"
+            onClick={() => {
+              setComposerCollapsed((prev) => {
+                const next = !prev;
+                try {
+                  localStorage.setItem('admin-feed-composer-collapsed', next ? '1' : '0');
+                } catch (_) {}
+                return next;
+              });
+            }}
+          >
+            {composerCollapsed ? 'Show create form' : 'Hide section'}
+          </button>
         </div>
-        <div className="admin-card-body">
-          <form onSubmit={submitComposer} className="admin-feed-composer-form">
-            <div className="admin-form-row">
-              <div className="admin-form-group">
-                <label htmlFor="admin-feed-place-search">Find place</label>
-                <input
-                  id="admin-feed-place-search"
-                  type="search"
-                  value={placeSearch}
-                  onChange={(e) => setPlaceSearch(e.target.value)}
-                  placeholder="Search by name, id, or location…"
-                  autoComplete="off"
-                />
-              </div>
-              <div className="admin-form-group">
-                <label htmlFor="admin-feed-place-select">Place *</label>
-                <select
-                  id="admin-feed-place-select"
-                  value={composerPlaceId}
-                  onChange={(e) => setComposerPlaceId(e.target.value)}
-                  required
-                >
-                  {!placeOptions.length && <option value="">No places — adjust search</option>}
-                  {placeOptions.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {(p.name || p.id) + (p.location ? ` — ${p.location}` : '')}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="admin-form-row admin-form-row--3">
-              <div className="admin-form-group">
-                <label htmlFor="admin-feed-kind">Content</label>
-                <select
-                  id="admin-feed-kind"
-                  value={composerContentKind}
-                  onChange={(e) => setComposerContentKind(e.target.value)}
-                >
-                  <option value="post">Feed post</option>
-                  <option value="reel">Reel (short video)</option>
-                </select>
-              </div>
-              <div className="admin-form-group">
-                <label htmlFor="admin-feed-mod-new">Moderation</label>
-                <select
-                  id="admin-feed-mod-new"
-                  value={composerModeration}
-                  onChange={(e) => setComposerModeration(e.target.value)}
-                >
-                  <option value="approved">approved (live if discoverable)</option>
-                  <option value="pending">pending (review first)</option>
-                  <option value="rejected">rejected (hidden)</option>
-                </select>
-              </div>
-              <div className="admin-form-group" style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <label style={{ marginBottom: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+        {!composerCollapsed && (
+          <div className="admin-card-body">
+            <form onSubmit={submitComposer} className="admin-feed-composer-form">
+              <div className="admin-form-row">
+                <div className="admin-form-group">
+                  <label htmlFor="admin-feed-place-search">Find place</label>
                   <input
-                    type="checkbox"
-                    checked={composerDiscoverable}
-                    onChange={(e) => setComposerDiscoverable(e.target.checked)}
+                    id="admin-feed-place-search"
+                    type="search"
+                    value={placeSearch}
+                    onChange={(e) => setPlaceSearch(e.target.value)}
+                    placeholder="Search by name, id, or location…"
+                    autoComplete="off"
                   />
-                  <span>Show in public discovery</span>
-                </label>
+                </div>
+                <div className="admin-form-group">
+                  <label htmlFor="admin-feed-place-select">Place *</label>
+                  <select
+                    id="admin-feed-place-select"
+                    value={composerPlaceId}
+                    onChange={(e) => setComposerPlaceId(e.target.value)}
+                    required
+                  >
+                    {!placeOptions.length && <option value="">No places — adjust search</option>}
+                    {placeOptions.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {(p.name || p.id) + (p.location ? ` — ${p.location}` : '')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
-            <div className="admin-form-group">
-              <label htmlFor="admin-feed-cap">Caption *</label>
-              <textarea
-                id="admin-feed-cap"
-                rows={4}
-                value={composerCaption}
-                onChange={(e) => setComposerCaption(e.target.value)}
-                placeholder="Caption for this post…"
-                maxLength={8000}
-                required
-              />
-            </div>
-            <div className="admin-form-row">
+              <div className="admin-form-row admin-form-row--3">
+                <div className="admin-form-group">
+                  <label htmlFor="admin-feed-kind">Content</label>
+                  <select
+                    id="admin-feed-kind"
+                    value={composerContentKind}
+                    onChange={(e) => setComposerContentKind(e.target.value)}
+                  >
+                    <option value="post">Feed post</option>
+                    <option value="reel">Reel (short video)</option>
+                  </select>
+                </div>
+                <div className="admin-form-group">
+                  <label htmlFor="admin-feed-mod-new">Moderation</label>
+                  <select
+                    id="admin-feed-mod-new"
+                    value={composerModeration}
+                    onChange={(e) => setComposerModeration(e.target.value)}
+                  >
+                    <option value="approved">approved (live if discoverable)</option>
+                    <option value="pending">pending (review first)</option>
+                    <option value="rejected">rejected (hidden)</option>
+                  </select>
+                </div>
+                <div className="admin-form-group" style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <label style={{ marginBottom: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={composerDiscoverable}
+                      onChange={(e) => setComposerDiscoverable(e.target.checked)}
+                    />
+                    <span>Show in public discovery</span>
+                  </label>
+                </div>
+              </div>
               <div className="admin-form-group">
-                <label htmlFor="admin-feed-img-url">Image URL (optional)</label>
-                <input
-                  id="admin-feed-img-url"
-                  value={composerImage}
-                  onChange={(e) => setComposerImage(e.target.value)}
-                  placeholder="https://… or upload below"
+                <label htmlFor="admin-feed-cap">Caption *</label>
+                <textarea
+                  id="admin-feed-cap"
+                  rows={4}
+                  value={composerCaption}
+                  onChange={(e) => setComposerCaption(e.target.value)}
+                  placeholder="Caption for this post…"
+                  maxLength={8000}
+                  required
                 />
               </div>
+
+              {composerContentKind === 'post' && (
+                <div className="admin-form-group">
+                  <label>Image (optional)</label>
+                  <div
+                    className="admin-image-upload-zone"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add('admin-image-upload-zone--drag');
+                    }}
+                    onDragLeave={(e) => {
+                      e.currentTarget.classList.remove('admin-image-upload-zone--drag');
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('admin-image-upload-zone--drag');
+                      uploadComposerFile(e.dataTransfer?.files?.[0], 'image');
+                    }}
+                  >
+                    <input
+                      id="admin-feed-composer-image-post"
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      style={{ display: 'none' }}
+                      disabled={composerUploading !== null}
+                      onChange={(e) => {
+                        uploadComposerFile(e.target.files?.[0], 'image');
+                        e.target.value = '';
+                      }}
+                    />
+                    <label
+                      htmlFor="admin-feed-composer-image-post"
+                      style={{ cursor: composerUploading !== null ? 'wait' : 'pointer', margin: 0 }}
+                    >
+                      {composerUploading === 'image'
+                        ? 'Uploading image…'
+                        : 'Drop image here or click — JPEG, PNG, GIF, WebP (same storage as place listings)'}
+                    </label>
+                  </div>
+                  {resolvedMediaUrl(composerImage) ? (
+                    <div className="admin-feed-media-preview-wrap">
+                      <img className="admin-form-preview" src={resolvedMediaUrl(composerImage)} alt="Preview" />
+                    </div>
+                  ) : null}
+                  {composerImage ? (
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--sm admin-btn--secondary"
+                      style={{ marginTop: '0.5rem' }}
+                      onClick={() => setComposerImage('')}
+                    >
+                      Clear image
+                    </button>
+                  ) : null}
+                </div>
+              )}
+
+              {composerContentKind === 'reel' && (
+                <>
+                  <div className="admin-form-group">
+                    <label>Reel video *</label>
+                    <div
+                      className="admin-image-upload-zone"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.add('admin-image-upload-zone--drag');
+                      }}
+                      onDragLeave={(e) => {
+                        e.currentTarget.classList.remove('admin-image-upload-zone--drag');
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove('admin-image-upload-zone--drag');
+                        uploadComposerFile(e.dataTransfer?.files?.[0], 'video');
+                      }}
+                    >
+                      <input
+                        id="admin-feed-composer-video"
+                        type="file"
+                        accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                        style={{ display: 'none' }}
+                        disabled={composerUploading !== null}
+                        onChange={(e) => {
+                          uploadComposerFile(e.target.files?.[0], 'video');
+                          e.target.value = '';
+                        }}
+                      />
+                      <label
+                        htmlFor="admin-feed-composer-video"
+                        style={{ cursor: composerUploading !== null ? 'wait' : 'pointer', margin: 0 }}
+                      >
+                        {composerUploading === 'video'
+                          ? 'Uploading video…'
+                          : 'Drop video here or click — MP4, WebM, MOV (about 80MB max, same admin upload as images)'}
+                      </label>
+                    </div>
+                    {resolvedMediaUrl(composerVideo) ? (
+                      <div className="admin-feed-media-preview-wrap">
+                        <video
+                          className="admin-form-preview"
+                          src={resolvedMediaUrl(composerVideo)}
+                          controls
+                          muted
+                          playsInline
+                          preload="metadata"
+                        />
+                      </div>
+                    ) : null}
+                    {composerVideo ? (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn--sm admin-btn--secondary"
+                        style={{ marginTop: '0.5rem' }}
+                        onClick={() => setComposerVideo('')}
+                      >
+                        Clear video
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="admin-form-group">
+                    <label>Optional cover image</label>
+                    <div
+                      className="admin-image-upload-zone"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.add('admin-image-upload-zone--drag');
+                      }}
+                      onDragLeave={(e) => {
+                        e.currentTarget.classList.remove('admin-image-upload-zone--drag');
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove('admin-image-upload-zone--drag');
+                        uploadComposerFile(e.dataTransfer?.files?.[0], 'image');
+                      }}
+                    >
+                      <input
+                        id="admin-feed-composer-image-reel"
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        style={{ display: 'none' }}
+                        disabled={composerUploading !== null}
+                        onChange={(e) => {
+                          uploadComposerFile(e.target.files?.[0], 'image');
+                          e.target.value = '';
+                        }}
+                      />
+                      <label
+                        htmlFor="admin-feed-composer-image-reel"
+                        style={{ cursor: composerUploading !== null ? 'wait' : 'pointer', margin: 0 }}
+                      >
+                        {composerUploading === 'image'
+                          ? 'Uploading cover…'
+                          : 'Drop cover image or click (optional thumbnail in lists)'}
+                      </label>
+                    </div>
+                    {composerImage && resolvedMediaUrl(composerImage) ? (
+                      <div className="admin-feed-media-preview-wrap">
+                        <img className="admin-form-preview" src={resolvedMediaUrl(composerImage)} alt="Cover preview" />
+                      </div>
+                    ) : null}
+                    {composerImage ? (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn--sm admin-btn--secondary"
+                        style={{ marginTop: '0.5rem' }}
+                        onClick={() => setComposerImage('')}
+                      >
+                        Clear cover
+                      </button>
+                    ) : null}
+                  </div>
+                </>
+              )}
+
               <div className="admin-form-group">
-                <label htmlFor="admin-feed-vid-url">Video URL {composerContentKind === 'reel' ? '(required for reel)' : '(optional)'}</label>
-                <input
-                  id="admin-feed-vid-url"
-                  value={composerVideo}
-                  onChange={(e) => setComposerVideo(e.target.value)}
-                  placeholder="https://… (direct MP4 or hosted file)"
-                />
+                <button
+                  type="button"
+                  className="admin-btn admin-btn--secondary admin-btn--sm"
+                  onClick={() => setComposerShowAdvancedUrls((x) => !x)}
+                >
+                  {composerShowAdvancedUrls ? 'Hide' : 'Show'} paste URLs (advanced)
+                </button>
+                {composerShowAdvancedUrls && (
+                  <div className="admin-feed-advanced-urls" style={{ marginTop: '1rem' }}>
+                    <div className="admin-form-row">
+                      <div className="admin-form-group">
+                        <label htmlFor="admin-feed-img-url">Image URL</label>
+                        <input
+                          id="admin-feed-img-url"
+                          value={composerImage}
+                          onChange={(e) => setComposerImage(e.target.value)}
+                          placeholder="https://… (overrides uploaded image URL)"
+                        />
+                      </div>
+                      <div className="admin-form-group">
+                        <label htmlFor="admin-feed-vid-url">Video URL</label>
+                        <input
+                          id="admin-feed-vid-url"
+                          value={composerVideo}
+                          onChange={(e) => setComposerVideo(e.target.value)}
+                          placeholder="https://… direct MP4 / hosted file"
+                        />
+                      </div>
+                    </div>
+                    <p className="admin-form-hint" style={{ marginBottom: 0 }}>
+                      Use uploads above when possible. Paste URLs only for assets already hosted elsewhere.
+                    </p>
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="admin-form-group">
-              <label htmlFor="admin-feed-img-file">Upload image</label>
-              <input
-                id="admin-feed-img-file"
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                onChange={onComposerImageUpload}
-                disabled={composerUploading}
-              />
-              {composerUploading && <span className="admin-form-hint"> Uploading…</span>}
-            </div>
-            <div className="admin-page-header-actions" style={{ marginTop: '0.5rem' }}>
-              <button
-                type="submit"
-                className="admin-btn admin-btn--primary"
-                disabled={composerSaving || composerUploading || !composerPlaceId}
-              >
-                {composerSaving ? 'Publishing…' : 'Publish'}
-              </button>
-            </div>
-          </form>
-        </div>
+
+              <div className="admin-page-header-actions" style={{ marginTop: '0.5rem' }}>
+                <button
+                  type="submit"
+                  className="admin-btn admin-btn--primary"
+                  disabled={composerSaving || composerUploading !== null || !composerPlaceId}
+                >
+                  {composerSaving ? 'Publishing…' : 'Publish'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
 
       <div className="admin-card admin-feed-filters">
@@ -570,13 +815,14 @@ export default function AdminFeed() {
                               <button
                                 type="button"
                                 className="admin-btn admin-btn--sm admin-btn--secondary"
-                                onClick={() =>
+                                onClick={() => {
+                                  setEditShowAdvancedUrls(false);
                                   setEditPost({
                                     ...p,
                                     type: isReelCard(p) ? 'video' : 'post',
                                     caption: captionForDisplay(p.caption),
-                                  })
-                                }
+                                  });
+                                }}
                               >
                                 Edit
                               </button>
@@ -668,13 +914,142 @@ export default function AdminFeed() {
                     </select>
                   </div>
                 </div>
+
                 <div className="admin-form-group">
-                  <label htmlFor="edit-img">Image URL</label>
-                  <input id="edit-img" value={editPost.image_url || ''} onChange={(e) => setEditPost((x) => ({ ...x, image_url: e.target.value }))} />
+                  <label>Image</label>
+                  <div
+                    className="admin-image-upload-zone"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add('admin-image-upload-zone--drag');
+                    }}
+                    onDragLeave={(e) => {
+                      e.currentTarget.classList.remove('admin-image-upload-zone--drag');
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('admin-image-upload-zone--drag');
+                      uploadEditFile(e.dataTransfer?.files?.[0], 'image');
+                    }}
+                  >
+                    <input
+                      id="admin-feed-edit-image"
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      style={{ display: 'none' }}
+                      disabled={editUploading !== null}
+                      onChange={(e) => {
+                        uploadEditFile(e.target.files?.[0], 'image');
+                        e.target.value = '';
+                      }}
+                    />
+                    <label htmlFor="admin-feed-edit-image" style={{ cursor: editUploading ? 'wait' : 'pointer', margin: 0 }}>
+                      {editUploading === 'image' ? 'Uploading…' : 'Drop image or click to replace'}
+                    </label>
+                  </div>
+                  {resolvedMediaUrl(editPost.image_url) ? (
+                    <div className="admin-feed-media-preview-wrap">
+                      <img className="admin-form-preview" src={resolvedMediaUrl(editPost.image_url)} alt="" />
+                    </div>
+                  ) : null}
+                  {(editPost.image_url || '').trim() ? (
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--sm admin-btn--secondary"
+                      style={{ marginTop: '0.5rem' }}
+                      onClick={() => setEditPost((x) => ({ ...x, image_url: '' }))}
+                    >
+                      Clear image
+                    </button>
+                  ) : null}
                 </div>
+
                 <div className="admin-form-group">
-                  <label htmlFor="edit-vid">Video URL</label>
-                  <input id="edit-vid" value={editPost.video_url || ''} onChange={(e) => setEditPost((x) => ({ ...x, video_url: e.target.value }))} />
+                  <label>Video (reel or optional)</label>
+                  <div
+                    className="admin-image-upload-zone"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add('admin-image-upload-zone--drag');
+                    }}
+                    onDragLeave={(e) => {
+                      e.currentTarget.classList.remove('admin-image-upload-zone--drag');
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('admin-image-upload-zone--drag');
+                      uploadEditFile(e.dataTransfer?.files?.[0], 'video');
+                    }}
+                  >
+                    <input
+                      id="admin-feed-edit-video"
+                      type="file"
+                      accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                      style={{ display: 'none' }}
+                      disabled={editUploading !== null}
+                      onChange={(e) => {
+                        uploadEditFile(e.target.files?.[0], 'video');
+                        e.target.value = '';
+                      }}
+                    />
+                    <label htmlFor="admin-feed-edit-video" style={{ cursor: editUploading ? 'wait' : 'pointer', margin: 0 }}>
+                      {editUploading === 'video' ? 'Uploading…' : 'Drop video or click to replace'}
+                    </label>
+                  </div>
+                  {resolvedMediaUrl(editPost.video_url) ? (
+                    <div className="admin-feed-media-preview-wrap">
+                      <video
+                        className="admin-form-preview"
+                        src={resolvedMediaUrl(editPost.video_url)}
+                        controls
+                        muted
+                        playsInline
+                        preload="metadata"
+                      />
+                    </div>
+                  ) : null}
+                  {(editPost.video_url || '').trim() ? (
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--sm admin-btn--secondary"
+                      style={{ marginTop: '0.5rem' }}
+                      onClick={() => setEditPost((x) => ({ ...x, video_url: '' }))}
+                    >
+                      Clear video
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className="admin-form-group">
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn--secondary admin-btn--sm"
+                    onClick={() => setEditShowAdvancedUrls((x) => !x)}
+                  >
+                    {editShowAdvancedUrls ? 'Hide' : 'Show'} paste URLs (advanced)
+                  </button>
+                  {editShowAdvancedUrls && (
+                    <div style={{ marginTop: '1rem' }} className="admin-form-row">
+                      <div className="admin-form-group">
+                        <label htmlFor="edit-img">Image URL</label>
+                        <input
+                          id="edit-img"
+                          value={editPost.image_url || ''}
+                          onChange={(e) => setEditPost((x) => ({ ...x, image_url: e.target.value }))}
+                          placeholder="https://…"
+                        />
+                      </div>
+                      <div className="admin-form-group">
+                        <label htmlFor="edit-vid">Video URL</label>
+                        <input
+                          id="edit-vid"
+                          value={editPost.video_url || ''}
+                          onChange={(e) => setEditPost((x) => ({ ...x, video_url: e.target.value }))}
+                          placeholder="https://…"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="admin-form-group">
                   <label htmlFor="edit-notes">Internal admin notes</label>
@@ -707,7 +1082,11 @@ export default function AdminFeed() {
                 <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setEditPost(null)}>
                   Cancel
                 </button>
-                <button type="submit" className="admin-btn admin-btn--primary" disabled={saving === editPost.id}>
+                <button
+                  type="submit"
+                  className="admin-btn admin-btn--primary"
+                  disabled={saving === editPost.id || editUploading !== null}
+                >
                   Save
                 </button>
               </div>
