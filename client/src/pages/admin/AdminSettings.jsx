@@ -38,7 +38,14 @@ export default function AdminSettings() {
     setSearchParams(id === 'general' ? {} : { tab: id });
   };
 
-  const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+  const apiBase = (() => {
+    const raw = import.meta.env.VITE_API_URL;
+    if (raw == null || String(raw).trim() === '') {
+      if (typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
+      return '';
+    }
+    return String(raw).replace(/\/$/, '');
+  })();
 
   const pingHealth = useCallback(() => {
     setHealth(null);

@@ -35,8 +35,8 @@ function TripoliClock({ title, condition, locale, dateLabel, timezoneLabel }) {
         <h3 className="vd-widget-title">{safeTitle}</h3>
         <div className="vd-widget-main">
           <span className="vd-widget-value vd-tripoli-clock-time">{timeStr}</span>
-          <span className="vd-widget-icon" aria-hidden="true" title="ساعة التل">
-            <img src="/tripoli-clock-tower.svg" alt="" width="48" height="64" className="vd-tripoli-clock-tower-img" />
+          <span className="vd-widget-icon vd-tripoli-clock-icon" aria-hidden="true" title="Tripoli local time">
+            <Icon name="schedule" size={34} />
           </span>
         </div>
         <p className="vd-widget-condition">{safeCondition}</p>

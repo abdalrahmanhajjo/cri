@@ -4327,6 +4327,18 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   object-fit: contain;
 }
 
+.vd-tripoli-clock-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(15, 118, 110, 0.08);
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  color: var(--color-primary-dark, #0d5c56);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .vd-widget-condition {
   font-size: 14px;
   color: #5a5a5a;
