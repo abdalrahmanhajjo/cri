@@ -1182,18 +1182,12 @@ export default function FeedPostCard({
                   ) : (
                     <Icon name="person" size={28} />
                   )}
-                  <span className="ig-reel-follow-badge" aria-hidden="true">
-                    <Icon name="add" size={14} />
-                  </span>
                 </span>
               </div>
             ) : (
               <div className="ig-reel-rail-avatar-link ig-reel-rail-avatar-link--static" aria-hidden="true">
                 <span className="ig-reel-rail-avatar">
                   <Icon name="person" size={28} />
-                  <span className="ig-reel-follow-badge">
-                    <Icon name="add" size={14} />
-                  </span>
                 </span>
               </div>
             )}
