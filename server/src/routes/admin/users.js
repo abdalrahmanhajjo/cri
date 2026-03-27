@@ -1,6 +1,7 @@
 const express = require('express');
 const { query } = require('../../db');
-const { authMiddleware, adminMiddleware } = require('../../middleware/auth');
+const { authMiddleware } = require('../../middleware/auth');
+const { adminMiddleware } = require('../../middleware/admin');
 const { validate } = require('../../middleware/validation');
 const { adminUserSchema } = require('../../schemas/admin');
 
