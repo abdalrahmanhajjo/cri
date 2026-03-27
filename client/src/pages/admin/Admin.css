@@ -1741,6 +1741,45 @@
   letter-spacing: 0.06em;
 }
 
+.admin-feed-composer-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.admin-feed-composer-toggle {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.admin-feed-composer-header-row .admin-card-header {
+  flex: 1;
+  min-width: 12rem;
+  padding: 0;
+  border-bottom: none;
+  display: block;
+}
+
+.admin-feed-composer .admin-card-body {
+  padding-top: 1rem;
+}
+
+.admin-feed-media-preview-wrap {
+  margin-top: 0.75rem;
+  max-width: 100%;
+}
+
+.admin-feed-media-preview-wrap .admin-form-preview {
+  max-height: 220px;
+  width: 100%;
+  object-fit: contain;
+  background: #0f172a;
+}
+
 .admin-feed-filters {
   margin-bottom: 1rem;
 }
