@@ -2985,10 +2985,6 @@ a.ig-feed-avatar--link:focus-visible {
   transition: background 0.2s ease, transform 0.15s ease;
 }
 
-.ig-reel-top-btn--desktop-only {
-  display: none;
-}
-
 .ig-reel-top-btn:hover {
   background: rgba(0, 0, 0, 0.5);
 }
@@ -3326,12 +3322,12 @@ a.ig-reel-handle--link:hover {
     max-height: min(90vh, 980px);
   }
 
-  .ig-reel-top {
-    padding: 12px 14px;
+  .ig-reel-video {
+    background: #000;
   }
 
-  .ig-reel-top-btn--desktop-only {
-    display: inline-flex;
+  .ig-reel-top {
+    padding: 12px 14px;
   }
 
   .ig-reel-rail {
@@ -3370,17 +3366,6 @@ a.ig-reel-handle--link:hover {
     width: 100%;
     max-width: 100%;
     padding: 0 8px 14px;
-  }
-
-  .ig-feed-post--reel {
-    border-radius: 12px;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
-  }
-
-  .ig-reel-theater {
-    max-height: 100dvh;
-    min-height: 100dvh;
-    border-radius: 12px;
   }
 
   .ig-reel-top {

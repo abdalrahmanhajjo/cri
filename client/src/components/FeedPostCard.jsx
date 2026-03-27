@@ -95,7 +95,6 @@ export default function FeedPostCard({
   const editTextareaRef = useRef(null);
   const reelVideoRef = useRef(null);
   const [reelMuted, setReelMuted] = useState(true);
-  const [reelPaused, setReelPaused] = useState(false);
   const [reelProgress, setReelProgress] = useState(0);
   const [feedHeaderMoreOpen, setFeedHeaderMoreOpen] = useState(false);
   const feedHeaderMoreRef = useRef(null);
@@ -110,6 +109,9 @@ export default function FeedPostCard({
   const [ownerSaving, setOwnerSaving] = useState(false);
   const [imageZoomOpen, setImageZoomOpen] = useState(false);
   const [imageZoomSrc, setImageZoomSrc] = useState('');
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : false
+  );
 
   const liked = post.liked_by_me === true;
   const saved = post.saved_by_me === true;
@@ -271,7 +273,6 @@ export default function FeedPostCard({
   useEffect(() => {
     setReelProgress(0);
     setReelMuted(true);
-    setReelPaused(false);
     setReelMoreOpen(false);
     setFeedHeaderMoreOpen(false);
     setOwnerEditOpen(false);
@@ -285,6 +286,19 @@ export default function FeedPostCard({
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [imageZoomOpen]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const apply = () => setIsDesktop(mq.matches);
+    apply();
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', apply);
+      return () => mq.removeEventListener('change', apply);
+    }
+    mq.addListener(apply);
+    return () => mq.removeListener(apply);
+  }, []);
 
   useEffect(() => {
     if (!reelMoreOpen) return undefined;
@@ -739,44 +753,44 @@ export default function FeedPostCard({
     if (!showReelTheater || !showVideo) return;
     const v = reelVideoRef.current;
     if (!v) return;
-    if (isActiveReel && !reelPaused) {
+    if (isActiveReel) {
+      if (isDesktop) {
+        v.poster = '';
+        v.removeAttribute('poster');
+      }
       const p = v.play();
       if (p && typeof p.catch === 'function') p.catch(() => {});
       return;
     }
     v.pause();
-  }, [isActiveReel, reelPaused, showReelTheater, showVideo, post.id]);
-
-  const toggleReelPlayback = useCallback(() => {
-    const v = reelVideoRef.current;
-    if (!showReelTheater || !showVideo || !v) return;
-    if (v.paused) {
-      const p = v.play();
-      if (p && typeof p.catch === 'function') p.catch(() => {});
-      setReelPaused(false);
-      return;
-    }
-    v.pause();
-    setReelPaused(true);
-  }, [showReelTheater, showVideo]);
+  }, [isActiveReel, showReelTheater, showVideo, post.id, isDesktop]);
 
   useEffect(() => {
-    if (!showReelTheater || !showVideo || !isActiveReel) return undefined;
-    const onKey = (e) => {
-      const k = String(e.key || '').toLowerCase();
-      if (k === ' ' || k === 'k') {
-        e.preventDefault();
-        toggleReelPlayback();
-        return;
-      }
-      if (k === 'm') {
-        e.preventDefault();
-        setReelMuted((m) => !m);
-      }
+    if (!isDesktop || !isActiveReel || !showReelTheater || !showVideo) return undefined;
+    const v = reelVideoRef.current;
+    if (!v) return undefined;
+    let cancelled = false;
+    const tryStart = () => {
+      if (cancelled) return;
+      v.poster = '';
+      v.removeAttribute('poster');
+      const p = v.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [showReelTheater, showVideo, isActiveReel, toggleReelPlayback]);
+    const t1 = window.setTimeout(tryStart, 40);
+    const t2 = window.setTimeout(() => {
+      if (cancelled) return;
+      if (v.paused || v.readyState < 2) {
+        v.load();
+        tryStart();
+      }
+    }, 220);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [isDesktop, isActiveReel, showReelTheater, showVideo, post.id]);
 
   const onReelProgressClick = (e) => {
     const v = reelVideoRef.current;
@@ -1086,29 +1100,29 @@ export default function FeedPostCard({
                 ref={reelVideoRef}
                 className="ig-reel-video"
                 src={vid}
-                poster={isActiveReel ? undefined : img || undefined}
+                poster={isDesktop ? undefined : isActiveReel ? undefined : img || undefined}
                 playsInline
                 muted={reelMuted}
                 loop
-                autoPlay={isActiveReel && !reelPaused}
-                preload="metadata"
+                autoPlay={isActiveReel}
+                controls={isDesktop}
+                preload={isDesktop ? 'auto' : 'metadata'}
                 onTimeUpdate={(e) => {
                   const el = e.currentTarget;
                   if (el.duration) setReelProgress(el.currentTime / el.duration);
                 }}
                 onLoadedData={() => {
                   const v = reelVideoRef.current;
-                  if (!v || !isActiveReel || reelPaused) return;
+                  if (!v || !isActiveReel) return;
                   const p = v.play();
                   if (p && typeof p.catch === 'function') p.catch(() => {});
                 }}
                 onCanPlay={() => {
                   const v = reelVideoRef.current;
-                  if (!v || !isActiveReel || reelPaused) return;
+                  if (!v || !isActiveReel) return;
                   const p = v.play();
                   if (p && typeof p.catch === 'function') p.catch(() => {});
                 }}
-                onClick={toggleReelPlayback}
               />
             ) : img ? (
               <img src={img} alt="" className="ig-reel-img" loading="lazy" decoding="async" />
@@ -1130,18 +1144,6 @@ export default function FeedPostCard({
           </div>
 
           <div className={`ig-reel-top${showVideo ? '' : ' ig-reel-top--solo-more'}`}>
-            {showVideo && (
-              <button
-                type="button"
-                className="ig-reel-top-btn ig-reel-top-btn--desktop-only"
-                onClick={toggleReelPlayback}
-                aria-pressed={!reelPaused}
-                aria-label={reelPaused ? 'Play video' : 'Pause video'}
-                title={reelPaused ? 'Play video' : 'Pause video'}
-              >
-                <Icon name={reelPaused ? 'play_arrow' : 'pause'} size={22} />
-              </button>
-            )}
             {showVideo && (
               <button
                 type="button"
