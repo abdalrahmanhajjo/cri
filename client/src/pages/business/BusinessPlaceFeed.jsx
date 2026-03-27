@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
-import { rawFeedImageUrls } from '../../utils/feedPostImages';
+import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
 import './Business.css';
 
 const BASE_TITLE = 'Business — Visit Tripoli';
@@ -47,12 +47,15 @@ export default function BusinessPlaceFeed() {
 
   const [formPlace, setFormPlace] = useState('');
   const [formCaption, setFormCaption] = useState('');
-  const [formImage, setFormImage] = useState('');
+  const [formImages, setFormImages] = useState([]);
   const [formVideo, setFormVideo] = useState('');
   const [formContentKind, setFormContentKind] = useState('post');
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState(null);
+  const [formShowAdvanced, setFormShowAdvanced] = useState(false);
 
   const [editing, setEditing] = useState(null);
+  const [editUploading, setEditUploading] = useState(null);
+  const [editShowAdvanced, setEditShowAdvanced] = useState(false);
 
   const [sectionTab, setSectionTab] = useState('feed');
   const [engagementPlaceId, setEngagementPlaceId] = useState('');
@@ -273,21 +276,25 @@ export default function BusinessPlaceFeed() {
     e.preventDefault();
     if (!formPlace || !formCaption.trim()) return;
     if (formContentKind === 'reel' && !formVideo.trim()) {
-      setError('Add a video URL for reels, or switch to Feed post.');
+      setError('Upload a reel video or set a direct video URL.');
       return;
     }
     setSaving(true);
     setError(null);
     try {
+      const imgs =
+        formContentKind === 'reel'
+          ? formImages.slice(0, 1)
+          : formImages.slice(0, MAX_FEED_POST_IMAGES);
       await api.business.feed.create({
         placeId: formPlace,
         caption: formCaption.trim(),
-        image_url: formImage.trim() || undefined,
+        ...(imgs.length ? { image_urls: imgs } : {}),
         video_url: formVideo.trim() || undefined,
         type: formContentKind === 'reel' ? 'video' : 'post',
       });
       setFormCaption('');
-      setFormImage('');
+      setFormImages([]);
       setFormVideo('');
       await load();
       refreshMe?.();
@@ -298,19 +305,92 @@ export default function BusinessPlaceFeed() {
     }
   };
 
-  const onUpload = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file || !formPlace) return;
-    setUploading(true);
+  const uploadFormImages = async (files) => {
+    if (!formPlace || !files?.length) return;
+    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    if (!list.length) {
+      setError('Choose image files only.');
+      return;
+    }
+    setUploading('image');
     setError(null);
     try {
-      const url = await api.business.upload(file, formPlace);
-      setFormImage(url);
+      for (const file of list) {
+        const url = await api.business.upload(file, formPlace);
+        if (!url) continue;
+        setFormImages((prev) => {
+          if (formContentKind === 'reel') return [url];
+          if (prev.includes(url)) return prev;
+          return [...prev, url].slice(0, MAX_FEED_POST_IMAGES);
+        });
+      }
     } catch (err) {
       setError(err.message || 'Upload failed');
     } finally {
-      setUploading(false);
+      setUploading(null);
+    }
+  };
+
+  const uploadFormVideo = async (file) => {
+    if (!formPlace || !file) return;
+    if (!/^video\//i.test(file.type)) {
+      setError('Choose a video file (MP4, WebM, MOV).');
+      return;
+    }
+    setUploading('video');
+    setError(null);
+    try {
+      const url = await api.business.upload(file, formPlace);
+      if (url) setFormVideo(url);
+    } catch (err) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const uploadEditImages = async (files) => {
+    if (!editing?.id || !files?.length) return;
+    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    if (!list.length) {
+      setError('Choose image files only.');
+      return;
+    }
+    setEditUploading('image');
+    setError(null);
+    try {
+      for (const file of list) {
+        const url = await api.business.upload(file, editing.place_id || formPlace);
+        if (!url) continue;
+        setEditing((prev) => {
+          const isReel = contentKind(prev.type) === 'reel';
+          const current = rawFeedImageUrls(prev);
+          const next = isReel ? [url] : [...current, url].slice(0, MAX_FEED_POST_IMAGES);
+          return { ...prev, image_urls: next, image_url: next[0] || null };
+        });
+      }
+    } catch (err) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setEditUploading(null);
+    }
+  };
+
+  const uploadEditVideo = async (file) => {
+    if (!editing?.id || !file) return;
+    if (!/^video\//i.test(file.type)) {
+      setError('Choose a video file (MP4, WebM, MOV).');
+      return;
+    }
+    setEditUploading('video');
+    setError(null);
+    try {
+      const url = await api.business.upload(file, editing.place_id || formPlace);
+      if (url) setEditing((x) => ({ ...x, video_url: url }));
+    } catch (err) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setEditUploading(null);
     }
   };
 
@@ -324,9 +404,10 @@ export default function BusinessPlaceFeed() {
     setSaving(true);
     setError(null);
     try {
+      const imgs = rawFeedImageUrls(editing);
       await api.business.feed.update(editing.id, {
         caption: editing.caption,
-        image_url: (editing.image_url && String(editing.image_url).trim()) || null,
+        image_urls: imgs.length ? imgs : null,
         video_url: (editing.video_url && String(editing.video_url).trim()) || null,
         type: contentKind(editing.type) === 'reel' ? 'video' : 'post',
       });
@@ -470,34 +551,189 @@ export default function BusinessPlaceFeed() {
                   maxLength={8000}
                 />
               </div>
-              <div className="business-field-row">
+              {formContentKind === 'post' && (
                 <div className="business-field">
-                  <label htmlFor="bf-img">Image URL (optional)</label>
-                  <input
-                    id="bf-img"
-                    className="business-input"
-                    value={formImage}
-                    onChange={(e) => setFormImage(e.target.value)}
-                    placeholder="https://… or upload below"
-                  />
+                  <label>Images (optional, up to {MAX_FEED_POST_IMAGES})</label>
+                  <div
+                    className="business-upload-zone"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add('business-upload-zone--drag');
+                    }}
+                    onDragLeave={(e) => e.currentTarget.classList.remove('business-upload-zone--drag')}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('business-upload-zone--drag');
+                      void uploadFormImages(e.dataTransfer?.files);
+                    }}
+                  >
+                    <input
+                      id="bf-file-images"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        void uploadFormImages(e.target.files);
+                        e.target.value = '';
+                      }}
+                      disabled={uploading !== null || !formPlace}
+                    />
+                    <label htmlFor="bf-file-images" style={{ cursor: 'pointer', margin: 0, display: 'block' }}>
+                      {uploading === 'image' ? 'Uploading images…' : 'Drop images here or click to upload'}
+                    </label>
+                  </div>
+                  {formImages.length > 0 && (
+                    <div className="business-image-grid">
+                      {formImages.map((url, idx) => (
+                        <div
+                          key={`${url}-${idx}`}
+                          className={`business-image-tile ${idx === 0 ? 'business-image-tile--cover' : ''}`}
+                        >
+                          {imgSrc(url) ? <img src={imgSrc(url)} alt="" /> : null}
+                          <div className="business-image-tile-actions">
+                            {idx > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormImages((prev) => {
+                                    const next = [...prev];
+                                    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                                    return next;
+                                  })
+                                }
+                              >
+                                Up
+                              </button>
+                            ) : null}
+                            <button type="button" onClick={() => setFormImages((prev) => prev.filter((_, i) => i !== idx))}>
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="business-field">
-                  <label htmlFor="bf-vid">Video URL (optional)</label>
-                  <input
-                    id="bf-vid"
-                    className="business-input"
-                    value={formVideo}
-                    onChange={(e) => setFormVideo(e.target.value)}
-                    placeholder="https://…"
-                  />
-                </div>
-              </div>
+              )}
+
+              {formContentKind === 'reel' && (
+                <>
+                  <div className="business-field">
+                    <label>Reel video *</label>
+                    <div
+                      className="business-upload-zone"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.add('business-upload-zone--drag');
+                      }}
+                      onDragLeave={(e) => e.currentTarget.classList.remove('business-upload-zone--drag')}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove('business-upload-zone--drag');
+                        void uploadFormVideo(e.dataTransfer?.files?.[0]);
+                      }}
+                    >
+                      <input
+                        id="bf-file-video"
+                        type="file"
+                        accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          void uploadFormVideo(e.target.files?.[0]);
+                          e.target.value = '';
+                        }}
+                        disabled={uploading !== null || !formPlace}
+                      />
+                      <label htmlFor="bf-file-video" style={{ cursor: 'pointer', margin: 0, display: 'block' }}>
+                        {uploading === 'video' ? 'Uploading reel…' : 'Drop video here or click to upload'}
+                      </label>
+                    </div>
+                  </div>
+                  <div className="business-field">
+                    <label>Optional cover image</label>
+                    <div
+                      className="business-upload-zone"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.add('business-upload-zone--drag');
+                      }}
+                      onDragLeave={(e) => e.currentTarget.classList.remove('business-upload-zone--drag')}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove('business-upload-zone--drag');
+                        void uploadFormImages(Array.from(e.dataTransfer?.files || []).slice(0, 1));
+                      }}
+                    >
+                      <input
+                        id="bf-file-cover"
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          void uploadFormImages(Array.from(e.target.files || []).slice(0, 1));
+                          e.target.value = '';
+                        }}
+                        disabled={uploading !== null || !formPlace}
+                      />
+                      <label htmlFor="bf-file-cover" style={{ cursor: 'pointer', margin: 0, display: 'block' }}>
+                        {uploading === 'image' ? 'Uploading cover…' : 'Drop cover image or click to upload'}
+                      </label>
+                    </div>
+                    {formImages[0] && imgSrc(formImages[0]) ? (
+                      <div className="business-image-grid">
+                        <div className="business-image-tile business-image-tile--cover">
+                          <img src={imgSrc(formImages[0])} alt="" />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </>
+              )}
+
               <div className="business-field">
-                <label htmlFor="bf-file">Upload image</label>
-                <input id="bf-file" type="file" accept="image/*" onChange={onUpload} disabled={uploading || !formPlace} />
-                {uploading && <span className="business-hint"> Uploading…</span>}
+                <button
+                  type="button"
+                  className="business-btn business-btn--ghost"
+                  onClick={() => setFormShowAdvanced((x) => !x)}
+                >
+                  {formShowAdvanced ? 'Hide' : 'Show'} advanced URL fields
+                </button>
+                {formShowAdvanced && (
+                  <div className="business-field-row" style={{ marginTop: '0.75rem' }}>
+                    <div className="business-field">
+                      <label htmlFor="bf-imgs">Image URLs (one per line)</label>
+                      <textarea
+                        id="bf-imgs"
+                        className="business-textarea"
+                        rows={3}
+                        value={formImages.join('\n')}
+                        onChange={(e) =>
+                          setFormImages(
+                            e.target.value
+                              .split(/[\n\r]+/)
+                              .map((s) => s.trim())
+                              .filter(Boolean)
+                              .slice(0, formContentKind === 'reel' ? 1 : MAX_FEED_POST_IMAGES)
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="business-field">
+                      <label htmlFor="bf-vid">Video URL (optional)</label>
+                      <input
+                        id="bf-vid"
+                        className="business-input"
+                        value={formVideo}
+                        onChange={(e) => setFormVideo(e.target.value)}
+                        placeholder="https://…"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-              <button type="submit" className="business-btn business-btn--primary" disabled={saving || uploading}>
+
+              <button type="submit" className="business-btn business-btn--primary" disabled={saving || uploading !== null}>
                 {saving ? 'Publishing…' : 'Publish to feed'}
               </button>
             </form>
@@ -582,12 +818,14 @@ export default function BusinessPlaceFeed() {
                         <button
                           type="button"
                           className="business-btn business-btn--ghost"
-                          onClick={() =>
+                          onClick={() => {
+                            setEditShowAdvanced(false);
                             setEditing({
                               ...p,
+                              image_urls: rawFeedImageUrls(p),
                               type: isReelCard(p) ? 'reel' : 'post',
-                            })
-                          }
+                            });
+                          }}
                         >
                           Edit
                         </button>
@@ -941,22 +1179,146 @@ export default function BusinessPlaceFeed() {
                   />
                 </div>
                 <div className="business-field">
-                  <label htmlFor="bf-e-img">Image URL</label>
-                  <input
-                    id="bf-e-img"
-                    className="business-input"
-                    value={editing.image_url || ''}
-                    onChange={(e) => setEditing((x) => ({ ...x, image_url: e.target.value }))}
-                  />
+                  <label>Images</label>
+                  <div
+                    className="business-upload-zone"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add('business-upload-zone--drag');
+                    }}
+                    onDragLeave={(e) => e.currentTarget.classList.remove('business-upload-zone--drag')}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('business-upload-zone--drag');
+                      void uploadEditImages(e.dataTransfer?.files);
+                    }}
+                  >
+                    <input
+                      id="bf-e-img-file"
+                      type="file"
+                      accept="image/*"
+                      multiple={contentKind(editing.type) !== 'reel'}
+                      style={{ display: 'none' }}
+                      disabled={editUploading !== null}
+                      onChange={(e) => {
+                        void uploadEditImages(e.target.files);
+                        e.target.value = '';
+                      }}
+                    />
+                    <label htmlFor="bf-e-img-file" style={{ cursor: 'pointer', margin: 0, display: 'block' }}>
+                      {editUploading === 'image' ? 'Uploading images…' : 'Drop images here or click to upload'}
+                    </label>
+                  </div>
+                  {rawFeedImageUrls(editing).length > 0 && (
+                    <div className="business-image-grid">
+                      {rawFeedImageUrls(editing).map((url, idx) => (
+                        <div
+                          key={`${url}-${idx}`}
+                          className={`business-image-tile ${idx === 0 ? 'business-image-tile--cover' : ''}`}
+                        >
+                          {imgSrc(url) ? <img src={imgSrc(url)} alt="" /> : null}
+                          <div className="business-image-tile-actions">
+                            {idx > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditing((x) => {
+                                    const next = [...rawFeedImageUrls(x)];
+                                    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                                    return { ...x, image_urls: next, image_url: next[0] || null };
+                                  })
+                                }
+                              >
+                                Up
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditing((x) => {
+                                  const next = rawFeedImageUrls(x).filter((_, i) => i !== idx);
+                                  return { ...x, image_urls: next, image_url: next[0] || null };
+                                })
+                              }
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="business-field">
-                  <label htmlFor="bf-e-vid">Video URL</label>
-                  <input
-                    id="bf-e-vid"
-                    className="business-input"
-                    value={editing.video_url || ''}
-                    onChange={(e) => setEditing((x) => ({ ...x, video_url: e.target.value }))}
-                  />
+                  <label>Video URL / upload</label>
+                  <div
+                    className="business-upload-zone"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add('business-upload-zone--drag');
+                    }}
+                    onDragLeave={(e) => e.currentTarget.classList.remove('business-upload-zone--drag')}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('business-upload-zone--drag');
+                      void uploadEditVideo(e.dataTransfer?.files?.[0]);
+                    }}
+                  >
+                    <input
+                      id="bf-e-vid-file"
+                      type="file"
+                      accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                      style={{ display: 'none' }}
+                      disabled={editUploading !== null}
+                      onChange={(e) => {
+                        void uploadEditVideo(e.target.files?.[0]);
+                        e.target.value = '';
+                      }}
+                    />
+                    <label htmlFor="bf-e-vid-file" style={{ cursor: 'pointer', margin: 0, display: 'block' }}>
+                      {editUploading === 'video' ? 'Uploading video…' : 'Drop video or click to upload'}
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    className="business-btn business-btn--ghost"
+                    style={{ marginTop: '0.5rem' }}
+                    onClick={() => setEditShowAdvanced((x) => !x)}
+                  >
+                    {editShowAdvanced ? 'Hide' : 'Show'} advanced URL fields
+                  </button>
+                  {editShowAdvanced && (
+                    <div className="business-field-row" style={{ marginTop: '0.75rem' }}>
+                      <div className="business-field">
+                        <label htmlFor="bf-e-img">Image URLs (one per line)</label>
+                        <textarea
+                          id="bf-e-img"
+                          className="business-textarea"
+                          rows={3}
+                          value={rawFeedImageUrls(editing).join('\n')}
+                          onChange={(e) =>
+                            setEditing((x) => {
+                              const next = e.target.value
+                                .split(/[\n\r]+/)
+                                .map((s) => s.trim())
+                                .filter(Boolean)
+                                .slice(0, contentKind(x.type) === 'reel' ? 1 : MAX_FEED_POST_IMAGES);
+                              return { ...x, image_urls: next, image_url: next[0] || null };
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="business-field">
+                        <label htmlFor="bf-e-vid">Video URL</label>
+                        <input
+                          id="bf-e-vid"
+                          className="business-input"
+                          value={editing.video_url || ''}
+                          onChange={(e) => setEditing((x) => ({ ...x, video_url: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="business-field">
                   <label htmlFor="bf-e-kind">Content type</label>
@@ -977,7 +1339,7 @@ export default function BusinessPlaceFeed() {
                 <button type="button" className="business-btn business-btn--ghost" onClick={() => setEditing(null)}>
                   Cancel
                 </button>
-                <button type="submit" className="business-btn business-btn--primary" disabled={saving}>
+                <button type="submit" className="business-btn business-btn--primary" disabled={saving || editUploading !== null}>
                   Save
                 </button>
               </div>
