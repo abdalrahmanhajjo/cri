@@ -696,6 +696,38 @@ export default function Discover() {
   }, [loading, tab, orderedFeedPosts, orderedReels]);
 
   useEffect(() => {
+    if (loading) return undefined;
+    const hash = window.location.hash || '';
+    if (!hash.startsWith('#feed-post-')) return undefined;
+    const raw = hash.replace('#feed-post-', '').trim();
+    if (!raw) return undefined;
+    const hasInFeed = feedPosts.some((p) => String(p.id) === raw);
+    const hasInReels = reels.some((p) => String(p.id) === raw);
+    if (hasInFeed || hasInReels) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await api.feedPublic.post(raw);
+        const p = r?.post;
+        if (!p || cancelled) return;
+        const isReel = String(p.type || '').toLowerCase() === 'reel' || String(p.type || '').toLowerCase() === 'video';
+        if (isReel) {
+          setReels((prev) => (prev.some((x) => String(x.id) === String(p.id)) ? prev : [p, ...prev]));
+          setTab((cur) => (cur === 'reel' ? cur : 'reel'));
+        } else {
+          setFeedPosts((prev) => (prev.some((x) => String(x.id) === String(p.id)) ? prev : [p, ...prev]));
+          setTab((cur) => (cur === 'feed' ? cur : 'feed'));
+        }
+      } catch {
+        // Keep regular list behavior if deep-link post is unavailable.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, feedPosts, reels]);
+
+  useEffect(() => {
     if (!user) {
       setRedeemedPromotionIds([]);
       return;

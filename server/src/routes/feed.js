@@ -215,6 +215,52 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
   }
 });
 
+/** GET /api/feed/post/:postId — public single post/reel for deep links */
+router.get('/post/:postId', optionalAuthMiddleware, async (req, res) => {
+  const postId = normalizeUuidParam(req.params.postId);
+  if (!postId) return res.status(400).json({ error: 'Invalid post id' });
+  const userId = userIdFromReq(req);
+  try {
+    const params = [postId];
+    const userParamIdx = userId ? 2 : null;
+    if (userId) params.push(userId);
+    const userSql = userParamIdx
+      ? `, EXISTS (SELECT 1 FROM feed_likes fl WHERE fl.post_id = fp.id AND fl.user_id = $${userParamIdx}::uuid) AS liked_by_me,
+         EXISTS (SELECT 1 FROM feed_saves fs WHERE fs.post_id = fp.id AND fs.user_id = $${userParamIdx}::uuid) AS saved_by_me`
+      : ', false AS liked_by_me, false AS saved_by_me';
+    const manageSql = userParamIdx
+      ? `, (fp.place_id IS NOT NULL AND EXISTS (SELECT 1 FROM place_owners po WHERE po.place_id = fp.place_id AND po.user_id = $${userParamIdx}::uuid)) AS i_manage_post`
+      : ', false AS i_manage_post';
+    const socialSql = `, COALESCE(fp.hide_likes, false) AS hide_likes,
+              COALESCE(fp.comments_disabled, false) AS comments_disabled`;
+    const { rows } = await query(
+      `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.image_urls, fp.video_url,
+              fp.type, fp.created_at, fp.author_role,
+              (SELECT COUNT(*)::int FROM feed_likes fl WHERE fl.post_id = fp.id) AS likes_count,
+              (SELECT COUNT(*)::int FROM feed_comments fc WHERE fc.post_id = fp.id) AS comments_count,
+              (SELECT CASE
+                 WHEN p.images IS NOT NULL AND jsonb_typeof(p.images) = 'array' AND jsonb_array_length(p.images) > 0
+                 THEN p.images #>> '{0}'
+                 ELSE NULL
+               END
+               FROM places p WHERE p.id = fp.place_id LIMIT 1) AS place_image_url,
+              (SELECT p.name FROM places p WHERE p.id = fp.place_id LIMIT 1) AS place_name
+              ${socialSql}
+              ${manageSql}
+              ${userSql}
+       FROM feed_posts fp
+       WHERE fp.id = $1 AND fp.moderation_status = 'approved' AND fp.discoverable = true
+       LIMIT 1`,
+      params
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Post not found' });
+    return res.json({ post: rows[0] });
+  } catch (err) {
+    console.error(err);
+    return sendDbAwareError(res, err, 'Failed to load post');
+  }
+});
+
 /** GET /api/feed/post/:postId/comments — public; optional auth adds liked_by_me on each row */
 router.get('/post/:postId/comments', optionalAuthMiddleware, async (req, res) => {
   const postId = normalizeUuidParam(req.params.postId);

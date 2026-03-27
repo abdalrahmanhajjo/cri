@@ -3106,8 +3106,8 @@ a.ig-feed-avatar--link:focus-visible {
   z-index: 3;
   padding: 0 8px 0 14px;
   pointer-events: none;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent 70%);
-  padding-top: 48px;
+  background: none;
+  padding-top: 0;
   padding-bottom: 8px;
 }
 
@@ -3150,7 +3150,7 @@ a.ig-feed-avatar--link:focus-visible {
   font-weight: 700;
   font-size: 0.95rem;
   letter-spacing: 0.01em;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
+  text-shadow: none;
 }
 
 a.ig-reel-handle--link {
@@ -3177,7 +3177,7 @@ a.ig-reel-handle--link:hover {
   font-size: 0.86rem;
   line-height: 1.45;
   color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.65);
+  text-shadow: none;
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
