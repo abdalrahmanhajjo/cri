@@ -733,9 +733,7 @@ export default function FeedPostCard({
   const replyTargetName =
     replyToId && comments.find((c) => c.id === replyToId)?.authorName;
 
-  // Desktop: render reels in the regular post-card layout ("like posts").
-  // Mobile: keep full-screen reel theater.
-  const showReelTheater = variant === 'reel' && !isDesktop && (showVideo || img || externalVideo);
+  const showReelTheater = variant === 'reel' && (showVideo || img || externalVideo);
   const mediaTapProps = hideLikes
     ? {}
     : { onDoubleClick: onMediaDoubleClick, onTouchEnd: onMediaTouchEnd };
