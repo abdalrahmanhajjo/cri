@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import api, { getToken, getStoredUser } from './api/client';
 import Layout from './components/Layout';
+import HciFeedbackDock from './components/HciFeedbackDock';
 import ScrollToTop from './components/ScrollToTop';
 import Explore from './pages/Explore';
 import Discover from './pages/Discover';
@@ -210,6 +211,7 @@ export default function App() {
       <LanguageProvider>
         <AuthProvider>
           <AppRoutes />
+          <HciFeedbackDock />
         </AuthProvider>
       </LanguageProvider>
     </BrowserRouter>

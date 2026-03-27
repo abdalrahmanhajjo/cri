@@ -317,7 +317,7 @@ export function optimizeSlotsOrder(slots, placeMap) {
 
 /** Trips list sort — lib/screens/trips/trips_list_logic.dart TripSortMode.smart */
 export function tripPhaseForSort(trip, now = new Date()) {
-  const today = todayDateOnly();
+  const today = formatYMD(now);
   const s = toDateOnly(trip?.startDate);
   const e = toDateOnly(trip?.endDate);
   if (!s || !e) return 'upcoming';

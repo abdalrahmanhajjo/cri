@@ -949,6 +949,39 @@ export const translations = {
       nextPhoto: 'Next photo',
       closeGallery: 'Close gallery',
     },
+    hci: {
+      fabLabel: 'HCI & feedback',
+      fabAria: 'Open HCI components and feedback',
+      closeBackdrop: 'Close panel',
+      panelTitle: 'Five components of interaction',
+      panelIntro:
+        'Human–computer interaction highlights how people and systems work together. These five ideas are built into Visit Tripoli — especially clear feedback when you act.',
+      feedbackBadge: 'Core principle',
+      feedbackTitle: 'Feedback',
+      feedbackDesc:
+        'The system responds to what you do: loading indicators, confirmations, error messages, and visible results — so you always know what happened.',
+      inputTitle: 'Input',
+      inputDesc:
+        'Ways you act on the site: search, forms, buttons, saved items, and map controls — kept obvious and reachable.',
+      outputTitle: 'Output',
+      outputDesc:
+        'What the interface shows you: labels, lists, maps, images, and timelines — ordered so you can scan and understand quickly.',
+      memoryTitle: 'Memory',
+      memoryDesc:
+        'The site recalls helpful context (language, saved places, drafts) securely so you repeat less and pick up where you left off.',
+      contextTitle: 'Context',
+      contextDesc:
+        'Navigation, page titles, and layout (including right-to-left Arabic) help you stay oriented and understand where you are.',
+      formTitle: 'Send us feedback',
+      formHint: 'Tell us what felt unclear, slow, or broken. We read every message.',
+      messageLabel: 'Your message',
+      messagePlaceholder: 'e.g. On mobile I could not find…',
+      emailLabel: 'Email (optional)',
+      emailPlaceholder: 'you@example.com',
+      sendEmail: 'Open email draft',
+      messageTooShort: 'Please write at least a few words (4+ characters).',
+      close: 'Close',
+    },
   },
   ar: {
     nav: {
@@ -1883,6 +1916,39 @@ export const translations = {
       previousPhoto: 'الصورة السابقة',
       nextPhoto: 'الصورة التالية',
       closeGallery: 'إغلاق معرض الصور',
+    },
+    hci: {
+      fabLabel: 'التفاعل والتغذية الراجعة',
+      fabAria: 'فتح مكونات التفاعل الخمس وإرسال ملاحظات',
+      closeBackdrop: 'إغلاق اللوحة',
+      panelTitle: 'خمسة مكونات للتفاعل',
+      panelIntro:
+        'تسلط دراسة التفاعل بين الإنسان والحاسوب الضوء على كيفية عمل المستخدم والنظام معًا. هذه الأفكار مدمجة في «زيارة طرابلس» — وخاصة تغذية راجعة واضحة عند كل فعل.',
+      feedbackBadge: 'مبدأ أساسي',
+      feedbackTitle: 'التغذية الراجعة',
+      feedbackDesc:
+        'يستجيب الموقع لأفعالك: مؤشرات تحميل، تأكيدات، رسائل خطأ، ونتائج ظاهرة — لتعرف دائمًا ماذا حدث.',
+      inputTitle: 'الإدخال',
+      inputDesc:
+        'طرق تعبيرك عن طلبك: البحث، النماذج، الأزرار، الأماكن المحفوظة، وأدوات الخريطة — بشكل واضح وسهل الوصول.',
+      outputTitle: 'العرض',
+      outputDesc:
+        'ما يعرضه الموقع: تسميات، قوائم، خرائط، صور، وجداول زمنية — بترتيب يساعدك على الفهم السريع.',
+      memoryTitle: 'الذاكرة',
+      memoryDesc:
+        'يتذكر الموقع سياقًا مفيدًا (اللغة، الأماكن المحفوظة، المسودات) بأمان لتكرر أقل وتستأنف عملك.',
+      contextTitle: 'السياق',
+      contextDesc:
+        'التنقل، عناوين الصفحات، والتخطيط (بما في ذلك العربية من اليمين لليسار) تبقيك متوجّهًا وتفهم أين أنت.',
+      formTitle: 'أرسل ملاحظاتك',
+      formHint: 'أخبرنا بما بدا غير واضح أو بطيء أو معطلاً. نقرأ جميع الرسائل.',
+      messageLabel: 'رسالتك',
+      messagePlaceholder: 'مثال: على الهاتف لم أجد…',
+      emailLabel: 'البريد (اختياري)',
+      emailPlaceholder: 'you@example.com',
+      sendEmail: 'فتح مسودة البريد',
+      messageTooShort: 'اكتب بضع كلمات على الأقل (4 أحرف أو أكثر).',
+      close: 'إغلاق',
     },
   },
   fr: {
@@ -2834,6 +2900,39 @@ export const translations = {
       nextPhoto: 'Photo suivante',
       closeGallery: 'Fermer la galerie',
     },
+    hci: {
+      fabLabel: 'IHM & retour',
+      fabAria: 'Ouvrir les cinq composants IHM et le commentaire',
+      closeBackdrop: 'Fermer le panneau',
+      panelTitle: 'Cinq composants de l’interaction',
+      panelIntro:
+        'L’interaction humain–machine rappelle comment les personnes et le système collaborent. Ces idées sont présentes sur Visiter Tripoli — surtout un retour clair après chaque action.',
+      feedbackBadge: 'Principe clé',
+      feedbackTitle: 'Retour (feedback)',
+      feedbackDesc:
+        'Le site répond à vos actions : chargement, confirmations, messages d’erreur et résultats visibles — vous savez toujours ce qui s’est passé.',
+      inputTitle: 'Entrée',
+      inputDesc:
+        'Façons d’agir : recherche, formulaires, boutons, favoris et carte — conçus pour être évidents et accessibles.',
+      outputTitle: 'Sortie',
+      outputDesc:
+        'Ce que l’interface montre : libellés, listes, cartes, images et fils — ordonnés pour une lecture rapide.',
+      memoryTitle: 'Mémoire',
+      memoryDesc:
+        'Le site mémorise l’essentiel (langue, favoris, brouillons) en limitant la répétition et en sécurisant votre compte.',
+      contextTitle: 'Contexte',
+      contextDesc:
+        'Navigation, titres de page et mise en page (dont l’arabe RTL) vous aident à vous repérer sur le parcours.',
+      formTitle: 'Envoyer un commentaire',
+      formHint: 'Dites-nous ce qui semblait confus, lent ou cassé. Nous lisons ces messages.',
+      messageLabel: 'Votre message',
+      messagePlaceholder: 'ex. Sur mobile je n’ai pas trouvé…',
+      emailLabel: 'E-mail (facultatif)',
+      emailPlaceholder: 'vous@exemple.com',
+      sendEmail: 'Ouvrir le brouillon mail',
+      messageTooShort: 'Écrivez au moins quelques mots (4 caractères ou plus).',
+      close: 'Fermer',
+    },
   },
 };
 
@@ -2876,7 +2975,9 @@ export function setTranslationOverrides(data) {
   apiOverrides = null;
   try {
     localStorage.setItem(OVERRIDES_KEY, JSON.stringify(data && typeof data === 'object' ? data : {}));
-  } catch (_) {}
+  } catch (_err) {
+    /* localStorage unavailable or quota */
+  }
 }
 
 export function clearTranslationOverrides() {
@@ -2895,12 +2996,16 @@ export function getStoredLanguage() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored && ['en', 'ar', 'fr'].includes(stored)) return stored;
-  } catch (_) {}
+  } catch (_err) {
+    /* ignore */
+  }
   return 'en';
 }
 
 export function setStoredLanguage(code) {
   try {
     localStorage.setItem(STORAGE_KEY, code);
-  } catch (_) {}
+  } catch (_err) {
+    /* ignore */
+  }
 }

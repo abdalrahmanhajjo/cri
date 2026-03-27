@@ -850,7 +850,9 @@ export default function MapPage() {
         try {
           renderer.setMap(null);
           renderer.setDirections(null);
-        } catch (_) {}
+        } catch (_err) {
+          /* ignore */
+        }
       }
       directionsRendererRef.current = null;
     };
@@ -936,7 +938,9 @@ export default function MapPage() {
           try {
             renderer.setMap(null);
             renderer.setDirections(null);
-          } catch (_) {}
+          } catch (_err) {
+            /* ignore */
+          }
         }
         directionsRendererRef.current = null;
         return;
@@ -948,7 +952,9 @@ export default function MapPage() {
         try {
           renderer.setMap(null);
           renderer.setDirections(null);
-        } catch (_) {}
+        } catch (_err) {
+          /* ignore */
+        }
       }
       const newRenderer = new maps.DirectionsRenderer({
         suppressMarkers: false,
@@ -1130,6 +1136,10 @@ export default function MapPage() {
     });
   }, [listOpen, tripFilterName]);
 
+  const handleShowAllPlaces = useCallback(() => {
+    navigate('/map', { replace: true });
+  }, [navigate]);
+
   if (!apiKey) {
     return (
       <div className="vd map-page" role="main">
@@ -1142,10 +1152,6 @@ export default function MapPage() {
       </div>
     );
   }
-
-  const handleShowAllPlaces = useCallback(() => {
-    navigate('/map', { replace: true });
-  }, [navigate]);
 
   const routeTimeLabel = travelMode === 'WALKING' ? t('home', 'timeToWalk') : t('home', 'timeToDrive');
   const nextTurnText = routeSummary?.steps?.[0] || routeSummary?.via || '';

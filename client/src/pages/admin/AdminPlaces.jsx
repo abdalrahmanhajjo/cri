@@ -258,7 +258,6 @@ function PlaceFormModal({ place, onClose, onSaved }) {
   };
 
   const imageUrls = form.images.trim() ? form.images.split(/\n/).map((s) => s.trim()).filter(Boolean) : [];
-  const firstImage = imageUrls[0];
 
   const handleMapSelect = (lat, lng) => {
     setForm((f) => ({ ...f, latitude: String(lat), longitude: String(lng) }));

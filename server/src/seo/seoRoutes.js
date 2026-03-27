@@ -44,14 +44,36 @@ function pickFirstImage(imagesJson) {
   }
 }
 
+function organizationIdForBase(baseUrl) {
+  return `${String(baseUrl || '').replace(/\/$/, '')}#organization`;
+}
+
+function websiteIdForBase(baseUrl) {
+  return `${String(baseUrl || '').replace(/\/$/, '')}#website`;
+}
+
+function organizationSameAsFromEnv() {
+  const raw = (process.env.ORGANIZATION_SAME_AS || '').trim();
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((u) => u.startsWith('http://') || u.startsWith('https://'));
+}
+
 function jsonLdOrg({ baseUrl }) {
-  return {
+  const logoUrl = safeUrlJoin(baseUrl, '/tripoli-lebanon-icon.svg');
+  const sameAs = organizationSameAsFromEnv();
+  const out = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': organizationIdForBase(baseUrl),
     name: 'Visit Tripoli',
     url: baseUrl,
-    sameAs: [],
+    logo: logoUrl,
   };
+  if (sameAs.length > 0) out.sameAs = sameAs;
+  return out;
 }
 
 function jsonLdBreadcrumb({ baseUrl, items }) {
@@ -68,17 +90,20 @@ function jsonLdBreadcrumb({ baseUrl, items }) {
 }
 
 function jsonLdWebsite({ baseUrl }) {
-  return JSON.stringify({
+  return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
+    '@id': websiteIdForBase(baseUrl),
     name: 'Visit Tripoli',
     url: baseUrl,
+    inLanguage: ['en', 'ar', 'fr'],
+    publisher: { '@id': organizationIdForBase(baseUrl) },
     potentialAction: {
       '@type': 'SearchAction',
       target: `${baseUrl}/discover?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
-  });
+  };
 }
 
 function jsonLdPlace({ baseUrl, place, canonical, image }) {
@@ -231,7 +256,7 @@ function makeSeoResponder({ clientDistPath }) {
       let ogImage = safeUrlJoin(baseUrl, '/tripoli-hero-bg.png');
       let robots = 'index,follow';
       let alternates = buildAlternates(baseUrl, req.path);
-      let jsonLd = JSON.stringify([JSON.parse(jsonLdWebsite({ baseUrl })), jsonLdOrg({ baseUrl })]);
+      let jsonLd = JSON.stringify([jsonLdOrg({ baseUrl }), jsonLdWebsite({ baseUrl })]);
       let status = 200;
 
       if (p === '/' || p === '/discover' || p === '/activities') {
@@ -452,9 +477,9 @@ function makeSeoResponder({ clientDistPath }) {
           name: info.title,
           url: canonical,
           description: clampText(description, 300) || undefined,
-          isPartOf: { '@type': 'WebSite', name: 'Visit Tripoli', url: baseUrl },
+          isPartOf: { '@id': websiteIdForBase(baseUrl) },
         };
-        jsonLd = JSON.stringify([webPage, crumbs, jsonLdOrg({ baseUrl })]);
+        jsonLd = JSON.stringify([webPage, crumbs, jsonLdOrg({ baseUrl }), jsonLdWebsite({ baseUrl })]);
       } else {
         return next();
       }

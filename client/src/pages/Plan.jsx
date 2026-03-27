@@ -916,7 +916,7 @@ export default function Plan() {
     return t('home', 'planTimeEvening');
   };
 
-  const getPlaceForSlot = (placeId, dayIndex) => {
+  const getPlaceForSlot = (placeId, _dayIndex) => {
     const id = String(placeId);
     const p = placeMap[id];
     const bestTime = p?.bestTime ? String(p.bestTime).trim() : '';
