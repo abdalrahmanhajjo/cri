@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
+import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
 import './Admin.css';
 
 function contentKind(t) {
@@ -17,7 +18,8 @@ function resolvedMediaUrl(url) {
 function isReelCard(p) {
   const t = String(p?.type || '').toLowerCase();
   if (t === 'reel' || t === 'video') return true;
-  const hasImage = !!resolvedMediaUrl(p?.image_url);
+  const hasImage =
+    rawFeedImageUrls(p).some((u) => resolvedMediaUrl(u)) || !!resolvedMediaUrl(p?.image_url);
   const hasVideo = !!resolvedMediaUrl(p?.video_url);
   return hasVideo && !hasImage;
 }
@@ -61,7 +63,7 @@ export default function AdminFeed() {
   const [composerPlaceId, setComposerPlaceId] = useState('');
   const [composerContentKind, setComposerContentKind] = useState('post');
   const [composerCaption, setComposerCaption] = useState('');
-  const [composerImage, setComposerImage] = useState('');
+  const [composerImages, setComposerImages] = useState([]);
   const [composerVideo, setComposerVideo] = useState('');
   const [composerModeration, setComposerModeration] = useState('approved');
   const [composerDiscoverable, setComposerDiscoverable] = useState(true);
@@ -151,23 +153,53 @@ export default function AdminFeed() {
     setComposerSaving(true);
     setError(null);
     try {
+      const imgs =
+        composerContentKind === 'reel'
+          ? composerImages.slice(0, 1)
+          : composerImages.slice(0, MAX_FEED_POST_IMAGES);
       await api.admin.feed.create({
         placeId: composerPlaceId,
         caption: composerCaption.trim(),
-        image_url: composerImage.trim() || undefined,
+        ...(imgs.length ? { image_urls: imgs } : {}),
         video_url: composerVideo.trim() || undefined,
         type: composerContentKind === 'reel' ? 'video' : 'post',
         moderation_status: composerModeration,
         discoverable: composerDiscoverable,
       });
       setComposerCaption('');
-      setComposerImage('');
+      setComposerImages([]);
       setComposerVideo('');
       await load(true);
     } catch (err) {
       setError(err.message || 'Could not create post');
     } finally {
       setComposerSaving(false);
+    }
+  };
+
+  const uploadComposerImages = async (files) => {
+    if (!files?.length) return;
+    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    if (!list.length) {
+      setError('Choose image files (JPEG, PNG, GIF, or WebP).');
+      return;
+    }
+    setComposerUploading('image');
+    setError(null);
+    try {
+      for (const file of list) {
+        const url = await api.admin.upload(file);
+        if (!url) continue;
+        setComposerImages((prev) => {
+          if (composerContentKind === 'reel') return [url];
+          if (prev.includes(url)) return prev;
+          return [...prev, url].slice(0, MAX_FEED_POST_IMAGES);
+        });
+      }
+    } catch (err) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setComposerUploading(null);
     }
   };
 
@@ -181,13 +213,16 @@ export default function AdminFeed() {
       setError('Choose a video file (MP4, WebM, or MOV).');
       return;
     }
+    if (kind === 'image') {
+      await uploadComposerImages([file]);
+      return;
+    }
     setComposerUploading(kind);
     setError(null);
     try {
       const url = await api.admin.upload(file);
       if (!url) return;
-      if (kind === 'image') setComposerImage(url);
-      else setComposerVideo(url);
+      setComposerVideo(url);
     } catch (err) {
       setError(err.message || 'Upload failed');
     } finally {
@@ -195,13 +230,40 @@ export default function AdminFeed() {
     }
   };
 
-  const uploadEditFile = async (file, kind) => {
-    if (!editPost || !file) return;
-    if (kind === 'image' && !/^image\//i.test(file.type)) {
-      setError('Choose an image file.');
+  const uploadEditImages = async (files) => {
+    if (!editPost || !files?.length) return;
+    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    if (!list.length) {
+      setError('Choose image files.');
       return;
     }
-    if (kind === 'video' && !/^video\//i.test(file.type)) {
+    setEditUploading('image');
+    setError(null);
+    try {
+      for (const file of list) {
+        const url = await api.admin.upload(file);
+        if (!url) continue;
+        setEditPost((x) => {
+          const isReel = contentKind(x.type) === 'reel';
+          const prev = rawFeedImageUrls(x);
+          const next = isReel ? [url] : prev.includes(url) ? prev : [...prev, url].slice(0, MAX_FEED_POST_IMAGES);
+          return { ...x, image_urls: next, image_url: next[0] || null };
+        });
+      }
+    } catch (err) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setEditUploading(null);
+    }
+  };
+
+  const uploadEditFile = async (file, kind) => {
+    if (!editPost || !file) return;
+    if (kind === 'image') {
+      await uploadEditImages([file]);
+      return;
+    }
+    if (!/^video\//i.test(file.type)) {
       setError('Choose a video file.');
       return;
     }
@@ -210,10 +272,7 @@ export default function AdminFeed() {
     try {
       const url = await api.admin.upload(file);
       if (!url) return;
-      setEditPost((x) => ({
-        ...x,
-        ...(kind === 'image' ? { image_url: url } : { video_url: url }),
-      }));
+      setEditPost((x) => ({ ...x, video_url: url }));
     } catch (err) {
       setError(err.message || 'Upload failed');
     } finally {
@@ -293,11 +352,12 @@ export default function AdminFeed() {
   const saveEdit = async (e) => {
     e.preventDefault();
     if (!editPost) return;
-    const { id, caption, image_url, video_url, admin_notes, moderation_status } = editPost;
+    const { id, caption, video_url, admin_notes, moderation_status } = editPost;
+    const imgs = rawFeedImageUrls(editPost);
     await patchPost(id, {
       caption,
       type: contentKind(editPost.type) === 'reel' ? 'video' : 'post',
-      image_url: image_url || null,
+      image_urls: imgs.length ? imgs : null,
       video_url: video_url || null,
       admin_notes: admin_notes || null,
       moderation_status,
@@ -438,7 +498,7 @@ export default function AdminFeed() {
 
               {composerContentKind === 'post' && (
                 <div className="admin-form-group">
-                  <label>Image (optional)</label>
+                  <label>Images (optional, up to {MAX_FEED_POST_IMAGES})</label>
                   <div
                     className="admin-image-upload-zone"
                     onDragOver={(e) => {
@@ -451,17 +511,18 @@ export default function AdminFeed() {
                     onDrop={(e) => {
                       e.preventDefault();
                       e.currentTarget.classList.remove('admin-image-upload-zone--drag');
-                      uploadComposerFile(e.dataTransfer?.files?.[0], 'image');
+                      void uploadComposerImages(e.dataTransfer?.files);
                     }}
                   >
                     <input
                       id="admin-feed-composer-image-post"
                       type="file"
                       accept="image/jpeg,image/png,image/gif,image/webp"
+                      multiple
                       style={{ display: 'none' }}
                       disabled={composerUploading !== null}
                       onChange={(e) => {
-                        uploadComposerFile(e.target.files?.[0], 'image');
+                        void uploadComposerImages(e.target.files);
                         e.target.value = '';
                       }}
                     />
@@ -470,23 +531,53 @@ export default function AdminFeed() {
                       style={{ cursor: composerUploading !== null ? 'wait' : 'pointer', margin: 0 }}
                     >
                       {composerUploading === 'image'
-                        ? 'Uploading image…'
-                        : 'Drop image here or click — JPEG, PNG, GIF, WebP (same storage as place listings)'}
+                        ? 'Uploading…'
+                        : 'Drop images here or click — add multiple (JPEG, PNG, GIF, WebP; same storage as place listings)'}
                     </label>
                   </div>
-                  {resolvedMediaUrl(composerImage) ? (
-                    <div className="admin-feed-media-preview-wrap">
-                      <img className="admin-form-preview" src={resolvedMediaUrl(composerImage)} alt="Preview" />
+                  {composerImages.length > 0 && (
+                    <div className="admin-feed-image-strip">
+                      {composerImages.map((u, idx) => (
+                        <div key={`${u}-${idx}`} className="admin-feed-image-strip-item">
+                          {resolvedMediaUrl(u) ? (
+                            <img src={resolvedMediaUrl(u)} alt="" />
+                          ) : null}
+                          <div className="admin-feed-image-strip-actions">
+                            {idx > 0 ? (
+                              <button
+                                type="button"
+                                className="admin-btn admin-btn--sm admin-btn--secondary"
+                                onClick={() =>
+                                  setComposerImages((prev) => {
+                                    const next = [...prev];
+                                    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                                    return next;
+                                  })
+                                }
+                              >
+                                Up
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              className="admin-btn admin-btn--sm admin-btn--secondary"
+                              onClick={() => setComposerImages((prev) => prev.filter((_, i) => i !== idx))}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ) : null}
-                  {composerImage ? (
+                  )}
+                  {composerImages.length > 0 ? (
                     <button
                       type="button"
                       className="admin-btn admin-btn--sm admin-btn--secondary"
                       style={{ marginTop: '0.5rem' }}
-                      onClick={() => setComposerImage('')}
+                      onClick={() => setComposerImages([])}
                     >
-                      Clear image
+                      Clear all images
                     </button>
                   ) : null}
                 </div>
@@ -591,17 +682,21 @@ export default function AdminFeed() {
                           : 'Drop cover image or click (optional thumbnail in lists)'}
                       </label>
                     </div>
-                    {composerImage && resolvedMediaUrl(composerImage) ? (
+                    {composerImages[0] && resolvedMediaUrl(composerImages[0]) ? (
                       <div className="admin-feed-media-preview-wrap">
-                        <img className="admin-form-preview" src={resolvedMediaUrl(composerImage)} alt="Cover preview" />
+                        <img
+                          className="admin-form-preview"
+                          src={resolvedMediaUrl(composerImages[0])}
+                          alt="Cover preview"
+                        />
                       </div>
                     ) : null}
-                    {composerImage ? (
+                    {composerImages.length > 0 ? (
                       <button
                         type="button"
                         className="admin-btn admin-btn--sm admin-btn--secondary"
                         style={{ marginTop: '0.5rem' }}
-                        onClick={() => setComposerImage('')}
+                        onClick={() => setComposerImages([])}
                       >
                         Clear cover
                       </button>
@@ -620,25 +715,34 @@ export default function AdminFeed() {
                 </button>
                 {composerShowAdvancedUrls && (
                   <div className="admin-feed-advanced-urls" style={{ marginTop: '1rem' }}>
-                    <div className="admin-form-row">
-                      <div className="admin-form-group">
-                        <label htmlFor="admin-feed-img-url">Image URL</label>
-                        <input
-                          id="admin-feed-img-url"
-                          value={composerImage}
-                          onChange={(e) => setComposerImage(e.target.value)}
-                          placeholder="https://… (overrides uploaded image URL)"
-                        />
-                      </div>
-                      <div className="admin-form-group">
-                        <label htmlFor="admin-feed-vid-url">Video URL</label>
-                        <input
-                          id="admin-feed-vid-url"
-                          value={composerVideo}
-                          onChange={(e) => setComposerVideo(e.target.value)}
-                          placeholder="https://… direct MP4 / hosted file"
-                        />
-                      </div>
+                    <div className="admin-form-group">
+                      <label htmlFor="admin-feed-img-urls">Image URLs (one per line)</label>
+                      <textarea
+                        id="admin-feed-img-urls"
+                        rows={4}
+                        value={composerImages.join('\n')}
+                        onChange={(e) => {
+                          const lines = e.target.value
+                            .split(/[\n\r]+/)
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                            .slice(
+                              0,
+                              composerContentKind === 'reel' ? 1 : MAX_FEED_POST_IMAGES
+                            );
+                          setComposerImages(lines);
+                        }}
+                        placeholder={'https://example.com/one.jpg\nhttps://example.com/two.jpg'}
+                      />
+                    </div>
+                    <div className="admin-form-group">
+                      <label htmlFor="admin-feed-vid-url">Video URL</label>
+                      <input
+                        id="admin-feed-vid-url"
+                        value={composerVideo}
+                        onChange={(e) => setComposerVideo(e.target.value)}
+                        placeholder="https://… direct MP4 / hosted file"
+                      />
                     </div>
                     <p className="admin-form-hint" style={{ marginBottom: 0 }}>
                       Use uploads above when possible. Paste URLs only for assets already hosted elsewhere.
@@ -724,12 +828,16 @@ export default function AdminFeed() {
                     </tr>
                   </thead>
                   <tbody>
-                    {posts.map((p) => (
+                    {posts.map((p) => {
+                      const rowImgs = rawFeedImageUrls(p);
+                      const firstImg = rowImgs[0];
+                      return (
                       <Fragment key={p.id}>
                         <tr className="admin-feed-row">
                           <td>
-                            {resolvedMediaUrl(p.image_url) ? (
-                              <img className="admin-feed-thumb" src={resolvedMediaUrl(p.image_url)} alt="" />
+                            <div className="admin-feed-thumb-wrap">
+                            {firstImg && resolvedMediaUrl(firstImg) ? (
+                              <img className="admin-feed-thumb" src={resolvedMediaUrl(firstImg)} alt="" />
                             ) : resolvedMediaUrl(p.video_url) ? (
                               <video
                                 className="admin-feed-thumb admin-feed-thumb--video"
@@ -742,6 +850,12 @@ export default function AdminFeed() {
                             ) : (
                               <span className="admin-feed-thumb-placeholder">—</span>
                             )}
+                            {rowImgs.length > 1 ? (
+                              <span className="admin-feed-thumb-count" title={`${rowImgs.length} images`}>
+                                {rowImgs.length}
+                              </span>
+                            ) : null}
+                            </div>
                           </td>
                           <td>
                             <div className="admin-feed-caption">
@@ -819,6 +933,7 @@ export default function AdminFeed() {
                                   setEditShowAdvancedUrls(false);
                                   setEditPost({
                                     ...p,
+                                    image_urls: rawFeedImageUrls(p),
                                     type: isReelCard(p) ? 'video' : 'post',
                                     caption: captionForDisplay(p.caption),
                                   });
@@ -870,7 +985,8 @@ export default function AdminFeed() {
                           </tr>
                         )}
                       </Fragment>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -916,7 +1032,7 @@ export default function AdminFeed() {
                 </div>
 
                 <div className="admin-form-group">
-                  <label>Image</label>
+                  <label>Images (order = carousel)</label>
                   <div
                     className="admin-image-upload-zone"
                     onDragOver={(e) => {
@@ -929,37 +1045,78 @@ export default function AdminFeed() {
                     onDrop={(e) => {
                       e.preventDefault();
                       e.currentTarget.classList.remove('admin-image-upload-zone--drag');
-                      uploadEditFile(e.dataTransfer?.files?.[0], 'image');
+                      void uploadEditImages(e.dataTransfer?.files);
                     }}
                   >
                     <input
                       id="admin-feed-edit-image"
                       type="file"
                       accept="image/jpeg,image/png,image/gif,image/webp"
+                      multiple={contentKind(editPost.type) !== 'reel'}
                       style={{ display: 'none' }}
                       disabled={editUploading !== null}
                       onChange={(e) => {
-                        uploadEditFile(e.target.files?.[0], 'image');
+                        void uploadEditImages(e.target.files);
                         e.target.value = '';
                       }}
                     />
-                    <label htmlFor="admin-feed-edit-image" style={{ cursor: editUploading ? 'wait' : 'pointer', margin: 0 }}>
-                      {editUploading === 'image' ? 'Uploading…' : 'Drop image or click to replace'}
+                    <label
+                      htmlFor="admin-feed-edit-image"
+                      style={{ cursor: editUploading !== null ? 'wait' : 'pointer', margin: 0 }}
+                    >
+                      {editUploading === 'image'
+                        ? 'Uploading…'
+                        : contentKind(editPost.type) === 'reel'
+                          ? 'Drop cover image or click (one image for reels)'
+                          : 'Drop images or click — add multiple'}
                     </label>
                   </div>
-                  {resolvedMediaUrl(editPost.image_url) ? (
-                    <div className="admin-feed-media-preview-wrap">
-                      <img className="admin-form-preview" src={resolvedMediaUrl(editPost.image_url)} alt="" />
+                  {rawFeedImageUrls(editPost).length > 0 && (
+                    <div className="admin-feed-image-strip">
+                      {rawFeedImageUrls(editPost).map((u, idx) => (
+                        <div key={`${u}-${idx}`} className="admin-feed-image-strip-item">
+                          {resolvedMediaUrl(u) ? <img src={resolvedMediaUrl(u)} alt="" /> : null}
+                          <div className="admin-feed-image-strip-actions">
+                            {idx > 0 ? (
+                              <button
+                                type="button"
+                                className="admin-btn admin-btn--sm admin-btn--secondary"
+                                onClick={() =>
+                                  setEditPost((x) => {
+                                    const next = [...rawFeedImageUrls(x)];
+                                    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                                    return { ...x, image_urls: next, image_url: next[0] || null };
+                                  })
+                                }
+                              >
+                                Up
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              className="admin-btn admin-btn--sm admin-btn--secondary"
+                              onClick={() =>
+                                setEditPost((x) => {
+                                  const next = rawFeedImageUrls(x).filter((_, i) => i !== idx);
+                                  return { ...x, image_urls: next, image_url: next[0] || null };
+                                })
+                              }
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ) : null}
-                  {(editPost.image_url || '').trim() ? (
+                  )}
+                  {rawFeedImageUrls(editPost).length > 0 ? (
                     <button
                       type="button"
                       className="admin-btn admin-btn--sm admin-btn--secondary"
                       style={{ marginTop: '0.5rem' }}
-                      onClick={() => setEditPost((x) => ({ ...x, image_url: '' }))}
+                      onClick={() => setEditPost((x) => ({ ...x, image_urls: [], image_url: null }))}
                     >
-                      Clear image
+                      Clear all images
                     </button>
                   ) : null}
                 </div>
@@ -1031,12 +1188,27 @@ export default function AdminFeed() {
                   {editShowAdvancedUrls && (
                     <div style={{ marginTop: '1rem' }} className="admin-form-row">
                       <div className="admin-form-group">
-                        <label htmlFor="edit-img">Image URL</label>
-                        <input
+                        <label htmlFor="edit-img">Image URLs (one per line)</label>
+                        <textarea
                           id="edit-img"
-                          value={editPost.image_url || ''}
-                          onChange={(e) => setEditPost((x) => ({ ...x, image_url: e.target.value }))}
-                          placeholder="https://…"
+                          rows={4}
+                          value={rawFeedImageUrls(editPost).join('\n')}
+                          onChange={(e) => {
+                            const lines = e.target.value
+                              .split(/[\n\r]+/)
+                              .map((s) => s.trim())
+                              .filter(Boolean)
+                              .slice(
+                                0,
+                                contentKind(editPost.type) === 'reel' ? 1 : MAX_FEED_POST_IMAGES
+                              );
+                            setEditPost((x) => ({
+                              ...x,
+                              image_urls: lines,
+                              image_url: lines[0] || null,
+                            }));
+                          }}
+                          placeholder={'https://…'}
                         />
                       </div>
                       <div className="admin-form-group">

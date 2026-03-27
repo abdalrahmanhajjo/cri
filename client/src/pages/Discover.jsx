@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api, { getPlaceImageUrl, API_ERROR_NETWORK } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
@@ -16,6 +16,10 @@ const TABS = [
   { id: 'offers', icon: 'sell', labelKey: 'tabOffers' },
   { id: 'proposals', icon: 'send', labelKey: 'tabProposals' },
 ];
+
+/** Paginated feed (Instagram-style: small first page + infinite scroll). */
+const FEED_PAGE_SIZE = 12;
+const REEL_PAGE_SIZE = 10;
 
 function DiscoverSkeleton({ tab }) {
   if (tab === 'feed' || tab === 'reel') {
@@ -451,6 +455,14 @@ export default function Discover() {
   const [tab, setTab] = useState('feed');
   const [feedPosts, setFeedPosts] = useState([]);
   const [reels, setReels] = useState([]);
+  const [feedNextOffset, setFeedNextOffset] = useState(0);
+  const [feedHasMore, setFeedHasMore] = useState(true);
+  const [feedLoadingMore, setFeedLoadingMore] = useState(false);
+  const [reelNextOffset, setReelNextOffset] = useState(0);
+  const [reelHasMore, setReelHasMore] = useState(true);
+  const [reelLoadingMore, setReelLoadingMore] = useState(false);
+  const feedSentinelRef = useRef(null);
+  const reelSentinelRef = useRef(null);
   const [promotions, setPromotions] = useState([]);
   const [redeemedPromotionIds, setRedeemedPromotionIds] = useState([]);
   const [places, setPlaces] = useState([]);
@@ -497,6 +509,78 @@ export default function Discover() {
     const sid = String(id);
     setReels((prev) => prev.filter((p) => String(p.id) !== sid));
   }, []);
+
+  const loadMoreFeed = useCallback(async () => {
+    if (!feedHasMore || feedLoadingMore) return;
+    setFeedLoadingMore(true);
+    setError(null);
+    try {
+      const r = await api.communityFeed({
+        format: 'post',
+        limit: FEED_PAGE_SIZE,
+        offset: feedNextOffset,
+        sort: 'smart',
+        ...(placeScopeId ? { placeId: placeScopeId } : {}),
+      });
+      const list = Array.isArray(r.posts) ? r.posts : [];
+      setFeedPosts((prev) => {
+        const seen = new Set(prev.map((p) => String(p.id)));
+        const out = [...prev];
+        for (const p of list) {
+          const id = String(p.id);
+          if (!seen.has(id)) {
+            seen.add(id);
+            out.push(p);
+          }
+        }
+        return out;
+      });
+      setFeedNextOffset((o) => o + list.length);
+      const more =
+        r.hasMore === true || (r.hasMore === undefined && list.length >= FEED_PAGE_SIZE);
+      setFeedHasMore(list.length > 0 && more);
+    } catch (err) {
+      setError(discoverFetchError(err, t));
+    } finally {
+      setFeedLoadingMore(false);
+    }
+  }, [feedHasMore, feedLoadingMore, feedNextOffset, placeScopeId, t]);
+
+  const loadMoreReels = useCallback(async () => {
+    if (!reelHasMore || reelLoadingMore) return;
+    setReelLoadingMore(true);
+    setError(null);
+    try {
+      const r = await api.communityFeed({
+        format: 'reel',
+        limit: REEL_PAGE_SIZE,
+        offset: reelNextOffset,
+        sort: 'smart',
+        ...(placeScopeId ? { placeId: placeScopeId } : {}),
+      });
+      const list = Array.isArray(r.posts) ? r.posts : [];
+      setReels((prev) => {
+        const seen = new Set(prev.map((p) => String(p.id)));
+        const out = [...prev];
+        for (const p of list) {
+          const id = String(p.id);
+          if (!seen.has(id)) {
+            seen.add(id);
+            out.push(p);
+          }
+        }
+        return out;
+      });
+      setReelNextOffset((o) => o + list.length);
+      const more =
+        r.hasMore === true || (r.hasMore === undefined && list.length >= REEL_PAGE_SIZE);
+      setReelHasMore(list.length > 0 && more);
+    } catch (err) {
+      setError(discoverFetchError(err, t));
+    } finally {
+      setReelLoadingMore(false);
+    }
+  }, [reelHasMore, reelLoadingMore, reelNextOffset, placeScopeId, t]);
 
   const [businessMe, setBusinessMe] = useState(null);
 
@@ -569,98 +653,30 @@ export default function Discover() {
   }, [user, tab]);
 
   useEffect(() => {
+    if (tab !== 'feed') return;
     let cancelled = false;
     setLoading(true);
     setError(null);
-
-    const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
-
-    if (tab === 'feed') {
-      const feedParams = { format: 'post', limit: 40 };
-      if (placeScopeId) feedParams.placeId = placeScopeId;
-      api
-        .communityFeed(feedParams)
-        .then((r) => {
-          if (!cancelled) setFeedPosts(Array.isArray(r.posts) ? r.posts : []);
-        })
-        .catch((err) => {
-          if (!cancelled) setError(discoverFetchError(err, t));
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (tab === 'reel') {
-      const reelParams = { format: 'reel', limit: 60 };
-      if (placeScopeId) reelParams.placeId = placeScopeId;
-      api
-        .communityFeed(reelParams)
-        .then((r) => {
-          if (!cancelled) setReels(Array.isArray(r.posts) ? r.posts : []);
-        })
-        .catch((err) => {
-          if (!cancelled) setError(discoverFetchError(err, t));
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (tab === 'offers') {
-      api
-        .publicPromotions({ limit: 100 })
-        .then((r) => {
-          if (cancelled) return;
-          let list = Array.isArray(r.promotions) ? r.promotions : [];
-          if (placeScopeId) {
-            list = list.filter((pr) => String(pr.placeId) === String(placeScopeId));
-          }
-          setPromotions(list);
-        })
-        .catch((err) => {
-          if (!cancelled) setError(discoverFetchError(err, t));
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (tab === 'proposals' && placeScopeId) {
-      api.places
-        .get(placeScopeId, { lang: langParam })
-        .then((p) => {
-          if (!cancelled) setPlaces(p && p.id != null ? [p] : []);
-        })
-        .catch((err) => {
-          if (!cancelled) {
-            setError(discoverFetchError(err, t));
-            setPlaces([]);
-          }
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    api.places
-      .list({ lang: langParam })
+    setFeedPosts([]);
+    setFeedNextOffset(0);
+    setFeedHasMore(true);
+    setFeedLoadingMore(false);
+    api
+      .communityFeed({
+        format: 'post',
+        limit: FEED_PAGE_SIZE,
+        offset: 0,
+        sort: 'smart',
+        ...(placeScopeId ? { placeId: placeScopeId } : {}),
+      })
       .then((r) => {
-        const list = r.popular || r.locations || [];
-        const cap = tab === 'proposals' ? 200 : 36;
-        if (!cancelled) setPlaces(Array.isArray(list) ? list.slice(0, cap) : []);
+        if (cancelled) return;
+        const list = Array.isArray(r.posts) ? r.posts : [];
+        setFeedPosts(list);
+        setFeedNextOffset(list.length);
+        const more =
+          r.hasMore === true || (r.hasMore === undefined && list.length >= FEED_PAGE_SIZE);
+        setFeedHasMore(list.length > 0 && more);
       })
       .catch((err) => {
         if (!cancelled) setError(discoverFetchError(err, t));
@@ -668,14 +684,154 @@ export default function Discover() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-
     return () => {
       cancelled = true;
     };
-  }, [tab, lang, t, placeScopeId]);
+  }, [tab, placeScopeId, t]);
 
-  const emptyFeed = !loading && !error && tab === 'feed' && feedPosts.length === 0;
-  const emptyReels = !loading && !error && tab === 'reel' && reels.length === 0;
+  useEffect(() => {
+    if (tab !== 'reel') return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setReels([]);
+    setReelNextOffset(0);
+    setReelHasMore(true);
+    setReelLoadingMore(false);
+    api
+      .communityFeed({
+        format: 'reel',
+        limit: REEL_PAGE_SIZE,
+        offset: 0,
+        sort: 'smart',
+        ...(placeScopeId ? { placeId: placeScopeId } : {}),
+      })
+      .then((r) => {
+        if (cancelled) return;
+        const list = Array.isArray(r.posts) ? r.posts : [];
+        setReels(list);
+        setReelNextOffset(list.length);
+        const more =
+          r.hasMore === true || (r.hasMore === undefined && list.length >= REEL_PAGE_SIZE);
+        setReelHasMore(list.length > 0 && more);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(discoverFetchError(err, t));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, placeScopeId, t]);
+
+  useEffect(() => {
+    if (tab !== 'offers') return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    api
+      .publicPromotions({ limit: 100 })
+      .then((r) => {
+        if (cancelled) return;
+        let list = Array.isArray(r.promotions) ? r.promotions : [];
+        if (placeScopeId) {
+          list = list.filter((pr) => String(pr.placeId) === String(placeScopeId));
+        }
+        setPromotions(list);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(discoverFetchError(err, t));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, placeScopeId, t]);
+
+  useEffect(() => {
+    if (tab !== 'proposals' || !placeScopeId) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
+    api.places
+      .get(placeScopeId, { lang: langParam })
+      .then((p) => {
+        if (!cancelled) setPlaces(p && p.id != null ? [p] : []);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(discoverFetchError(err, t));
+          setPlaces([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, placeScopeId, lang, t]);
+
+  useEffect(() => {
+    if (tab !== 'proposals' || placeScopeId) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
+    api.places
+      .list({ lang: langParam })
+      .then((r) => {
+        const list = r.popular || r.locations || [];
+        if (!cancelled) setPlaces(Array.isArray(list) ? list.slice(0, 200) : []);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(discoverFetchError(err, t));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, placeScopeId, lang, t]);
+
+  useEffect(() => {
+    if (tab !== 'feed' || !feedHasMore || feedLoadingMore) return undefined;
+    const el = feedSentinelRef.current;
+    if (!el) return undefined;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void loadMoreFeed();
+      },
+      { root: null, rootMargin: '400px', threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [tab, feedHasMore, feedLoadingMore, feedPosts.length, loadMoreFeed]);
+
+  useEffect(() => {
+    if (tab !== 'reel' || !reelHasMore || reelLoadingMore) return undefined;
+    const el = reelSentinelRef.current;
+    if (!el) return undefined;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void loadMoreReels();
+      },
+      { root: null, rootMargin: '400px', threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [tab, reelHasMore, reelLoadingMore, reels.length, loadMoreReels]);
+
+  const emptyFeed =
+    !loading && !error && !feedLoadingMore && tab === 'feed' && feedPosts.length === 0;
+  const emptyReels =
+    !loading && !error && !reelLoadingMore && tab === 'reel' && reels.length === 0;
   const emptyOffers = !loading && !error && tab === 'offers' && promotions.length === 0;
   const emptyPlaces = !loading && !error && tab === 'proposals' && places.length === 0;
 
@@ -769,38 +925,56 @@ export default function Discover() {
         {emptyPlaces && <DiscoverEmpty icon="send" message={t('discover', 'emptyProposals')} t={t} />}
 
         {!loading && !error && tab === 'feed' && feedPosts.length > 0 && (
-          <div className="ig-feed-stack">
-            {feedPosts.map((p, i) => (
-              <div key={p.id} className="ig-feed-stagger" style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}>
-                <FeedPostCard
-                  post={p}
-                  user={user}
-                  onPatch={patchFeedPost}
-                  onRemove={removeFeedPost}
-                  t={t}
-                  discoverBasePath={discoverBasePath}
-                />
+          <>
+            <div className="ig-feed-stack">
+              {feedPosts.map((p, i) => (
+                <div key={p.id} className="ig-feed-stagger" style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}>
+                  <FeedPostCard
+                    post={p}
+                    user={user}
+                    onPatch={patchFeedPost}
+                    onRemove={removeFeedPost}
+                    t={t}
+                    discoverBasePath={discoverBasePath}
+                  />
+                </div>
+              ))}
+            </div>
+            {feedHasMore ? <div ref={feedSentinelRef} className="ig-feed-sentinel" aria-hidden="true" /> : null}
+            {feedLoadingMore ? (
+              <div className="ig-feed-load-more" role="status" aria-live="polite">
+                <span className="ig-feed-load-more-spinner" aria-hidden="true" />
+                <span className="ig-discover-loading-sr">{t('discover', 'loading')}</span>
               </div>
-            ))}
-          </div>
+            ) : null}
+          </>
         )}
 
         {!loading && !error && tab === 'reel' && reels.length > 0 && (
-          <div className="ig-feed-stack">
-            {reels.map((p, i) => (
-              <div key={p.id} className="ig-feed-stagger" style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}>
-                <FeedPostCard
-                  post={p}
-                  user={user}
-                  onPatch={patchReelPost}
-                  onRemove={removeReelPost}
-                  t={t}
-                  variant="reel"
-                  discoverBasePath={discoverBasePath}
-                />
+          <>
+            <div className="ig-feed-stack">
+              {reels.map((p, i) => (
+                <div key={p.id} className="ig-feed-stagger" style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}>
+                  <FeedPostCard
+                    post={p}
+                    user={user}
+                    onPatch={patchReelPost}
+                    onRemove={removeReelPost}
+                    t={t}
+                    variant="reel"
+                    discoverBasePath={discoverBasePath}
+                  />
+                </div>
+              ))}
+            </div>
+            {reelHasMore ? <div ref={reelSentinelRef} className="ig-feed-sentinel" aria-hidden="true" /> : null}
+            {reelLoadingMore ? (
+              <div className="ig-feed-load-more" role="status" aria-live="polite">
+                <span className="ig-feed-load-more-spinner" aria-hidden="true" />
+                <span className="ig-discover-loading-sr">{t('discover', 'loading')}</span>
               </div>
-            ))}
-          </div>
+            ) : null}
+          </>
         )}
 
         {!loading && !error && tab === 'offers' && promotions.length > 0 && (

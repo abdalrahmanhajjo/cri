@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
+import { rawFeedImageUrls } from '../../utils/feedPostImages';
 import './Business.css';
 
 const BASE_TITLE = 'Business — Visit Tripoli';
@@ -25,7 +26,7 @@ function videoSrc(url) {
 function isReelCard(p) {
   const t = String(p?.type || '').toLowerCase();
   if (t === 'reel' || t === 'video') return true;
-  const hasImage = !!imgSrc(p?.image_url);
+  const hasImage = rawFeedImageUrls(p).some((u) => !!imgSrc(u));
   const hasVideo = !!videoSrc(p?.video_url);
   return hasVideo && !hasImage;
 }
@@ -544,13 +545,14 @@ export default function BusinessPlaceFeed() {
               {posts.map((p) => {
                 const placeName = places.find((x) => x.id === p.place_id)?.name || p.place_id;
                 const isReel = isReelCard(p);
-                const hasImage = !!imgSrc(p.image_url);
+                const firstImg = rawFeedImageUrls(p)[0];
+                const hasImage = !!imgSrc(firstImg);
                 const vSrc = videoSrc(p.video_url);
                 return (
                   <article key={p.id} className="business-feed-card">
                     <div className="business-feed-card-media">
                       {hasImage ? (
-                        <img src={imgSrc(p.image_url)} alt="" className="business-feed-card-img" />
+                        <img src={imgSrc(firstImg)} alt="" className="business-feed-card-img" />
                       ) : vSrc ? (
                         <video
                           className="business-feed-card-img business-feed-card-video"

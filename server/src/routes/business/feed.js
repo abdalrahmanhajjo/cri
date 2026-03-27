@@ -4,6 +4,7 @@ const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware } = require('../../middleware/placeOwner');
 const { parsePlaceId, safeUrl } = require('../../utils/validate');
+const { feedImagesForStorage } = require('../../utils/feedImageUrls');
 
 const router = express.Router();
 router.use(authMiddleware, businessPortalMiddleware);
@@ -54,7 +55,7 @@ router.get('/', async (req, res) => {
     }
     extra += formatExtra;
     const { rows } = await query(
-      `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.video_url,
+      `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.image_urls, fp.video_url,
               fp.type, fp.created_at, fp.author_role,
               fp.moderation_status, fp.discoverable, fp.updated_at,
               COALESCE(fp.hide_likes, false) AS hide_likes,
@@ -89,7 +90,7 @@ router.post('/', async (req, res) => {
   if (!caption || caption.length > 8000) {
     return res.status(400).json({ error: 'caption is required (max 8000 characters)' });
   }
-  const imageUrl = safeUrl(req.body?.image_url) || null;
+  const { image_url: imageUrl, image_urls: imageUrlsArr } = feedImagesForStorage(req.body || {});
   const videoUrl = safeUrl(req.body?.video_url) || null;
   const rawType = typeof req.body?.type === 'string' ? req.body.type.trim().toLowerCase() : 'post';
   const type = rawType === 'reel' || rawType === 'video' ? 'video' : 'post';
@@ -113,10 +114,20 @@ router.post('/', async (req, res) => {
 
     await query(
       `INSERT INTO feed_posts (
-         id, user_id, author_name, place_id, caption, image_url, video_url, type, author_role,
+         id, user_id, author_name, place_id, caption, image_url, image_urls, video_url, type, author_role,
          moderation_status, discoverable
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'business_owner', 'approved', true)`,
-      [id, userId, authorShort, pid.value, caption, imageUrl, videoUrl, type]
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, 'business_owner', 'approved', true)`,
+      [
+        id,
+        userId,
+        authorShort,
+        pid.value,
+        caption,
+        imageUrl,
+        imageUrlsArr ? JSON.stringify(imageUrlsArr) : null,
+        videoUrl,
+        type,
+      ]
     );
 
     const { rows } = await query('SELECT * FROM feed_posts WHERE id = $1', [id]);
@@ -170,9 +181,17 @@ router.patch('/:id', async (req, res) => {
     updates.push(`caption = $${n++}`);
     vals.push(cap);
   }
-  if (body.image_url !== undefined) {
+  const hasImageUrls = Object.prototype.hasOwnProperty.call(body, 'image_urls');
+  const hasImageUrl = Object.prototype.hasOwnProperty.call(body, 'image_url');
+  if (hasImageUrls || hasImageUrl) {
+    const { image_url: nextFirst, image_urls: nextList } = feedImagesForStorage({
+      image_url: hasImageUrl ? body.image_url : undefined,
+      image_urls: hasImageUrls ? body.image_urls : undefined,
+    });
     updates.push(`image_url = $${n++}`);
-    vals.push(body.image_url ? safeUrl(body.image_url) : null);
+    vals.push(nextFirst);
+    updates.push(`image_urls = $${n++}::jsonb`);
+    vals.push(nextList ? JSON.stringify(nextList) : null);
   }
   if (body.video_url !== undefined) {
     updates.push(`video_url = $${n++}`);
