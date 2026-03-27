@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api, { getPlaceImageUrl } from '../api/client';
+import api, { getPlaceImageUrl } from '../api';
 import { useLanguage } from '../context/LanguageContext';
 import './SeoLanding.css';
 

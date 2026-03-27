@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import api from '../api/client';
-import { getPlaceImageUrl } from '../api/client';
+import api from '../api';
+import { getPlaceImageUrl } from '../api';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import { DateRangeCalendar } from '../components/Calendar';

@@ -1,5 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { api } from '../../api/client';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import {
+  useAdminUsers,
+  useAdminPlaces,
+  useAdminPlaceOwners,
+  useAddPlaceOwnerMutation,
+  useRemovePlaceOwnerMutation
+} from '../../hooks/useAdmin';
 import './Admin.css';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -67,24 +73,16 @@ function SearchPicker({
 }
 
 export default function AdminPlaceOwners() {
-  const [owners, setOwners] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [saving, setSaving] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
 
   const [userQuery, setUserQuery] = useState('');
   const debouncedUserQ = useDebounced(userQuery, 350);
-  const [userResults, setUserResults] = useState([]);
-  const [userLoading, setUserLoading] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
   const [placeQuery, setPlaceQuery] = useState('');
   const debouncedPlaceQ = useDebounced(placeQuery, 350);
-  const [placeResults, setPlaceResults] = useState([]);
-  const [placeLoading, setPlaceLoading] = useState(false);
   const [placeOpen, setPlaceOpen] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
 
@@ -109,76 +107,36 @@ export default function AdminPlaceOwners() {
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
 
-  useEffect(() => {
-    if (advanced) return;
-    const q = debouncedUserQ.trim();
-    if (q.length < 1) {
-      setUserResults([]);
-      setUserLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setUserLoading(true);
-    api.admin.users
-      .list({ q, limit: 25 })
-      .then((r) => {
-        if (cancelled) return;
-        const list = (r.users || []).filter((u) => !u.isBlocked);
-        setUserResults(list.map((u) => ({ key: u.id, ...u })));
-      })
-      .catch(() => {
-        if (!cancelled) setUserResults([]);
-      })
-      .finally(() => {
-        if (!cancelled) setUserLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [debouncedUserQ, advanced]);
+  const { data: userData, isLoading: userLoading } = useAdminUsers(
+    { q: debouncedUserQ, limit: 25 },
+    { enabled: !advanced && debouncedUserQ.trim().length > 0 }
+  );
+  const userResults = useMemo(() => (userData?.users || []).filter((u) => !u.isBlocked).map(u => ({ key: u.id, ...u })), [userData]);
 
-  useEffect(() => {
-    if (advanced) return;
-    const q = debouncedPlaceQ.trim();
-    if (q.length < 1) {
-      setPlaceResults([]);
-      setPlaceLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setPlaceLoading(true);
-    api.admin.places
-      .list({ q, limit: 50 })
-      .then((r) => {
-        if (cancelled) return;
-        setPlaceResults((r.places || []).map((p) => ({ key: p.id, ...p })));
-      })
-      .catch(() => {
-        if (!cancelled) setPlaceResults([]);
-      })
-      .finally(() => {
-        if (!cancelled) setPlaceLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [debouncedPlaceQ, advanced]);
+  const { data: placeData, isLoading: placeLoading } = useAdminPlaces(
+    { q: debouncedPlaceQ, limit: 50 },
+    { enabled: !advanced && debouncedPlaceQ.trim().length > 0 }
+  );
+  const placeResults = useMemo(() => (placeData?.popular || placeData?.locations || []).map(p => ({ key: p.id, ...p })), [placeData]);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    const params = {};
-    if (debouncedQ) params.q = debouncedQ;
-    api.admin.placeOwners
-      .list(params)
-      .then((r) => setOwners(r.owners || []))
-      .catch((err) => setError(err.message || 'Failed to load'))
-      .finally(() => setLoading(false));
-  }, [debouncedQ]);
+  const { data: ownersRes, isLoading: loading, error: queryError, refetch } = useAdminPlaceOwners();
+  const owners = ownersRes?.owners || [];
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const filteredOwners = useMemo(() => {
+    if (!debouncedQ) return owners;
+    const q = debouncedQ.toLowerCase();
+    return owners.filter(o => 
+      o.user_id.toLowerCase().includes(q) || 
+      o.place_id.toLowerCase().includes(q) || 
+      (o.email && o.email.toLowerCase().includes(q)) ||
+      (o.user_name && o.user_name.toLowerCase().includes(q))
+    );
+  }, [owners, debouncedQ]);
+
+  const addMutation = useAddPlaceOwnerMutation();
+  const removeMutation = useRemovePlaceOwnerMutation();
+
+  const [error, setError] = useState(null);
 
   const onUserInput = (v) => {
     setUserQuery(v);
@@ -216,35 +174,32 @@ export default function AdminPlaceOwners() {
   const add = async (e) => {
     e.preventDefault();
     if (!canSubmit()) return;
-    setSaving(true);
     setError(null);
     const userId = advanced ? rawUserId.trim() : selectedUser.id;
     const placeId = advanced ? rawPlaceId.trim() : selectedPlace.id;
     try {
-      await api.admin.placeOwners.add({ userId, placeId });
+      await addMutation.mutateAsync({ userId, placeId });
       setUserQuery('');
       setPlaceQuery('');
       setSelectedUser(null);
       setSelectedPlace(null);
       setRawUserId('');
       setRawPlaceId('');
-      load();
     } catch (err) {
       setError(err.message || 'Failed to add');
-    } finally {
-      setSaving(false);
     }
   };
 
   const remove = async (user_id, place_id) => {
     if (!window.confirm('Remove this ownership link?')) return;
     try {
-      await api.admin.placeOwners.remove(user_id, place_id);
-      load();
+      await removeMutation.mutateAsync({ userId: user_id, placeId: place_id });
     } catch (err) {
       setError(err.message || 'Failed to remove');
     }
   };
+
+  const displayError = error || queryError?.message;
 
   return (
     <div className="admin-page-content">
@@ -254,7 +209,7 @@ export default function AdminPlaceOwners() {
           <h1>Place owners</h1>
         </div>
       </div>
-      {error && <div className="admin-error">{error}</div>}
+      {displayError && <div className="admin-error">{displayError}</div>}
 
       <div className="admin-card" style={{ marginBottom: '1.5rem' }}>
         <div className="admin-card-header">
@@ -331,8 +286,8 @@ export default function AdminPlaceOwners() {
           )}
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', marginTop: '0.5rem' }}>
-            <button type="submit" className="admin-btn admin-btn--primary" disabled={saving || !canSubmit()}>
-              {saving ? 'Adding…' : 'Add link'}
+            <button type="submit" className="admin-btn admin-btn--primary" disabled={addMutation.isPending || !canSubmit()}>
+              {addMutation.isPending ? 'Adding…' : 'Add link'}
             </button>
             <label className="admin-search-pick__advanced-toggle">
               <input
@@ -372,7 +327,7 @@ export default function AdminPlaceOwners() {
               />
             </div>
             <div className="admin-toolbar-actions">
-              <button type="button" className="admin-btn admin-btn--secondary" onClick={load} disabled={loading}>
+              <button type="button" className="admin-btn admin-btn--secondary" onClick={() => refetch()} disabled={loading}>
                 Refresh
               </button>
             </div>
@@ -383,14 +338,14 @@ export default function AdminPlaceOwners() {
       <div className="admin-card">
         <div className="admin-card-header">
           <h2 className="admin-card-title">
-            Links ({owners.length}
+            Links ({filteredOwners.length}
             {debouncedQ ? ` matching “${debouncedQ}”` : ''})
           </h2>
         </div>
         <div className="admin-card-body" style={{ padding: 0 }}>
           {loading && owners.length === 0 && <div className="admin-loading" style={{ padding: '1.5rem' }}>Loading…</div>}
-          {!loading && owners.length === 0 && <div className="admin-empty">No place owners match your search.</div>}
-          {!loading && owners.length > 0 && (
+          {!loading && filteredOwners.length === 0 && <div className="admin-empty">No place owners match your search.</div>}
+          {!loading && filteredOwners.length > 0 && (
             <table className="admin-table">
               <thead>
                 <tr>
@@ -402,7 +357,7 @@ export default function AdminPlaceOwners() {
                 </tr>
               </thead>
               <tbody>
-                {owners.map((o) => (
+                {filteredOwners.map((o) => (
                   <tr key={`${o.user_id}-${o.place_id}`}>
                     <td>
                       <strong>{o.place_id}</strong>
@@ -414,9 +369,10 @@ export default function AdminPlaceOwners() {
                       <button
                         type="button"
                         className="admin-btn admin-btn--sm admin-btn--danger"
+                        disabled={removeMutation.isPending && removeMutation.variables?.userId === o.user_id && removeMutation.variables?.placeId === o.place_id}
                         onClick={() => remove(o.user_id, o.place_id)}
                       >
-                        Remove
+                        {removeMutation.isPending && removeMutation.variables?.userId === o.user_id && removeMutation.variables?.placeId === o.place_id ? 'Removing…' : 'Remove'}
                       </button>
                     </td>
                   </tr>

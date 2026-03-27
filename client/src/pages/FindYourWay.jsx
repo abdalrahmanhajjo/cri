@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import api, { getPlaceImageUrl } from '../api/client';
+import api, { getPlaceImageUrl } from '../api';
 import Icon from '../components/Icon';
 import { WAYS_CONFIG, groupPlacesByWay, FIND_YOUR_WAY_WAY_KEYS } from '../utils/findYourWayGrouping';
 import './Explore.css';

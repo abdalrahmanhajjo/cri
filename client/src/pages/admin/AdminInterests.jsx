@@ -1,5 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { api } from '../../api/client';
+import { 
+  useCreateAdminInterestMutation, 
+  useUpdateAdminInterestMutation, 
+  useDeleteAdminInterestMutation 
+} from '../../hooks/useAdmin';
+import { useInterests } from '../../hooks/useInterests';
 import './Admin.css';
 
 function InterestModal({ interest, onClose, onSaved }) {
@@ -12,7 +16,10 @@ function InterestModal({ interest, onClose, onSaved }) {
   const [form, setForm] = useState({
     id: '', name: '', icon: 'place', description: '', color: '#666666', count: '0', popularity: '0', tags: '',
   });
-  const [saving, setSaving] = useState(false);
+
+  const createMutation = useCreateAdminInterestMutation();
+  const updateMutation = useUpdateAdminInterestMutation();
+
   const [err, setErr] = useState(null);
 
   useEffect(() => {
@@ -35,7 +42,6 @@ function InterestModal({ interest, onClose, onSaved }) {
   const submit = async (e) => {
     e.preventDefault();
     setErr(null);
-    setSaving(true);
     try {
       const tags = form.tags.trim() ? form.tags.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : [];
       const payload = {
@@ -49,16 +55,14 @@ function InterestModal({ interest, onClose, onSaved }) {
         tags,
       };
       if (interest?.id) {
-        await api.admin.interests.update(interest.id, payload);
+        await updateMutation.mutateAsync({ id: interest.id, body: payload });
       } else {
-        await api.admin.interests.create(payload);
+        await createMutation.mutateAsync(payload);
       }
       onSaved();
       onClose();
     } catch (ex) {
       setErr(ex.message || 'Failed to save');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -113,7 +117,9 @@ function InterestModal({ interest, onClose, onSaved }) {
           </div>
           <div className="admin-modal-footer">
             <button type="button" className="admin-btn admin-btn--secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="admin-btn admin-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+            <button type="submit" className="admin-btn admin-btn--primary" disabled={createMutation.isPending || updateMutation.isPending}>
+              {createMutation.isPending || updateMutation.isPending ? 'Saving…' : 'Save'}
+            </button>
           </div>
         </form>
       </div>
@@ -122,39 +128,27 @@ function InterestModal({ interest, onClose, onSaved }) {
 }
 
 export default function AdminInterests() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const fetchData = useCallback(() => {
-    setLoading(true);
-    api.interests.list()
-      .then((r) => setData(r.interests || []))
-      .catch((err) => setError(err.message || 'Failed to load interests'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const { data: interestsData, isLoading: loading, error } = useInterests();
+  const deleteMutation = useDeleteAdminInterestMutation();
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return data;
+    const list = interestsData || [];
+    if (!search.trim()) return list;
     const q = search.trim().toLowerCase();
-    return data.filter((c) => (c.name && c.name.toLowerCase().includes(q)) || (c.id && c.id.toLowerCase().includes(q)));
-  }, [data, search]);
+    return list.filter((c) => (c.name && c.name.toLowerCase().includes(q)) || (c.id && c.id.toLowerCase().includes(q)));
+  }, [interestsData, search]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await api.admin.interests.delete(deleteTarget.id);
+      await deleteMutation.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
-      fetchData();
     } catch (e) {
-      setError(e.message || 'Delete failed');
+      console.error('Delete failed', e);
     }
   };
 
@@ -172,7 +166,7 @@ export default function AdminInterests() {
           <button type="button" className="admin-btn admin-btn--primary" onClick={() => setModal({})}>+ Add interest</button>
         </div>
       </div>
-      {error && <div className="admin-error">{error}</div>}
+      {error && <div className="admin-error">{error.message || 'Failed to load interests'}</div>}
       <div className="admin-card">
         <div className="admin-card-body" style={{ padding: 0 }}>
           {loading && <div className="admin-loading" style={{ padding: '1.5rem' }}>Loading…</div>}
@@ -205,7 +199,7 @@ export default function AdminInterests() {
         <InterestModal
           interest={modal && modal.id ? modal : null}
           onClose={() => setModal(null)}
-          onSaved={fetchData}
+          onSaved={() => {}}
         />
       )}
 

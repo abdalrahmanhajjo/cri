@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../api/client';
+import api from '../api';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import {

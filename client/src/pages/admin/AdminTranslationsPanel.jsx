@@ -1,6 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useAdminContent, useUpdateAdminContentMutation } from '../../hooks/useAdmin';
 import { translations, getTranslationOverrides, setTranslationOverrides, setApiOverrides } from '../../i18n/translations';
-import { api } from '../../api/client';
 
 function flattenTranslations() {
   const items = [];
@@ -133,8 +132,10 @@ function ContentRow({ item, currentValue, onSave, showNamespace }) {
 
 /** Site-wide UI strings — stored in DB (migration 004). */
 export default function AdminTranslationsPanel() {
+  const { data: contentData, isLoading: loading, error: queryError } = useAdminContent();
+  const updateMutation = useUpdateAdminContentMutation();
+
   const [overrides, setOverrides] = useState({});
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState('');
@@ -142,20 +143,14 @@ export default function AdminTranslationsPanel() {
   const [namespaceFilter, setNamespaceFilter] = useState(SECTION_ALL);
 
   useEffect(() => {
-    api.admin.content
-      .get()
-      .then((res) => {
-        const data = res?.overrides || {};
-        setOverrides(data);
-        setApiOverrides(data);
-        setError(null);
-      })
-      .catch((err) => {
-        setOverrides(getTranslationOverrides());
-        setError(err?.message || 'Failed to load content');
-      })
-      .finally(() => setLoading(false));
-  }, []);
+    if (contentData?.overrides) {
+      setOverrides(contentData.overrides);
+      setApiOverrides(contentData.overrides);
+    } else if (queryError) {
+      setOverrides(getTranslationOverrides());
+      setError(queryError?.message || 'Failed to load content');
+    }
+  }, [contentData, queryError]);
 
   const getCurrentValue = (item) => {
     const o = overrides[item.lang]?.[item.namespace]?.[item.key];
@@ -174,11 +169,7 @@ export default function AdminTranslationsPanel() {
       next[lang][namespace][key] = value;
     }
     try {
-      const res = await api.admin.content.save(next);
-      const data = res?.overrides || next;
-      setOverrides(data);
-      setApiOverrides(data);
-      window.dispatchEvent(new CustomEvent('translations-updated'));
+      await updateMutation.mutateAsync(next);
       setToast({ type: 'success', msg: 'Saved to database' });
     } catch (err) {
       console.error(err);

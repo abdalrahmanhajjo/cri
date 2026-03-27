@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import api, { getPlaceImageUrl } from '../api/client';
+import api, { getPlaceImageUrl } from '../api';
 import Icon from '../components/Icon';
 import { useLanguage } from '../context/LanguageContext';
 import {

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { api, API_ERROR_NETWORK } from '../api/client';
+import { api, API_ERROR_NETWORK } from '../api';
 import { siteSettingsDefaults } from '../config/siteSettingsDefaults';
 import { getStoredLanguage, getTranslation } from '../i18n/translations';
 

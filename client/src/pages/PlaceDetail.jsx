@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import api from '../api/client';
+import api, { getPlaceImageUrl } from '../api';
 import Icon from '../components/Icon';
 import OfferCard from '../components/OfferCard';
-import { getPlaceImageUrl } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { usePlace, usePlaceReviews, usePlacePromotions } from '../hooks/usePlaces';
+import { useUserFavourites, useToggleFavourite } from '../hooks/useUser';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
 import './Detail.css';
 
@@ -65,13 +66,14 @@ export default function PlaceDetail() {
   const location = useLocation();
   const { t, lang } = useLanguage();
   const { user } = useAuth();
-  const [place, setPlace] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isFavourite, setIsFavourite] = useState(false);
+
+  const { data: place, isLoading: loadingPlace, error: placeError } = usePlace(id, { lang });
+  const { data: reviewsRes, isLoading: loadingReviews } = usePlaceReviews(id);
+  const { data: promotionsRes } = usePlacePromotions(id);
+  const { data: favsRes } = useUserFavourites();
+  const toggleFavMutation = useToggleFavourite();
+
   const [copyToast, setCopyToast] = useState(false);
-  const [promotions, setPromotions] = useState([]);
-  const [redeemedPromotionIds, setRedeemedPromotionIds] = useState([]);
   const [checkinMsg, setCheckinMsg] = useState(null);
   const [checkinBusy, setCheckinBusy] = useState(false);
   const [inquiryIntent, setInquiryIntent] = useState('general');
@@ -84,9 +86,6 @@ export default function PlaceDetail() {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
-  const [placeReviews, setPlaceReviews] = useState([]);
-  const [placeReviewsLoading, setPlaceReviewsLoading] = useState(false);
-  const [placeReviewsError, setPlaceReviewsError] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewBody, setReviewBody] = useState('');
@@ -94,7 +93,13 @@ export default function PlaceDetail() {
   const [reviewMsg, setReviewMsg] = useState(null);
   const [reviewsOpen, setReviewsOpen] = useState(false);
 
+  const placeReviews = reviewsRes?.reviews || [];
+  const promotions = promotionsRes?.promotions || [];
   const myReview = useMemo(() => placeReviews.find((r) => r.isYours), [placeReviews]);
+  const isFavourite = useMemo(() => {
+    const ids = new Set((favsRes?.placeIds || []).map(String));
+    return ids.has(String(id));
+  }, [favsRes, id]);
 
   useEffect(() => {
     if (myReview) {
@@ -113,46 +118,9 @@ export default function PlaceDetail() {
   }, [id]);
 
   useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    setPlaceReviewsLoading(true);
-    setPlaceReviewsError(false);
-    api.places
-      .reviews(id)
-      .then((r) => {
-        if (!cancelled) setPlaceReviews(Array.isArray(r.reviews) ? r.reviews : []);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setPlaceReviews([]);
-          setPlaceReviewsError(true);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setPlaceReviewsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
-
-  useEffect(() => {
-    let cancelled = false;
-    api.places
-      .get(id)
-      .then((p) => {
-        if (!cancelled) {
-          setPlace(p);
-          if (p?.name) document.title = `${p.name} | Visit Tripoli`;
-        }
-      })
-      .catch((e) => { if (!cancelled) setError(e.message); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => {
-      cancelled = true;
-      document.title = 'Visit Tripoli';
-    };
-  }, [id]);
+    if (place?.name) document.title = `${place.name} | Visit Tripoli`;
+    return () => { document.title = 'Visit Tripoli'; };
+  }, [place?.name]);
 
   const galleryUrls = useMemo(() => collectPlaceImageUrls(place), [place]);
 
@@ -177,25 +145,16 @@ export default function PlaceDetail() {
     return () => window.removeEventListener('keydown', onKey);
   }, [lightboxOpen, galleryUrls.length]);
 
+  const [redeemedPromotionIds, setRedeemedPromotionIds] = useState([]);
   useEffect(() => {
     if (!user) {
       setRedeemedPromotionIds([]);
-      return undefined;
+      return;
     }
-    let cancelled = false;
-    api.coupons
-      .redeemed()
-      .then((r) => {
-        if (cancelled) return;
-        const ids = Array.isArray(r.couponIds) ? r.couponIds.map((cid) => `coupon-${cid}`) : [];
-        setRedeemedPromotionIds(ids);
-      })
-      .catch(() => {
-        if (!cancelled) setRedeemedPromotionIds([]);
-      });
-    return () => {
-      cancelled = true;
-    };
+    api.coupons.redeemed().then((r) => {
+      const ids = Array.isArray(r.couponIds) ? r.couponIds.map((cid) => `coupon-${cid}`) : [];
+      setRedeemedPromotionIds(ids);
+    }).catch(() => setRedeemedPromotionIds([]));
   }, [user]);
 
   useEffect(() => {
@@ -203,60 +162,20 @@ export default function PlaceDetail() {
   }, [user?.email]);
 
   useEffect(() => {
-    if (!id) {
-      setPromotions([]);
-      return;
-    }
-    let cancelled = false;
-    api.places
-      .promotions(id)
-      .then((r) => {
-        if (!cancelled) setPromotions(Array.isArray(r.promotions) ? r.promotions : []);
-      })
-      .catch(() => {
-        if (!cancelled) setPromotions([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
-
-  useEffect(() => {
+    const loading = loadingPlace;
     if (loading || !place) return;
     if (location.hash !== '#place-proposal') return;
     const el = document.getElementById('place-proposal');
     if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  }, [loading, place, location.hash]);
-
-  useEffect(() => {
-    if (!user || !place) {
-      setIsFavourite(false);
-      return;
-    }
-    api.user
-      .favourites()
-      .then((res) => {
-        const ids = new Set((Array.isArray(res.placeIds) ? res.placeIds : []).map(String));
-        setIsFavourite(ids.has(String(place.id)));
-      })
-      .catch(() => setIsFavourite(false));
-  }, [user, place]);
+  }, [loadingPlace, place, location.hash]);
 
   const toggleFavourite = useCallback(() => {
     if (!user) {
       navigate('/login', { state: { from: 'place' } });
       return;
     }
-    if (!place) return;
-    const placeId = String(place.id);
-    if (isFavourite) {
-      api.user.removeFavourite(placeId).catch(() => {});
-      setIsFavourite(false);
-    } else {
-      api.user.addFavourite(placeId).catch(() => {});
-      setIsFavourite(true);
-    }
-  }, [user, place, isFavourite, navigate]);
+    toggleFavMutation.mutate({ id, isFavourite });
+  }, [user, id, isFavourite, navigate, toggleFavMutation]);
 
   const handleShare = useCallback(() => {
     if (typeof navigator !== 'undefined' && navigator.share && place) {
@@ -469,7 +388,7 @@ export default function PlaceDetail() {
     });
   }, [place, user, navigate, location.pathname, location.search, location.hash]);
 
-  if (loading) {
+  if (loadingPlace) {
     return (
       <div className="place-detail place-detail--loading">
         <div className="place-detail-loading">
@@ -480,7 +399,7 @@ export default function PlaceDetail() {
     );
   }
 
-  if (error || !place) {
+  if (placeError || !place) {
     return (
       <div className="place-detail place-detail--error">
         <div className="place-detail-container">
@@ -489,7 +408,7 @@ export default function PlaceDetail() {
           </Link>
           <div className="place-detail-error">
             <p>{t('detail', 'placeNotFound')}</p>
-            <p className="place-detail-error-sub">{error || ''}</p>
+            <p className="place-detail-error-sub">{placeError?.message || ''}</p>
           </div>
         </div>
       </div>
@@ -724,17 +643,13 @@ export default function PlaceDetail() {
                   >
                     <p className="place-detail-engage-hint">{t('detail', 'reviewSiteHint')}</p>
 
-                    {placeReviewsLoading && (
+                    {loadingReviews && (
                       <p className="place-detail-engage-hint" aria-live="polite">
                         {t('detail', 'loading')}
                       </p>
                     )}
-                    {placeReviewsError && !placeReviewsLoading && (
-                      <p className="place-detail-error-inline" role="alert">
-                        {t('detail', 'reviewsLoadError')}
-                      </p>
-                    )}
-                    {!placeReviewsLoading && !placeReviewsError && placeReviews.length === 0 && (
+                    {/* (Review error display could go here if needed) */}
+                    {!loadingReviews && placeReviews.length === 0 && (
                       <p className="place-detail-engage-hint">{t('detail', 'reviewsEmpty')}</p>
                     )}
                     {placeReviews.length > 0 && (

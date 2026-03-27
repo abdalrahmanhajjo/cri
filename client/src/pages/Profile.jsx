@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import HciSettingsPanel from '../components/HciSettingsPanel';
-import api from '../api/client';
+import api from '../api';
 import {
   checkPasswordRequirements,
   PASSWORD_REQUIREMENTS,

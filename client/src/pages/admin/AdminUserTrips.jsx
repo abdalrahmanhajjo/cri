@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { api } from '../../api/client';
+import { useState, useEffect } from 'react';
+import { useAdminUserTrips } from '../../hooks/useAdmin';
 import './Admin.css';
 
 function formatDate(str) {
@@ -13,9 +13,6 @@ function formatDate(str) {
 }
 
 export default function AdminUserTrips() {
-  const [trips, setTrips] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [searchInput, setSearchInput] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
 
@@ -24,21 +21,11 @@ export default function AdminUserTrips() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    const params = { limit: 500 };
-    if (debouncedQ) params.q = debouncedQ;
-    api.admin.allTrips
-      .list(params)
-      .then((r) => setTrips(r.trips || []))
-      .catch((err) => setError(err.message || 'Failed to load trips'))
-      .finally(() => setLoading(false));
-  }, [debouncedQ]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const { data: tripsRes, isLoading: loading, error, refetch } = useAdminUserTrips({ 
+    q: debouncedQ, 
+    limit: 500 
+  });
+  const trips = tripsRes?.trips || [];
 
   return (
     <div className="admin-page-content">
@@ -48,7 +35,7 @@ export default function AdminUserTrips() {
           <h1>User trips</h1>
         </div>
       </div>
-      {error && <div className="admin-error">{error}</div>}
+      {error && <div className="admin-error">{error.message || 'Failed to load trips'}</div>}
 
       <div className="admin-card admin-toolbar-card" style={{ marginBottom: '1rem' }}>
         <div className="admin-card-body" style={{ padding: '1rem 1.25rem' }}>
@@ -65,7 +52,7 @@ export default function AdminUserTrips() {
               />
             </div>
             <div className="admin-toolbar-actions">
-              <button type="button" className="admin-btn admin-btn--secondary" onClick={load} disabled={loading}>
+              <button type="button" className="admin-btn admin-btn--secondary" onClick={() => refetch()} disabled={loading}>
                 Refresh
               </button>
             </div>

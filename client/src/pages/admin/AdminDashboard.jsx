@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../../api/client';
+import { useAdminStats } from '../../hooks/useAdmin';
+import { usePlaces, useCategories, useEvents } from '../../hooks/usePlaces';
 import './Admin.css';
 
 function formatDate(str) {
@@ -15,50 +16,34 @@ function formatDate(str) {
 
 export default function AdminDashboard() {
   const [search, setSearch] = useState('');
-  const [stats, setStats] = useState({ places: 0, categories: 0, tours: 0, events: 0, users: 0, trips: 0, feedPosts: 0 });
-  const [places, setPlaces] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [quickTab, setQuickTab] = useState('places');
+  const [error, setError] = useState(null);
+  const { data: statsRes, isLoading: loadingStats } = useAdminStats();
+  const { data: placesRes, isLoading: loadingPlaces } = usePlaces();
+  const { data: catsRes, isLoading: loadingCats } = useCategories();
+  const { data: eventsRes, isLoading: loadingEvents } = useEvents();
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    Promise.all([
-      api.admin.stats().catch(() => ({})),
-      api.places.list().then((r) => r.popular || r.locations || []),
-      api.categories.list().then((r) => r.categories || []),
-      api.events.list().then((r) => r.events || []),
-    ])
-      .then(([st, pList, cList, eList]) => {
-        if (cancelled) return;
-        const placesArr = Array.isArray(pList) ? pList : [];
-        const categoriesArr = Array.isArray(cList) ? cList : [];
-        const eventsArr = Array.isArray(eList) ? eList : [];
-        setStats({
-          places: st.places != null ? st.places : placesArr.length,
-          categories: st.categories != null ? st.categories : categoriesArr.length,
-          tours: st.tours != null ? st.tours : 0,
-          events: st.events != null ? st.events : eventsArr.length,
-          users: st.users ?? 0,
-          trips: st.trips ?? 0,
-          feedPosts: st.feedPosts ?? 0,
-        });
-        setPlaces(placesArr.slice(0, 5));
-        setEvents(eventsArr.slice(0, 5));
-        setCategories(categoriesArr);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.message || 'Failed to load dashboard data');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
+  const stats = useMemo(() => {
+    const st = statsRes || {};
+    const placesArr = placesRes?.locations || placesRes?.popular || [];
+    const categoriesArr = catsRes?.categories || [];
+    const eventsArr = eventsRes?.events || [];
+    return {
+      places: st.places != null ? st.places : placesArr.length,
+      categories: st.categories != null ? st.categories : categoriesArr.length,
+      tours: st.tours != null ? st.tours : 0,
+      events: st.events != null ? st.events : eventsArr.length,
+      users: st.users ?? 0,
+      trips: st.trips ?? 0,
+      feedPosts: st.feedPosts ?? 0,
+    };
+  }, [statsRes, placesRes, catsRes, eventsRes]);
+
+  const places = useMemo(() => (placesRes?.locations || placesRes?.popular || []).slice(0, 5), [placesRes]);
+  const events = useMemo(() => (eventsRes?.events || []).slice(0, 5), [eventsRes]);
+  const categories = useMemo(() => catsRes?.categories || [], [catsRes]);
+
+  const loading = loadingStats || loadingPlaces || loadingCats || loadingEvents;
 
   const { places: placesNum, categories: categoriesNum, tours: toursNum, events: eventsNum, users: usersNum, trips: tripsNum, feedPosts: feedNum } = stats;
   const total = placesNum + categoriesNum + toursNum + eventsNum;

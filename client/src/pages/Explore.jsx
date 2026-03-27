@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api, { getPlaceImageUrl } from '../api/client';
+import api, { getPlaceImageUrl } from '../api';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
+import { usePlaces } from '../hooks/usePlaces';
+import { useCategories } from '../hooks/useCategories';
+import { useCommunityFeed } from '../hooks/useCommunityFeed';
+import { useUserFavourites } from '../hooks/useUser';
 import Icon from '../components/Icon';
 import { CommunityFeedStrip } from '../components/CommunityFeed';
 import { trackEvent } from '../utils/analytics';
@@ -468,60 +472,23 @@ export default function Explore() {
   const { t, lang } = useLanguage();
   const { user } = useAuth();
   const { settings } = useSiteSettings();
-  const [places, setPlaces] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [categoryCount, setCategoryCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [communityPosts, setCommunityPosts] = useState([]);
 
-  useEffect(() => {
-    const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    Promise.allSettled([api.places.list({ lang: langParam }), api.categories.list({ lang: langParam })])
-      .then((results) => {
-        if (cancelled) return;
-        const [pRes, cRes] = results;
-        if (pRes.status === 'rejected') {
-          const err = pRes.reason;
-          const apiErr = err?.data?.error || err?.message;
-          const detail =
-            import.meta.env.DEV && err?.data?.detail ? `\n\n${err.data.detail}` : '';
-          setError(String(apiErr || err || 'Failed to load') + detail);
-          return;
-        }
-        const pr = pRes.value;
-        const pl = pr.popular || pr.locations || [];
-        setPlaces(Array.isArray(pl) ? pl : []);
-        if (cRes.status === 'fulfilled') {
-          const cats = cRes.value?.categories || [];
-          const arr = Array.isArray(cats) ? cats : [];
-          setCategories(arr);
-          setCategoryCount(arr.length);
-        } else {
-          setCategories([]);
-          setCategoryCount(0);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [lang]);
+  const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
 
-  useEffect(() => {
-    if (loading || error) return;
-    const hash = window.location.hash;
-    const allowedHashes = ['#plan', '#experience', '#why', '#plan-trip', '#download-app', '#community'];
-    if (hash && allowedHashes.includes(hash)) {
-      const el = document.querySelector(hash);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [loading, error]);
+  const { 
+    data: placesRes, 
+    isLoading: loadingPlaces, 
+    error: placesError 
+  } = usePlaces({ lang: langParam });
+
+  const { 
+    data: categoriesRes, 
+    isLoading: loadingCategories 
+  } = useCategories({ lang: langParam });
+
+  const { 
+    data: feedRes 
+  } = useCommunityFeed({ limit: 48, sort: 'smart' });
 
   useEffect(() => {
     trackEvent(user, 'page_view', { page: 'home' });
@@ -539,20 +506,12 @@ export default function Explore() {
     meta.setAttribute('content', d);
   }, [settings.metaDescription]);
 
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .communityFeed({ limit: 48, sort: 'smart' })
-      .then((r) => {
-        if (!cancelled) setCommunityPosts(Array.isArray(r.posts) ? r.posts : []);
-      })
-      .catch(() => {
-        if (!cancelled) setCommunityPosts([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const loading = loadingPlaces || loadingCategories;
+  const error = placesError ? (placesError.data?.error || placesError.message) : null;
+
+  const placesList = placesRes?.popular || placesRes?.locations || [];
+  const categoriesList = categoriesRes?.categories || [];
+  const communityPosts = feedRes?.posts || [];
 
   const heroTitle = settings.siteName?.trim() || t('home', 'heroTitle');
   const heroTagline = settings.siteTagline?.trim() || t('home', 'heroTagline');
@@ -585,9 +544,8 @@ export default function Explore() {
     );
   }
 
-  const placesList = Array.isArray(places) ? places : [];
   const placeCountStr = formatDirectoryCount(placesList.length, lang);
-  const categoryCountStr = formatDirectoryCount(categoryCount, lang);
+  const categoryCountStr = formatDirectoryCount(categoriesList.length, lang);
   const topPicks = placesList.slice().sort((a, b) => (Number(b?.rating) || 0) - (Number(a?.rating) || 0)).slice(0, 6);
   const bentoV = resolveHomeBentoVisuals(settings);
   const bentoAvatarSlots = resolveBentoAvatarSlots(settings, placesList, (p) =>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import api, { getPlaceImageUrl } from '../api/client';
+import api, { getPlaceImageUrl } from '../api';
 import { useLanguage } from '../context/LanguageContext';
 import './BacklinkKit.css';
 

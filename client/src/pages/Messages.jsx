@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { COMMUNITY_PATH } from '../utils/discoverPaths';
 import { useLanguage } from '../context/LanguageContext';
-import api from '../api/client';
+import api from '../api';
 import Icon from '../components/Icon';
 import './Discover.css';
 import './Messages.css';

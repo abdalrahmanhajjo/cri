@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Outlet, NavLink, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import api from '../../api/client';
+import api from '../../api';
 import './Business.css';
 
 export function BusinessNavSections({ places, onNavClick }) {

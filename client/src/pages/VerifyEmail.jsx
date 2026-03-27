@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../api/client';
+import api from '../api';
 import Icon from '../components/Icon';
 import './Auth.css';
 

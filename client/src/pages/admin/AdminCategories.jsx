@@ -1,5 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { api } from '../../api/client';
+import { 
+  useCreateAdminCategoryMutation, 
+  useUpdateAdminCategoryMutation, 
+  useDeleteAdminCategoryMutation 
+} from '../../hooks/useAdmin';
+import { useCategories } from '../../hooks/useCategories';
 import './Admin.css';
 
 function CategoryFormModal({ category, onClose, onSaved }) {
@@ -10,7 +14,10 @@ function CategoryFormModal({ category, onClose, onSaved }) {
   }, []);
 
   const [form, setForm] = useState({ id: '', name: '', icon: '', description: '', count: '', color: '', tags: '' });
-  const [saving, setSaving] = useState(false);
+  
+  const createMutation = useCreateAdminCategoryMutation();
+  const updateMutation = useUpdateAdminCategoryMutation();
+
   const [err, setErr] = useState(null);
 
   useEffect(() => {
@@ -32,7 +39,6 @@ function CategoryFormModal({ category, onClose, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErr(null);
-    setSaving(true);
     try {
       const tags = form.tags.trim() ? form.tags.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : [];
       const payload = {
@@ -45,16 +51,14 @@ function CategoryFormModal({ category, onClose, onSaved }) {
         tags,
       };
       if (category) {
-        await api.admin.categories.update(category.id, payload);
+        await updateMutation.mutateAsync({ id: category.id, body: payload });
       } else {
-        await api.admin.categories.create(payload);
+        await createMutation.mutateAsync(payload);
       }
       onSaved();
       onClose();
     } catch (e) {
       setErr(e.message || 'Failed to save');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -140,7 +144,9 @@ function CategoryFormModal({ category, onClose, onSaved }) {
           </div>
           <div className="admin-modal-footer">
             <button type="button" className="admin-btn admin-btn--secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="admin-btn admin-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save Category'}</button>
+            <button type="submit" className="admin-btn admin-btn--primary" disabled={createMutation.isPending || updateMutation.isPending}>
+              {createMutation.isPending || updateMutation.isPending ? 'Saving…' : 'Save Category'}
+            </button>
           </div>
         </form>
       </div>
@@ -149,42 +155,29 @@ function CategoryFormModal({ category, onClose, onSaved }) {
 }
 
 export default function AdminCategories() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [modalCategory, setModalCategory] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const fetchData = useCallback(() => {
-    api.categories.list()
-      .then((r) => setData(r.categories || []))
-      .catch((err) => setError(err.message || 'Failed to load categories'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    setLoading(true);
-    fetchData();
-  }, [fetchData]);
+  const { data: categoriesData, isLoading: loading, error } = useCategories();
+  const deleteMutation = useDeleteAdminCategoryMutation();
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return data;
+    if (!search.trim()) return categoriesData || [];
     const q = search.trim().toLowerCase();
-    return data.filter((c) =>
+    return (categoriesData || []).filter((c) =>
       (c.name && c.name.toLowerCase().includes(q)) ||
       (c.description && c.description.toLowerCase().includes(q))
     );
-  }, [data, search]);
+  }, [categoriesData, search]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await api.admin.categories.delete(deleteTarget.id);
+      await deleteMutation.mutateAsync(deleteTarget.id);
       setToast({ type: 'success', msg: 'Category deleted' });
       setDeleteTarget(null);
-      fetchData();
     } catch (e) {
       setToast({ type: 'error', msg: e.message || 'Delete failed' });
     }
@@ -214,7 +207,7 @@ export default function AdminCategories() {
           <button type="button" className="admin-btn admin-btn--primary" onClick={() => setModalCategory({})}>+ Add Category</button>
         </div>
       </div>
-      {error && <div className="admin-error">{error}</div>}
+      {error && <div className="admin-error">{error.message || 'Failed to load categories'}</div>}
       <div className="admin-widgets admin-dashboard-grid" style={{ gridTemplateColumns: 'repeat(12, 1fr)' }}>
         <div className="admin-card" style={{ gridColumn: 'span 3' }}>
           <div className="admin-card-body">
@@ -263,7 +256,7 @@ export default function AdminCategories() {
         <CategoryFormModal
           category={modalCategory && Object.keys(modalCategory).length ? modalCategory : null}
           onClose={() => setModalCategory(null)}
-          onSaved={() => { setToast({ type: 'success', msg: 'Category saved' }); fetchData(); }}
+          onSaved={() => { setToast({ type: 'success', msg: 'Category saved' }); }}
         />
       )}
 

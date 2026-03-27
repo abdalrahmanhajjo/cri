@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/client';
+import api from '../api';
 import './Trips.css';
 
 export default function Trips() {

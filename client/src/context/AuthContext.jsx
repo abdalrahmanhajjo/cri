@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, startTransition } from 'react';
-import { api, getToken, setToken as saveToken, getStoredUser, setStoredUser, getSessionCode, setSessionCode, generateSessionCode } from '../api/client';
+import { api, getToken, setToken as saveToken, getStoredUser, setStoredUser, getSessionCode, setSessionCode, generateSessionCode } from '../api';
 
 const AuthContext = createContext(null);
 

@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../api/client';
+import api from '../api';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
-import { getPlaceImageUrl } from '../api/client';
+import { getPlaceImageUrl } from '../api';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import './Explore.css';
 import './Spots.css';

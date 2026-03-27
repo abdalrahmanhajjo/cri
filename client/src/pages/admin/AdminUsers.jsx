@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { api } from '../../api/client';
+import { 
+  useAdminUsers, 
+  useUpdateAdminUserMutation, 
+  useDeleteAdminUserMutation 
+} from '../../hooks/useAdmin';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
 
@@ -17,11 +20,6 @@ function buildUserListParams(debouncedQ, provider, isAdmin, isBusinessOwner, ema
 export default function AdminUsers() {
   const { user: me } = useAuth();
   const myId = me?.id;
-  const [users, setUsers] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [savingId, setSavingId] = useState(null);
 
   const [searchInput, setSearchInput] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
@@ -41,25 +39,16 @@ export default function AdminUsers() {
     [debouncedQ, provider, filterAdmin, filterBusiness, filterVerified, filterBlocked]
   );
 
-  const load = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    api.admin.users
-      .list(listParams)
-      .then((r) => {
-        setUsers(r.users || []);
-        setTotal(r.total ?? 0);
-      })
-      .catch((err) => setError(err.message || 'Failed to load users'))
-      .finally(() => setLoading(false));
-  }, [listParams]);
+  const { data: usersRes, isLoading: loading, error: queryError, refetch } = useAdminUsers(listParams);
+  const users = usersRes?.users || [];
+  const total = usersRes?.total ?? 0;
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const updateMutation = useUpdateAdminUserMutation();
+  const deleteMutation = useDeleteAdminUserMutation();
+
+  const [error, setError] = useState(null);
 
   const toggle = async (u, field) => {
-    setSavingId(u.id);
     setError(null);
     try {
       const body =
@@ -68,27 +57,19 @@ export default function AdminUsers() {
           : field === 'isBusinessOwner'
             ? { isBusinessOwner: !u.isBusinessOwner }
             : { isBlocked: !u.isBlocked };
-      await api.admin.users.update(u.id, body);
-      setUsers((list) => list.map((x) => (x.id === u.id ? { ...x, ...body } : x)));
+      await updateMutation.mutateAsync({ id: u.id, body });
     } catch (err) {
       setError(err.message || 'Update failed');
-    } finally {
-      setSavingId(null);
     }
   };
 
   const removeUser = async (u) => {
     if (!window.confirm(`Delete account ${u.email}? This cannot be undone.`)) return;
-    setSavingId(u.id);
     setError(null);
     try {
-      await api.admin.users.delete(u.id);
-      setUsers((list) => list.filter((x) => x.id !== u.id));
-      setTotal((t) => Math.max(0, t - 1));
+      await deleteMutation.mutateAsync(u.id);
     } catch (err) {
       setError(err.message || 'Delete failed');
-    } finally {
-      setSavingId(null);
     }
   };
 
@@ -157,7 +138,7 @@ export default function AdminUsers() {
               </select>
             </div>
             <div className="admin-toolbar-actions">
-              <button type="button" className="admin-btn admin-btn--secondary" onClick={load} disabled={loading}>
+              <button type="button" className="admin-btn admin-btn--secondary" onClick={() => refetch()} disabled={loading}>
                 Refresh
               </button>
             </div>
@@ -202,39 +183,39 @@ export default function AdminUsers() {
                         <td>{u.authProvider || '—'}</td>
                         <td>
                           <label
-                            style={{ cursor: savingId === u.id || isSelf ? 'not-allowed' : 'pointer' }}
+                            style={{ cursor: (updateMutation.isPending && updateMutation.variables?.id === u.id) || isSelf ? 'not-allowed' : 'pointer' }}
                             title={isSelf ? 'Cannot change your own admin role here' : undefined}
                           >
                             <input
                               type="checkbox"
                               checked={!!u.isAdmin}
-                              disabled={savingId === u.id || isSelf}
+                              disabled={(updateMutation.isPending && updateMutation.variables?.id === u.id) || isSelf}
                               onChange={() => toggle(u, 'isAdmin')}
                             />
                           </label>
                         </td>
                         <td>
                           <label
-                            style={{ cursor: savingId === u.id || isSelf ? 'not-allowed' : 'pointer' }}
+                            style={{ cursor: (updateMutation.isPending && updateMutation.variables?.id === u.id) || isSelf ? 'not-allowed' : 'pointer' }}
                             title={isSelf ? 'Cannot change your own business role here' : undefined}
                           >
                             <input
                               type="checkbox"
                               checked={!!u.isBusinessOwner}
-                              disabled={savingId === u.id || isSelf}
+                              disabled={(updateMutation.isPending && updateMutation.variables?.id === u.id) || isSelf}
                               onChange={() => toggle(u, 'isBusinessOwner')}
                             />
                           </label>
                         </td>
                         <td>
                           <label
-                            style={{ cursor: savingId === u.id || isSelf ? 'not-allowed' : 'pointer' }}
+                            style={{ cursor: (updateMutation.isPending && updateMutation.variables?.id === u.id) || isSelf ? 'not-allowed' : 'pointer' }}
                             title={isSelf ? 'Cannot block your own account' : undefined}
                           >
                             <input
                               type="checkbox"
                               checked={!!u.isBlocked}
-                              disabled={savingId === u.id || isSelf}
+                              disabled={(updateMutation.isPending && updateMutation.variables?.id === u.id) || isSelf}
                               onChange={() => toggle(u, 'isBlocked')}
                             />
                           </label>
@@ -244,7 +225,7 @@ export default function AdminUsers() {
                           <button
                             type="button"
                             className="admin-btn admin-btn--danger admin-btn--sm"
-                            disabled={savingId === u.id || isSelf}
+                            disabled={(deleteMutation.isPending && deleteMutation.variables === u.id) || isSelf}
                             title={isSelf ? 'Cannot delete your own account' : 'Permanently delete this user'}
                             onClick={() => removeUser(u)}
                           >

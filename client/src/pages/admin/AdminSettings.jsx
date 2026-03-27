@@ -1,7 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { api } from '../../api/client';
-import { siteSettingsDefaults } from '../../config/siteSettingsDefaults';
+import { useAdminSettings, useUpdateAdminSettingsMutation } from '../../hooks/useAdmin';
 import AdminTranslationsPanel from './AdminTranslationsPanel';
 import './Admin.css';
 
@@ -27,12 +24,20 @@ export default function AdminSettings() {
   const tabParam = searchParams.get('tab');
   const activeTab = TABS.some((t) => t.id === tabParam) ? tabParam : 'general';
 
+  const { data: settingsData, isLoading: loading } = useAdminSettings();
+  const updateMutation = useUpdateAdminSettingsMutation();
+
   const [form, setForm] = useState(() => ({ ...siteSettingsDefaults }));
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [health, setHealth] = useState(null);
   const [healthErr, setHealthErr] = useState(null);
+
+  useEffect(() => {
+    if (settingsData?.settings) {
+      setForm({ ...siteSettingsDefaults, ...settingsData.settings });
+    }
+  }, [settingsData]);
 
   const setTab = (id) => {
     setSearchParams(id === 'general' ? {} : { tab: id });
@@ -64,26 +69,12 @@ export default function AdminSettings() {
     return () => window.clearTimeout(id);
   }, [pingHealth]);
 
-  useEffect(() => {
-    api.admin.siteSettings
-      .get()
-      .then((r) => {
-        const server = r.settings && typeof r.settings === 'object' ? r.settings : {};
-        setForm({ ...siteSettingsDefaults, ...server });
-      })
-      .catch(() => setForm({ ...siteSettingsDefaults }))
-      .finally(() => setLoading(false));
-  }, []);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setSaved(false);
     try {
-      const r = await api.admin.siteSettings.save(form);
-      const merged = r.settings && typeof r.settings === 'object' ? r.settings : form;
-      setForm({ ...siteSettingsDefaults, ...merged });
-      window.dispatchEvent(new Event('tripoli-site-settings-saved'));
+      await updateMutation.mutateAsync(form);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {

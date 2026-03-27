@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback, Fragment } from 'react';
-import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
+import { useState, useEffect, useCallback, Fragment, useMemo } from 'react';
+import { getImageUrl, fixImageUrlExtension } from '../../api';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
+import { useAdminFeed, useCreateAdminPostMutation, useUpdateAdminPostMutation, useDeleteAdminPostMutation, useDeleteAdminCommentMutation } from '../../hooks/useAdmin';
+import { useAdminPlaces } from '../../hooks/useAdmin';
 import './Admin.css';
 
 function contentKind(t) {
@@ -39,14 +41,6 @@ function typeBadgeText(p) {
 }
 
 export default function AdminFeed() {
-  const [posts, setPosts] = useState([]);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [migrationError, setMigrationError] = useState(null);
-  const [deleting, setDeleting] = useState(null);
-  const [saving, setSaving] = useState(null);
-
   const [status, setStatus] = useState('all');
   const [discoverable, setDiscoverable] = useState('all');
   const [contentFormat, setContentFormat] = useState('all');
@@ -59,7 +53,6 @@ export default function AdminFeed() {
   const [editPost, setEditPost] = useState(null);
 
   const [placeSearch, setPlaceSearch] = useState('');
-  const [placeOptions, setPlaceOptions] = useState([]);
   const [composerPlaceId, setComposerPlaceId] = useState('');
   const [composerContentKind, setComposerContentKind] = useState('post');
   const [composerCaption, setComposerCaption] = useState('');
@@ -69,7 +62,7 @@ export default function AdminFeed() {
   const [composerDiscoverable, setComposerDiscoverable] = useState(true);
   /** null | 'image' | 'video' — which composer slot is uploading */
   const [composerUploading, setComposerUploading] = useState(null);
-  const [composerSaving, setComposerSaving] = useState(false);
+
   const [composerCollapsed, setComposerCollapsed] = useState(() => {
     try {
       return typeof localStorage !== 'undefined' && localStorage.getItem('admin-feed-composer-collapsed') === '1';
@@ -81,64 +74,30 @@ export default function AdminFeed() {
   const [editShowAdvancedUrls, setEditShowAdvancedUrls] = useState(false);
   const [editUploading, setEditUploading] = useState(null);
 
-  const load = useCallback((silent) => {
-    if (!silent) {
-      setLoading(true);
-      setError(null);
-      setMigrationError(null);
-    }
-    const params = {
-      status,
-      discoverable,
-      q: q.trim() || undefined,
-      limit: 200,
-      format: contentFormat !== 'all' ? contentFormat : undefined,
-    };
-    api.admin.feed
-      .list(params)
-      .then((r) => {
-        setPosts(r.posts || []);
-        setPendingCount(typeof r.pendingCount === 'number' ? r.pendingCount : 0);
-      })
-      .catch((err) => {
-        const msg = err.message || 'Failed to load feed';
-        if (!silent) {
-          setError(msg);
-          if (err.status === 503 || /migration/i.test(msg)) setMigrationError(msg);
-        }
-      })
-      .finally(() => {
-        if (!silent) setLoading(false);
-      });
-  }, [status, discoverable, contentFormat, q]);
+  const [error, setError] = useState(null);
+  const [migrationError, setMigrationError] = useState(null);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const params = useMemo(() => ({
+    status,
+    discoverable,
+    q: q.trim() || undefined,
+    limit: 200,
+    format: contentFormat !== 'all' ? contentFormat : undefined,
+  }), [status, discoverable, q, contentFormat]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const t = setTimeout(() => {
-      api.admin.places
-        .list({ q: placeSearch.trim() || undefined, limit: 100 })
-        .then((r) => {
-          if (cancelled) return;
-          const list = r.places || [];
-          setPlaceOptions(list);
-          setComposerPlaceId((prev) => {
-            if (prev && list.some((p) => p.id === prev)) return prev;
-            return list[0]?.id || '';
-          });
-        })
-        .catch(() => {
-          if (!cancelled) setPlaceOptions([]);
-        });
-    }, 280);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-  }, [placeSearch]);
+  const { data: feedRes, isLoading: loading, error: queryError, refetch: load } = useAdminFeed(params);
+  const posts = useMemo(() => feedRes?.posts || [], [feedRes]);
+  const pendingCount = useMemo(() => feedRes?.pendingCount ?? 0, [feedRes]);
+
+  const createPostMutation = useCreateAdminPostMutation();
+  const updatePostMutation = useUpdateAdminPostMutation();
+  const deletePostMutation = useDeleteAdminPostMutation();
+  const deleteCommentMutation = useDeleteAdminCommentMutation();
+
+  const composerSaving = createPostMutation.isLoading;
+
+  const { data: placesRes } = useAdminPlaces({ q: placeSearch.trim() || undefined, limit: 100 });
+  const placeOptions = useMemo(() => placesRes?.places || [], [placesRes]);
 
   const submitComposer = async (e) => {
     e.preventDefault();
@@ -150,31 +109,27 @@ export default function AdminFeed() {
       setError('Reels need a video: upload a file above or paste a direct video URL in advanced options.');
       return;
     }
-    setComposerSaving(true);
     setError(null);
-    try {
-      const imgs =
-        composerContentKind === 'reel'
-          ? composerImages.slice(0, 1)
-          : composerImages.slice(0, MAX_FEED_POST_IMAGES);
-      await api.admin.feed.create({
-        placeId: composerPlaceId,
-        caption: composerCaption.trim(),
-        ...(imgs.length ? { image_urls: imgs } : {}),
-        video_url: composerVideo.trim() || undefined,
-        type: composerContentKind === 'reel' ? 'video' : 'post',
-        moderation_status: composerModeration,
-        discoverable: composerDiscoverable,
-      });
-      setComposerCaption('');
-      setComposerImages([]);
-      setComposerVideo('');
-      await load(true);
-    } catch (err) {
-      setError(err.message || 'Could not create post');
-    } finally {
-      setComposerSaving(false);
-    }
+    const imgs =
+      composerContentKind === 'reel'
+        ? composerImages.slice(0, 1)
+        : composerImages.slice(0, MAX_FEED_POST_IMAGES);
+    createPostMutation.mutate({
+      placeId: composerPlaceId,
+      caption: composerCaption.trim(),
+      ...(imgs.length ? { image_urls: imgs } : {}),
+      video_url: composerVideo.trim() || undefined,
+      type: composerContentKind === 'reel' ? 'video' : 'post',
+      moderation_status: composerModeration,
+      discoverable: composerDiscoverable,
+    }, {
+      onSuccess: () => {
+        setComposerCaption('');
+        setComposerImages([]);
+        setComposerVideo('');
+      },
+      onError: (err) => setError(err.message || 'Could not create post')
+    });
   };
 
   const uploadComposerImages = async (files) => {
@@ -302,59 +257,40 @@ export default function AdminFeed() {
     loadComments(id);
   };
 
-  const patchPost = async (id, body) => {
-    setSaving(id);
+  const patchPost = (id, body) => {
     setError(null);
-    try {
-      const r = await api.admin.feed.update(id, body);
-      const updated = r.post;
-      setPosts((list) => list.map((p) => (p.id === id ? { ...p, ...updated } : p)));
-      load(true);
-    } catch (err) {
-      setError(err.message || 'Update failed');
-    } finally {
-      setSaving(null);
-    }
+    updatePostMutation.mutate({ id, body }, {
+      onError: (err) => setError(err.message || 'Update failed')
+    });
   };
 
-  const remove = async (id) => {
+  const remove = (id) => {
     if (!window.confirm('Delete this post and all comments, likes, and saves?')) return;
-    setDeleting(id);
-    try {
-      await api.admin.feed.delete(id);
-      setPosts((p) => p.filter((x) => x.id !== id));
-      setExpandedId((e) => (e === id ? null : e));
-    } catch (err) {
-      setError(err.message || 'Delete failed');
-    } finally {
-      setDeleting(null);
-    }
+    deletePostMutation.mutate(id, {
+      onSuccess: () => setExpandedId(null),
+      onError: (err) => setError(err.message || 'Delete failed')
+    });
   };
 
-  const removeComment = async (postId, commentId) => {
+  const removeComment = (postId, commentId) => {
     if (!window.confirm('Delete this comment?')) return;
-    try {
-      await api.admin.feed.deleteComment(commentId);
-      setComments((c) => ({
-        ...c,
-        [postId]: (c[postId] || []).filter((x) => x.id !== commentId),
-      }));
-      setPosts((list) =>
-        list.map((p) =>
-          p.id === postId ? { ...p, comments_count: Math.max(0, (p.comments_count || 1) - 1) } : p
-        )
-      );
-    } catch (err) {
-      setError(err.message || 'Failed to delete comment');
-    }
+    deleteCommentMutation.mutate(commentId, {
+      onSuccess: () => {
+        setComments((c) => ({
+          ...c,
+          [postId]: (c[postId] || []).filter((x) => x.id !== commentId),
+        }));
+      },
+      onError: (err) => setError(err.message || 'Failed to delete comment')
+    });
   };
 
-  const saveEdit = async (e) => {
+  const saveEdit = (e) => {
     e.preventDefault();
     if (!editPost) return;
     const { id, caption, video_url, admin_notes, moderation_status } = editPost;
     const imgs = rawFeedImageUrls(editPost);
-    await patchPost(id, {
+    patchPost(id, {
       caption,
       type: contentKind(editPost.type) === 'reel' ? 'video' : 'post',
       image_urls: imgs.length ? imgs : null,
@@ -903,7 +839,7 @@ export default function AdminFeed() {
                                   <button
                                     type="button"
                                     className="admin-btn admin-btn--sm admin-btn--primary"
-                                    disabled={saving === p.id}
+                                    disabled={updatePostMutation.isLoading && updatePostMutation.variables?.id === p.id}
                                     onClick={() => patchPost(p.id, { moderation_status: 'approved', discoverable: true })}
                                   >
                                     Approve
@@ -1259,7 +1195,7 @@ export default function AdminFeed() {
                 <button
                   type="submit"
                   className="admin-btn admin-btn--primary"
-                  disabled={saving === editPost.id || editUploading !== null}
+                  disabled={updatePostMutation.isLoading || editUploading !== null}
                 >
                   Save
                 </button>

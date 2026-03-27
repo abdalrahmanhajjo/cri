@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/client';
+import api from '../api';
 import Icon from '../components/Icon';
 import {
   checkPasswordRequirements,

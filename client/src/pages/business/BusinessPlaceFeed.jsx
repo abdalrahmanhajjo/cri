@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
+import api, { getImageUrl, fixImageUrlExtension } from '../../api';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
 import './Business.css';
 

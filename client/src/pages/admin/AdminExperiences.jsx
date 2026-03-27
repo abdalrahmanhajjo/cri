@@ -1,6 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../../api/client';
+import { 
+  useCreateAdminExperienceMutation, 
+  useUpdateAdminExperienceMutation, 
+  useDeleteAdminExperienceMutation,
+  useAdminExperiences
+} from '../../hooks/useAdmin';
 import './Admin.css';
 
 function ExperienceFormModal({ tour, onClose, onSaved }) {
@@ -15,7 +20,10 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
     price: '', currency: '', priceDisplay: '', badge: '', badgeColor: '', description: '', image: '',
     difficulty: '', placeIds: '',
   });
-  const [saving, setSaving] = useState(false);
+
+  const createMutation = useCreateAdminExperienceMutation();
+  const updateMutation = useUpdateAdminExperienceMutation();
+
   const [err, setErr] = useState(null);
 
   useEffect(() => {
@@ -50,7 +58,6 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErr(null);
-    setSaving(true);
     try {
       const placeIds = form.placeIds.trim() ? form.placeIds.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : [];
       const payload = {
@@ -72,16 +79,14 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
         placeIds,
       };
       if (tour) {
-        await api.admin.tours.update(tour.id, payload);
+        await updateMutation.mutateAsync({ id: tour.id, body: payload });
       } else {
-        await api.admin.tours.create(payload);
+        await createMutation.mutateAsync(payload);
       }
       onSaved();
       onClose();
     } catch (e) {
       setErr(e.message || 'Failed to save');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -223,7 +228,9 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
           </div>
           <div className="admin-modal-footer">
             <button type="button" className="admin-btn admin-btn--secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="admin-btn admin-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save Experience'}</button>
+            <button type="submit" className="admin-btn admin-btn--primary" disabled={createMutation.isPending || updateMutation.isPending}>
+              {createMutation.isPending || updateMutation.isPending ? 'Saving…' : 'Save Experience'}
+            </button>
           </div>
         </form>
       </div>
@@ -232,25 +239,15 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
 }
 
 export default function AdminExperiences() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [modalTour, setModalTour] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const fetchData = useCallback(() => {
-    api.tours.list()
-      .then((r) => setData(r.featured || []))
-      .catch((err) => setError(err.message || 'Failed to load experiences'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: experiencesRes, isLoading: loading, error } = useAdminExperiences();
+  const data = experiencesRes?.featured || [];
 
-  useEffect(() => {
-    setLoading(true);
-    fetchData();
-  }, [fetchData]);
+  const deleteMutation = useDeleteAdminExperienceMutation();
 
   const filtered = useMemo(() => {
     if (!search.trim()) return data;
@@ -264,10 +261,9 @@ export default function AdminExperiences() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await api.admin.tours.delete(deleteTarget.id);
+      await deleteMutation.mutateAsync(deleteTarget.id);
       setToast({ type: 'success', msg: 'Experience deleted' });
       setDeleteTarget(null);
-      fetchData();
     } catch (e) {
       setToast({ type: 'error', msg: e.message || 'Delete failed' });
     }
@@ -297,7 +293,7 @@ export default function AdminExperiences() {
           <button type="button" className="admin-btn admin-btn--primary" onClick={() => setModalTour({})}>+ Add Experience</button>
         </div>
       </div>
-      {error && <div className="admin-error">{error}</div>}
+      {error && <div className="admin-error">{error.message || 'Failed to load experiences'}</div>}
       <div className="admin-widgets admin-dashboard-grid" style={{ gridTemplateColumns: 'repeat(12, 1fr)' }}>
         <div className="admin-card" style={{ gridColumn: 'span 3' }}>
           <div className="admin-card-body">
@@ -353,7 +349,7 @@ export default function AdminExperiences() {
         <ExperienceFormModal
           tour={modalTour && Object.keys(modalTour).length ? modalTour : null}
           onClose={() => setModalTour(null)}
-          onSaved={() => { setToast({ type: 'success', msg: 'Experience saved' }); fetchData(); }}
+          onSaved={() => { setToast({ type: 'success', msg: 'Experience saved' }); }}
         />
       )}
 

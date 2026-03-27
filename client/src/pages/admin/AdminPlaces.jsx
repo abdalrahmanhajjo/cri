@@ -1,6 +1,15 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { api, getImageUrl, fixImageUrlExtension, getImageUrlAlternate } from '../../api/client';
+import { 
+  useAdminPlaces, 
+  useCreateAdminPlaceMutation, 
+  useUpdateAdminPlaceMutation, 
+  useDeleteAdminPlaceMutation,
+  useAdminPlaceReviews,
+  useUpdateAdminPlaceReviewMutation,
+  useDeleteAdminPlaceReviewMutation,
+  useAdminPlaceDetail,
+  useAdminUploadMutation
+} from '../../hooks/useAdmin';
+import { useCategories } from '../../hooks/useCategories';
 import MapPicker from '../../components/MapPicker';
 import './Admin.css';
 
@@ -58,57 +67,24 @@ function PlaceFormModal({ place, onClose, onSaved }) {
     images: '',
     tags: '',
   });
-  const [saving, setSaving] = useState(false);
+
+  const { data: categoriesRes } = useCategories();
+  const categories = categoriesRes?.categories || [];
+
+  const { data: reviewsRes, isLoading: modReviewsLoading, error: modReviewsErr } = useAdminPlaceReviews(place?.id);
+  const modReviews = reviewsRes?.reviews || [];
+
+  const { data: hydratedPlace, isFetching: hydrating } = useAdminPlaceDetail(place?.id);
+
+  const createMutation = useCreateAdminPlaceMutation();
+  const updateMutation = useUpdateAdminPlaceMutation();
+  const updateReviewMutation = useUpdateAdminPlaceReviewMutation();
+  const deleteReviewMutation = useDeleteAdminPlaceReviewMutation();
+  const uploadMutation = useAdminUploadMutation();
+
   const [err, setErr] = useState(null);
-  const [categories, setCategories] = useState([]);
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [hydrating, setHydrating] = useState(false);
   const [categoryCustom, setCategoryCustom] = useState(false);
-  const [modReviews, setModReviews] = useState([]);
-  const [modReviewsLoading, setModReviewsLoading] = useState(false);
-  const [modReviewsErr, setModReviewsErr] = useState(null);
-
-  const refreshModReviews = useCallback(async () => {
-    if (!place?.id) return;
-    const r = await api.admin.places.reviews(place.id);
-    setModReviews(Array.isArray(r.reviews) ? r.reviews : []);
-  }, [place?.id]);
-
-  useEffect(() => {
-    if (!place?.id) {
-      setModReviews([]);
-      setModReviewsErr(null);
-      return;
-    }
-    let cancelled = false;
-    setModReviewsLoading(true);
-    setModReviewsErr(null);
-    api.admin.places
-      .reviews(place.id)
-      .then((r) => {
-        if (!cancelled) setModReviews(Array.isArray(r.reviews) ? r.reviews : []);
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setModReviewsErr(e.message || 'Failed to load member reviews');
-          setModReviews([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setModReviewsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [place?.id]);
-
-  useEffect(() => {
-    api.categories.list().then((r) => {
-      const list = r?.categories || [];
-      setCategories(Array.isArray(list) ? list : []);
-    }).catch(() => setCategories([]));
-  }, []);
 
   useEffect(() => {
     if (place) {
@@ -131,8 +107,6 @@ function PlaceFormModal({ place, onClose, onSaved }) {
         images: Array.isArray(place.images) ? place.images.join('\n') : '',
         tags: Array.isArray(place.tags) ? place.tags.join(', ') : (place.tags || ''),
       });
-
-      // Hydrate full place details (images/tags) because the admin list endpoint returns summary fields.
       didHydrateImagesRef.current = false;
       userTouchedImagesRef.current = false;
     } else {
@@ -142,87 +116,56 @@ function PlaceFormModal({ place, onClose, onSaved }) {
         category: '', categoryId: '', duration: '', price: '', bestTime: '', rating: '', reviewCount: '',
         images: '', tags: '',
       });
-
       didHydrateImagesRef.current = false;
       userTouchedImagesRef.current = false;
     }
-  }, [place]);
-
-  // Hydrate full place data (images/tags) when opening Edit.
-  // Admin list endpoint returns only summary fields, so without this the edit modal can't show stored images reliably.
-  useEffect(() => {
-    let cancelled = false;
-    const placeId = place?.id;
-    if (!placeId) return undefined;
-    if (didHydrateImagesRef.current) return undefined;
-
-    setHydrating(true);
-    api.places
-      .get(placeId)
-      .then((p) => {
-        if (cancelled) return;
-
-        const keepImages = userTouchedImagesRef.current;
-        const keepTags = userTouchedImagesRef.current;
-
-        setForm((f) => ({
-          ...f,
-          id: p?.id ?? f.id,
-          name: p?.name ?? f.name,
-          description: p?.description ?? f.description,
-          location: p?.location ?? f.location,
-          latitude: p?.latitude ?? f.latitude,
-          longitude: p?.longitude ?? f.longitude,
-          category: p?.category ?? f.category,
-          categoryId: p?.categoryId ?? p?.category_id ?? f.categoryId,
-          duration: p?.duration ?? f.duration,
-          price: p?.price ?? f.price,
-          bestTime: p?.bestTime ?? p?.best_time ?? f.bestTime,
-          rating: p?.rating ?? f.rating,
-          reviewCount: p?.reviewCount ?? p?.review_count ?? f.reviewCount,
-          images: keepImages
-            ? f.images
-            : Array.isArray(p?.images)
-              ? p.images.join('\n')
-              : (typeof p?.images === 'string' ? p.images : ''),
-          tags: keepTags
-            ? f.tags
-            : Array.isArray(p?.tags)
-              ? p.tags.join(', ')
-              : (p?.tags ?? ''),
-        }));
-
-        if (categories.length > 0) {
-          const hydratedCatId = p?.categoryId ?? p?.category_id ?? '';
-          setCategoryCustom(!hydratedCatId || !categories.some((c) => c.id === hydratedCatId));
-        }
-
-        didHydrateImagesRef.current = true;
-      })
-      .catch(() => {
-        // Not fatal; modal still works for editing via form inputs.
-        didHydrateImagesRef.current = true;
-      })
-      .finally(() => {
-        if (!cancelled) setHydrating(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [place?.id, categories]);
-
-  useEffect(() => {
-    if (place && categories.length > 0) {
-      const catId = place.categoryId || place.category_id || '';
-      setCategoryCustom(!catId || !categories.some((c) => c.id === catId));
-    }
   }, [place, categories]);
+
+  useEffect(() => {
+    if (hydratedPlace && !didHydrateImagesRef.current) {
+      const p = hydratedPlace;
+      const keepImages = userTouchedImagesRef.current;
+      const keepTags = userTouchedImagesRef.current;
+
+      setForm((f) => ({
+        ...f,
+        id: p?.id ?? f.id,
+        name: p?.name ?? f.name,
+        description: p?.description ?? f.description,
+        location: p?.location ?? f.location,
+        latitude: p?.latitude ?? f.latitude,
+        longitude: p?.longitude ?? f.longitude,
+        category: p?.category ?? f.category,
+        categoryId: p?.categoryId ?? p?.category_id ?? f.categoryId,
+        duration: p?.duration ?? f.duration,
+        price: p?.price ?? f.price,
+        bestTime: p?.bestTime ?? p?.best_time ?? f.bestTime,
+        rating: p?.rating ?? f.rating,
+        reviewCount: p?.reviewCount ?? p?.review_count ?? f.reviewCount,
+        images: keepImages
+          ? f.images
+          : Array.isArray(p?.images)
+            ? p.images.join('\n')
+            : (typeof p?.images === 'string' ? p.images : ''),
+        tags: keepTags
+          ? f.tags
+          : Array.isArray(p?.tags)
+            ? p.tags.join(', ')
+            : (p?.tags ?? ''),
+      }));
+
+      if (categories.length > 0) {
+        const hydratedCatId = p?.categoryId ?? p?.category_id ?? '';
+        setCategoryCustom(!hydratedCatId || !categories.some((c) => c.id === hydratedCatId));
+      }
+
+      didHydrateImagesRef.current = true;
+    }
+  }, [hydratedPlace, categories]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErr(null);
-    setSaving(true);
     try {
       const images = form.images.trim() ? form.images.split(/\n/).map((s) => s.trim()).filter(Boolean) : [];
       const tags = form.tags.trim() ? form.tags.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : [];
@@ -244,16 +187,14 @@ function PlaceFormModal({ place, onClose, onSaved }) {
         tags,
       };
       if (place) {
-        await api.admin.places.update(place.id, payload);
+        await updateMutation.mutateAsync({ id: place.id, body: payload });
       } else {
-        await api.admin.places.create(payload);
+        await createMutation.mutateAsync(payload);
       }
       onSaved();
       onClose();
     } catch (e) {
       setErr(e.message || 'Failed to save');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -268,11 +209,10 @@ function PlaceFormModal({ place, onClose, onSaved }) {
     if (!files?.length) return;
     setErr(null);
     userTouchedImagesRef.current = true;
-    setUploading(true);
     try {
       const results = await Promise.all(
         Array.from(files).map((file) =>
-          api.admin.upload(file).catch((e) => {
+          uploadMutation.mutateAsync(file).catch((e) => {
             throw new Error(`${file.name}: ${e?.message || 'Upload failed'}`);
           })
         )
@@ -281,8 +221,6 @@ function PlaceFormModal({ place, onClose, onSaved }) {
       setForm((f) => ({ ...f, images: newUrls.join('\n') }));
     } catch (e) {
       setErr(e?.message || 'Upload failed');
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -487,11 +425,13 @@ function PlaceFormModal({ place, onClose, onSaved }) {
                             className="admin-btn admin-btn--sm admin-btn--secondary"
                             onClick={async () => {
                               try {
-                                setModReviewsErr(null);
-                                await api.places.patchReview(place.id, rv.id, { hidden: !rv.hidden });
-                                await refreshModReviews();
+                                await updateReviewMutation.mutateAsync({
+                                  placeId: place.id,
+                                  reviewId: rv.id,
+                                  body: { hidden: !rv.hidden }
+                                });
                               } catch (e) {
-                                setModReviewsErr(e.message || 'Update failed');
+                                console.error('Update failed', e);
                               }
                             }}
                           >
@@ -503,11 +443,12 @@ function PlaceFormModal({ place, onClose, onSaved }) {
                             onClick={async () => {
                               if (!window.confirm('Permanently delete this review?')) return;
                               try {
-                                setModReviewsErr(null);
-                                await api.places.deleteReview(place.id, rv.id);
-                                await refreshModReviews();
+                                await deleteReviewMutation.mutateAsync({
+                                  placeId: place.id,
+                                  reviewId: rv.id
+                                });
                               } catch (e) {
-                                setModReviewsErr(e.message || 'Delete failed');
+                                console.error('Delete failed', e);
                               }
                             }}
                           >
@@ -584,7 +525,9 @@ function PlaceFormModal({ place, onClose, onSaved }) {
           </div>
           <div className="admin-modal-footer">
             <button type="button" className="admin-btn admin-btn--secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="admin-btn admin-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save Place'}</button>
+            <button type="submit" className="admin-btn admin-btn--primary" disabled={createMutation.isPending || updateMutation.isPending}>
+              {createMutation.isPending || updateMutation.isPending ? 'Saving…' : 'Save Place'}
+            </button>
           </div>
         </form>
       </div>
@@ -601,46 +544,32 @@ function PlaceFormModal({ place, onClose, onSaved }) {
 }
 
 export default function AdminPlaces() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [modalPlace, setModalPlace] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const fetchData = useCallback(() => {
-    api.places.list()
-      .then((r) => {
-        const list = r.popular || r.locations || [];
-        setData(Array.isArray(list) ? list : []);
-      })
-      .catch((err) => setError(err.message || 'Failed to load places'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: placesRes, isLoading: loading, error } = useAdminPlaces();
+  const placesData = placesRes?.popular || placesRes?.locations || [];
 
-  useEffect(() => {
-    setLoading(true);
-    fetchData();
-  }, [fetchData]);
+  const deleteMutation = useDeleteAdminPlaceMutation();
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return data;
+    if (!search.trim()) return placesData;
     const q = search.trim().toLowerCase();
-    return data.filter((p) =>
+    return placesData.filter((p) =>
       (p.name && p.name.toLowerCase().includes(q)) ||
       (p.location && p.location.toLowerCase().includes(q)) ||
       (p.category && p.category.toLowerCase().includes(q))
     );
-  }, [data, search]);
+  }, [placesData, search]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await api.admin.places.delete(deleteTarget.id);
+      await deleteMutation.mutateAsync(deleteTarget.id);
       setToast({ type: 'success', msg: 'Place deleted' });
       setDeleteTarget(null);
-      fetchData();
     } catch (e) {
       setToast({ type: 'error', msg: e.message || 'Delete failed' });
     }
@@ -672,7 +601,7 @@ export default function AdminPlaces() {
           </button>
         </div>
       </div>
-      {error && <div className="admin-error">{error}</div>}
+      {error && <div className="admin-error">{error.message || 'Failed to load places'}</div>}
       <div className="admin-widgets admin-dashboard-grid" style={{ gridTemplateColumns: 'repeat(12, 1fr)' }}>
         <div className="admin-card" style={{ gridColumn: 'span 3' }}>
           <div className="admin-card-body">
@@ -728,7 +657,7 @@ export default function AdminPlaces() {
         <PlaceFormModal
           place={modalPlace && Object.keys(modalPlace).length ? modalPlace : null}
           onClose={() => setModalPlace(null)}
-          onSaved={() => { setToast({ type: 'success', msg: 'Place saved' }); fetchData(); }}
+          onSaved={() => { setToast({ type: 'success', msg: 'Place saved' }); }}
         />
       )}
 

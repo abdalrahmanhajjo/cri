@@ -1,4 +1,4 @@
-import { getPlaceImageUrl } from '../api/client';
+import { getPlaceImageUrl } from '../api';
 
 const DEFAULT_MAX_ROWS = 10;
 

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/client';
+import api from '../api';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
-import { getPlaceImageUrl } from '../api/client';
+import { getPlaceImageUrl } from '../api';
 import './Explore.css';
 
 function TourCard({ tour }) {

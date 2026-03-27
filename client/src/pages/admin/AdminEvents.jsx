@@ -1,6 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { api } from '../../api/client';
+import { 
+  useAdminEvents, 
+  useCreateAdminEventMutation, 
+  useUpdateAdminEventMutation, 
+  useDeleteAdminEventMutation 
+} from '../../hooks/useAdmin';
 import './Admin.css';
 
 function formatDate(str) {
@@ -30,7 +33,10 @@ function EventFormModal({ event, onClose, onSaved }) {
     id: '', name: '', description: '', startDate: '', endDate: '', location: '', image: '',
     category: '', organizer: '', price: '', priceDisplay: '', status: 'active', placeId: '',
   });
-  const [saving, setSaving] = useState(false);
+
+  const createMutation = useCreateAdminEventMutation();
+  const updateMutation = useUpdateAdminEventMutation();
+
   const [err, setErr] = useState(null);
 
   useEffect(() => {
@@ -63,7 +69,6 @@ function EventFormModal({ event, onClose, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErr(null);
-    setSaving(true);
     try {
       const payload = {
         id: form.id || undefined,
@@ -81,16 +86,14 @@ function EventFormModal({ event, onClose, onSaved }) {
         placeId: form.placeId || null,
       };
       if (event) {
-        await api.admin.events.update(event.id, payload);
+        await updateMutation.mutateAsync({ id: event.id, body: payload });
       } else {
-        await api.admin.events.create(payload);
+        await createMutation.mutateAsync(payload);
       }
       onSaved();
       onClose();
     } catch (e) {
       setErr(e.message || 'Failed to save');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -225,7 +228,9 @@ function EventFormModal({ event, onClose, onSaved }) {
           </div>
           <div className="admin-modal-footer">
             <button type="button" className="admin-btn admin-btn--secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="admin-btn admin-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save Event'}</button>
+            <button type="submit" className="admin-btn admin-btn--primary" disabled={createMutation.isPending || updateMutation.isPending}>
+              {createMutation.isPending || updateMutation.isPending ? 'Saving…' : 'Save Event'}
+            </button>
           </div>
         </form>
       </div>
@@ -234,43 +239,32 @@ function EventFormModal({ event, onClose, onSaved }) {
 }
 
 export default function AdminEvents() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [modalEvent, setModalEvent] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const fetchData = useCallback(() => {
-    api.events.list()
-      .then((r) => setData(r.events || []))
-      .catch((err) => setError(err.message || 'Failed to load events'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: eventsRes, isLoading: loading, error } = useAdminEvents();
+  const eventsData = eventsRes?.events || [];
 
-  useEffect(() => {
-    setLoading(true);
-    fetchData();
-  }, [fetchData]);
+  const deleteMutation = useDeleteAdminEventMutation();
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return data;
+    if (!search.trim()) return eventsData;
     const q = search.trim().toLowerCase();
-    return data.filter((e) =>
+    return eventsData.filter((e) =>
       (e.name && e.name.toLowerCase().includes(q)) ||
       (e.location && e.location.toLowerCase().includes(q)) ||
       (e.category && e.category.toLowerCase().includes(q))
     );
-  }, [data, search]);
+  }, [eventsData, search]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await api.admin.events.delete(deleteTarget.id);
+      await deleteMutation.mutateAsync(deleteTarget.id);
       setToast({ type: 'success', msg: 'Event deleted' });
       setDeleteTarget(null);
-      fetchData();
     } catch (e) {
       setToast({ type: 'error', msg: e.message || 'Delete failed' });
     }
@@ -300,7 +294,7 @@ export default function AdminEvents() {
           <button type="button" className="admin-btn admin-btn--primary" onClick={() => setModalEvent({})}>+ Add Event</button>
         </div>
       </div>
-      {error && <div className="admin-error">{error}</div>}
+      {error && <div className="admin-error">{error.message || 'Failed to load events'}</div>}
       <div className="admin-widgets admin-dashboard-grid" style={{ gridTemplateColumns: 'repeat(12, 1fr)' }}>
         <div className="admin-card" style={{ gridColumn: 'span 3' }}>
           <div className="admin-card-body">
@@ -362,7 +356,7 @@ export default function AdminEvents() {
         <EventFormModal
           event={modalEvent && Object.keys(modalEvent).length ? modalEvent : null}
           onClose={() => setModalEvent(null)}
-          onSaved={() => { setToast({ type: 'success', msg: 'Event saved' }); fetchData(); }}
+          onSaved={() => { setToast({ type: 'success', msg: 'Event saved' }); }}
         />
       )}
 

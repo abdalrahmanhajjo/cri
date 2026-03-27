@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/client';
+import api from '../api';
 import { useLanguage } from '../context/LanguageContext';
+import { usePlaces } from '../hooks/usePlaces';
 import Icon from './Icon';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
@@ -34,36 +35,12 @@ export default function GlobalSearchBar({
   }
 
   const deferredQ = useDeferredValue(query);
-  const [places, setPlaces] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
-
-  const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    api.places
-      .list({ lang: langParam })
-      .then((r) => {
-        if (!cancelled) {
-          const list = r.popular || r.locations || [];
-          setPlaces(Array.isArray(list) ? list : []);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setPlaces([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [langParam]);
+  const { data: placesRes, isLoading: loading } = usePlaces();
+  const places = useMemo(() => placesRes?.locations || placesRes?.popular || [], [placesRes]);
 
   useEffect(() => {
     const onDoc = (e) => {

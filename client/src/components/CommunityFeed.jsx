@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { getImageUrl, fixImageUrlExtension, getPlaceImageUrl } from '../api/client';
+import { getImageUrl, fixImageUrlExtension, getPlaceImageUrl } from '../api';
 import Icon from './Icon';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
 import { rawFeedImageUrls } from '../utils/feedPostImages';

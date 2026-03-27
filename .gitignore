@@ -25,3 +25,7 @@ npm-debug.log*
 !.vscode/extensions.json
 .idea
 .DS_Store
+
+# Playwright
+playwright-report/
+test-results/

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
-import api, { getImageUrl, fixImageUrlExtension, getImageUrlAlternate } from '../../api/client';
+import api, { getImageUrl, fixImageUrlExtension, getImageUrlAlternate } from '../../api';
 import MapPicker from '../../components/MapPicker';
 import './Business.css';
 

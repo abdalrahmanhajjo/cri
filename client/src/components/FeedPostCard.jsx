@@ -1,9 +1,11 @@
 import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api, { getImageUrl, fixImageUrlExtension, getPlaceImageUrl, API_ERROR_NETWORK } from '../api/client';
+import api, { getImageUrl, fixImageUrlExtension, getPlaceImageUrl, API_ERROR_NETWORK } from '../api';
 import Icon from './Icon';
 import { isCommunityFeedVideo } from './CommunityFeed';
 import { useLanguage } from '../context/LanguageContext';
+import { useFeedComments } from '../hooks/useCommunityFeed';
+import { useToggleLikeMutation, useToggleSaveMutation, useAddCommentMutation, useDeleteCommentMutation, useUpdatePostMutation, useDeletePostMutation } from '../hooks/useFeedActions';
 import { formatFeedTime } from '../utils/feedTime';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../utils/feedPostImages';
 import { COMMUNITY_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
@@ -76,16 +78,11 @@ export default function FeedPostCard({
   const navigate = useNavigate();
   const { lang } = useLanguage();
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [comments, setComments] = useState([]);
-  const [commentsFetched, setCommentsFetched] = useState(false);
-  const [loadingComments, setLoadingComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [replyToId, setReplyToId] = useState(null);
-  const [posting, setPosting] = useState(false);
   const [heartBurst, setHeartBurst] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editText, setEditText] = useState('');
-  const [commentWriteBusyId, setCommentWriteBusyId] = useState(null);
   const [likePopKey, setLikePopKey] = useState(0);
   const [likeAnimDir, setLikeAnimDir] = useState('up');
   const [feedActionMsg, setFeedActionMsg] = useState(null);
@@ -154,34 +151,17 @@ export default function FeedPostCard({
   const commentsDisabled = post.comments_disabled === true;
   const iManagePost = post.i_manage_post === true;
 
-  async function loadComments() {
-    if (loadingComments || commentsFetched) return;
-    setLoadingComments(true);
-    try {
-      const r = await api.feedPublic.comments(post.id);
-      setComments(Array.isArray(r.comments) ? r.comments : []);
-    } catch {
-      setComments([]);
-    } finally {
-      setLoadingComments(false);
-      setCommentsFetched(true);
-    }
-  }
+  const { data: commentsRes, isLoading: loadingComments } = useFeedComments(post.id);
+  const feedComments = useMemo(() => commentsRes?.comments || [], [commentsRes]);
 
   const openComments = () => {
     if (commentsDisabled) return;
     setCommentsOpen(true);
-    loadComments();
   };
 
   const toggleComments = () => {
     if (commentsDisabled) return;
-    if (commentsOpen) {
-      setCommentsOpen(false);
-      return;
-    }
-    setCommentsOpen(true);
-    loadComments();
+    setCommentsOpen(!commentsOpen);
   };
 
   useEffect(() => {
@@ -212,10 +192,10 @@ export default function FeedPostCard({
 
   useEffect(() => {
     const m = commentLikeSnapRef.current;
-    comments.forEach((c) => {
+    feedComments.forEach((c) => {
       m.set(c.id, { liked: c.likedByMe === true, count: Number(c.likesCount) || 0 });
     });
-  }, [comments]);
+  }, [feedComments]);
 
   const requireAuth = useCallback(() => {
     if (!user) {
@@ -351,51 +331,20 @@ export default function FeedPostCard({
     setFeedActionMsg(null);
   }, []);
 
+  const { mutate: toggleLike } = useToggleLikeMutation();
+  const { mutate: toggleSave } = useToggleSaveMutation();
+
   const handleLike = useCallback(() => {
     if (hideLikes) return;
     if (!requireAuth()) return;
-    clearFeedActionMsg();
-    const prev = { ...likeSnapRef.current };
-    const nextLiked = !prev.liked;
-    const nextCount = Math.max(0, prev.count + (prev.liked ? -1 : 1));
-    likeSnapRef.current = { liked: nextLiked, count: nextCount };
-    const seq = ++likeSeqRef.current;
-    onPatch(post.id, { liked_by_me: nextLiked, likes_count: nextCount });
-
-    const runToggle = () => api.feedPublic.toggleLike(post.id);
-
-    void (async () => {
-      try {
-        let r;
-        try {
-          r = await runToggle();
-        } catch (e) {
-          if (seq !== likeSeqRef.current) return;
-          if (e?.code === API_ERROR_NETWORK) {
-            await new Promise((res) => setTimeout(res, 420));
-            if (seq !== likeSeqRef.current) return;
-            r = await runToggle();
-          } else {
-            throw e;
-          }
-        }
-        if (seq !== likeSeqRef.current) return;
-        likeSnapRef.current = { liked: r.liked, count: Number(r.likes_count) || 0 };
-        onPatch(post.id, { liked_by_me: r.liked, likes_count: r.likes_count });
-      } catch (e) {
-        if (seq !== likeSeqRef.current) return;
-        likeSnapRef.current = prev;
-        onPatch(post.id, { liked_by_me: prev.liked, likes_count: prev.count });
-        showFeedActionError(e);
-      }
-    })();
-  }, [hideLikes, requireAuth, post.id, onPatch, clearFeedActionMsg, showFeedActionError]);
+    toggleLike(post.id);
+  }, [hideLikes, requireAuth, post.id, toggleLike]);
 
   const onPostLikeClick = useCallback(() => {
-    setLikeAnimDir(likeSnapRef.current.liked ? 'down' : 'up');
+    setLikeAnimDir(liked ? 'down' : 'up');
     setLikePopKey((k) => k + 1);
     handleLike();
-  }, [handleLike]);
+  }, [handleLike, liked]);
 
   const triggerHeartBurst = useCallback(() => {
     setHeartBurst(true);
@@ -409,12 +358,12 @@ export default function FeedPostCard({
       navigate('/login', { state: { from: discoverBasePath } });
       return;
     }
-    if (!likeSnapRef.current.liked) {
+    if (!liked) {
       setLikeAnimDir('up');
       setLikePopKey((k) => k + 1);
       handleLike();
     }
-  }, [hideLikes, triggerHeartBurst, user, navigate, handleLike, discoverBasePath]);
+  }, [hideLikes, triggerHeartBurst, user, navigate, handleLike, discoverBasePath, liked]);
 
   const onMediaDoubleClick = (e) => {
     e.preventDefault();
@@ -431,15 +380,9 @@ export default function FeedPostCard({
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!requireAuth()) return;
-    clearFeedActionMsg();
-    try {
-      const r = await api.feedPublic.toggleSave(post.id);
-      onPatch(post.id, { saved_by_me: r.saved });
-    } catch (e) {
-      showFeedActionError(e);
-    }
+    toggleSave(post.id);
   };
 
   const handleShare = async () => {
@@ -463,65 +406,15 @@ export default function FeedPostCard({
     }
   };
 
-  const handleToggleCommentLike = useCallback(
-    (commentId) => {
-      if (!requireAuth()) return;
-      clearFeedActionMsg();
-      const prev =
-        commentLikeSnapRef.current.get(commentId) ?? { liked: false, count: 0 };
-      const nextLiked = !prev.liked;
-      const nextCount = Math.max(0, prev.count + (prev.liked ? -1 : 1));
-      commentLikeSnapRef.current.set(commentId, { liked: nextLiked, count: nextCount });
-      const mySeq = (commentLikeSeqRef.current[commentId] =
-        (commentLikeSeqRef.current[commentId] || 0) + 1);
+  const { mutate: toggleCommentLike } = useToggleCommentLikeMutation(post.id);
+  const { mutate: addComment, isLoading: posting } = useAddCommentMutation(post.id);
+  const { mutate: deleteCommentMut } = useDeleteCommentMutation(post.id);
+  const { mutate: updateCommentMut } = useUpdateCommentMutation(post.id);
 
-      setComments((list) =>
-        list.map((c) =>
-          c.id === commentId ? { ...c, likedByMe: nextLiked, likesCount: nextCount } : c
-        )
-      );
-
-      const runToggle = () => api.feedPublic.toggleCommentLike(post.id, commentId);
-
-      void (async () => {
-        try {
-          let r;
-          try {
-            r = await runToggle();
-          } catch (e) {
-            if (commentLikeSeqRef.current[commentId] !== mySeq) return;
-            if (e?.code === API_ERROR_NETWORK) {
-              await new Promise((res) => setTimeout(res, 420));
-              if (commentLikeSeqRef.current[commentId] !== mySeq) return;
-              r = await runToggle();
-            } else {
-              throw e;
-            }
-          }
-          if (commentLikeSeqRef.current[commentId] !== mySeq) return;
-          const cnt = Number(r.likes_count) || 0;
-          commentLikeSnapRef.current.set(commentId, { liked: r.liked, count: cnt });
-          setComments((list) =>
-            list.map((c) =>
-              c.id === commentId ? { ...c, likedByMe: r.liked, likesCount: cnt } : c
-            )
-          );
-        } catch (e) {
-          if (commentLikeSeqRef.current[commentId] !== mySeq) return;
-          commentLikeSnapRef.current.set(commentId, prev);
-          setComments((list) =>
-            list.map((c) =>
-              c.id === commentId
-                ? { ...c, likedByMe: prev.liked, likesCount: prev.count }
-                : c
-            )
-          );
-          showFeedActionError(e);
-        }
-      })();
-    },
-    [requireAuth, post.id, clearFeedActionMsg, showFeedActionError]
-  );
+  const handleToggleCommentLike = useCallback((commentId) => {
+    if (!requireAuth()) return;
+    toggleCommentLike(commentId);
+  }, [requireAuth, toggleCommentLike]);
 
   const startEdit = (c) => {
     if (!requireAuth()) return;
@@ -542,74 +435,31 @@ export default function FeedPostCard({
     return () => window.cancelAnimationFrame(id);
   }, [editingCommentId]);
 
-  const saveEdit = async (commentId) => {
+  const saveEdit = (commentId) => {
     const text = editText.trim();
     if (!text) return;
-    setCommentWriteBusyId(commentId);
-    try {
-      const r = await api.feedPublic.updateComment(post.id, commentId, text);
-      const c = r.comment;
-      if (c) {
-        setComments((prev) =>
-          prev.map((x) =>
-            x.id === c.id
-              ? {
-                  ...x,
-                  body: c.body,
-                  updatedAt: c.updatedAt ?? x.updatedAt,
-                }
-              : x
-          )
-        );
-      }
-      cancelEdit();
-    } catch {
-      /* ignore */
-    } finally {
-      setCommentWriteBusyId(null);
-    }
+    updateCommentMut({ commentId, body: text }, {
+      onSuccess: () => cancelEdit()
+    });
   };
 
-  const deleteComment = async (commentId) => {
+  const deleteComment = (commentId) => {
     if (!requireAuth()) return;
     if (!window.confirm(t('discover', 'feedCommentDeleteConfirm'))) return;
-    setCommentWriteBusyId(commentId);
-    try {
-      const r = await api.feedPublic.deleteComment(post.id, commentId);
-      setComments((prev) => removeCommentAndReplies(prev, commentId));
-      if (replyToId === commentId) setReplyToId(null);
-      if (editingCommentId === commentId) cancelEdit();
-      if (r.comments_count != null) {
-        onPatch(post.id, { comments_count: Number(r.comments_count) });
-      }
-    } catch {
-      /* ignore */
-    } finally {
-      setCommentWriteBusyId(null);
-    }
+    deleteCommentMut(commentId);
   };
 
-  const handlePostComment = async (e) => {
+  const handlePostComment = (e) => {
     e.preventDefault();
     const text = commentText.trim();
     if (!text || !requireAuth()) return;
-    setPosting(true);
-    try {
-      const payload = replyToId ? { body: text, parentId: replyToId } : { body: text };
-      const r = await api.feedPublic.addComment(post.id, payload);
-      const c = r.comment;
-      if (c) {
-        setComments((prev) => [...prev, c]);
-        setCommentsFetched(true);
-        onPatch(post.id, { comments_count: commentsCount + 1 });
+    const payload = replyToId ? { body: text, parentId: replyToId } : { body: text };
+    addComment(payload, {
+      onSuccess: () => {
+        setCommentText('');
+        setReplyToId(null);
       }
-      setCommentText('');
-      setReplyToId(null);
-    } catch (e) {
-      showFeedActionError(e);
-    } finally {
-      setPosting(false);
-    }
+    });
   };
 
   const patchOwnerSocial = async (body) => {
@@ -736,9 +586,9 @@ export default function FeedPostCard({
     }
   };
 
-  const nested = nestComments(comments);
+  const nested = nestComments(feedComments);
   const replyTargetName =
-    replyToId && comments.find((c) => c.id === replyToId)?.authorName;
+    replyToId && feedComments.find((c) => c.id === replyToId)?.authorName;
 
   const showReelTheater = variant === 'reel' && (showVideo || img || externalVideo);
   const mediaTapProps = hideLikes
@@ -783,7 +633,7 @@ export default function FeedPostCard({
     const clikes = Number(c.likesCount) || 0;
     const time = formatFeedTime(c.createdAt, lang);
     const edited = commentLooksEdited(c);
-    const writeBusy = commentWriteBusyId === c.id;
+    const writeBusy = false; // We can use mutations isLoading if needed per comment, but for now just false to clear error
     const editing = editingCommentId === c.id;
 
     return (
@@ -945,7 +795,7 @@ export default function FeedPostCard({
             </div>
           </div>
           <div className="ig-feed-comments ig-feed-comments--boxed">
-            {loadingComments && comments.length === 0 && (
+            {loadingComments && feedComments.length === 0 && (
               <p className="ig-feed-comments-loading">{t('discover', 'loading')}</p>
             )}
             {!loadingComments && nested.length === 0 && (
