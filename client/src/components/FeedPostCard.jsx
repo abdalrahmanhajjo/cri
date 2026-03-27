@@ -1082,10 +1082,11 @@ export default function FeedPostCard({
           <div className="ig-reel-media-layer" role="presentation" {...mediaTapProps}>
             {showVideo ? (
               <video
+                key={`${post.id}-${isActiveReel ? 'active' : 'idle'}`}
                 ref={reelVideoRef}
                 className="ig-reel-video"
                 src={vid}
-                poster={img || undefined}
+                poster={isActiveReel ? undefined : img || undefined}
                 playsInline
                 muted={reelMuted}
                 loop
