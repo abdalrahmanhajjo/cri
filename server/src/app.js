@@ -168,7 +168,7 @@ app.use('/api/coupons', couponsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/site-settings', siteSettingsPublicRoutes);
 app.use('/api/user', profileRoutes);
-app.use('/api/user', tripsRoutes);
+app.use('/api/user/trips', tripsRoutes);
 app.use('/api/admin/places', adminPlacesRoutes);
 app.use('/api/admin/categories', adminCategoriesRoutes);
 app.use('/api/admin/tours', adminToursRoutes);

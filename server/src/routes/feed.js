@@ -1,5 +1,5 @@
 const express = require('express');
-const { pool, query } = require('../db');
+const { pool, query: dbQuery } = require('../db');
 const { sendDbAwareError } = require('../utils/dbHttpError');
 const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth');
 
@@ -13,7 +13,7 @@ const router = express.Router();
 /** Concurrent toggles can race two INSERTs; second hits unique_violation (23505) — row already in desired state. */
 async function insertFeedLikeOrConcurrent(client, postId, userId) {
   try {
-    await client.dbQuery('INSERT INTO feed_likes (post_id, user_id) VALUES ($1::uuid, $2::uuid)', [postId, userId]);
+    await client.query('INSERT INTO feed_likes (post_id, user_id) VALUES ($1::uuid, $2::uuid)', [postId, userId]);
   } catch (e) {
     if (e.code === '23505') return;
     throw e;
@@ -22,7 +22,7 @@ async function insertFeedLikeOrConcurrent(client, postId, userId) {
 
 async function insertCommentLikeOrConcurrent(client, commentId, userId) {
   try {
-    await client.dbQuery(
+    await client.query(
       'INSERT INTO feed_comment_likes (comment_id, user_id) VALUES ($1::uuid, $2::uuid)',
       [commentId, userId]
     );
@@ -358,32 +358,32 @@ router.post('/post/:postId/comments/:commentId/like', authMiddleware, async (req
     let client;
     try {
       client = await pool.connect();
-      await client.dbQuery('BEGIN');
-      const existing = await client.dbQuery(
+      await client.query('BEGIN');
+      const existing = await client.query(
         'SELECT 1 FROM feed_comment_likes WHERE comment_id = $1::uuid AND user_id = $2::uuid',
         [commentId, userId]
       );
       if (existing.rows.length) {
-        await client.dbQuery('DELETE FROM feed_comment_likes WHERE comment_id = $1::uuid AND user_id = $2::uuid', [
+        await client.query('DELETE FROM feed_comment_likes WHERE comment_id = $1::uuid AND user_id = $2::uuid', [
           commentId,
           userId,
         ]);
       } else {
         await insertCommentLikeOrConcurrent(client, commentId, userId);
       }
-      const { rows: cnt } = await client.dbQuery('SELECT COUNT(*)::int AS c FROM feed_comment_likes WHERE comment_id = $1::uuid', [
+      const { rows: cnt } = await client.query('SELECT COUNT(*)::int AS c FROM feed_comment_likes WHERE comment_id = $1::uuid', [
         commentId,
       ]);
-      const liked = await client.dbQuery(
+      const liked = await client.query(
         'SELECT 1 FROM feed_comment_likes WHERE comment_id = $1::uuid AND user_id = $2::uuid',
         [commentId, userId]
       );
-      await client.dbQuery('COMMIT');
+      await client.query('COMMIT');
       res.json({ liked: liked.rows.length > 0, likes_count: Number(cnt[0]?.c) || 0 });
     } catch (e) {
       if (client) {
         try {
-          await client.dbQuery('ROLLBACK');
+          await client.query('ROLLBACK');
         } catch (_) {}
       }
       throw e;
@@ -593,24 +593,24 @@ router.post('/post/:postId/like', authMiddleware, async (req, res) => {
     let client;
     try {
       client = await pool.connect();
-      await client.dbQuery('BEGIN');
-      const existing = await client.dbQuery(
+      await client.query('BEGIN');
+      const existing = await client.query(
         'SELECT 1 FROM feed_likes WHERE post_id = $1::uuid AND user_id = $2::uuid',
         [postId, userId]
       );
       if (existing.rows.length) {
-        await client.dbQuery('DELETE FROM feed_likes WHERE post_id = $1::uuid AND user_id = $2::uuid', [postId, userId]);
+        await client.query('DELETE FROM feed_likes WHERE post_id = $1::uuid AND user_id = $2::uuid', [postId, userId]);
       } else {
         await insertFeedLikeOrConcurrent(client, postId, userId);
       }
-      const { rows: cntRows } = await client.dbQuery('SELECT COUNT(*)::int AS c FROM feed_likes WHERE post_id = $1::uuid', [
+      const { rows: cntRows } = await client.query('SELECT COUNT(*)::int AS c FROM feed_likes WHERE post_id = $1::uuid', [
         postId,
       ]);
-      const liked = await client.dbQuery(
+      const liked = await client.query(
         'SELECT 1 FROM feed_likes WHERE post_id = $1::uuid AND user_id = $2::uuid',
         [postId, userId]
       );
-      await client.dbQuery('COMMIT');
+      await client.query('COMMIT');
       return res.json({
         liked: liked.rows.length > 0,
         likes_count: Number(cntRows[0]?.c) || 0,
@@ -618,7 +618,7 @@ router.post('/post/:postId/like', authMiddleware, async (req, res) => {
     } catch (err) {
       if (client) {
         try {
-          await client.dbQuery('ROLLBACK');
+          await client.query('ROLLBACK');
         } catch (_) {}
       }
       if (err.code === '40P01' && attempt === 0) {
