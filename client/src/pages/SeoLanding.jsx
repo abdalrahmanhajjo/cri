@@ -499,11 +499,14 @@ export function AboutTripoli() {
         </header>
 
         <section className="seo-landing__aboutLead" aria-label="Tripoli lead image and summary" data-reveal>
-          <div className="seo-landing__aboutLeadMedia" aria-hidden="true">
+          <div className="seo-landing__aboutLeadMedia">
             <img
               className="seo-landing__aboutLeadImg"
               src="/tripoli-history-hero.png"
-              alt=""
+              alt={tt(
+                'lead_img_alt',
+                'Citadel of Raymond de Saint-Gilles, historic fortress on a green hillside above Tripoli’s old city, Lebanon.'
+              )}
               loading="lazy"
               decoding="async"
             />

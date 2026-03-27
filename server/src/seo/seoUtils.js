@@ -78,6 +78,11 @@ function injectSeoIntoIndexHtml(indexHtml, seo) {
 
   const meta = [];
   meta.push(`<meta name="robots" content="${escapeAttr(robots)}" />`);
+  // Optional: set GOOGLE_SITE_VERIFICATION in server env (value from Google Search Console → HTML tag).
+  const googleSiteVerification = (process.env.GOOGLE_SITE_VERIFICATION || '').trim();
+  if (googleSiteVerification) {
+    meta.push(`<meta name="google-site-verification" content="${escapeAttr(googleSiteVerification)}" />`);
+  }
   if (description) meta.push(`<meta name="description" content="${escapeAttr(clampText(description, 180))}" />`);
   if (canonical) meta.push(`<link rel="canonical" href="${escapeAttr(canonical)}" />`);
 

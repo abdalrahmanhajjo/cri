@@ -422,9 +422,10 @@ function makeSeoResponder({ clientDistPath }) {
               'Tripoli travel tips: best time to visit, how to get around the old city, what to wear, and respectful visiting advice for a comfortable day in Tripoli, Lebanon.',
           },
           '/about-tripoli': {
-            title: 'About Tripoli, Lebanon | Visit Tripoli',
+            title: 'History of Tripoli, Lebanon | Visit Tripoli',
             description:
-              'Learn about Tripoli, Lebanon: its old city, souks, landmarks, culture, and visitor highlights. A practical introduction for travelers and local explorers.',
+              'Timeline of Tripoli, Lebanon: Mediterranean trade, medieval fortifications, Mamluk old city, Ottoman markets, and today’s living souks. Lightweight guide for visitors.',
+            ogImagePath: '/tripoli-history-hero.png',
           },
           '/partner-link-kit': {
             title: 'Partner Link Kit for Visit Tripoli | Official Backlinks',
@@ -435,6 +436,7 @@ function makeSeoResponder({ clientDistPath }) {
         const info = metaByPath[p];
         title = info.title;
         description = info.description;
+        if (info.ogImagePath) ogImage = safeUrlJoin(baseUrl, info.ogImagePath);
         canonical = safeUrlJoin(baseUrl, p);
         alternates = buildAlternates(baseUrl, p);
         const crumbs = jsonLdBreadcrumb({
