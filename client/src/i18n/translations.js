@@ -100,6 +100,8 @@ export const translations = {
       lead_title: 'A city built from trade and stone',
       lead_text:
         'Tripoli’s old city is best understood as a system: markets connect to khans, which connect to courtyards, which connect to major landmarks. Each era added layers — but the walk remains coherent.',
+      lead_img_alt:
+        'Citadel of Raymond de Saint-Gilles, historic fortress on a green hillside above Tripoli’s old city, Lebanon.',
       jump_timeline: 'Jump to timeline',
       jump_notes: 'Visitor notes',
       metrics_1_value: 'Walkable core',
@@ -1039,6 +1041,8 @@ export const translations = {
       lead_title: 'مدينة بُنيت من التجارة والحجر',
       lead_text:
         'أفضل طريقة لفهم المدينة القديمة في طرابلس هي كنظام مترابط: الأسواق تقود إلى الخانات، والخانات إلى الأفنية، والأفنية إلى المعالم. كل عصر أضاف طبقات — لكن المسار بقي منسجمًا.',
+      lead_img_alt:
+        'قلعة ريمون دو سان جيل، قلعة تاريخية على تلة خضراء فوق المدينة القديمة في طرابلس، لبنان.',
       jump_timeline: 'اذهب إلى الخط الزمني',
       jump_notes: 'ملاحظات للزائر',
       metrics_1_value: 'قلب قابل للمشي',
@@ -1972,6 +1976,8 @@ export const translations = {
       lead_title: 'Une ville née du commerce et de la pierre',
       lead_text:
         'La vieille ville de Tripoli se comprend comme un système : les souks mènent aux khans, les khans aux cours, les cours aux grands monuments. Chaque époque a ajouté des couches — mais la marche reste cohérente.',
+      lead_img_alt:
+        'Citadelle de Raymond de Saint-Gilles, forteresse historique sur une colline verdoyante au-dessus de la vieille ville de Tripoli, Liban.',
       jump_timeline: 'Aller à la chronologie',
       jump_notes: 'Notes de visite',
       metrics_1_value: 'Cœur piéton',
