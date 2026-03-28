@@ -739,7 +739,7 @@ export default function Explore() {
         <TopPicksCarousel places={topPicks} t={t} />
       )}
 
-      <ExperienceTripoliSection t={t} lang={lang} places={placesList} categories={categories} />
+      <ExperienceTripoliSection t={t} lang={lang} places={placesList} categories={categoriesList} />
 
       {communityPosts.length > 0 && (
         <CommunityFeedStrip posts={communityPosts} t={t} moreTo={COMMUNITY_PATH} layout="bento" />
