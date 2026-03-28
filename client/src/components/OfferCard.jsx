@@ -22,6 +22,58 @@ function formatOfferDate(iso, lang) {
   }
 }
 
+function formatOfferAmount(n, lang) {
+  const num = Number(n);
+  if (!Number.isFinite(num)) return String(n ?? '');
+  const locale = lang === 'ar' ? 'ar-LB' : lang === 'fr' ? 'fr-LB' : 'en-GB';
+  try {
+    return new Intl.NumberFormat(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num);
+  } catch {
+    return String(num);
+  }
+}
+
+/** Server sends coupon copy + raw fields; DB translations override; English templates removed from SQL. */
+function resolveCouponTitle(pr, t) {
+  const title = String(pr.title ?? '').trim();
+  if (title) return title;
+  const place = String(pr.placeName ?? '').trim();
+  if (place) return place;
+  return t('discover', 'couponDefaultTitle');
+}
+
+function resolveCouponSubtitle(pr, t, lang) {
+  const sub = String(pr.subtitle ?? '').trim();
+  if (sub) return sub;
+  const min = pr.minPurchase != null ? Number(pr.minPurchase) : 0;
+  if (min > 0) {
+    return t('discover', 'couponMinPurchase').replace('{amount}', formatOfferAmount(min, lang));
+  }
+  return null;
+}
+
+function resolveCouponDiscountLabel(pr, t, lang) {
+  const label = String(pr.discountLabel ?? '').trim();
+  if (label) return label;
+  const type = pr.discountType != null ? String(pr.discountType).toLowerCase() : '';
+  const val = pr.discountValue != null ? Number(pr.discountValue) : NaN;
+  if (!Number.isFinite(val)) return '';
+  const formatted = formatOfferAmount(val, lang);
+  if (type === 'percent') return t('discover', 'couponPercentOff').replace('{value}', formatted);
+  if (type === 'fixed') return t('discover', 'couponFixedOff').replace('{value}', formatted);
+  return '';
+}
+
+function resolveCouponTerms(pr, t) {
+  const terms = String(pr.terms ?? '').trim();
+  if (terms) return terms;
+  const lim = pr.usageLimit;
+  if (lim != null && lim !== '' && Number.isFinite(Number(lim))) {
+    return t('discover', 'couponUsageLimit').replace('{n}', String(lim));
+  }
+  return null;
+}
+
 function offerValidityText({ startsAt, endsAt, t, lang }) {
   const s = formatOfferDate(startsAt != null ? String(startsAt) : '', lang);
   const e = formatOfferDate(endsAt != null ? String(endsAt) : '', lang);
@@ -58,6 +110,16 @@ export default function OfferCard({
   const showLink = showPlaceLink && placeNameTrim && placeId;
   const coupon = isCouponItem(pr);
   const pillLabel = coupon ? t('discover', 'couponPill') : t('discover', 'offerPill');
+  const displayTitle = coupon ? resolveCouponTitle(pr, t) : String(pr.title ?? '');
+  const displaySubtitle = coupon
+    ? resolveCouponSubtitle(pr, t, lang)
+    : pr.subtitle != null && String(pr.subtitle).trim()
+      ? pr.subtitle
+      : null;
+  const displayDiscount = coupon
+    ? resolveCouponDiscountLabel(pr, t, lang)
+    : String(pr.discountLabel ?? '').trim();
+  const displayTerms = coupon ? resolveCouponTerms(pr, t) : pr.terms != null && String(pr.terms).trim() ? pr.terms : null;
   const validityLine = offerValidityText({
     startsAt: pr.startsAt,
     endsAt: pr.endsAt,
@@ -119,10 +181,10 @@ export default function OfferCard({
       <div className="ig-offer-card-inner">
         <div className="ig-offer-card-head">
           <span className="ig-offer-pill">{pillLabel}</span>
-          {pr.discountLabel && <span className="ig-offer-discount">{pr.discountLabel}</span>}
+          {displayDiscount ? <span className="ig-offer-discount">{displayDiscount}</span> : null}
         </div>
-        <h2 className="ig-offer-title">{pr.title}</h2>
-        {pr.subtitle && <p className="ig-offer-sub">{pr.subtitle}</p>}
+        <h2 className="ig-offer-title">{displayTitle}</h2>
+        {displaySubtitle ? <p className="ig-offer-sub">{displaySubtitle}</p> : null}
         {validityLine && <p className="ig-offer-validity">{validityLine}</p>}
         {showGlobalHint && <p className="ig-offer-global-hint">{t('discover', 'offerGlobalHint')}</p>}
         {pr.code && (
@@ -139,7 +201,7 @@ export default function OfferCard({
         ) : (
           placeNameTrim && <p className="ig-offer-place">{placeNameTrim}</p>
         )}
-        {pr.terms && <p className="ig-offer-terms">{pr.terms}</p>}
+        {displayTerms ? <p className="ig-offer-terms">{displayTerms}</p> : null}
 
         {coupon && pr.code && (
           <div className="ig-offer-redeem">

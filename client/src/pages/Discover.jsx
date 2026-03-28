@@ -835,8 +835,9 @@ export default function Discover() {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
     api
-      .publicPromotions({ limit: 100 })
+      .publicPromotions({ limit: 100, lang: langParam })
       .then((r) => {
         if (cancelled) return;
         let list = Array.isArray(r.promotions) ? r.promotions : [];
@@ -854,7 +855,7 @@ export default function Discover() {
     return () => {
       cancelled = true;
     };
-  }, [tab, placeScopeId, t]);
+  }, [tab, placeScopeId, lang, t]);
 
   useEffect(() => {
     if (tab !== 'proposals' || !placeScopeId) return;

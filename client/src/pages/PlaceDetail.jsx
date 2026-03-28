@@ -212,7 +212,7 @@ export default function PlaceDetail() {
     }
     let cancelled = false;
     api.places
-      .promotions(id)
+      .promotions(id, { lang })
       .then((r) => {
         if (!cancelled) setPromotions(Array.isArray(r.promotions) ? r.promotions : []);
       })
@@ -222,7 +222,7 @@ export default function PlaceDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, lang]);
 
   useEffect(() => {
     if (loading || !place) return;
