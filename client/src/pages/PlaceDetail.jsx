@@ -190,8 +190,11 @@ export default function PlaceDetail() {
       .redeemed()
       .then((r) => {
         if (cancelled) return;
-        const ids = Array.isArray(r.couponIds) ? r.couponIds.map((cid) => `coupon-${cid}`) : [];
-        setRedeemedPromotionIds(ids);
+        const cids = Array.isArray(r.couponIds) ? r.couponIds.map((cid) => `coupon-${cid}`) : [];
+        const pids = Array.isArray(r.placePromotionIds)
+          ? r.placePromotionIds.map((id) => `promo-${id}`)
+          : [];
+        setRedeemedPromotionIds([...cids, ...pids]);
       })
       .catch(() => {
         if (!cancelled) setRedeemedPromotionIds([]);

@@ -745,8 +745,11 @@ export default function Discover() {
       .redeemed()
       .then((r) => {
         if (cancelled) return;
-        const ids = Array.isArray(r.couponIds) ? r.couponIds.map((id) => `coupon-${id}`) : [];
-        setRedeemedPromotionIds(ids);
+        const cids = Array.isArray(r.couponIds) ? r.couponIds.map((id) => `coupon-${id}`) : [];
+        const pids = Array.isArray(r.placePromotionIds)
+          ? r.placePromotionIds.map((id) => `promo-${id}`)
+          : [];
+        setRedeemedPromotionIds([...cids, ...pids]);
       })
       .catch(() => {
         if (!cancelled) setRedeemedPromotionIds([]);
