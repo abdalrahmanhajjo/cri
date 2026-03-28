@@ -659,6 +659,9 @@ export const translations = {
       bentoSiteGuideLeadShort:
         "Discover Tripoli's best spots, local experiences, and ready-made plans — all in one place.",
       bentoAvatarStackAria: 'Browse places and community',
+      bentoAvatarPlaceLink: 'View place: {name}',
+      bentoAvatarPlaceLinkNoName: 'View place profile',
+      bentoAvatarCommunityLink: 'Open community feed',
       waysInThisPage: 'In this page',
       downloadAppTitle: 'Official Tripoli app',
       downloadAppSub: 'Official guide: explore the map, save places and plan your visit.',
@@ -1644,6 +1647,9 @@ export const translations = {
       bentoSiteGuideLeadShort:
         'اكتشف أفضل أماكن طرابلس، تجارب محلية، وخططاً جاهزة — كل ذلك في مكان واحد.',
       bentoAvatarStackAria: 'تصفح الأماكن والمجتمع',
+      bentoAvatarPlaceLink: 'عرض المكان: {name}',
+      bentoAvatarPlaceLinkNoName: 'عرض صفحة المكان',
+      bentoAvatarCommunityLink: 'فتح موجز المجتمع',
       waysInThisPage: 'في هذه الصفحة',
       downloadAppTitle: 'التطبيق الرسمي لطرابلس',
       downloadAppSub: 'دليل رسمي: استكشف الخريطة، احفظ المفضلة وخطط لزيارتك.',
@@ -2629,6 +2635,9 @@ export const translations = {
       bentoSiteGuideLeadShort:
         'Découvrez les meilleurs adresses de Tripoli, les expériences locales et des parcours tout prêts — le tout au même endroit.',
       bentoAvatarStackAria: 'Parcourir lieux et communauté',
+      bentoAvatarPlaceLink: 'Voir le lieu : {name}',
+      bentoAvatarPlaceLinkNoName: 'Voir la fiche du lieu',
+      bentoAvatarCommunityLink: 'Ouvrir le fil communautaire',
       waysInThisPage: 'Sur cette page',
       downloadAppTitle: 'Application officielle Tripoli',
       downloadAppSub: 'Guide officiel : carte, lieux favoris et itinéraire pour planifier votre visite.',
