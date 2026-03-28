@@ -182,7 +182,7 @@ export default function AdminFeed() {
     if (!files?.length) return;
     const list = Array.from(files).filter(isLikelyImageFile);
     if (!list.length) {
-      setError('Choose image files (JPEG, PNG, GIF, WebP, or HEIC).');
+      setError('Choose image files (JPEG, PNG, GIF, WebP, or HEIC — HEIC is saved as JPEG).');
       return;
     }
     setComposerUploading('image');
@@ -207,7 +207,7 @@ export default function AdminFeed() {
   const uploadComposerFile = async (file, kind) => {
     if (!file) return;
     if (kind === 'image' && !isLikelyImageFile(file)) {
-      setError('Choose an image file (JPEG, PNG, GIF, WebP, or HEIC).');
+      setError('Choose an image file (JPEG, PNG, GIF, WebP, or HEIC — HEIC is saved as JPEG).');
       return;
     }
     if (kind === 'video' && !/^video\//i.test(file.type)) {
@@ -235,7 +235,7 @@ export default function AdminFeed() {
     if (!editPost || !files?.length) return;
     const list = Array.from(files).filter(isLikelyImageFile);
     if (!list.length) {
-      setError('Choose image files (including HEIC).');
+      setError('Choose image files (HEIC uploads are saved as JPEG).');
       return;
     }
     setEditUploading('image');
@@ -535,7 +535,7 @@ export default function AdminFeed() {
                     >
                       {composerUploading === 'image'
                         ? 'Uploading…'
-                        : 'Drop images here or click — add multiple (JPEG, PNG, GIF, WebP, HEIC; same storage as place listings)'}
+                        : 'Drop images here or click — add multiple (JPEG, PNG, GIF, WebP, or HEIC stored as JPEG; same storage as place listings)'}
                     </label>
                   </div>
                   {composerImages.length > 0 && (

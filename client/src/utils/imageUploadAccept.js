@@ -1,4 +1,4 @@
-/** File input `accept` including Apple HEIC/HEIF (server converts to JPEG when possible). */
+/** File input `accept` including Apple HEIC/HEIF (API always stores them as JPEG). */
 export const ACCEPT_IMAGES_WITH_HEIC =
   'image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.heic,.heif';
 
