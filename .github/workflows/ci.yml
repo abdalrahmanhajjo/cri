@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install server dependencies
+        run: npm ci --prefix server
+
+      - name: Server tests
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-jwt-secret-at-least-32-characters-long
+        run: npm run test --prefix server
+
+      - name: Install client dependencies
+        run: npm ci --prefix client
+
+      - name: Build client
+        run: npm run build --prefix client
