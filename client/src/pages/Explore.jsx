@@ -273,6 +273,26 @@ function TopPicksCarousel({ places, t }) {
     setIndex((i) => (safePlaces.length ? Math.min(i, safePlaces.length - 1) : 0));
   }, [safePlaces.length]);
 
+  const onCarouselKeyDown = useCallback(
+    (e) => {
+      if (safePlaces.length <= 1) return;
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setIndex((i) => (i + 1) % safePlaces.length);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setIndex((i) => (i - 1 + safePlaces.length) % safePlaces.length);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        setIndex(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        setIndex(safePlaces.length - 1);
+      }
+    },
+    [safePlaces.length]
+  );
+
   const [favouriteIds, setFavouriteIds] = useState(new Set());
   useEffect(() => {
     if (!user) {
@@ -312,7 +332,14 @@ function TopPicksCarousel({ places, t }) {
           <h2 className="vd-top-picks-title">{t('home', 'topPicks')}</h2>
           <p className="vd-top-picks-subtitle">{t('home', 'topPicksSub')}</p>
         </header>
-        <div className="vd-top-picks-carousel">
+        <div
+          className="vd-top-picks-carousel"
+          tabIndex={0}
+          role="region"
+          aria-roledescription="carousel"
+          aria-label={t('home', 'topPicksCarouselLabel')}
+          onKeyDown={onCarouselKeyDown}
+        >
           <div
             className="vd-top-picks-track"
             style={{ transform: `translateX(-${index * 100}%)`, direction: 'ltr' }}
@@ -403,22 +430,44 @@ function TopPicksCarousel({ places, t }) {
               );
             })}
           </div>
-          <div className="vd-top-picks-dots" role="group" aria-label={t('home', 'topPicksCarouselLabel')}>
-            {safePlaces.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                className={`vd-top-picks-dot ${i === index ? 'vd-top-picks-dot--active' : ''}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setIndex(i);
-                }}
-                aria-label={`${t('home', 'topPicks')} — ${i + 1} / ${safePlaces.length}`}
-                aria-current={i === index ? 'true' : undefined}
-              />
-            ))}
+          <div className="vd-top-picks-carousel-footer">
+            {safePlaces.length > 1 ? (
+              <p
+                className="vd-top-picks-counter"
+                aria-live="polite"
+                aria-atomic="true"
+                aria-label={t('home', 'topPicksSlidePosition')
+                  .replace('{current}', String(index + 1))
+                  .replace('{total}', String(safePlaces.length))}
+              >
+                <span className="vd-top-picks-counter-label">{t('home', 'topPicksCounterLabel')}</span>
+                <span className="vd-top-picks-counter-nums" aria-hidden="true">
+                  <span className="vd-top-picks-counter-current">{index + 1}</span>
+                  <span className="vd-top-picks-counter-sep">/</span>
+                  <span className="vd-top-picks-counter-total">{safePlaces.length}</span>
+                </span>
+              </p>
+            ) : (
+              <span className="vd-top-picks-counter vd-top-picks-counter--placeholder" aria-hidden="true" />
+            )}
+            <div className="vd-top-picks-dots" role="group" aria-label={t('home', 'topPicksCarouselLabel')}>
+              {safePlaces.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={`vd-top-picks-dot ${i === index ? 'vd-top-picks-dot--active' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIndex(i);
+                  }}
+                  aria-label={`${t('home', 'topPicks')} — ${i + 1} / ${safePlaces.length}`}
+                  aria-current={i === index ? 'true' : undefined}
+                />
+              ))}
+            </div>
           </div>
+          <p className="vd-top-picks-carousel-keys-hint">{t('home', 'topPicksCarouselKeysHint')}</p>
         </div>
       </div>
     </section>
