@@ -21,7 +21,7 @@ function safeJson(val, fallback = []) {
 
 /** GET /api/admin/places?q=&limit= — search places for admin pickers (id, name, location) */
 router.get('/', async (req, res) => {
-  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 40, 1), 100);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 40, 1), 500);
   const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 120) : '';
   const params = [];
   let whereSql = '';

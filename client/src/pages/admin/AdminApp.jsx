@@ -11,6 +11,7 @@ import AdminUserTrips from './AdminUserTrips';
 import AdminFeed from './AdminFeed';
 import AdminInterests from './AdminInterests';
 import AdminPlaceOwners from './AdminPlaceOwners';
+import AdminOffers from './AdminOffers';
 
 export default function AdminApp() {
   return (
@@ -27,6 +28,7 @@ export default function AdminApp() {
         <Route path="feed" element={<AdminFeed />} />
         <Route path="interests" element={<AdminInterests />} />
         <Route path="place-owners" element={<AdminPlaceOwners />} />
+        <Route path="offers" element={<AdminOffers />} />
       </Route>
     </Routes>
   );
