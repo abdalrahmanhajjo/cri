@@ -87,6 +87,8 @@ app.use((req, res, next) => {
 app.use(
   helmet({
     contentSecurityPolicy: {
+      // Helmet's defaults also define script-src; merging produced duplicate script-src (browser warning).
+      useDefaults: false,
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: [
@@ -109,7 +111,8 @@ app.use(
           'https://*.supabase.co',
           'https://*.pooler.supabase.com',
         ],
-        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        frameSrc: ["'self'", 'https://www.googletagmanager.com'],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
       },
