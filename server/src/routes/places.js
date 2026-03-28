@@ -102,7 +102,7 @@ function isPlausiblePhone(s) {
 /** Fix malformed extension (e.g. xxxjpg -> xxx.jpg) from old upload bug */
 function fixImageUrlExtension(url) {
   if (!url || typeof url !== 'string') return url;
-  return url.replace(/([a-f0-9]{32})(jpe?g|png|gif|webp)$/i, '$1.$2');
+  return url.replace(/([a-f0-9]{32})(jpe?g|png|gif|webp|heic|heif)$/i, '$1.$2');
 }
 
 function resolveImageUrls(images, baseUrl) {

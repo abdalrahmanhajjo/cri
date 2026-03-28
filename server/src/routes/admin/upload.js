@@ -6,6 +6,13 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
+const {
+  isVideoMime,
+  multerFileAllowed,
+  prepareUploadedImage,
+  pickImageExtension,
+  VIDEO_MIME_TO_EXT,
+} = require('../../utils/imageUpload');
 
 const router = express.Router();
 const BUCKET = 'place-images';
@@ -16,21 +23,6 @@ try {
   fs.mkdirSync(LOCAL_PLACES, { recursive: true });
   fs.mkdirSync(LOCAL_FEED_VIDEOS, { recursive: true });
 } catch (_) {}
-
-function isImageMime(m) {
-  return /^image\/(jpeg|png|gif|webp)$/i.test(m || '');
-}
-
-function isVideoMime(m) {
-  return /^video\/(mp4|webm|quicktime|x-m4v)$/i.test(m || '');
-}
-
-const VIDEO_MIME_TO_EXT = {
-  'video/mp4': '.mp4',
-  'video/webm': '.webm',
-  'video/quicktime': '.mov',
-  'video/x-m4v': '.m4v',
-};
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL?.trim();
@@ -65,12 +57,11 @@ async function ensureBucket(supabase) {
 const memoryStorage = multer.memoryStorage();
 const upload = multer({
   storage: memoryStorage,
-  // Images: high-res photos; feed reels: short MP4/WebM/MOV (higher cap for video).
   limits: { fileSize: 80 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const ok = isImageMime(file.mimetype) || isVideoMime(file.mimetype);
+    const ok = multerFileAllowed(file);
     cb(
-      ok ? null : new Error('Only images (JPEG, PNG, GIF, WebP) or videos (MP4, WebM, MOV) allowed'),
+      ok ? null : new Error('Only images (JPEG, PNG, GIF, WebP, HEIC/HEIF) or videos (MP4, WebM, MOV) allowed'),
       ok
     );
   },
@@ -82,20 +73,23 @@ router.use(authMiddleware, adminMiddleware);
 router.post('/', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-  const rawExt = path.extname(req.file.originalname) || '';
-  const ext = (rawExt.startsWith('.') ? rawExt : rawExt ? '.' + rawExt : '').toLowerCase();
+  let uploadBuffer = req.file.buffer;
+  let contentType = req.file.mimetype;
   let safeExt;
   let storagePrefix;
 
-  if (isImageMime(req.file.mimetype)) {
-    safeExt = /^\.(jpe?g|png|gif|webp)$/i.test(ext) ? ext : '.jpg';
-    storagePrefix = 'places';
-  } else if (isVideoMime(req.file.mimetype)) {
+  if (isVideoMime(req.file.mimetype)) {
+    const rawExt = path.extname(req.file.originalname) || '';
+    const ext = (rawExt.startsWith('.') ? rawExt : rawExt ? `.${rawExt}` : '').toLowerCase();
     const fromMime = VIDEO_MIME_TO_EXT[req.file.mimetype.toLowerCase()] || '.mp4';
     safeExt = /^\.(mp4|webm|mov|m4v)$/i.test(ext) ? ext : fromMime;
     storagePrefix = 'feed/videos';
   } else {
-    return res.status(400).json({ error: 'Unsupported file type' });
+    const prep = await prepareUploadedImage(uploadBuffer, req.file.mimetype, req.file.originalname);
+    uploadBuffer = prep.buffer;
+    contentType = prep.contentType;
+    safeExt = pickImageExtension(contentType, req.file.originalname, prep.useExtension);
+    storagePrefix = 'places';
   }
 
   const filename = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
@@ -111,8 +105,8 @@ router.post('/', upload.single('file'), async (req, res) => {
     try {
       const { data, error } = await supabase.storage
         .from(BUCKET)
-        .upload(filePath, req.file.buffer, {
-          contentType: req.file.mimetype,
+        .upload(filePath, uploadBuffer, {
+          contentType,
           upsert: false,
         });
 
@@ -123,8 +117,8 @@ router.post('/', upload.single('file'), async (req, res) => {
       if (error.message?.includes('Bucket not found') || error.message?.includes('not found')) {
         const bucketReady = await ensureBucket(supabase);
         if (bucketReady) {
-          const retry = await supabase.storage.from(BUCKET).upload(filePath, req.file.buffer, {
-            contentType: req.file.mimetype,
+          const retry = await supabase.storage.from(BUCKET).upload(filePath, uploadBuffer, {
+            contentType,
             upsert: false,
           });
           if (!retry.error) {
@@ -142,7 +136,7 @@ router.post('/', upload.single('file'), async (req, res) => {
   try {
     const localDir = storagePrefix === 'places' ? LOCAL_PLACES : LOCAL_FEED_VIDEOS;
     const localPath = path.join(localDir, filename);
-    fs.writeFileSync(localPath, req.file.buffer);
+    fs.writeFileSync(localPath, uploadBuffer);
     const publicPrefix = storagePrefix === 'places' ? '/uploads/places' : '/uploads/feed/videos';
     res.json({ url: `${publicPrefix}/${filename}` });
   } catch (err) {

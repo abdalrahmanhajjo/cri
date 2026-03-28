@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
+import { isLikelyImageFile, ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
 import './Admin.css';
 
 function contentKind(t) {
@@ -179,9 +180,9 @@ export default function AdminFeed() {
 
   const uploadComposerImages = async (files) => {
     if (!files?.length) return;
-    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    const list = Array.from(files).filter(isLikelyImageFile);
     if (!list.length) {
-      setError('Choose image files (JPEG, PNG, GIF, or WebP).');
+      setError('Choose image files (JPEG, PNG, GIF, WebP, or HEIC).');
       return;
     }
     setComposerUploading('image');
@@ -205,8 +206,8 @@ export default function AdminFeed() {
 
   const uploadComposerFile = async (file, kind) => {
     if (!file) return;
-    if (kind === 'image' && !/^image\//i.test(file.type)) {
-      setError('Choose an image file (JPEG, PNG, GIF, or WebP).');
+    if (kind === 'image' && !isLikelyImageFile(file)) {
+      setError('Choose an image file (JPEG, PNG, GIF, WebP, or HEIC).');
       return;
     }
     if (kind === 'video' && !/^video\//i.test(file.type)) {
@@ -232,9 +233,9 @@ export default function AdminFeed() {
 
   const uploadEditImages = async (files) => {
     if (!editPost || !files?.length) return;
-    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    const list = Array.from(files).filter(isLikelyImageFile);
     if (!list.length) {
-      setError('Choose image files.');
+      setError('Choose image files (including HEIC).');
       return;
     }
     setEditUploading('image');
@@ -519,7 +520,7 @@ export default function AdminFeed() {
                     <input
                       id="admin-feed-composer-image-post"
                       type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      accept={ACCEPT_IMAGES_WITH_HEIC}
                       multiple
                       style={{ display: 'none' }}
                       disabled={composerUploading !== null}
@@ -534,7 +535,7 @@ export default function AdminFeed() {
                     >
                       {composerUploading === 'image'
                         ? 'Uploading…'
-                        : 'Drop images here or click — add multiple (JPEG, PNG, GIF, WebP; same storage as place listings)'}
+                        : 'Drop images here or click — add multiple (JPEG, PNG, GIF, WebP, HEIC; same storage as place listings)'}
                     </label>
                   </div>
                   {composerImages.length > 0 && (
@@ -667,7 +668,7 @@ export default function AdminFeed() {
                       <input
                         id="admin-feed-composer-image-reel"
                         type="file"
-                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        accept={ACCEPT_IMAGES_WITH_HEIC}
                         style={{ display: 'none' }}
                         disabled={composerUploading !== null}
                         onChange={(e) => {
@@ -1053,7 +1054,7 @@ export default function AdminFeed() {
                     <input
                       id="admin-feed-edit-image"
                       type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      accept={ACCEPT_IMAGES_WITH_HEIC}
                       multiple={contentKind(editPost.type) !== 'reel'}
                       style={{ display: 'none' }}
                       disabled={editUploading !== null}

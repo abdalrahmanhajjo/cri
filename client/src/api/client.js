@@ -18,13 +18,13 @@ function getBaseUrl() {
 /** Fix malformed extension (e.g. xxxjpg -> xxx.jpg) from old upload bug */
 export function fixImageUrlExtension(url) {
   if (!url || typeof url !== 'string') return url;
-  return url.replace(/([a-f0-9]{32})(jpe?g|png|gif|webp)$/i, '$1.$2');
+  return url.replace(/([a-f0-9]{32})(jpe?g|png|gif|webp|heic|heif)$/i, '$1.$2');
 }
 
 /** Return original-style URL (xxx.jpg -> xxxjpg) for fallback when fixed URL fails */
 export function getImageUrlAlternate(url) {
   if (!url || typeof url !== 'string') return null;
-  return url.replace(/\.(jpe?g|png|gif|webp)$/i, '$1');
+  return url.replace(/\.(jpe?g|png|gif|webp|heic|heif)$/i, '$1');
 }
 
 /** Resolve image URL - use relative path (proxied in dev) or full URL */

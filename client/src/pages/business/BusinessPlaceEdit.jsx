@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension, getImageUrlAlternate } from '../../api/client';
+import { ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
 import MapPicker from '../../components/MapPicker';
 import './Business.css';
 
@@ -613,7 +614,7 @@ export default function BusinessPlaceEdit() {
             >
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
+                accept={ACCEPT_IMAGES_WITH_HEIC}
                 multiple
                 style={{ display: 'none' }}
                 id="biz-place-upload"
