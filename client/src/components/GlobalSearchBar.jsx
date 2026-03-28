@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api';
 import { useLanguage } from '../context/LanguageContext';
 import { usePlaces } from '../hooks/usePlaces';
 import Icon from './Icon';
@@ -23,7 +22,7 @@ export default function GlobalSearchBar({
   /** If set, choosing a suggestion focuses this flow instead of navigating to `/place/:id`. */
   onSelectPlace,
 }) {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [internalQuery, setInternalQuery] = useState('');
   const controlled = queryValue !== undefined && typeof onQueryChange === 'function';

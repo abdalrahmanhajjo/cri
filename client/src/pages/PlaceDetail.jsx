@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api';
 import Icon from '../components/Icon';
@@ -66,6 +67,7 @@ export default function PlaceDetail() {
   const location = useLocation();
   const { t, lang } = useLanguage();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: place, isLoading: loadingPlace, error: placeError } = usePlace(id, { lang });
   const { data: reviewsRes, isLoading: loadingReviews } = usePlaceReviews(id);
@@ -308,9 +310,8 @@ export default function PlaceDetail() {
           title: reviewTitle.trim() || undefined,
           review: text || undefined,
         });
-        const [p, revRes] = await Promise.all([api.places.get(id), api.places.reviews(id)]);
-        setPlace(p);
-        setPlaceReviews(Array.isArray(revRes.reviews) ? revRes.reviews : []);
+        await queryClient.invalidateQueries({ queryKey: ['place', id] });
+        await queryClient.invalidateQueries({ queryKey: ['place', id, 'reviews'] });
         setReviewMsg({ type: 'ok', text: t('detail', 'reviewThanks') });
       } catch (err) {
         const code = err?.data?.code;
@@ -323,7 +324,7 @@ export default function PlaceDetail() {
         setReviewSubmitting(false);
       }
     },
-    [user, place, id, reviewBody, reviewRating, reviewTitle, t]
+    [user, place, id, reviewBody, reviewRating, reviewTitle, t, queryClient]
   );
 
   const deleteMyReview = useCallback(async () => {
@@ -333,16 +334,15 @@ export default function PlaceDetail() {
     setReviewMsg(null);
     try {
       await api.places.deleteReview(place.id, myReview.id);
-      const [p, revRes] = await Promise.all([api.places.get(id), api.places.reviews(id)]);
-      setPlace(p);
-      setPlaceReviews(Array.isArray(revRes.reviews) ? revRes.reviews : []);
+      await queryClient.invalidateQueries({ queryKey: ['place', id] });
+      await queryClient.invalidateQueries({ queryKey: ['place', id, 'reviews'] });
       setReviewMsg({ type: 'ok', text: t('detail', 'reviewDeleted') });
     } catch (err) {
       setReviewMsg({ type: 'err', text: err?.message || t('detail', 'reviewSubmitFailed') });
     } finally {
       setReviewSubmitting(false);
     }
-  }, [user, place, id, myReview, t]);
+  }, [user, place, id, myReview, t, queryClient]);
 
   const openLightbox = useCallback(
     (index) => {

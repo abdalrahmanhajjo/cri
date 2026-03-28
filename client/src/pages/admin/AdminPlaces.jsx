@@ -12,7 +12,16 @@ import {
 } from '../../hooks/useAdmin';
 import { useCategories } from '../../hooks/useCategories';
 import MapPicker from '../../components/MapPicker';
+import { getImageUrl, fixImageUrlExtension, getImageUrlAlternate } from '../../api';
 import './Admin.css';
+
+function PlaceModalHeaderIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
 
 function AdminImageWithFallback({ url }) {
   const primary = getImageUrl(fixImageUrlExtension(url));
@@ -240,18 +249,13 @@ function PlaceFormModal({ place, onClose, onSaved }) {
     userTouchedImagesRef.current = true;
     setForm((f) => ({ ...f, images: next.join('\n') }));
   };
-  const PlaceIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
-    </svg>
-  );
 
   return (
     <div className="admin-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="admin-modal admin-modal--wide" onClick={(e) => e.stopPropagation()}>
         <div className="admin-modal-header">
           <h2>
-            <span className="admin-modal-header-icon"><PlaceIcon /></span>
+            <span className="admin-modal-header-icon"><PlaceModalHeaderIcon /></span>
             {place ? 'Edit Place' : 'Add Place'}
           </h2>
           <button type="button" className="admin-modal-close" onClick={onClose} aria-label="Close">×</button>
@@ -483,8 +487,8 @@ function PlaceFormModal({ place, onClose, onSaved }) {
                   id="place-image-upload"
                   onChange={(e) => { handleImageUpload(e.target.files); e.target.value = ''; }}
                 />
-                <label htmlFor="place-image-upload" style={{ cursor: uploading ? 'wait' : 'pointer', margin: 0 }}>
-                  {uploading ? 'Uploading…' : 'Drop images here or click to upload (JPEG, PNG, GIF, WebP — up to 25MB each)'}
+                <label htmlFor="place-image-upload" style={{ cursor: uploadMutation.isPending ? 'wait' : 'pointer', margin: 0 }}>
+                  {uploadMutation.isPending ? 'Uploading…' : 'Drop images here or click to upload (JPEG, PNG, GIF, WebP — up to 25MB each)'}
                 </label>
               </div>
               {imageUrls.length > 0 && (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAdminStats, useAdminEvents } from '../../hooks/useAdmin';
 import { usePlaces } from '../../hooks/usePlaces';
@@ -18,7 +18,6 @@ function formatDate(str) {
 export default function AdminDashboard() {
   const [search, setSearch] = useState('');
   const [quickTab, setQuickTab] = useState('places');
-  const [error, setError] = useState(null);
   const { data: statsRes, isLoading: loadingStats } = useAdminStats();
   const { data: placesRes, isLoading: loadingPlaces } = usePlaces();
   const { data: catsRes, isLoading: loadingCats } = useCategories();
@@ -90,8 +89,6 @@ export default function AdminDashboard() {
           />
         </div>
       </div>
-
-      {error && <div className="admin-error">{error}</div>}
 
       <div className="admin-widgets admin-dashboard-grid" style={{ gridTemplateColumns: 'repeat(12, 1fr)' }}>
         {/* Quick Manage - My Tasks style */}

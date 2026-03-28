@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import api, { getPlaceImageUrl, API_ERROR_NETWORK } from '../api';
+import api, { getPlaceImageUrl } from '../api';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { usePlace, usePlaces } from '../hooks/usePlaces';
@@ -80,10 +79,6 @@ function DiscoverSkeleton({ tab }) {
   );
 }
 
-function discoverFetchError(err, t) {
-  return err?.code === API_ERROR_NETWORK ? t('errors', 'networkError') : err?.message || t('discover', 'error');
-}
-
 function DiscoverProposalPanel({ places, t, user }) {
   const [selectedId, setSelectedId] = useState('');
   const [searchQ, setSearchQ] = useState('');
@@ -94,19 +89,11 @@ function DiscoverProposalPanel({ places, t, user }) {
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [formError, setFormError] = useState(null);
-  const [submittedInquiry, setSubmittedInquiry] = useState(null);
-  const [replyLoading, setReplyLoading] = useState(false);
-  const [replyData, setReplyData] = useState(null);
-  const [replyError, setReplyError] = useState(null);
-
   useEffect(() => {
     if (user?.email) setGuestEmail(user.email);
   }, [user?.email]);
 
   useEffect(() => {
-    setSubmittedInquiry(null);
-    setReplyData(null);
-    setReplyError(null);
     setFeedback(null);
   }, [selectedId]);
 
@@ -177,9 +164,6 @@ function DiscoverProposalPanel({ places, t, user }) {
           ? `${serverMsg}${ref ? ` (#${ref})` : ''}`
           : t('discover', 'proposalSentOk').replace('{id}', ref || '—')
       );
-      if (ref) setSubmittedInquiry({ placeId: selectedId, inquiryId: ref });
-      setReplyData(null);
-      setReplyError(null);
       setMessage('');
       if (!user) setGuestName('');
     } catch (err) {
@@ -190,26 +174,6 @@ function DiscoverProposalPanel({ places, t, user }) {
       }
     } finally {
       setSending(false);
-    }
-  }
-
-  async function checkVenueReply() {
-    if (!submittedInquiry?.placeId || !submittedInquiry?.inquiryId) return;
-    setReplyError(null);
-    setReplyLoading(true);
-    try {
-      const emailForQuery = user ? undefined : guestEmail.trim().toLowerCase() || undefined;
-      const data = await api.places.inquiryStatus(
-        submittedInquiry.placeId,
-        submittedInquiry.inquiryId,
-        emailForQuery
-      );
-      setReplyData(data);
-    } catch (err) {
-      setReplyData(null);
-      setReplyError(err?.message || t('discover', 'error'));
-    } finally {
-      setReplyLoading(false);
     }
   }
 
@@ -395,7 +359,6 @@ export default function Discover() {
   const { placeId: placeScopeId } = useParams();
   const { t, lang } = useLanguage();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [tab, setTab] = useState('feed');
   const [activeReelId, setActiveReelId] = useState(null);
 
@@ -435,8 +398,6 @@ export default function Discover() {
 
   const feedPosts = useMemo(() => feedData?.pages.flatMap(p => p.posts) || [], [feedData]);
   const reels = useMemo(() => reelsData?.pages.flatMap(p => p.posts) || [], [reelsData]);
-  const redeemedPromotionIds = useMemo(() => 
-    (redeemedRes?.couponIds || []).map(id => `coupon-${id}`), [redeemedRes]);
   const places = placesRes?.locations || placesRes?.popular || [];
 
   const [seenFeedIds, setSeenFeedIds] = useState(() => loadSeenIds(SEEN_FEED_KEY));

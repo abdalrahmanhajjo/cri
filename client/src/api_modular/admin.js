@@ -1,4 +1,4 @@
-import { apiBase, getBaseUrl, getToken, setToken } from './base';
+import { apiBase, getBaseUrl, getToken } from './base';
 
 async function fetchWithNetworkRetry(url, init) {
   // Simple version for upload

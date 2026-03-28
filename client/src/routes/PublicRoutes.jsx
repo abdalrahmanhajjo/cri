@@ -1,27 +1,25 @@
+import { lazy } from 'react';
 import { Route, Navigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Explore from '../pages/Explore';
-import Discover from '../pages/Discover';
-import PlaceDiscover from '../pages/PlaceDiscover';
-import PlaceDetail from '../pages/PlaceDetail';
-import TourDetail from '../pages/TourDetail';
-import EventDetail from '../pages/EventDetail';
-import ActivitiesHub from '../pages/ActivitiesHub';
-import BacklinkKit from '../pages/BacklinkKit';
-import {
-  ThingsToDoTripoli,
-  OldCityGuide,
-  SouksGuide,
-  SweetsGuide,
-  TravelTipsTripoli,
-  AboutTripoli,
-} from '../pages/SeoLanding';
 
-/** Old /discover/place/:id links -> /community/place/:id */
-const LegacyDiscoverPlaceRedirect = () => {
-  const { placeId } = window.location.pathname.split('/').pop();
-  return <Navigate to={`/community/place/${placeId}`} replace />;
-};
+const Discover = lazy(() => import('../pages/Discover'));
+const PlaceDiscover = lazy(() => import('../pages/PlaceDiscover'));
+const PlaceDetail = lazy(() => import('../pages/PlaceDetail'));
+const TourDetail = lazy(() => import('../pages/TourDetail'));
+const EventDetail = lazy(() => import('../pages/EventDetail'));
+const ActivitiesHub = lazy(() => import('../pages/ActivitiesHub'));
+const BacklinkKit = lazy(() => import('../pages/BacklinkKit'));
+const ThingsToDoTripoli = lazy(() =>
+  import('../pages/SeoLanding').then((m) => ({ default: m.ThingsToDoTripoli }))
+);
+const OldCityGuide = lazy(() => import('../pages/SeoLanding').then((m) => ({ default: m.OldCityGuide })));
+const SouksGuide = lazy(() => import('../pages/SeoLanding').then((m) => ({ default: m.SouksGuide })));
+const SweetsGuide = lazy(() => import('../pages/SeoLanding').then((m) => ({ default: m.SweetsGuide })));
+const TravelTipsTripoli = lazy(() =>
+  import('../pages/SeoLanding').then((m) => ({ default: m.TravelTipsTripoli }))
+);
+const AboutTripoli = lazy(() => import('../pages/SeoLanding').then((m) => ({ default: m.AboutTripoli })));
 
 export const PublicRoutes = (
   <Route path="/" element={<Layout />}>

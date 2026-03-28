@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   useCreateAdminExperienceMutation, 
@@ -7,6 +7,14 @@ import {
   useAdminExperiences
 } from '../../hooks/useAdmin';
 import './Admin.css';
+
+function ExperienceModalHeaderIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  );
+}
 
 function ExperienceFormModal({ tour, onClose, onSaved }) {
   useEffect(() => {
@@ -90,18 +98,12 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
     }
   };
 
-  const TourIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  );
-
   return (
     <div className="admin-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="admin-modal admin-modal--wide" onClick={(e) => e.stopPropagation()}>
         <div className="admin-modal-header">
           <h2>
-            <span className="admin-modal-header-icon"><TourIcon /></span>
+            <span className="admin-modal-header-icon"><ExperienceModalHeaderIcon /></span>
             {tour ? 'Edit Experience' : 'Add Experience'}
           </h2>
           <button type="button" className="admin-modal-close" onClick={onClose} aria-label="Close">×</button>

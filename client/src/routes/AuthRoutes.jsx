@@ -1,8 +1,10 @@
+import { lazy } from 'react';
 import { Route } from 'react-router-dom';
-import Login from '../pages/Login';
-import Register from '../pages/Register';
-import ForgotPassword from '../pages/ForgotPassword';
-import VerifyEmail from '../pages/VerifyEmail';
+
+const Login = lazy(() => import('../pages/Login'));
+const Register = lazy(() => import('../pages/Register'));
+const ForgotPassword = lazy(() => import('../pages/ForgotPassword'));
+const VerifyEmail = lazy(() => import('../pages/VerifyEmail'));
 
 export const AuthRoutes = (
   <>

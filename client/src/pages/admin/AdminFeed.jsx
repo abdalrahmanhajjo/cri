@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, Fragment, useMemo } from 'react';
-import { getImageUrl, fixImageUrlExtension } from '../../api';
+import { useState, Fragment, useMemo } from 'react';
+import api, { getImageUrl, fixImageUrlExtension } from '../../api';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
 import { useAdminFeed, useCreateAdminPostMutation, useUpdateAdminPostMutation, useDeleteAdminPostMutation, useDeleteAdminCommentMutation } from '../../hooks/useAdmin';
 import { useAdminPlaces } from '../../hooks/useAdmin';
@@ -75,7 +75,6 @@ export default function AdminFeed() {
   const [editUploading, setEditUploading] = useState(null);
 
   const [error, setError] = useState(null);
-  const [migrationError, setMigrationError] = useState(null);
 
   const params = useMemo(() => ({
     status,
@@ -86,6 +85,11 @@ export default function AdminFeed() {
   }), [status, discoverable, q, contentFormat]);
 
   const { data: feedRes, isLoading: loading, error: queryError, refetch: load } = useAdminFeed(params);
+  const patchSavingId =
+    updatePostMutation.isPending && updatePostMutation.variables?.id != null
+      ? updatePostMutation.variables.id
+      : null;
+  const deleteBusyId = deletePostMutation.isPending ? deletePostMutation.variables : null;
   const posts = useMemo(() => feedRes?.posts || [], [feedRes]);
   const pendingCount = useMemo(() => feedRes?.pendingCount ?? 0, [feedRes]);
 
@@ -94,7 +98,7 @@ export default function AdminFeed() {
   const deletePostMutation = useDeleteAdminPostMutation();
   const deleteCommentMutation = useDeleteAdminCommentMutation();
 
-  const composerSaving = createPostMutation.isLoading;
+  const composerSaving = createPostMutation.isPending;
 
   const { data: placesRes } = useAdminPlaces({ q: placeSearch.trim() || undefined, limit: 100 });
   const placeOptions = useMemo(() => placesRes?.places || [], [placesRes]);
@@ -310,9 +314,9 @@ export default function AdminFeed() {
         </div>
       </div>
 
-      {migrationError && (
+      {queryError && (
         <div className="admin-error admin-feed-banner" role="alert">
-          Database migration required: run <code>server/migrations/006_feed_moderation.sql</code> so moderation and discovery fields exist.
+          {queryError.message || 'Could not load feed'}
         </div>
       )}
       {error && <div className="admin-error">{error}</div>}
@@ -839,7 +843,7 @@ export default function AdminFeed() {
                                   <button
                                     type="button"
                                     className="admin-btn admin-btn--sm admin-btn--primary"
-                                    disabled={updatePostMutation.isLoading && updatePostMutation.variables?.id === p.id}
+                                    disabled={updatePostMutation.isPending && updatePostMutation.variables?.id === p.id}
                                     onClick={() => patchPost(p.id, { moderation_status: 'approved', discoverable: true })}
                                   >
                                     Approve
@@ -847,7 +851,7 @@ export default function AdminFeed() {
                                   <button
                                     type="button"
                                     className="admin-btn admin-btn--sm admin-btn--secondary"
-                                    disabled={saving === p.id}
+                                    disabled={patchSavingId === p.id}
                                     onClick={() => patchPost(p.id, { moderation_status: 'rejected', discoverable: false })}
                                   >
                                     Reject
@@ -858,7 +862,7 @@ export default function AdminFeed() {
                                 <button
                                   type="button"
                                   className="admin-btn admin-btn--sm admin-btn--secondary"
-                                  disabled={saving === p.id}
+                                  disabled={patchSavingId === p.id}
                                   onClick={() => patchPost(p.id, { discoverable: p.discoverable === false })}
                                 >
                                   {p.discoverable === false ? 'Show in discovery' : 'Hide from discovery'}
@@ -885,10 +889,10 @@ export default function AdminFeed() {
                               <button
                                 type="button"
                                 className="admin-btn admin-btn--sm admin-btn--danger"
-                                disabled={deleting === p.id}
+                                disabled={deleteBusyId === p.id}
                                 onClick={() => remove(p.id)}
                               >
-                                {deleting === p.id ? '…' : 'Delete'}
+                                {deleteBusyId === p.id ? '…' : 'Delete'}
                               </button>
                             </div>
                           </td>
@@ -1195,7 +1199,7 @@ export default function AdminFeed() {
                 <button
                   type="submit"
                   className="admin-btn admin-btn--primary"
-                  disabled={updatePostMutation.isLoading || editUploading !== null}
+                  disabled={updatePostMutation.isPending || editUploading !== null}
                 >
                   Save
                 </button>

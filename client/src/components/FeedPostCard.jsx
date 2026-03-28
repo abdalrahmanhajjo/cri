@@ -5,7 +5,14 @@ import Icon from './Icon';
 import { isCommunityFeedVideo } from './CommunityFeed';
 import { useLanguage } from '../context/LanguageContext';
 import { useFeedComments } from '../hooks/useCommunityFeed';
-import { useToggleLikeMutation, useToggleSaveMutation, useAddCommentMutation, useDeleteCommentMutation, useUpdatePostMutation, useDeletePostMutation } from '../hooks/useFeedActions';
+import {
+  useToggleLikeMutation,
+  useToggleSaveMutation,
+  useAddCommentMutation,
+  useDeleteCommentMutation,
+  useToggleCommentLikeMutation,
+  useUpdateCommentMutation,
+} from '../hooks/useFeedActions';
 import { formatFeedTime } from '../utils/feedTime';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../utils/feedPostImages';
 import { COMMUNITY_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
@@ -39,10 +46,6 @@ function nestComments(list) {
   roots.sort(sortByTime);
   roots.forEach((r) => r.replies.sort(sortByTime));
   return roots;
-}
-
-function removeCommentAndReplies(comments, deletedId) {
-  return comments.filter((c) => c.id !== deletedId && c.parentId !== deletedId);
 }
 
 function commentLooksEdited(c) {
@@ -92,9 +95,7 @@ export default function FeedPostCard({
     liked: post.liked_by_me === true,
     count: Number(post.likes_count) || 0,
   });
-  const likeSeqRef = useRef(0);
   const commentLikeSnapRef = useRef(new Map());
-  const commentLikeSeqRef = useRef({});
   const commentInputRef = useRef(null);
   const editTextareaRef = useRef(null);
   const reelVideoRef = useRef(null);
@@ -141,7 +142,7 @@ export default function FeedPostCard({
   const gallerySrcs = useMemo(() => {
     const raw = rawFeedImageUrls(post);
     return raw.map((u) => mediaUrl(u)).filter(Boolean);
-  }, [post.id, post.image_url, post.image_urls]);
+  }, [post]);
   const img = gallerySrcs[0] || '';
   const vid = post.video_url ? mediaUrl(post.video_url) : '';
   const showVideo = isVideo && vid && isLikelyStreamableVideoUrl(post.video_url);
@@ -322,14 +323,6 @@ export default function FeedPostCard({
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [ownerEditOpen, feedHeaderMoreOpen, reelMoreOpen, ownerSaving]);
-
-  const clearFeedActionMsg = useCallback(() => {
-    if (feedActionMsgTimerRef.current) {
-      clearTimeout(feedActionMsgTimerRef.current);
-      feedActionMsgTimerRef.current = null;
-    }
-    setFeedActionMsg(null);
-  }, []);
 
   const { mutate: toggleLike } = useToggleLikeMutation();
   const { mutate: toggleSave } = useToggleSaveMutation();

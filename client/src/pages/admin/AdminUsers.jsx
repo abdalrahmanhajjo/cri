@@ -1,7 +1,8 @@
-import { 
-  useAdminUsers, 
-  useUpdateAdminUserMutation, 
-  useDeleteAdminUserMutation 
+import { useState, useEffect, useMemo } from 'react';
+import {
+  useAdminUsers,
+  useUpdateAdminUserMutation,
+  useDeleteAdminUserMutation
 } from '../../hooks/useAdmin';
 import { useAuth } from '../../context/AuthContext';
 import './Admin.css';
@@ -39,7 +40,7 @@ export default function AdminUsers() {
     [debouncedQ, provider, filterAdmin, filterBusiness, filterVerified, filterBlocked]
   );
 
-  const { data: usersRes, isLoading: loading, error: queryError, refetch } = useAdminUsers(listParams);
+  const { data: usersRes, isLoading: loading, refetch } = useAdminUsers(listParams);
   const users = usersRes?.users || [];
   const total = usersRes?.total ?? 0;
 

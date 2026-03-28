@@ -3,15 +3,15 @@ import { Suspense, lazy } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
 import BusinessGateLoader from '../pages/business/BusinessGateLoader';
-import Profile from '../pages/Profile';
-import Trips from '../pages/Trips';
-import TripDetail from '../pages/TripDetail';
-import Favourites from '../pages/Favourites';
-import Messages from '../pages/Messages';
-import Plan from '../pages/Plan';
-import AiPlanner from '../pages/AiPlanner';
 
 const MapPage = lazy(() => import('../pages/Map'));
+const Profile = lazy(() => import('../pages/Profile'));
+const Trips = lazy(() => import('../pages/Trips'));
+const TripDetail = lazy(() => import('../pages/TripDetail'));
+const Favourites = lazy(() => import('../pages/Favourites'));
+const Messages = lazy(() => import('../pages/Messages'));
+const Plan = lazy(() => import('../pages/Plan'));
+const AiPlanner = lazy(() => import('../pages/AiPlanner'));
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();

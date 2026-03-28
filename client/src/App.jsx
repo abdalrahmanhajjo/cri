@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import RoutePageFallback from './components/RoutePageFallback';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { SiteSettingsProvider } from './context/SiteSettingsContext';
@@ -21,14 +22,16 @@ function AppRoutes() {
   }, [user]);
 
   return (
-    <Routes>
-      {BusinessRoutes}
-      {AdminRoutes}
-      {AuthRoutes}
-      {UserRoutes}
-      {PublicRoutes}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <Suspense fallback={<RoutePageFallback />}>
+      <Routes>
+        {BusinessRoutes}
+        {AdminRoutes}
+        {AuthRoutes}
+        {UserRoutes}
+        {PublicRoutes}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 

@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy } from 'react';
 import { Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
 import BusinessGateLoader from '../pages/business/BusinessGateLoader';
-import BusinessLayout from '../pages/business/BusinessLayout';
-import BusinessDashboard from '../pages/business/BusinessDashboard';
-import BusinessPlaceEdit from '../pages/business/BusinessPlaceEdit';
-import BusinessPlaceFeed from '../pages/business/BusinessPlaceFeed';
+
+const BusinessLayout = lazy(() => import('../pages/business/BusinessLayout'));
+const BusinessDashboard = lazy(() => import('../pages/business/BusinessDashboard'));
+const BusinessPlaceFeed = lazy(() => import('../pages/business/BusinessPlaceFeed'));
+const BusinessPlaceEdit = lazy(() => import('../pages/business/BusinessPlaceEdit'));
 
 function BusinessRoute({ children }) {
   const { user, loading, logout } = useAuth();

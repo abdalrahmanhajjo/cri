@@ -130,7 +130,6 @@ function InterestModal({ interest, onClose, onSaved }) {
 
 export default function AdminInterests() {
   const [search, setSearch] = useState('');
-  const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 

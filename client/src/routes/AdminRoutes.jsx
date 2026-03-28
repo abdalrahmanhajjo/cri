@@ -1,19 +1,21 @@
+import { lazy } from 'react';
 import { Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getToken, getStoredUser } from '../api';
 import BusinessGateLoader from '../pages/business/BusinessGateLoader';
-import AdminLayout from '../pages/admin/AdminLayout';
-import AdminDashboard from '../pages/admin/AdminDashboard';
-import AdminPlaces from '../pages/admin/AdminPlaces';
-import AdminCategories from '../pages/admin/AdminCategories';
-import AdminExperiences from '../pages/admin/AdminExperiences';
-import AdminEvents from '../pages/admin/AdminEvents';
-import AdminSettings from '../pages/admin/AdminSettings';
-import AdminUsers from '../pages/admin/AdminUsers';
-import AdminUserTrips from '../pages/admin/AdminUserTrips';
-import AdminFeed from '../pages/admin/AdminFeed';
-import AdminInterests from '../pages/admin/AdminInterests';
-import AdminPlaceOwners from '../pages/admin/AdminPlaceOwners';
+
+const AdminLayout = lazy(() => import('../pages/admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
+const AdminPlaces = lazy(() => import('../pages/admin/AdminPlaces'));
+const AdminCategories = lazy(() => import('../pages/admin/AdminCategories'));
+const AdminExperiences = lazy(() => import('../pages/admin/AdminExperiences'));
+const AdminEvents = lazy(() => import('../pages/admin/AdminEvents'));
+const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
+const AdminUsers = lazy(() => import('../pages/admin/AdminUsers'));
+const AdminUserTrips = lazy(() => import('../pages/admin/AdminUserTrips'));
+const AdminFeed = lazy(() => import('../pages/admin/AdminFeed'));
+const AdminInterests = lazy(() => import('../pages/admin/AdminInterests'));
+const AdminPlaceOwners = lazy(() => import('../pages/admin/AdminPlaceOwners'));
 
 function AdminRoute({ children }) {
   const { user, loading } = useAuth();

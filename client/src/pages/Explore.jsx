@@ -7,7 +7,6 @@ import { useSiteSettings } from '../context/SiteSettingsContext';
 import { usePlaces } from '../hooks/usePlaces';
 import { useCategories } from '../hooks/useCategories';
 import { useCommunityFeed } from '../hooks/useCommunityFeed';
-import { useUserFavourites } from '../hooks/useUser';
 import Icon from '../components/Icon';
 import { CommunityFeedStrip } from '../components/CommunityFeed';
 import { trackEvent } from '../utils/analytics';

@@ -15,6 +15,42 @@ body {
   min-height: 100vh;
 }
 
+/* Lazy route chunk loading (Suspense fallback) */
+.route-page-fallback {
+  min-height: 50vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.route-page-fallback-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: route-page-spin 0.65s linear infinite;
+}
+
+.route-page-fallback-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes route-page-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 img {
   max-width: 100%;
   height: auto;

@@ -7,6 +7,14 @@ import {
 } from '../../hooks/useAdmin';
 import './Admin.css';
 
+function CategoryModalHeaderIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
+    </svg>
+  );
+}
+
 function CategoryFormModal({ category, onClose, onSaved }) {
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -63,18 +71,12 @@ function CategoryFormModal({ category, onClose, onSaved }) {
     }
   };
 
-  const CategoryIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
-    </svg>
-  );
-
   return (
     <div className="admin-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
         <div className="admin-modal-header">
           <h2>
-            <span className="admin-modal-header-icon"><CategoryIcon /></span>
+            <span className="admin-modal-header-icon"><CategoryModalHeaderIcon /></span>
             {category ? 'Edit Category' : 'Add Category'}
           </h2>
           <button type="button" className="admin-modal-close" onClick={onClose} aria-label="Close">×</button>
