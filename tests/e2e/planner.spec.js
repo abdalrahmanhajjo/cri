@@ -10,9 +10,9 @@ test.describe('Planner Flow', () => {
     await page.goto('/plan');
     
     // Click create new trip
-    await page.click('button:has-text("New Trip")');
+    await page.click('button:has-text("Create new trip")');
     await page.fill('input[placeholder*="Trip name"]', 'My Automated Trip');
-    await page.click('button:has-text("Create")');
+    await page.click('button:has-text("Save")');
     
     // Verify trip exists in list
     await page.goto('/trips');
@@ -20,8 +20,8 @@ test.describe('Planner Flow', () => {
     
     // Delete trip
     await page.click('text=My Automated Trip');
-    await page.click('button:has-text("Delete")');
-    await page.click('button:has-text("Confirm")');
+    page.once('dialog', dialog => dialog.accept());
+    await page.click('button:has-text("Delete trip")');
     
     // Verify deleted
     await expect(page.locator('text=My Automated Trip')).not.toBeVisible();

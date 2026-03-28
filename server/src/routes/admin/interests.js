@@ -15,6 +15,27 @@ function safeJson(val, fallback = []) {
   return fallback;
 }
 
+router.get('/', async (req, res) => {
+  try {
+    const result = await dbQuery('SELECT * FROM interests ORDER BY name ASC');
+    res.json({
+      interests: result.rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        icon: r.icon,
+        description: r.description || '',
+        color: r.color || '#666666',
+        count: r.count ?? 0,
+        popularity: r.popularity ?? 0,
+        tags: safeJson(r.tags),
+      }))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch interests' });
+  }
+});
+
 router.post('/', async (req, res) => {
   try {
     const body = req.body || {};

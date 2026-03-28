@@ -8,6 +8,26 @@ const { adminCategorySchema } = require('../../schemas/admin');
 const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
 
+router.get('/', async (req, res) => {
+  try {
+    const result = await dbQuery('SELECT * FROM categories ORDER BY name ASC');
+    res.json({
+      categories: result.rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        icon: r.icon,
+        description: r.description || '',
+        tags: Array.isArray(r.tags) ? r.tags : (typeof r.tags === 'string' ? JSON.parse(r.tags) : []),
+        count: r.count ?? 0,
+        color: r.color || '#666666',
+      }))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
 function safeJson(val, fallback = []) {
   if (Array.isArray(val)) return val;
   if (typeof val === 'object' && val !== null) return val;

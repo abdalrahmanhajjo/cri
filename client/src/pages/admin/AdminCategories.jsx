@@ -162,7 +162,7 @@ export default function AdminCategories() {
   const [toast, setToast] = useState(null);
 
   const { data: categoriesRes, isLoading: loading, error } = useAdminCategories();
-  const categoriesData = categoriesRes || [];
+  const categoriesData = categoriesRes?.categories || [];
   const deleteMutation = useDeleteAdminCategoryMutation();
 
   const filtered = useMemo(() => {

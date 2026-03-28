@@ -17,6 +17,40 @@ function safeJson(val, fallback = []) {
   return fallback;
 }
 
+router.get('/', async (req, res) => {
+  try {
+    const result = await dbQuery('SELECT * FROM tours ORDER BY name ASC');
+    res.json({
+      tours: result.rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        duration: r.duration,
+        durationHours: r.duration_hours,
+        locations: r.locations,
+        rating: r.rating,
+        reviews: r.reviews,
+        price: r.price,
+        currency: r.currency,
+        priceDisplay: r.price_display,
+        badge: r.badge,
+        badgeColor: r.badge_color,
+        description: r.description,
+        image: r.image,
+        difficulty: r.difficulty,
+        languages: safeJson(r.languages),
+        includes: safeJson(r.includes),
+        excludes: safeJson(r.excludes),
+        highlights: safeJson(r.highlights),
+        itinerary: safeJson(r.itinerary),
+        placeIds: safeJson(r.place_ids),
+      }))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch tours' });
+  }
+});
+
 router.post('/', validate(adminTourSchema), async (req, res) => {
   try {
     const body = req.body || {};

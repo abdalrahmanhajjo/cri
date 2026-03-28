@@ -8,6 +8,32 @@ const { adminEventSchema } = require('../../schemas/admin');
 const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
 
+router.get('/', async (req, res) => {
+  try {
+    const result = await dbQuery('SELECT * FROM events ORDER BY start_date DESC');
+    res.json({
+      events: result.rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        startDate: r.start_date,
+        endDate: r.end_date,
+        location: r.location,
+        image: r.image,
+        category: r.category,
+        organizer: r.organizer,
+        price: r.price,
+        priceDisplay: r.price_display,
+        status: r.status,
+        placeId: r.place_id,
+      }))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
 router.post('/', validate(adminEventSchema), async (req, res) => {
   try {
     const body = req.body || {};

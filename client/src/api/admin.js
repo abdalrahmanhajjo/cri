@@ -19,6 +19,7 @@ export const adminApi = {
     delete: (id) => http.delete(`/api/admin/users/${id}`),
   },
   categories: {
+    list: (p) => http.get('/api/admin/categories', { params: p }),
     update: (id, body) => http.put(`/api/admin/categories/${id}`, body),
     create: (body) => http.post('/api/admin/categories', body),
     delete: (id) => http.delete(`/api/admin/categories/${id}`),

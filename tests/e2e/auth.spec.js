@@ -8,8 +8,8 @@ test.describe('Authentication Flow', () => {
     await login(page, 'test@example.com', 'password123');
     await expect(page).toHaveURL('/');
     
-    // Check if profile link exists
-    const profileLink = page.locator('a[href="/profile"]');
+    // Check if profile link exists (target visible one since mobile nav might be hidden)
+    const profileLink = page.locator('a[href="/profile"]:visible').first();
     await expect(profileLink).toBeVisible();
   });
 

@@ -11,12 +11,12 @@ test.describe('Admin Flow', () => {
     await page.goto('/admin/settings');
     
     // Change site name
-    const siteNameInput = page.locator('input[name="siteName"]');
+    const siteNameInput = page.locator('#as-site-name');
     await siteNameInput.fill('Tripoli Explorer Automated');
     await page.click('button:has-text("Save Settings")');
     
     // Wait for success
-    await expect(page.locator('text=Settings saved successfully')).toBeVisible();
+    await expect(page.locator('text=Settings saved to server')).toBeVisible();
     
     // Verify on public home
     await page.goto('/');

@@ -7,18 +7,19 @@ test.describe('Discovery Flow', () => {
     // Find search bar
     const searchBar = page.locator('input[placeholder*="Search"]');
     await searchBar.fill('Souk');
+    await searchBar.press('Enter');
     
     // Wait for results
-    await page.waitForSelector('.vd-card--place');
+    await page.waitForSelector('.pd-card');
     
     // Click first result
-    const firstPlace = page.locator('.vd-card--place').first();
-    const placeName = await firstPlace.locator('.vd-card-title').innerText();
+    const firstPlace = page.locator('.pd-card').first();
+    const placeName = await firstPlace.locator('.pd-card-title').innerText();
     await firstPlace.click();
     
     // Verify detail page
     await expect(page).toHaveURL(/\/place\//);
-    const detailTitle = page.locator('.vd-place-detail-title');
+    const detailTitle = page.locator('.place-detail-title');
     await expect(detailTitle).toContainText(placeName);
   });
 });
