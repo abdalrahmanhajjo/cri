@@ -5,6 +5,7 @@ import Icon from './Icon';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
 import { rawFeedImageUrls } from '../utils/feedPostImages';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
+import { optimizeVideoPosterUrl } from '../utils/supabaseImage.js';
 
 /** Reels / video items: explicit type, or legacy rows stored as `post` with video and no cover image (matches business portal). */
 export function isCommunityFeedVideo(post) {
@@ -92,7 +93,7 @@ export function CommunityFeedCard({ post, t }) {
             controls
             playsInline
             preload="metadata"
-            poster={img || undefined}
+            poster={img ? optimizeVideoPosterUrl(img) : undefined}
             aria-label={fullCap.slice(0, 120) || reelLabel}
           />
         ) : img ? (

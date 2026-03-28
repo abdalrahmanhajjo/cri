@@ -9,11 +9,18 @@ import Icon from '../components/Icon';
 import { CommunityFeedStrip } from '../components/CommunityFeed';
 import { trackEvent } from '../utils/analytics';
 import { homeBentoDefaults, resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
-import { getBentoHeroImgProps, getBentoHeroPreloadHref, normalizePreloadImageHref } from '../utils/bentoHeroImage';
+import {
+  getBentoHeroImgProps,
+  getBentoHeroPreloadHref,
+  isDefaultCityHeroPath,
+  normalizePreloadImageHref,
+} from '../utils/bentoHeroImage';
+import { cityHeroWebpSrcSet, CITY_HERO_SIZES } from '../constants/cityHero';
 import { resolveHeroTagline, resolveFooterTagline } from '../config/resolveSiteTagline';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import { getApiOrigin } from '../utils/apiOrigin';
 import { WAYS_CONFIG, groupPlacesByWay, countDirectoryCategoriesForWay } from '../utils/findYourWayGrouping';
+import { supabaseOptimizeForThumbnail } from '../utils/supabaseImage.js';
 import './Explore.css';
 
 const TRIPOLI_TIMEZONE = 'Asia/Beirut';
@@ -596,7 +603,7 @@ export default function Explore() {
     const id = 'tripoli-preload-bento-hero';
     const heroTrim = (bentoHeroUrl || '').trim();
     const defaultHero = (homeBentoDefaults.hero || '').trim();
-    /* index.html preloads default /city.png; skip JS tag to avoid duplicate requests */
+    /* index.html preloads default city WebP srcset; skip JS tag to avoid duplicate requests */
     if (heroTrim === defaultHero) {
       document.getElementById(id)?.remove();
       return undefined;
@@ -726,12 +733,24 @@ export default function Explore() {
           <div className="vd-home-bento-grid">
             <div className="vd-bento-hero-why-bundle">
               <div className="vd-bento-card vd-bento-hero-main">
-                <img
-                  className="vd-bento-hero-main-photo"
-                  alt=""
-                  draggable={false}
-                  {...getBentoHeroImgProps(bentoV.hero)}
-                />
+                {isDefaultCityHeroPath(bentoV.hero) ? (
+                  <picture>
+                    <source type="image/webp" srcSet={cityHeroWebpSrcSet()} sizes={CITY_HERO_SIZES} />
+                    <img
+                      className="vd-bento-hero-main-photo"
+                      alt=""
+                      draggable={false}
+                      {...getBentoHeroImgProps(bentoV.hero)}
+                    />
+                  </picture>
+                ) : (
+                  <img
+                    className="vd-bento-hero-main-photo"
+                    alt=""
+                    draggable={false}
+                    {...getBentoHeroImgProps(bentoV.hero)}
+                  />
+                )}
                 <div className="vd-bento-hero-main-scrim" aria-hidden="true" />
                 <div className="vd-bento-hero-main-content">
                   <h1 className="vd-bento-hero-title">{heroTitle}</h1>
@@ -757,7 +776,11 @@ export default function Explore() {
                             to={to}
                             className="vd-bento-avatar"
                             aria-label={bentoAvatarLinkLabel(slot)}
-                            style={slot.href ? { backgroundImage: bentoCssUrl(slot.href) } : undefined}
+                            style={
+                              slot.href
+                                ? { backgroundImage: bentoCssUrl(supabaseOptimizeForThumbnail(slot.href, 120)) }
+                                : undefined
+                            }
                           >
                             {!slot.href && <Icon name="travel_explore" size={22} aria-hidden />}
                           </Link>
