@@ -8,7 +8,8 @@ This document supports **layer 4** goals: calm production operations, observabil
 |----------|---------|
 | `LOG_FORMAT=json` | One JSON object per log line for log aggregators (Render, Datadog, etc.). |
 | `DB_SLOW_QUERY_MS` | Log queries slower than this many ms (default `750`). Set `0` to disable. |
-| `SENTRY_DSN` | Optional. When set, the API loads `@sentry/node` and reports unhandled errors from the Express error handler. Use `SENTRY_ENVIRONMENT` / `SENTRY_RELEASE` for filtering in Sentry. |
+| `SENTRY_DSN` | Optional. When set (and not disabled below), the API loads `@sentry/node` and reports unhandled errors from the Express error handler. Use `SENTRY_ENVIRONMENT` / `SENTRY_RELEASE` for filtering in Sentry. |
+| `SENTRY_ENABLED` | Optional killswitch: `off`, `false`, `0`, or `no` disables Sentry even if `SENTRY_DSN` is set. |
 | `GOOGLE_SITE_VERIFICATION` | Search Console HTML-tag value (injected by SEO middleware). |
 
 ## Health and uptime
