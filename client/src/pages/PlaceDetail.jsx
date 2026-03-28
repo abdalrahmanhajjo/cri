@@ -139,8 +139,10 @@ export default function PlaceDetail() {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     api.places
-      .get(id)
+      .get(id, { lang })
       .then((p) => {
         if (!cancelled) {
           setPlace(p);
@@ -153,7 +155,7 @@ export default function PlaceDetail() {
       cancelled = true;
       document.title = 'Visit Tripoli';
     };
-  }, [id]);
+  }, [id, lang]);
 
   const galleryUrls = useMemo(() => collectPlaceImageUrls(place), [place]);
 
@@ -390,7 +392,10 @@ export default function PlaceDetail() {
           title: reviewTitle.trim() || undefined,
           review: text || undefined,
         });
-        const [p, revRes] = await Promise.all([api.places.get(id), api.places.reviews(id)]);
+        const [p, revRes] = await Promise.all([
+          api.places.get(id, { lang }),
+          api.places.reviews(id),
+        ]);
         setPlace(p);
         setPlaceReviews(Array.isArray(revRes.reviews) ? revRes.reviews : []);
         setReviewMsg({ type: 'ok', text: t('detail', 'reviewThanks') });
@@ -405,7 +410,7 @@ export default function PlaceDetail() {
         setReviewSubmitting(false);
       }
     },
-    [user, place, id, reviewBody, reviewRating, reviewTitle, t]
+    [user, place, id, reviewBody, reviewRating, reviewTitle, t, lang]
   );
 
   const deleteMyReview = useCallback(async () => {
@@ -415,7 +420,10 @@ export default function PlaceDetail() {
     setReviewMsg(null);
     try {
       await api.places.deleteReview(place.id, myReview.id);
-      const [p, revRes] = await Promise.all([api.places.get(id), api.places.reviews(id)]);
+      const [p, revRes] = await Promise.all([
+        api.places.get(id, { lang }),
+        api.places.reviews(id),
+      ]);
       setPlace(p);
       setPlaceReviews(Array.isArray(revRes.reviews) ? revRes.reviews : []);
       setReviewMsg({ type: 'ok', text: t('detail', 'reviewDeleted') });
@@ -424,7 +432,7 @@ export default function PlaceDetail() {
     } finally {
       setReviewSubmitting(false);
     }
-  }, [user, place, id, myReview, t]);
+  }, [user, place, id, myReview, t, lang]);
 
   const openLightbox = useCallback(
     (index) => {
