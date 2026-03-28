@@ -2,8 +2,11 @@
  * Responsive image delivery across the app:
  * - Unsplash: srcset + auto=format + fit=crop + quality (smaller bytes)
  * - Google Places photo API: srcset via maxwidth variants
- * - Everything else (uploads, Supabase, etc.): pass-through src only
+ * - Supabase Storage public objects: /render/image + width srcset (WebP when API supports it)
+ * - Other URLs: pass-through src only
  */
+
+import { isSupabaseStorageObjectPublicUrl, supabaseRenderImageUrl } from './supabaseImage.js';
 
 export const UNSPLASH_HOST = 'images.unsplash.com';
 
@@ -128,6 +131,20 @@ export function buildUnsplashUrl(base, w, q) {
  * @param {string} url
  * @returns {{ src: string, srcSet: string, sizes: string } | null}
  */
+/**
+ * @param {string} url
+ * @param {{ unsplashWidths: number[], defaultUnsplashW: number, sizes: string, q: string }} preset
+ */
+function supabaseDeliveryProps(url, preset) {
+  const q = Math.max(20, Math.min(100, Number(preset.q) || 78));
+  const sw = preset.unsplashWidths;
+  const srcSet = sw
+    .map((w) => `${supabaseRenderImageUrl(url, { width: w, quality: q })} ${w}w`)
+    .join(', ');
+  const src = supabaseRenderImageUrl(url, { width: preset.defaultUnsplashW, quality: q });
+  return { src, srcSet, sizes: preset.sizes };
+}
+
 function googlePlacePhotoProps(url) {
   try {
     const u = new URL(url, 'https://example.com');
@@ -165,6 +182,10 @@ export function getDeliveryImgProps(absUrl, presetKey = 'gridCard') {
     return { src: g.src, srcSet: g.srcSet, sizes: preset.sizes };
   }
 
+  if (isSupabaseStorageObjectPublicUrl(url)) {
+    return supabaseDeliveryProps(url, preset);
+  }
+
   const parsed = parseUnsplash(url);
   if (parsed) {
     const q = parsed.q || preset.q;
@@ -187,4 +208,24 @@ export function getUnsplashPreloadSrc(src, presetKey = 'bentoHero') {
   const parsed = parseUnsplash(src.trim());
   if (!parsed) return src.trim();
   return buildUnsplashUrl(parsed.base, preset.defaultUnsplashW, parsed.q || preset.q);
+}
+
+/**
+ * Preload href for LCP hero: Unsplash tuned URL or Supabase render URL.
+ */
+export function getDeliveryPreloadSrc(src, presetKey = 'bentoHero') {
+  if (!src || typeof src !== 'string') return '';
+  const trimmed = src.trim();
+  const preset = PRESETS[presetKey] || PRESETS.bentoHero;
+  if (isSupabaseStorageObjectPublicUrl(trimmed)) {
+    return supabaseRenderImageUrl(trimmed, {
+      width: preset.defaultUnsplashW,
+      quality: Number(preset.q) || 76,
+    });
+  }
+  const parsed = parseUnsplash(trimmed);
+  if (parsed) {
+    return buildUnsplashUrl(parsed.base, preset.defaultUnsplashW, parsed.q || preset.q);
+  }
+  return trimmed;
 }

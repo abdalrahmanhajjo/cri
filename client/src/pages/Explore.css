@@ -2049,6 +2049,14 @@
   }
 }
 
+/* Tablet story layout: reserve hero frame before image decode (CLS). */
+@media (min-width: 640px) and (max-width: 959px) {
+  .vd-bento-hero-why-bundle .vd-bento-hero-main {
+    aspect-ratio: 16 / 10;
+    min-height: 280px;
+  }
+}
+
 @media (min-width: 960px) {
   .vd-home-bento-grid {
     display: grid;
@@ -2072,6 +2080,8 @@
     grid-column: 1 / span 8;
     grid-row: 1;
     min-height: clamp(248px, 28vw, 336px);
+    /* Reserve space before hero image paints (reduces CLS vs content-driven height). */
+    aspect-ratio: 1024 / 673;
   }
 
   .vd-bento-hero-side {

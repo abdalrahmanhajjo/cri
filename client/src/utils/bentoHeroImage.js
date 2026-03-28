@@ -3,17 +3,25 @@
  * Unsplash: srcset with capped widths + slightly lower quality to cut bytes.
  * Other URLs: pass through with sizes hint for responsive layout.
  */
-import { getDeliveryImgProps, getUnsplashPreloadSrc, BENTO_HERO_SIZES } from './responsiveImages.js';
+import { getDeliveryImgProps, getDeliveryPreloadSrc, BENTO_HERO_SIZES } from './responsiveImages.js';
 
 export { BENTO_HERO_SIZES };
+
+/** Default hero file: WebP variants in `<picture>`; PNG remains `src` fallback. */
+export function isDefaultCityHeroPath(src) {
+  const s = (src || '').trim().toLowerCase();
+  if (!s) return false;
+  return s.endsWith('/city.png') || s === 'city.png';
+}
 
 /**
  * @param {string} src — resolved hero URL (same-origin, Unsplash, or admin URL)
  * @returns {Record<string, string | undefined>} spread onto <img>
  */
 export function getBentoHeroImgProps(src) {
-  const { src: imgSrc, srcSet, sizes } = getDeliveryImgProps(src || '', 'bentoHero');
-  return {
+  const s = (src || '').trim();
+  const { src: imgSrc, srcSet, sizes } = getDeliveryImgProps(s, 'bentoHero');
+  const out = {
     src: imgSrc || '',
     srcSet,
     sizes,
@@ -21,11 +29,17 @@ export function getBentoHeroImgProps(src) {
     decoding: 'async',
     fetchPriority: 'high',
   };
+  const lower = s.toLowerCase();
+  if (lower.endsWith('/city.png') || lower.endsWith('city.png')) {
+    out.width = 1024;
+    out.height = 673;
+  }
+  return out;
 }
 
 /** URL to put in <link rel="preload"> (matches default img src, not full srcset). */
 export function getBentoHeroPreloadHref(src) {
-  return getUnsplashPreloadSrc(src, 'bentoHero');
+  return getDeliveryPreloadSrc(src, 'bentoHero');
 }
 
 /**

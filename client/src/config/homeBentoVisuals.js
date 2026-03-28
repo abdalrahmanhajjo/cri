@@ -2,7 +2,7 @@
  * Default home bento imagery — hero/mosaic fallbacks; avatar circles prefer **live directory** photos (see `resolveBentoAvatarSlots`).
  * Override per field from Site settings (Admin → Features) with full HTTPS URLs or `/…` public paths.
  *
- * Hero: `client/public/city.png`. Stock avatars below are unused when enough places in the API have images.
+ * Hero: `client/public/city.png` + responsive `city-*.webp` (see `npm run optimize:city`). Stock avatars below are unused when enough places in the API have images.
  * Unsplash (side/mosaic): https://unsplash.com/license
  */
 const U = 'https://images.unsplash.com';
