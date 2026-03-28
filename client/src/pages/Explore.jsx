@@ -643,6 +643,29 @@ export default function Explore() {
   const playStoreHref = settings.playStoreUrl?.trim() || 'https://play.google.com';
   const showMap = settings.showMap !== false;
 
+  const placesList = Array.isArray(places) ? places : [];
+  const placeNameById = useMemo(() => {
+    const m = new Map();
+    for (const p of placesList) {
+      if (p?.id == null) continue;
+      const nm = p?.name != null ? String(p.name).trim() : '';
+      m.set(String(p.id), nm);
+    }
+    return m;
+  }, [placesList]);
+
+  const bentoAvatarLinkLabel = useCallback(
+    (slot) => {
+      if (slot.placeId) {
+        const name = placeNameById.get(String(slot.placeId)) || '';
+        if (name) return t('home', 'bentoAvatarPlaceLink').replace(/\{name\}/g, name);
+        return t('home', 'bentoAvatarPlaceLinkNoName');
+      }
+      return t('home', 'bentoAvatarCommunityLink');
+    },
+    [placeNameById, t]
+  );
+
   if (loading) {
     return (
       <div className="vd vd-home">
@@ -686,16 +709,6 @@ export default function Explore() {
     );
   }
 
-  const placesList = Array.isArray(places) ? places : [];
-  const placeNameById = useMemo(() => {
-    const m = new Map();
-    for (const p of placesList) {
-      if (p?.id == null) continue;
-      const nm = p?.name != null ? String(p.name).trim() : '';
-      m.set(String(p.id), nm);
-    }
-    return m;
-  }, [placesList]);
   const placeCountStr = formatDirectoryCount(placesList.length, lang);
   const categoryCountStr = formatDirectoryCount(categoryCount, lang);
   const topPicks = placesList.slice().sort((a, b) => (Number(b?.rating) || 0) - (Number(a?.rating) || 0)).slice(0, 6);
@@ -704,18 +717,6 @@ export default function Explore() {
     getPlaceImageUrl(p?.image || (Array.isArray(p?.images) && p.images[0]))
   );
   const showBentoAvatarStack = bentoAvatarSlots.some((s) => s.href || s.placeId);
-
-  const bentoAvatarLinkLabel = useCallback(
-    (slot) => {
-      if (slot.placeId) {
-        const name = placeNameById.get(String(slot.placeId)) || '';
-        if (name) return t('home', 'bentoAvatarPlaceLink').replace(/\{name\}/g, name);
-        return t('home', 'bentoAvatarPlaceLinkNoName');
-      }
-      return t('home', 'bentoAvatarCommunityLink');
-    },
-    [placeNameById, t]
-  );
 
   return (
     <div className="vd vd-home">
