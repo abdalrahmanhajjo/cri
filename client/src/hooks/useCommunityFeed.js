@@ -2,9 +2,11 @@ import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import api from '../api';
 
 export function useCommunityFeed(params = {}) {
+  const { enabled = true, ...queryParams } = params;
   return useQuery({
-    queryKey: ['communityFeed', params],
-    queryFn: () => api.feed.list(params),
+    queryKey: ['communityFeed', queryParams],
+    queryFn: () => api.feed.list(queryParams),
+    enabled,
   });
 }
 

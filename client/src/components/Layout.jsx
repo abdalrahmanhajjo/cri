@@ -7,6 +7,7 @@ import Icon from './Icon';
 import BackToTop from './BackToTop';
 import GlobalSearchBar from './GlobalSearchBar';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
+import { features } from '../config/features';
 import './Layout.css';
 
 const langLabels = { en: 'EN', ar: 'العربية', fr: 'FR' };
@@ -134,13 +135,15 @@ export default function Layout() {
               <Link to="/map" className={`nav-link ${isMapPage ? 'nav-link--active' : ''}`} onClick={closeMenu}>
                 {t('nav', 'viewMapNav')}
               </Link>
-              <Link
-                to={COMMUNITY_PATH}
-                className={`nav-link ${isCommunityHub ? 'nav-link--active' : ''}`}
-                onClick={closeMenu}
-              >
-                {t('nav', 'communityFeed')}
-              </Link>
+              {features.showCommunityNav && (
+                <Link
+                  to={COMMUNITY_PATH}
+                  className={`nav-link ${isCommunityHub ? 'nav-link--active' : ''}`}
+                  onClick={closeMenu}
+                >
+                  {t('nav', 'communityFeed')}
+                </Link>
+              )}
               <Link
                 to="/activities"
                 className={`nav-link ${navActivitiesHubActive ? 'nav-link--active' : ''}`}
@@ -258,13 +261,15 @@ export default function Layout() {
             <Link to="/map" className={`nav-link ${isMapPage ? 'nav-link--active' : ''}`} onClick={closeMenu}>
               {t('nav', 'viewMapNav')}
             </Link>
-            <Link
-              to={COMMUNITY_PATH}
-              className={`nav-link ${isCommunityHub ? 'nav-link--active' : ''}`}
-              onClick={closeMenu}
-            >
-              {t('nav', 'communityFeed')}
-            </Link>
+            {features.showCommunityNav && (
+              <Link
+                to={COMMUNITY_PATH}
+                className={`nav-link ${isCommunityHub ? 'nav-link--active' : ''}`}
+                onClick={closeMenu}
+              >
+                {t('nav', 'communityFeed')}
+              </Link>
+            )}
             <Link
               to="/activities"
               className={`nav-link ${navActivitiesHubActive ? 'nav-link--active' : ''}`}

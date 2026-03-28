@@ -18,6 +18,22 @@ Use the **same database** as your Tripoli Explorer mobile app:
 
 API runs at http://localhost:3095. Uses the same `DATABASE_URL` and (optionally) same `JWT_SECRET` as the mobile backend so accounts and data are shared.
 
+### 2. API server
+
+From the repo root:
+
+```bash
+cd server
+cp .env.example .env
+# Edit .env: set DATABASE_URL, JWT_SECRET, CORS_ORIGIN, and optional Supabase/SMTP keys (see table below).
+npm install
+npm run dev
+```
+
+Or run **client + API together** from the repo root: `npm install` then `npm run dev` (starts the server on port **3095** and Vite on **5173**).
+
+Apply web-specific SQL when needed: from repo root, `npm run db:migrate` (requires `DATABASE_URL`). Core app tables must already exist from the mobile/Figma1 migrations.
+
 ### 3. Web client
 
 ```bash
@@ -29,6 +45,8 @@ npm run dev
 ```
 
 Open http://localhost:5173. Log in with the same account as the app; data comes from the same DB via this server.
+
+Optional **public UI toggles** (`client/.env`, must rebuild): `VITE_FEATURE_WEATHER`, `VITE_FEATURE_HOME_COMMUNITY_STRIP`, `VITE_FEATURE_COMMUNITY_NAV` — set to `0` to hide weather, the home community strip, or the Community nav link. Docker: same variables as build args (see `Dockerfile`).
 
 ## Server (.env)
 

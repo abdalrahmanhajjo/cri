@@ -13,6 +13,7 @@ import { trackEvent } from '../utils/analytics';
 import { resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import { WAYS_CONFIG, groupPlacesByWay, countDirectoryCategoriesForWay } from '../utils/findYourWayGrouping';
+import { features } from '../config/features';
 import './Explore.css';
 
 const TRIPOLI_TIMEZONE = 'Asia/Beirut';
@@ -485,9 +486,13 @@ export default function Explore() {
     isLoading: loadingCategories 
   } = useCategories({ lang: langParam });
 
-  const { 
-    data: feedRes 
-  } = useCommunityFeed({ limit: 48, sort: 'smart' });
+  const {
+    data: feedRes,
+  } = useCommunityFeed({
+    limit: 48,
+    sort: 'smart',
+    enabled: features.showHomeCommunityStrip,
+  });
 
   useEffect(() => {
     trackEvent(user, 'page_view', { page: 'home' });
@@ -740,7 +745,7 @@ export default function Explore() {
 
       <ExperienceTripoliSection t={t} lang={lang} places={placesList} categories={categoriesList} />
 
-      {communityPosts.length > 0 && (
+      {features.showHomeCommunityStrip && communityPosts.length > 0 && (
         <CommunityFeedStrip posts={communityPosts} t={t} moreTo={COMMUNITY_PATH} layout="bento" />
       )}
 
@@ -810,18 +815,20 @@ export default function Explore() {
               dateLabel={t('home', 'tripoliClockDate')}
               timezoneLabel={t('home', 'tripoliClockTimezone')}
             />
-            <WeatherTripoli
-              title={t('home', 'weatherInTripoli')}
-              sunriseLabel={t('home', 'weatherSunrise')}
-              sunsetLabel={t('home', 'weatherSunset')}
-              lowLabel={t('home', 'weatherLow')}
-              highLabel={t('home', 'weatherHigh')}
-              humidityLabel={t('home', 'weatherHumidity')}
-              windLabel={t('home', 'weatherWind')}
-              celsiusLabel={t('home', 'weatherCelsius')}
-              fahrenheitLabel={t('home', 'weatherFahrenheit')}
-              t={t}
-            />
+            {features.showWeatherWidget && (
+              <WeatherTripoli
+                title={t('home', 'weatherInTripoli')}
+                sunriseLabel={t('home', 'weatherSunrise')}
+                sunsetLabel={t('home', 'weatherSunset')}
+                lowLabel={t('home', 'weatherLow')}
+                highLabel={t('home', 'weatherHigh')}
+                humidityLabel={t('home', 'weatherHumidity')}
+                windLabel={t('home', 'weatherWind')}
+                celsiusLabel={t('home', 'weatherCelsius')}
+                fahrenheitLabel={t('home', 'weatherFahrenheit')}
+                t={t}
+              />
+            )}
             </div>
           </div>
           <p className="vd-plan-text">{t('home', 'planText')}</p>

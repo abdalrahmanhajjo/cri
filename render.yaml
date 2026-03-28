@@ -6,6 +6,8 @@
 # JWT_SECRET is auto-generated below (generateValue). To set your own, remove that block and add JWT_SECRET in the dashboard.
 # Run DB migrations once from your machine: DATABASE_URL="…" npm run db:migrate
 # Free tier: service sleeps after ~15 min idle (first request may take ~1 min). Disk is ephemeral — prefer Supabase Storage for uploads.
+# Optional Docker build args: VITE_GOOGLE_MAPS_API_KEY, VITE_FEATURE_WEATHER, VITE_FEATURE_HOME_COMMUNITY_STRIP,
+# VITE_FEATURE_COMMUNITY_NAV — configure under the service → Build → Docker Build Args if you need them.
 
 services:
   - type: web
