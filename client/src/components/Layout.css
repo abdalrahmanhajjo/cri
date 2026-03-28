@@ -912,11 +912,26 @@ button.nav-icon {
     max-width: 100%;
     justify-self: stretch;
     justify-content: center;
+    /* Stack wordmark + tagline as one centered brand block (not a full-width line under the menu column). */
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .header--vd .header-row--main .logo-tagline--brand {
+    flex-basis: auto;
+    width: auto;
+    max-width: min(100%, 20rem);
+    margin-top: 0;
+    text-align: center;
+    text-wrap: balance;
   }
 
   .header-row--main .logo-stack {
     min-width: 0;
     max-width: 100%;
+    justify-content: center;
   }
 
   .header--vd .header-row--main .logo-stack .logo {
