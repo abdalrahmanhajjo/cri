@@ -8,7 +8,7 @@ This document supports **layer 4** goals: calm production operations, observabil
 |----------|---------|
 | `LOG_FORMAT=json` | One JSON object per log line for log aggregators (Render, Datadog, etc.). |
 | `DB_SLOW_QUERY_MS` | Log queries slower than this many ms (default `750`). Set `0` to disable. |
-| `SENTRY_DSN` | *(Optional)* Not wired in-repo; add `@sentry/node` in `server` and initialize in `server/src/index.js` if you use Sentry. |
+| `SENTRY_DSN` | Optional. When set, the API loads `@sentry/node` and reports unhandled errors from the Express error handler. Use `SENTRY_ENVIRONMENT` / `SENTRY_RELEASE` for filtering in Sentry. |
 | `GOOGLE_SITE_VERIFICATION` | Search Console HTML-tag value (injected by SEO middleware). |
 
 ## Health and uptime
@@ -44,4 +44,9 @@ The client sends Core Web Vitals to `POST /api/metrics/vitals` (rate-limited). W
 
 - Rotate **JWT_SECRET** and DB password if leaked; invalidate sessions if needed.
 - Run `npm audit` in `client` and `server` regularly; CI runs a high-severity audit on push.
+- **Gitleaks** runs on push/PR (`.github/workflows/gitleaks.yml`) to catch accidental secret commits.
 - Re-read **OWASP Top 10** when adding new write endpoints or file uploads.
+
+## Places API pagination
+
+`GET /api/places?limit=50&offset=0` returns the same `popular` / `locations` arrays plus `page: { limit, offset, total, hasMore }`. Omit `limit` for the full list (backward compatible with the home page and existing clients).

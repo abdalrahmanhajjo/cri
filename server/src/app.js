@@ -12,6 +12,7 @@ const { sanitizeBody } = require('./middleware/security');
 const healthRoutes = require('./routes/health');
 const metricsRoutes = require('./routes/metrics');
 const { logError, useJson: structuredLogs } = require('./utils/logger');
+const { captureException } = require('./instrumentSentry');
 const authRoutes = require('./routes/auth');
 const placesRoutes = require('./routes/places');
 const toursRoutes = require('./routes/tours');
@@ -293,6 +294,7 @@ app.use((err, req, res, next) => {
       message: msg,
       stack: !isProd && err.stack ? String(err.stack).slice(0, 2000) : undefined,
     });
+    captureException(err, { requestId: req.id, path: req.originalUrl?.split('?')[0] });
     if (!structuredLogs) console.error(err);
   }
   const status = err.status != null ? err.status : dbDown ? 503 : 500;

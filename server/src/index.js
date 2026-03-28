@@ -30,6 +30,9 @@ if (isProd) {
   console.warn('Warning: JWT_SECRET is not set; auth tokens will use a dev fallback.');
 }
 
+const { initSentry, isEnabled: sentryEnabled } = require('./instrumentSentry');
+initSentry();
+
 const app = require('./app');
 const { verifyDatabaseConnection, closePool } = require('./db');
 
@@ -51,6 +54,7 @@ const server = app.listen(basePort, listenHost, () => {
   console.log(
     `  AI planner: ${groqOk ? 'GROQ_API_KEY set' : n8nOk ? 'N8N_WEBHOOK_URL set' : 'not configured'}`
   );
+  console.log(`  Sentry: ${sentryEnabled() ? 'enabled (SENTRY_DSN)' : 'off (set SENTRY_DSN to capture errors)'}`);
   void verifyDatabaseConnection();
 });
 

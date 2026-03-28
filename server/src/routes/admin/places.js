@@ -4,6 +4,7 @@ const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 
 const { normalizeDbText } = require('../../utils/normalizeDbText');
+const { validateAdminPlaceUpsert } = require('../../utils/validateAdminPlace');
 
 const router = express.Router();
 
@@ -57,8 +58,11 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const body = req.body || {};
-    const id = (body.id || '').toString().trim() || (body.name || 'place').toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '');
-    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    const parsed = validateAdminPlaceUpsert(body);
+    if (!parsed.ok) {
+      return res.status(400).json({ error: 'Validation failed', details: parsed.errors });
+    }
+    const v = parsed.value;
 
     const images = safeJson(body.images, []);
     const tags = safeJson(body.tags, []);
@@ -75,26 +79,26 @@ router.post('/', async (req, res) => {
          duration = EXCLUDED.duration, price = EXCLUDED.price, best_time = EXCLUDED.best_time,
          rating = EXCLUDED.rating, review_count = EXCLUDED.review_count, hours = EXCLUDED.hours, tags = EXCLUDED.tags`,
       [
-        id,
-        (body.name || '').toString(),
-        (body.description || '').toString(),
-        (body.location || '').toString(),
-        body.latitude != null ? parseFloat(body.latitude) : null,
-        body.longitude != null ? parseFloat(body.longitude) : null,
-        (body.searchName || body.search_name || '').toString() || null,
+        v.id,
+        v.name,
+        v.description,
+        v.location,
+        v.latitude,
+        v.longitude,
+        v.searchName,
         imagesJson,
-        (body.category || '').toString() || null,
-        (body.categoryId || body.category_id || '').toString() || null,
-        (body.duration || '').toString() || null,
-        (body.price || '').toString() || null,
-        (body.bestTime || body.best_time || '').toString() || null,
-        body.rating != null ? parseFloat(body.rating) : null,
-        body.reviewCount != null || body.review_count != null ? parseInt(body.reviewCount ?? body.review_count, 10) : null,
+        v.category,
+        v.categoryId,
+        v.duration,
+        v.price,
+        v.bestTime,
+        v.rating,
+        v.reviewCount,
         body.hours ? JSON.stringify(body.hours) : null,
         tagsJson,
       ]
     );
-    res.status(201).json({ id, message: 'Place saved' });
+    res.status(201).json({ id: v.id, message: 'Place saved' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to save place', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
