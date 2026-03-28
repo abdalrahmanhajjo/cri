@@ -267,6 +267,7 @@ export const translations = {
       modalClose: 'Close',
       goToPlan: 'Open trip planner',
       sortViewGroupLabel: 'Sort and layout',
+      resultsHeading: 'Places matching your filters',
     },
     home: {
       heroTitle: 'Explore Tripoli',
@@ -2241,6 +2242,7 @@ export const translations = {
       modalClose: 'Fermer',
       goToPlan: 'Ouvrir le planificateur',
       sortViewGroupLabel: 'Tri et affichage',
+      resultsHeading: 'Lieux correspondant à vos filtres',
     },
     home: {
       heroTitle: 'Explorer Tripoli',
