@@ -3,23 +3,24 @@ const { query } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 const { parsePositiveInt } = require('../utils/validate');
 const { sendDbAwareError } = require('../utils/dbHttpError');
+const { normalizeDbText } = require('../utils/normalizeDbText');
 
 const router = express.Router();
 
 function rowToEvent(row) {
   return {
     id: row.id,
-    name: row.name,
-    description: row.description,
+    name: normalizeDbText(row.name),
+    description: normalizeDbText(row.description || ''),
     startDate: row.start_date instanceof Date ? row.start_date.toISOString() : row.start_date,
     endDate: row.end_date instanceof Date ? row.end_date.toISOString() : row.end_date,
-    location: row.location,
+    location: normalizeDbText(row.location || ''),
     image: row.image,
-    category: row.category,
-    organizer: row.organizer,
+    category: normalizeDbText(row.category || ''),
+    organizer: normalizeDbText(row.organizer || ''),
     price: row.price,
-    priceDisplay: row.price_display,
-    status: row.status,
+    priceDisplay: row.price_display != null ? normalizeDbText(String(row.price_display)) : row.price_display,
+    status: row.status != null ? normalizeDbText(String(row.status)) : row.status,
     placeId: row.place_id
   };
 }

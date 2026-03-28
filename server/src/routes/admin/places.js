@@ -3,6 +3,8 @@ const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 
+const { normalizeDbText } = require('../../utils/normalizeDbText');
+
 const router = express.Router();
 
 router.use(authMiddleware, adminMiddleware);
@@ -41,8 +43,8 @@ router.get('/', async (req, res) => {
     res.json({
       places: rows.map((r) => ({
         id: r.id,
-        name: r.name || '',
-        location: r.location || '',
+        name: normalizeDbText(r.name || ''),
+        location: normalizeDbText(r.location || ''),
       })),
     });
   } catch (err) {

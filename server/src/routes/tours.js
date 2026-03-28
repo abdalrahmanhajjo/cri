@@ -3,32 +3,61 @@ const { query } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 const { parsePlaceId } = require('../utils/validate');
 const { sendDbAwareError } = require('../utils/dbHttpError');
+const { normalizeDbText } = require('../utils/normalizeDbText');
 
 const router = express.Router();
 
+function parseJsonArray(val) {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try {
+      return JSON.parse(val);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function normalizeStringList(arr) {
+  return parseJsonArray(arr).map((x) => (typeof x === 'string' ? normalizeDbText(x) : x));
+}
+
+function normalizeItinerary(arr) {
+  return parseJsonArray(arr).map((item) => {
+    if (!item || typeof item !== 'object') return item;
+    const o = { ...item };
+    for (const k of Object.keys(o)) {
+      if (typeof o[k] === 'string') o[k] = normalizeDbText(o[k]);
+    }
+    return o;
+  });
+}
+
 function rowToTour(row) {
+  const languages = parseJsonArray(row.languages);
   return {
     id: row.id,
-    name: row.name,
-    duration: row.duration,
+    name: normalizeDbText(row.name),
+    duration: typeof row.duration === 'string' ? normalizeDbText(row.duration) : row.duration,
     durationHours: row.duration_hours,
     locations: row.locations,
     rating: row.rating,
     reviews: row.reviews,
     price: row.price,
     currency: row.currency,
-    priceDisplay: row.price_display,
-    badge: row.badge,
+    priceDisplay: row.price_display != null ? normalizeDbText(String(row.price_display)) : row.price_display,
+    badge: row.badge != null ? normalizeDbText(String(row.badge)) : row.badge,
     badgeColor: row.badge_color,
-    description: row.description,
+    description: normalizeDbText(row.description || ''),
     image: row.image,
-    difficulty: row.difficulty,
-    languages: Array.isArray(row.languages) ? row.languages : (row.languages ? JSON.parse(row.languages) : []),
-    includes: Array.isArray(row.includes) ? row.includes : (row.includes ? JSON.parse(row.includes) : []),
-    excludes: Array.isArray(row.excludes) ? row.excludes : (row.excludes ? JSON.parse(row.excludes) : []),
-    highlights: Array.isArray(row.highlights) ? row.highlights : (row.highlights ? JSON.parse(row.highlights) : []),
-    itinerary: Array.isArray(row.itinerary) ? row.itinerary : (row.itinerary ? JSON.parse(row.itinerary) : []),
-    placeIds: Array.isArray(row.place_ids) ? row.place_ids : (row.place_ids ? JSON.parse(row.place_ids) : [])
+    difficulty: row.difficulty != null ? normalizeDbText(String(row.difficulty)) : row.difficulty,
+    languages: languages.map((x) => (typeof x === 'string' ? normalizeDbText(x) : x)),
+    includes: normalizeStringList(row.includes),
+    excludes: normalizeStringList(row.excludes),
+    highlights: normalizeStringList(row.highlights),
+    itinerary: normalizeItinerary(row.itinerary),
+    placeIds: parseJsonArray(row.place_ids)
   };
 }
 
