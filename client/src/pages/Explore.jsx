@@ -358,34 +358,43 @@ function TopPicksCarousel({ places, t }) {
               const heartAria = user
                 ? (isFavourite ? t('home', 'removeFromFavourites') : t('home', 'addToFavourites'))
                 : t('home', 'signInToSave');
-              const placeCardLabel = `${name}. ${t('home', 'readNow')}`;
+              const titleId = `vd-top-picks-title-${placeId}`;
               return (
                 <article key={placeId} className="vd-top-picks-card vd-top-picks-card--split-hit">
                   <Link
                     to={`/place/${placeId}`}
-                    className="vd-top-picks-card-hit"
-                    style={{ display: 'contents' }}
-                    aria-label={placeCardLabel}
+                    className="vd-top-picks-card-bg vd-top-picks-card-bg--hit"
+                    tabIndex={-1}
+                    aria-hidden="true"
                   >
-                    <div className="vd-top-picks-card-bg">
-                      {safeImg ? (
-                        <DeliveryImg
-                          url={safeImg}
-                          preset="topPicks"
-                          alt=""
-                          loading={slideIndex === 0 ? 'eager' : 'lazy'}
-                          fetchPriority={slideIndex === 0 ? 'high' : undefined}
-                        />
-                      ) : (
-                        <span className="vd-top-picks-fallback">Place</span>
-                      )}
-                    </div>
-                    <div className="vd-top-picks-card-overlay">
+                    {safeImg ? (
+                      <DeliveryImg
+                        url={safeImg}
+                        preset="topPicks"
+                        alt=""
+                        loading={slideIndex === 0 ? 'eager' : 'lazy'}
+                        fetchPriority={slideIndex === 0 ? 'high' : undefined}
+                      />
+                    ) : (
+                      <span className="vd-top-picks-fallback">Place</span>
+                    )}
+                  </Link>
+                  <div className="vd-top-picks-card-body">
+                    <Link
+                      to={`/place/${placeId}`}
+                      className="vd-top-picks-card-text-hit"
+                      aria-labelledby={titleId}
+                      aria-describedby={desc ? `${titleId}-desc` : undefined}
+                    >
                       <span className="vd-top-picks-eyebrow">{t('home', 'topPickEyebrow')}</span>
-                      <h3 className="vd-top-picks-name">{name}</h3>
-                      {desc && (
-                        <p className="vd-top-picks-desc">{desc}</p>
-                      )}
+                      <h3 id={titleId} className="vd-top-picks-name">
+                        {name}
+                      </h3>
+                      {desc ? (
+                        <p id={`${titleId}-desc`} className="vd-top-picks-desc">
+                          {desc}
+                        </p>
+                      ) : null}
                       <div className="vd-top-picks-details">
                         {rating != null && (
                           <span className="vd-top-picks-detail">
@@ -401,22 +410,22 @@ function TopPicksCarousel({ places, t }) {
                           <span className="vd-top-picks-detail">{cat}</span>
                         )}
                       </div>
-                      <div className="vd-top-picks-cta-row">
-                        <span className="vd-top-picks-read-now">
-                          {t('home', 'readNow')} <Icon name="arrow_forward" size={18} />
-                        </span>
-                      </div>
+                    </Link>
+                    <div className="vd-top-picks-cta-row">
+                      <Link to={`/place/${placeId}`} className="vd-top-picks-read-now" tabIndex={-1} aria-hidden="true">
+                        {t('home', 'readNow')}
+                      </Link>
+                      <button
+                        type="button"
+                        className={`vd-top-picks-action-btn vd-top-picks-action-btn--heart ${isFavourite ? 'vd-top-picks-action-btn--active' : ''}`}
+                        aria-label={heartAria}
+                        onClick={(e) => toggleFavourite(e, p.id)}
+                      >
+                        <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={22} />
+                      </button>
                     </div>
-                  </Link>
+                  </div>
                   <div className="vd-top-picks-card-floating-actions">
-                    <button
-                      type="button"
-                      className={`vd-top-picks-action-btn vd-top-picks-action-btn--heart ${isFavourite ? 'vd-top-picks-action-btn--active' : ''}`}
-                      aria-label={heartAria}
-                      onClick={(e) => toggleFavourite(e, p.id)}
-                    >
-                      <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={22} />
-                    </button>
                     <button
                       type="button"
                       className="vd-top-picks-scroll-top"
