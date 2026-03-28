@@ -12,7 +12,7 @@
     <link rel="preload" as="image" href="/city.png" fetchpriority="high" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Single stylesheet + display=swap; non-render-blocking load (then apply as all media) -->
+    <!-- Non-blocking; display=swap (Material Symbols need reliable load — do not use optional on this bundle). -->
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
@@ -29,18 +29,27 @@
     <title>Visit Tripoli – Best spots, experiences & plans</title>
   </head>
   <body>
-    <!-- Google Tag Manager (after body open: avoids blocking head parse) -->
+    <!-- GTM after idle / load — cuts main-thread JS during LCP; tags still fire same session -->
     <script>
-      (function (w, d, s, l, i) {
-        w[l] = w[l] || [];
-        w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
-        var f = d.getElementsByTagName(s)[0],
-          j = d.createElement(s),
-          dl = l != 'dataLayer' ? '&l=' + l : '';
-        j.async = true;
-        j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
-        f.parentNode.insertBefore(j, f);
-      })(window, document, 'script', 'dataLayer', 'GTM-5P8FD3C5');
+      function tripoliInitGtm() {
+        (function (w, d, s, l, i) {
+          w[l] = w[l] || [];
+          w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+          var f = d.getElementsByTagName(s)[0],
+            j = d.createElement(s),
+            dl = l != 'dataLayer' ? '&l=' + l : '';
+          j.async = true;
+          j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+          f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-5P8FD3C5');
+      }
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(tripoliInitGtm, { timeout: 4500 });
+      } else {
+        window.addEventListener('load', function () {
+          setTimeout(tripoliInitGtm, 1);
+        });
+      }
     </script>
     <noscript
       ><iframe
