@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import { DateRangeCalendar } from '../components/Calendar';
@@ -85,11 +86,12 @@ function PlaceCardDiscover({ place, isFavourite, onToggleFavourite, tripDayCount
   return (
     <div className="plan-discover-card">
       <Link to={`/place/${placeId}`} className="plan-discover-card-link">
-        <div
-          className="plan-discover-card-media"
-          style={{ backgroundImage: imgUrl ? `url(${imgUrl})` : undefined }}
-        >
-          {!imgUrl && <span className="plan-discover-card-fallback">Place</span>}
+        <div className="plan-discover-card-media">
+          {imgUrl ? (
+            <DeliveryImg url={imgUrl} preset="planDiscover" alt="" />
+          ) : (
+            <span className="plan-discover-card-fallback">Place</span>
+          )}
           <div className="plan-discover-card-overlay">
             <h3 className="plan-discover-card-title">{name || 'Place'}</h3>
             {location && <p className="plan-discover-card-meta">{location}</p>}
@@ -148,7 +150,8 @@ function FavouriteCard({ place, dayCount, onAddToDay, t }) {
 
   return (
     <div className="plan-fav-card">
-      <Link to={`/place/${placeId}`} className="plan-fav-card-media" style={{ backgroundImage: imgUrl ? `url(${imgUrl})` : undefined }}>
+      <Link to={`/place/${placeId}`} className="plan-fav-card-media">
+        {imgUrl ? <DeliveryImg url={imgUrl} preset="planSquare" alt="" /> : null}
         {!imgUrl && <span className="plan-fav-card-fallback">Place</span>}
       </Link>
       <div className="plan-fav-card-body">

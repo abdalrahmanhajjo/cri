@@ -1398,11 +1398,13 @@
   background-size: cover;
   background-position: center;
   position: relative;
+  overflow: hidden;
 }
 
 .plan-page .plan-discover-card-fallback {
   position: absolute;
   inset: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1413,6 +1415,7 @@
 .plan-page .plan-discover-card-overlay {
   position: absolute;
   inset: 0;
+  z-index: 1;
   background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%);
   display: flex;
   flex-direction: column;
@@ -1439,6 +1442,7 @@
   position: absolute;
   top: 8px;
   right: 8px;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1651,6 +1655,8 @@
 }
 
 .plan-page .plan-fav-card-media {
+  position: relative;
+  overflow: hidden;
   width: 72px;
   height: 72px;
   flex-shrink: 0;
@@ -1662,6 +1668,8 @@
 }
 
 .plan-page .plan-fav-card-fallback {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   display: flex;

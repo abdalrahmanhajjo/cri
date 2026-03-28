@@ -4,6 +4,7 @@ import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import './Explore.css';
 import './Events.css';
 
@@ -24,8 +25,8 @@ function EventCard({ event }) {
 
   return (
     <Link to={`/event/${event.id}`} className="vd-card vd-card--event events-card">
-      <div className="vd-card-media" style={{ backgroundImage: img ? `url(${img})` : undefined }}>
-        {!img && <span className="vd-card-fallback">Event</span>}
+      <div className="vd-card-media">
+        {img ? <DeliveryImg url={img} preset="gridCard" alt="" /> : <span className="vd-card-fallback">Event</span>}
         {date && <span className="vd-card-badge vd-card-date">{date}</span>}
         {status && <span className="events-status-pill">{status}</span>}
       </div>

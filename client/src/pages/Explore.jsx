@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
@@ -225,11 +226,16 @@ function PlaceCard({ place, size }) {
       to={`/place/${placeId}`}
       className={`vd-card vd-card--place ${isFeatured ? 'vd-card--featured' : ''}`}
     >
-      <div
-        className="vd-card-media"
-        style={{ backgroundImage: safeImgUrl ? `url(${safeImgUrl})` : undefined }}
-      >
-        {!safeImgUrl && <span className="vd-card-fallback">Place</span>}
+      <div className="vd-card-media">
+        {safeImgUrl ? (
+          <DeliveryImg
+            url={safeImgUrl}
+            preset={isFeatured ? 'gridCardFeatured' : 'gridCard'}
+            alt=""
+          />
+        ) : (
+          <span className="vd-card-fallback">Place</span>
+        )}
         <div className="vd-card-overlay">
           <h3 className="vd-card-title">{name || 'Place'}</h3>
           {location && <p className="vd-card-meta">{location}</p>}
@@ -304,7 +310,7 @@ function TopPicksCarousel({ places, t }) {
             className="vd-top-picks-track"
             style={{ transform: `translateX(-${index * 100}%)`, direction: 'ltr' }}
           >
-            {safePlaces.map((p) => {
+            {safePlaces.map((p, slideIndex) => {
               if (!p || p.id == null) return null;
               const placeId = String(p.id);
               const safeImg = getPlaceImageUrl(p.image || (p.images && p.images[0])) || null;
@@ -327,11 +333,18 @@ function TopPicksCarousel({ places, t }) {
                     style={{ display: 'contents' }}
                     aria-label={placeCardLabel}
                   >
-                    <div
-                      className="vd-top-picks-card-bg"
-                      style={{ backgroundImage: safeImg ? `url(${safeImg})` : undefined }}
-                    >
-                      {!safeImg && <span className="vd-top-picks-fallback">Place</span>}
+                    <div className="vd-top-picks-card-bg">
+                      {safeImg ? (
+                        <DeliveryImg
+                          url={safeImg}
+                          preset="topPicks"
+                          alt=""
+                          loading={slideIndex === 0 ? 'eager' : 'lazy'}
+                          fetchPriority={slideIndex === 0 ? 'high' : undefined}
+                        />
+                      ) : (
+                        <span className="vd-top-picks-fallback">Place</span>
+                      )}
                     </div>
                     <div className="vd-top-picks-card-overlay">
                       <span className="vd-top-picks-eyebrow">{t('home', 'topPickEyebrow')}</span>

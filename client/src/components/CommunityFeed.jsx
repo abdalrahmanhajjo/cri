@@ -4,6 +4,7 @@ import { getImageUrl, fixImageUrlExtension, getPlaceImageUrl } from '../api/clie
 import Icon from './Icon';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
 import { rawFeedImageUrls } from '../utils/feedPostImages';
+import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 
 /** Reels / video items: explicit type, or legacy rows stored as `post` with video and no cover image (matches business portal). */
 export function isCommunityFeedVideo(post) {
@@ -95,7 +96,7 @@ export function CommunityFeedCard({ post, t }) {
             aria-label={fullCap.slice(0, 120) || reelLabel}
           />
         ) : img ? (
-          <img src={img} alt="" className="vd-community-feed-img" loading="lazy" decoding="async" />
+          <img alt="" className="vd-community-feed-img" loading="lazy" decoding="async" {...getDeliveryImgProps(img, 'gridCard')} />
         ) : (
           <div className="vd-community-feed-placeholder" aria-hidden="true" />
         )}
@@ -124,13 +125,13 @@ export function CommunityFeedCard({ post, t }) {
                 : null;
               return av ? (
                 <img
-                  src={av}
                   alt=""
                   className="vd-community-feed-place-avatar"
                   width={36}
                   height={36}
                   loading="lazy"
                   decoding="async"
+                  {...getDeliveryImgProps(av, 'thumb')}
                 />
               ) : (
                 <span className="vd-community-feed-place-avatar vd-community-feed-place-avatar--icon" aria-hidden>
@@ -210,7 +211,7 @@ export function CommunityFeedStrip({ posts, t, moreTo, layout = 'scroll' }) {
                       className={`vd-community-feed-mosaic-cell vd-community-feed-mosaic-cell--${i + 1}`}
                     >
                       {src ? (
-                        <img src={src} alt="" className="vd-community-feed-mosaic-img" loading="lazy" decoding="async" />
+                        <img alt="" className="vd-community-feed-mosaic-img" loading="lazy" decoding="async" {...getDeliveryImgProps(src, 'thumb')} />
                       ) : (
                         <span className="vd-community-feed-mosaic-fallback">
                           <Icon name={isCommunityFeedVideo(p) ? 'play_circle' : 'photo_camera'} size={22} />

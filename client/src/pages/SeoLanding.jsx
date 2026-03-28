@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import './SeoLanding.css';
 
@@ -135,12 +136,9 @@ function Page({ title, intro, sections, links, dbTitle = 'Featured places from d
                   getPlaceImageUrl(Array.isArray(p.images) ? p.images[0] : '');
                 return (
                   <article key={slug} className="seo-landing__dbCard">
-                    <Link
-                      to={to}
-                      className="seo-landing__dbMedia"
-                      style={img ? { backgroundImage: `url(${img})` } : undefined}
-                      aria-label={p.name || slug}
-                    />
+                    <Link to={to} className="seo-landing__dbMedia" aria-label={p.name || slug}>
+                      {img ? <DeliveryImg url={img} preset="seoDb" alt="" /> : null}
+                    </Link>
                     <div className="seo-landing__dbBody">
                       <h3>{p.name || slug}</h3>
                       <p>{p.location || 'Tripoli, Lebanon'}</p>

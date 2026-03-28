@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
@@ -36,8 +37,10 @@ function DiscoverCard({
   return (
     <div className={`pd-card pd-card--${viewMode}`}>
       <Link to={`/place/${place.id}`} className="pd-card-main">
-        <div className="pd-card-media" style={{ backgroundImage: img ? `url(${img})` : undefined }}>
-          {!img && (
+        <div className="pd-card-media">
+          {img ? (
+            <DeliveryImg url={img} preset="discoverCard" alt="" />
+          ) : (
             <span className="pd-card-fallback">
               <Icon name="place" size={28} />
             </span>

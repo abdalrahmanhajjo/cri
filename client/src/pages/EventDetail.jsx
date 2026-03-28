@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import Icon from '../components/Icon';
+import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import './Detail.css';
@@ -194,7 +196,6 @@ export default function EventDetail() {
   }
 
   const img = getPlaceImageUrl(event.image);
-  const heroStyle = img ? { backgroundImage: `url(${img})` } : {};
   const dateLabel = eventDateRangeLabel(event.startDate, event.endDate);
   const timeStr = eventTimeRangeLabel(event.startDate, event.endDate);
   const pricePill = event.priceDisplay || (event.price != null ? String(event.price) : '') || t('detail', 'free');
@@ -216,7 +217,18 @@ export default function EventDetail() {
         </Link>
 
         <article className="place-detail-article">
-          <header className="place-detail-hero place-detail-hero--event" style={img ? heroStyle : undefined}>
+          <header className="place-detail-hero place-detail-hero--event">
+            {img && (
+              <img
+                key={img}
+                className="place-detail-hero__img"
+                alt=""
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+                {...getDeliveryImgProps(img, 'detailHero')}
+              />
+            )}
             {!img && (
               <div className="place-detail-hero-fallback">
                 <Icon name="event" size={48} />
@@ -322,7 +334,13 @@ export default function EventDetail() {
                       <div className="event-venue-gallery">
                         {venueImgs.slice(0, 6).map((src, gi) => (
                           <Link key={gi} to={`/place/${venue.id}`} className="event-venue-gallery-item">
-                            <span className="event-venue-gallery-img" style={{ backgroundImage: `url(${src})` }} role="img" aria-label="" />
+                            <img
+                              className="event-venue-gallery-img"
+                              alt=""
+                              loading="lazy"
+                              decoding="async"
+                              {...getDeliveryImgProps(src, 'venueThumb')}
+                            />
                           </Link>
                         ))}
                       </div>
@@ -346,7 +364,9 @@ export default function EventDetail() {
                       const eImg = getPlaceImageUrl(ev.image);
                       return (
                         <Link key={ev.id} to={`/event/${ev.id}`} className="detail-similar-card">
-                          <div className="detail-similar-card-media" style={eImg ? { backgroundImage: `url(${eImg})` } : undefined} />
+                          <div className="detail-similar-card-media">
+                            {eImg ? <DeliveryImg url={eImg} preset="similarStrip" alt="" /> : null}
+                          </div>
                           <span className="detail-similar-card-title">{ev.name}</span>
                           {ev.startDate && (
                             <span className="detail-similar-card-meta">

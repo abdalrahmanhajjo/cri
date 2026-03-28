@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import api, { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import Icon from '../components/Icon';
 import { WAYS_CONFIG, groupPlacesByWay, FIND_YOUR_WAY_WAY_KEYS } from '../utils/findYourWayGrouping';
 import './Explore.css';
@@ -16,8 +17,12 @@ function PlaceCard({ place }) {
   const validRating = rating != null && !Number.isNaN(rating);
   return (
     <Link to={`/place/${placeId}`} className="vd-card vd-card--place">
-      <div className="vd-card-media" style={{ backgroundImage: safeImg ? `url(${safeImg})` : undefined }}>
-        {!safeImg && <span className="vd-card-fallback">Place</span>}
+      <div className="vd-card-media">
+        {safeImg ? (
+          <DeliveryImg url={safeImg} preset="gridCard" alt="" />
+        ) : (
+          <span className="vd-card-fallback">Place</span>
+        )}
         <div className="vd-card-overlay">
           <h3 className="vd-card-title">{name || 'Place'}</h3>
           {location && <p className="vd-card-meta">{location}</p>}
