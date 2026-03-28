@@ -14,6 +14,12 @@ import {
 import { trackEvent } from './utils/analytics';
 
 function AppRoutes() {
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    trackEvent(user, 'app_start', { timestamp: new Date().toISOString() });
+  }, [user]);
+
   return (
     <Routes>
       {BusinessRoutes}
@@ -27,12 +33,6 @@ function AppRoutes() {
 }
 
 export default function App() {
-  const { user } = useAuth();
-  
-  useEffect(() => {
-    trackEvent(user, 'app_start', { timestamp: new Date().toISOString() });
-  }, [user]);
-
   return (
     <BrowserRouter>
       <ScrollToTop />
