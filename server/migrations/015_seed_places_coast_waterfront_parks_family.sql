@@ -1,3 +1,4 @@
+-- NOTE: Superseded for full resets by 020_tripoli_heritage_places_reset.sql (wipes all places).
 -- Seed 4 Tripoli places under:
 -- - coast_waterfront (2 places)
 -- - parks_family (2 places)
