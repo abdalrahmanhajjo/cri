@@ -10,6 +10,18 @@ function isCouponItem(item) {
   return id.startsWith('coupon-');
 }
 
+function isPlacePromoItem(item) {
+  const id = item?.id != null ? String(item.id) : '';
+  return id.startsWith('promo-');
+}
+
+/** Coded coupons and coded place promotions use the same redeem + “show at checkout” flow. */
+function isRedeemableOffer(item) {
+  const code = String(item?.code ?? '').trim();
+  if (!code) return false;
+  return isCouponItem(item) || isPlacePromoItem(item);
+}
+
 function formatOfferDate(iso, lang) {
   if (iso == null || iso === '') return null;
   const d = new Date(iso);
@@ -109,6 +121,7 @@ export default function OfferCard({
   const placeNameTrim = String(placeName ?? '').trim();
   const showLink = showPlaceLink && placeNameTrim && placeId;
   const coupon = isCouponItem(pr);
+  const redeemable = isRedeemableOffer(pr);
   const pillLabel = coupon ? t('discover', 'couponPill') : t('discover', 'offerPill');
   const displayTitle = coupon ? resolveCouponTitle(pr, t) : String(pr.title ?? '');
   const displaySubtitle = coupon
@@ -156,7 +169,7 @@ export default function OfferCard({
 
   async function handleRedeem(e) {
     e.preventDefault();
-    if (!coupon || !promoId || !user) return;
+    if (!redeemable || !promoId || !user) return;
     setRedeemError(null);
     setRedeemBusy(true);
     try {
@@ -203,7 +216,7 @@ export default function OfferCard({
         )}
         {displayTerms ? <p className="ig-offer-terms">{displayTerms}</p> : null}
 
-        {coupon && pr.code && (
+        {redeemable && (
           <div className="ig-offer-redeem">
             {alreadyRedeemed || justRedeemed ? (
               <div className="ig-offer-redeemed-wrap">
