@@ -215,6 +215,8 @@
   margin: 0 0 12px;
   font-size: 11px;
   font-weight: 700;
+  line-height: 1.35;
+  min-height: calc(1.35 * 1em);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--pd-teal-deep);
@@ -476,6 +478,9 @@
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  align-content: flex-start;
+  /* Reserve ~2 pill rows so webfont swap is less likely to reflow the whole toolbar (CLS). */
+  min-height: calc(44px * 2 + 8px);
 }
 
 .pd-cat-pill {
@@ -488,6 +493,7 @@
   font-family: var(--pd-sans);
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.2;
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: background 0.18s, border-color 0.18s, color 0.18s;
@@ -734,8 +740,10 @@
 
 .pd-card--list .pd-card-media {
   width: min(200px, 38%);
-  aspect-ratio: auto;
-  min-height: 100%;
+  flex-shrink: 0;
+  aspect-ratio: 4 / 3;
+  min-height: 0;
+  align-self: stretch;
 }
 
 .pd-card-media-scrim {
