@@ -8,7 +8,7 @@ export const PlaceSchema = z.object({
   name: z.string().default('Untitled'),
   description: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
-  categoryId: z.number().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
   categoryName: z.string().optional().nullable(),
   image: z.string().optional().nullable(),
   images: z.array(z.string()).optional().default([]),
