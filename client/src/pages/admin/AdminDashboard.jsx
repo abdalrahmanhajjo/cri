@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useAdminStats } from '../../hooks/useAdmin';
-import { usePlaces, useCategories, useEvents } from '../../hooks/usePlaces';
+import { useAdminStats, useAdminEvents } from '../../hooks/useAdmin';
+import { usePlaces } from '../../hooks/usePlaces';
+import { useCategories } from '../../hooks/useCategories';
 import './Admin.css';
 
 function formatDate(str) {
@@ -21,7 +22,7 @@ export default function AdminDashboard() {
   const { data: statsRes, isLoading: loadingStats } = useAdminStats();
   const { data: placesRes, isLoading: loadingPlaces } = usePlaces();
   const { data: catsRes, isLoading: loadingCats } = useCategories();
-  const { data: eventsRes, isLoading: loadingEvents } = useEvents();
+  const { data: eventsRes, isLoading: loadingEvents } = useAdminEvents();
 
   const stats = useMemo(() => {
     const st = statsRes || {};
