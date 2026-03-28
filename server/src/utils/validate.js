@@ -57,4 +57,28 @@ function safeUrl(url) {
   return null;
 }
 
-module.exports = { parsePositiveInt, parsePlaceId, parseTripId, safeUrl };
+/**
+ * Optional pagination for GET /api/places (backward compatible when `limit` omitted).
+ * @param {Record<string, unknown>} query - req.query
+ * @returns {{ usePagination: boolean, limit: number|null, offset: number, invalid?: string }}
+ */
+function parsePlacesListPagination(query) {
+  const q = query && typeof query === 'object' ? query : {};
+  const rawLimit = q.limit;
+  if (rawLimit == null || rawLimit === '') {
+    return { usePagination: false, limit: null, offset: 0 };
+  }
+  const limit = parseInt(String(rawLimit), 10);
+  if (!Number.isFinite(limit) || limit < 1) {
+    return { invalid: 'limit must be a positive integer (max 500)' };
+  }
+  const clampedLimit = Math.min(500, Math.max(1, limit));
+  let offset = 0;
+  if (q.offset != null && q.offset !== '') {
+    const o = parseInt(String(q.offset), 10);
+    if (Number.isFinite(o) && o >= 0) offset = Math.min(o, 1_000_000);
+  }
+  return { usePagination: true, limit: clampedLimit, offset };
+}
+
+module.exports = { parsePositiveInt, parsePlaceId, parseTripId, safeUrl, parsePlacesListPagination };

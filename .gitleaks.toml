@@ -1,0 +1,11 @@
+# Repo-local overrides. Gitleaks ships default rules; we only silence known false positives.
+title = "Visit Tripoli"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documented CI JWT placeholder (not a production secret)"
+regexes = [
+  '''ci-jwt-secret-at-least-32-characters-long''',
+]

@@ -2,7 +2,7 @@ const express = require('express');
 const { haversineMeters } = require('../utils/geo');
 const { query } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
-const { parsePositiveInt } = require('../utils/validate');
+const { parsePositiveInt, parsePlacesListPagination } = require('../utils/validate');
 const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth');
 const { sendDbAwareError } = require('../utils/dbHttpError');
 const {
@@ -179,9 +179,12 @@ router.get('/', cachePublicList(60, 300), async (req, res) => {
   try {
     const baseUrl = getUploadsBaseUrl(req);
     const lang = getRequestLang(req);
+    const pag = parsePlacesListPagination(req.query);
+    if (pag.invalid) {
+      return res.status(400).json({ error: pag.invalid });
+    }
     const { statsJoinSql } = await getPlaceReviewMeta();
-    const result = await query(
-      `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
+    const listSql = `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
               pr_stats.app_avg_rating, pr_stats.app_review_count,
               COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,
               COALESCE(pt.location, p.location) AS location, COALESCE(pt.category, p.category) AS category,
@@ -190,11 +193,31 @@ router.get('/', cachePublicList(60, 300), async (req, res) => {
        FROM places p
        LEFT JOIN place_translations pt ON pt.place_id = p.id AND pt.lang = $1
        ${statsJoinSql}
-       ORDER BY p.name`,
-      [lang]
-    );
+       ORDER BY p.name`;
+
+    if (!pag.usePagination) {
+      const result = await query(`${listSql}`, [lang]);
+      const places = result.rows.map((r) => rowToPlace(r, baseUrl));
+      return res.json({ popular: places, locations: places });
+    }
+
+    const [{ rows: countRows }, result] = await Promise.all([
+      query('SELECT COUNT(*)::int AS c FROM places', []),
+      query(`${listSql} LIMIT $2 OFFSET $3`, [lang, pag.limit, pag.offset]),
+    ]);
+    const total = countRows[0]?.c != null ? Number(countRows[0].c) : 0;
     const places = result.rows.map((r) => rowToPlace(r, baseUrl));
-    res.json({ popular: places, locations: places });
+    const end = pag.offset + places.length;
+    res.json({
+      popular: places,
+      locations: places,
+      page: {
+        limit: pag.limit,
+        offset: pag.offset,
+        total,
+        hasMore: end < total,
+      },
+    });
   } catch (err) {
     console.error(err);
     sendDbAwareError(res, err, 'Failed to fetch places');
