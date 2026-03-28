@@ -774,28 +774,54 @@
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 8px;
+  gap: 4px;
   z-index: 2;
 }
 
+/* 44×44px minimum touch target (WCAG 2.5.5); visual dot is ::after */
 .vd-top-picks-dot {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  transition: none;
+}
+
+.vd-top-picks-dot::after {
+  content: '';
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-sizing: border-box;
+  border: 2px solid rgba(255, 255, 255, 0.95);
   background: transparent;
-  cursor: pointer;
-  padding: 0;
-  transition: background 0.2s, transform 0.2s;
+  transition: background 0.2s, transform 0.2s, border-color 0.2s;
 }
 
-.vd-top-picks-dot:hover {
-  background: rgba(255, 255, 255, 0.5);
+.vd-top-picks-dot:hover::after {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: #fff;
 }
 
-.vd-top-picks-dot--active {
+.vd-top-picks-dot--active::after {
   background: #fff;
+  border-color: #fff;
   transform: scale(1.15);
+}
+
+.vd-top-picks-dot:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* Desktop only: text panel + image split.
@@ -860,10 +886,14 @@
     left: 48px;
     transform: none;
   }
-  .vd-top-picks-dot {
-    border-color: var(--color-border);
+  .vd-top-picks-dot::after {
+    border-color: rgba(55, 65, 81, 0.62);
   }
-  .vd-top-picks-dot--active {
+  .vd-top-picks-dot:hover::after {
+    background: rgba(55, 65, 81, 0.12);
+    border-color: rgba(55, 65, 81, 0.85);
+  }
+  .vd-top-picks-dot--active::after {
     background: var(--color-primary);
     border-color: var(--color-primary);
   }
@@ -2161,11 +2191,11 @@
   font-family: var(--font-sans);
   font-size: clamp(12px, 1.15vw, 14px);
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.96);
+  color: #fff;
   margin: 0 0 20px 0;
   line-height: 1.45;
   max-width: 40ch;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65), 0 2px 14px rgba(0, 0, 0, 0.45);
 }
 
 .vd-bento-hero-ctas {
@@ -2216,7 +2246,7 @@
   border-radius: 50%;
   border: 3px solid rgba(255, 255, 255, 0.95);
   margin-inline-start: -12px;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(0, 0, 0, 0.38);
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;

@@ -5,6 +5,9 @@
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/svg+xml" href="/tripoli-lebanon-icon.svg" />
+    <!-- Warm CDN used by bento hero + many cards (cuts TLS/DNS before first Unsplash request) -->
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
     <!-- Default home LCP image: discoverable before JS; skipped in-app when admin sets another hero -->
     <link rel="preload" as="image" href="/city.png" fetchpriority="high" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

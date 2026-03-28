@@ -687,6 +687,15 @@ export default function Explore() {
   }
 
   const placesList = Array.isArray(places) ? places : [];
+  const placeNameById = useMemo(() => {
+    const m = new Map();
+    for (const p of placesList) {
+      if (p?.id == null) continue;
+      const nm = p?.name != null ? String(p.name).trim() : '';
+      m.set(String(p.id), nm);
+    }
+    return m;
+  }, [placesList]);
   const placeCountStr = formatDirectoryCount(placesList.length, lang);
   const categoryCountStr = formatDirectoryCount(categoryCount, lang);
   const topPicks = placesList.slice().sort((a, b) => (Number(b?.rating) || 0) - (Number(a?.rating) || 0)).slice(0, 6);
@@ -695,6 +704,18 @@ export default function Explore() {
     getPlaceImageUrl(p?.image || (Array.isArray(p?.images) && p.images[0]))
   );
   const showBentoAvatarStack = bentoAvatarSlots.some((s) => s.href || s.placeId);
+
+  const bentoAvatarLinkLabel = useCallback(
+    (slot) => {
+      if (slot.placeId) {
+        const name = placeNameById.get(String(slot.placeId)) || '';
+        if (name) return t('home', 'bentoAvatarPlaceLink').replace(/\{name\}/g, name);
+        return t('home', 'bentoAvatarPlaceLinkNoName');
+      }
+      return t('home', 'bentoAvatarCommunityLink');
+    },
+    [placeNameById, t]
+  );
 
   return (
     <div className="vd vd-home">
@@ -721,7 +742,11 @@ export default function Explore() {
                     </Link>
                   </div>
                   {showBentoAvatarStack && (
-                    <div className="vd-bento-avatar-stack" aria-label={t('home', 'bentoAvatarStackAria')}>
+                    <div
+                      className="vd-bento-avatar-stack"
+                      role="group"
+                      aria-label={t('home', 'bentoAvatarStackAria')}
+                    >
                       {bentoAvatarSlots.map((slot, i) => {
                         const to = slot.placeId ? `/place/${slot.placeId}` : COMMUNITY_PATH;
                         const key = slot.placeId ? `bento-av-${slot.placeId}` : `bento-av-${i}`;
@@ -730,9 +755,10 @@ export default function Explore() {
                             key={key}
                             to={to}
                             className="vd-bento-avatar"
+                            aria-label={bentoAvatarLinkLabel(slot)}
                             style={slot.href ? { backgroundImage: bentoCssUrl(slot.href) } : undefined}
                           >
-                            {!slot.href && <Icon name="travel_explore" size={22} />}
+                            {!slot.href && <Icon name="travel_explore" size={22} aria-hidden />}
                           </Link>
                         );
                       })}

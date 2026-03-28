@@ -12,32 +12,32 @@ export const BENTO_HERO_SIZES = '(max-width: 959px) 100vw, min(1200px, 67vw)';
 
 const PRESETS = {
   bentoHero: {
-    unsplashWidths: [640, 960, 1280, 1600],
-    defaultUnsplashW: 1280,
+    unsplashWidths: [480, 640, 960, 1280, 1600],
+    defaultUnsplashW: 960,
     sizes: BENTO_HERO_SIZES,
-    q: '78',
-  },
-  detailHero: {
-    unsplashWidths: [640, 960, 1280, 1920],
-    defaultUnsplashW: 1280,
-    sizes: '(max-width: 900px) 100vw, min(1040px, 92vw)',
-    q: '78',
-  },
-  topPicks: {
-    unsplashWidths: [640, 960, 1280, 1600],
-    defaultUnsplashW: 1280,
-    sizes: '(max-width: 900px) 100vw, min(900px, 88vw)',
     q: '76',
   },
+  detailHero: {
+    unsplashWidths: [480, 640, 960, 1280, 1920],
+    defaultUnsplashW: 960,
+    sizes: '(max-width: 900px) 100vw, min(1040px, 92vw)',
+    q: '76',
+  },
+  topPicks: {
+    unsplashWidths: [480, 640, 960, 1280, 1600],
+    defaultUnsplashW: 960,
+    sizes: '(max-width: 900px) 100vw, min(900px, 88vw)',
+    q: '75',
+  },
   gridCard: {
-    unsplashWidths: [320, 480, 640, 800],
-    defaultUnsplashW: 640,
+    unsplashWidths: [240, 320, 480, 640, 800],
+    defaultUnsplashW: 480,
     sizes: '(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 380px',
-    q: '74',
+    q: '72',
   },
   gridCardFeatured: {
-    unsplashWidths: [480, 640, 960, 1200],
-    defaultUnsplashW: 800,
+    unsplashWidths: [400, 480, 640, 960, 1200],
+    defaultUnsplashW: 640,
     sizes: '(max-width: 900px) 100vw, min(560px, 62vw)',
     q: '75',
   },
