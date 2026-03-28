@@ -176,7 +176,7 @@ export default function MapPicker({ lat, lng, onSelect, onClose }) {
           <details className="admin-form-hint" style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
             <summary style={{ cursor: 'pointer', color: '#6b7280' }}>Map not loading? Fix API key</summary>
             <p style={{ marginTop: '0.35rem', color: '#6b7280' }}>
-              Google Cloud Console → APIs &amp; Services: enable <strong>Maps JavaScript API</strong>, <strong>Geocoding API</strong>, <strong>Places API</strong>. Enable billing. Add <code>http://localhost:*/*</code> to your API key&apos;s HTTP referrer restrictions.
+              Google Cloud Console → APIs & Services: enable <strong>Maps JavaScript API</strong>, <strong>Geocoding API</strong>, <strong>Places API</strong>. Enable billing. Add <code>http://localhost:*/*</code> to your API key’s HTTP referrer restrictions.
             </p>
           </details>
         </div>

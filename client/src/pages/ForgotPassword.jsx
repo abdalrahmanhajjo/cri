@@ -256,7 +256,7 @@ export default function ForgotPassword() {
         <div className="auth-card card">
           <h2 className="auth-title">Forgot password?</h2>
           <p className="auth-footer" style={{ marginTop: 0, marginBottom: 16, textAlign: 'left' }}>
-            Enter your email and we&apos;ll send you a 6-digit code to reset your password.
+            Enter your email and we’ll send you a 6-digit code to reset your password.
           </p>
           <form onSubmit={handleSendCode} className="auth-form" noValidate>
             {error && (

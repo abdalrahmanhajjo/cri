@@ -216,7 +216,7 @@ function AdminLayoutInner() {
             <div className="admin-user-avatar">{initials}</div>
             <div className="admin-user-info">
               <span className="admin-user-name">{user?.name || user?.email || 'Admin'}</span>
-              <span className="admin-user-role">App &amp; web admin</span>
+              <span className="admin-user-role">App & web admin</span>
             </div>
           </div>
         </div>

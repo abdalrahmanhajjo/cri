@@ -286,7 +286,7 @@ export default function AdminTranslationsPanel() {
 
       <div className="admin-translations-intro">
         <div className="admin-translations-intro__text">
-          <h2 className="admin-translations-intro__title">Website &amp; app copy</h2>
+          <h2 className="admin-translations-intro__title">Website & app copy</h2>
           <p className="admin-translations-intro__lead">
             These keys match the bundled strings in <code>client/src/i18n/translations.js</code> (English, Arabic, French).
             Overrides are stored in PostgreSQL and apply to <strong>this website</strong> as soon as visitors reload. Point your{' '}
@@ -350,7 +350,7 @@ export default function AdminTranslationsPanel() {
             <div className="admin-form-group admin-translations-filter">
               <label htmlFor="at-section">Section</label>
               <select id="at-section" value={namespaceFilter} onChange={(e) => setNamespaceFilter(e.target.value)}>
-                <option value={SECTION_ALL}>All sections — full app &amp; site ({totalForLang})</option>
+                <option value={SECTION_ALL}>All sections — full app & site ({totalForLang})</option>
                 {NAMESPACES.map((ns) => (
                   <option key={ns} value={ns}>
                     {SECTION_META[ns]?.label || ns} ({countsByNamespace[ns] ?? 0})

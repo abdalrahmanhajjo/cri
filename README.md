@@ -30,6 +30,8 @@ npm run dev
 
 The API listens on **http://localhost:3095** by default (`PORT`). **GET /health** is liveness; **GET /ready** runs `SELECT 1` and returns **503** if Postgres is unreachable.
 
+From the **repo root**, run **`npm run db:migrate`** once `DATABASE_URL` is set so web-specific tables exist (including **`auth_abuse_tracking`** in migration `018` — shared login / forgot-password / reset-password limits and verification-email cooldown across all API instances). Set **`AUTH_ABUSE_STORE=memory`** only if you want in-process counters (single instance, no migration).
+
 **Production:** `DATABASE_URL`, `JWT_SECRET`, and **`CORS_ORIGIN`** are required at boot (the process exits if they are missing). Use comma-separated origins or `*` only for controlled testing.
 
 ### 3. Web client
@@ -61,6 +63,7 @@ Open http://localhost:5173.
 | `CORS_ORIGIN`  | Comma-separated browser origins, or `*`. **Required in production** (fail-closed at boot if unset). |
 | `UPLOADS_BASE_URL` | Optional: public base for `/uploads/*` when using local disk + split hosting. |
 | `SERVE_CLIENT_DIST` | `true` to serve the built SPA from Node (Docker / single VM). |
+| `AUTH_ABUSE_STORE` | Set to `memory` to keep auth abuse counters in RAM only (default: use Postgres when `DATABASE_URL` is set). |
 
 ## Scripts
 

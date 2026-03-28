@@ -547,7 +547,9 @@ function PlaceFormModal({ place, onClose, onSaved }) {
               </div>
               {imageUrls.length > 0 && (
                 <div className="admin-image-list">
-                  <p className="admin-form-hint" style={{ width: '100%', marginBottom: '0.5rem' }}>First image is the main/cover image. Click &quot;Set as main&quot; to change.</p>
+                  <p className="admin-form-hint" style={{ width: '100%', marginBottom: '0.5rem' }}>
+                {'First image is the main/cover image. Click "Set as main" to change.'}
+              </p>
                   {imageUrls.map((url, i) => (
                     <div key={i} className={`admin-image-list-item ${i === 0 ? 'admin-image-list-item--main' : ''}`}>
                       {i === 0 && <span className="admin-image-main-badge">Main</span>}
@@ -736,7 +738,7 @@ export default function AdminPlaces() {
         <div className="admin-confirm-backdrop" onClick={(e) => e.target === e.currentTarget && setDeleteTarget(null)}>
           <div className="admin-confirm" onClick={(e) => e.stopPropagation()}>
             <h3>Delete place?</h3>
-            <p>This will permanently delete &quot;{deleteTarget.name}&quot;. This cannot be undone.</p>
+            <p>{`This will permanently delete "${deleteTarget.name}". This cannot be undone.`}</p>
             <div className="admin-confirm-actions">
               <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
               <button type="button" className="admin-btn admin-btn--danger" onClick={handleDelete}>Delete</button>

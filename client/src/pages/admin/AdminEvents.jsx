@@ -370,7 +370,7 @@ export default function AdminEvents() {
         <div className="admin-confirm-backdrop" onClick={(e) => e.target === e.currentTarget && setDeleteTarget(null)}>
           <div className="admin-confirm" onClick={(e) => e.stopPropagation()}>
             <h3>Delete event?</h3>
-            <p>This will permanently delete &quot;{deleteTarget.name}&quot;. This cannot be undone.</p>
+            <p>{`This will permanently delete "${deleteTarget.name}". This cannot be undone.`}</p>
             <div className="admin-confirm-actions">
               <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
               <button type="button" className="admin-btn admin-btn--danger" onClick={handleDelete}>Delete</button>
