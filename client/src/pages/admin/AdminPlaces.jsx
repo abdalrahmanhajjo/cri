@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { api, getImageUrl, fixImageUrlExtension, getImageUrlAlternate } from '../../api/client';
+import { ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
 import MapPicker from '../../components/MapPicker';
 import './Admin.css';
 
@@ -535,7 +536,7 @@ function PlaceFormModal({ place, onClose, onSaved }) {
               >
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  accept={ACCEPT_IMAGES_WITH_HEIC}
                   multiple
                   style={{ display: 'none' }}
                   id="place-image-upload"

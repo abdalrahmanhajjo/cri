@@ -6,6 +6,7 @@ import { isCommunityFeedVideo } from './CommunityFeed';
 import { useLanguage } from '../context/LanguageContext';
 import { formatFeedTime } from '../utils/feedTime';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../utils/feedPostImages';
+import { isLikelyImageFile, ACCEPT_IMAGES_WITH_HEIC } from '../utils/imageUploadAccept';
 import { COMMUNITY_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
 
 function mediaUrl(url) {
@@ -645,7 +646,7 @@ export default function FeedPostCard({
       setFeedActionMsg('This post is not linked to a place. Upload from Business dashboard.');
       return;
     }
-    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    const list = Array.from(files).filter(isLikelyImageFile);
     if (!list.length) return;
     setOwnerEditUploading('image');
     try {
@@ -1609,7 +1610,7 @@ export default function FeedPostCard({
                 <input
                   id={`owner-edit-images-${post.id}`}
                   type="file"
-                  accept="image/*"
+                  accept={ACCEPT_IMAGES_WITH_HEIC}
                   multiple={contentKind(post.type) !== 'reel'}
                   style={{ display: 'none' }}
                   disabled={ownerSaving || ownerEditUploading !== null}

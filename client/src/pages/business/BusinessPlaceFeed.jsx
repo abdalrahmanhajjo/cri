@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
+import { isLikelyImageFile, ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
 import './Business.css';
 
 const BASE_TITLE = 'Business — Visit Tripoli';
@@ -307,7 +308,7 @@ export default function BusinessPlaceFeed() {
 
   const uploadFormImages = async (files) => {
     if (!formPlace || !files?.length) return;
-    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    const list = Array.from(files).filter(isLikelyImageFile);
     if (!list.length) {
       setError('Choose image files only.');
       return;
@@ -351,7 +352,7 @@ export default function BusinessPlaceFeed() {
 
   const uploadEditImages = async (files) => {
     if (!editing?.id || !files?.length) return;
-    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    const list = Array.from(files).filter(isLikelyImageFile);
     if (!list.length) {
       setError('Choose image files only.');
       return;
@@ -570,7 +571,7 @@ export default function BusinessPlaceFeed() {
                     <input
                       id="bf-file-images"
                       type="file"
-                      accept="image/*"
+                      accept={ACCEPT_IMAGES_WITH_HEIC}
                       multiple
                       style={{ display: 'none' }}
                       onChange={(e) => {
@@ -668,7 +669,7 @@ export default function BusinessPlaceFeed() {
                       <input
                         id="bf-file-cover"
                         type="file"
-                        accept="image/*"
+                        accept={ACCEPT_IMAGES_WITH_HEIC}
                         style={{ display: 'none' }}
                         onChange={(e) => {
                           void uploadFormImages(Array.from(e.target.files || []).slice(0, 1));
@@ -1196,7 +1197,7 @@ export default function BusinessPlaceFeed() {
                     <input
                       id="bf-e-img-file"
                       type="file"
-                      accept="image/*"
+                      accept={ACCEPT_IMAGES_WITH_HEIC}
                       multiple={contentKind(editing.type) !== 'reel'}
                       style={{ display: 'none' }}
                       disabled={editUploading !== null}
