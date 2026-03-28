@@ -1,9 +1,9 @@
 import { 
   useCreateAdminInterestMutation, 
   useUpdateAdminInterestMutation, 
-  useDeleteAdminInterestMutation 
+  useDeleteAdminInterestMutation,
+  useAdminInterests
 } from '../../hooks/useAdmin';
-import { useInterests } from '../../hooks/useInterests';
 import './Admin.css';
 
 function InterestModal({ interest, onClose, onSaved }) {
@@ -129,18 +129,20 @@ function InterestModal({ interest, onClose, onSaved }) {
 
 export default function AdminInterests() {
   const [search, setSearch] = useState('');
+  const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const { data: interestsData, isLoading: loading, error } = useInterests();
+  const { data: interestsRes, isLoading: loading, error } = useAdminInterests();
+  const data = interestsRes?.interests || interestsRes?.featured || [];
   const deleteMutation = useDeleteAdminInterestMutation();
 
   const filtered = useMemo(() => {
-    const list = interestsData || [];
+    const list = data || [];
     if (!search.trim()) return list;
     const q = search.trim().toLowerCase();
     return list.filter((c) => (c.name && c.name.toLowerCase().includes(q)) || (c.id && c.id.toLowerCase().includes(q)));
-  }, [interestsData, search]);
+  }, [data, search]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;

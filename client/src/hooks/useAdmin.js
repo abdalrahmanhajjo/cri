@@ -412,3 +412,47 @@ export function useAdminUserTrips(params = {}) {
     queryFn: () => api.admin.allTrips.list(params),
   });
 }
+
+export function useAdminInterests(params = {}) {
+  return useQuery({
+    queryKey: ['admin', 'interests', params],
+    queryFn: () => api.admin.interests.list(params),
+  });
+}
+
+export function useCreateAdminInterestMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body) => api.admin.interests.create(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'interests'] });
+    },
+  });
+}
+
+export function useUpdateAdminInterestMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }) => api.admin.interests.update(id, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'interests'] });
+    },
+  });
+}
+
+export function useDeleteAdminInterestMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.admin.interests.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'interests'] });
+    },
+  });
+}
+
+export function useAdminCategories(params = {}) {
+  return useQuery({
+    queryKey: ['admin', 'categories', params],
+    queryFn: () => api.admin.categories.list(params),
+  });
+}

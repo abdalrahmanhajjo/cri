@@ -1,9 +1,10 @@
+import { useState, useEffect, useMemo } from 'react';
 import { 
   useCreateAdminCategoryMutation, 
   useUpdateAdminCategoryMutation, 
-  useDeleteAdminCategoryMutation 
+  useDeleteAdminCategoryMutation,
+  useAdminCategories
 } from '../../hooks/useAdmin';
-import { useCategories } from '../../hooks/useCategories';
 import './Admin.css';
 
 function CategoryFormModal({ category, onClose, onSaved }) {
@@ -160,13 +161,14 @@ export default function AdminCategories() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const { data: categoriesData, isLoading: loading, error } = useCategories();
+  const { data: categoriesRes, isLoading: loading, error } = useAdminCategories();
+  const categoriesData = categoriesRes || [];
   const deleteMutation = useDeleteAdminCategoryMutation();
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return categoriesData || [];
+    if (!search.trim()) return categoriesData;
     const q = search.trim().toLowerCase();
-    return (categoriesData || []).filter((c) =>
+    return categoriesData.filter((c) =>
       (c.name && c.name.toLowerCase().includes(q)) ||
       (c.description && c.description.toLowerCase().includes(q))
     );
