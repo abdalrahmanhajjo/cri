@@ -154,7 +154,7 @@ export default function AdminSettings() {
                     <label htmlFor="as-tagline">Tagline</label>
                     <input id="as-tagline" value={form.siteTagline} onChange={(e) => setForm((f) => ({ ...f, siteTagline: e.target.value }))} />
                     <span className="admin-form-hint">
-                      Home hero and footer use translated lines unless you enter a custom tagline here (then that text is shown in all languages).
+                      Tagline is kept for API/mobile compatibility. The web home hero and header/footer brand line use language files in the app build (translation editor overrides do not apply to those lines).
                     </span>
                   </div>
                   <div className="admin-form-group">
