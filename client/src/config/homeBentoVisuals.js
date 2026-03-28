@@ -6,7 +6,8 @@
  * Unsplash (side/mosaic): https://unsplash.com/license
  */
 const U = 'https://images.unsplash.com';
-const q = 'auto=format&fit=crop&w=1800&q=82';
+/** Smaller default width + quality — layout uses srcset on hero; backgrounds still benefit from lighter files */
+const q = 'auto=format&fit=crop&w=1280&q=78';
 const HB = '/home-bento';
 
 export const homeBentoDefaults = {

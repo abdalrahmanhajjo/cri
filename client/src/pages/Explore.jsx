@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
@@ -8,6 +8,7 @@ import Icon from '../components/Icon';
 import { CommunityFeedStrip } from '../components/CommunityFeed';
 import { trackEvent } from '../utils/analytics';
 import { resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
+import { getBentoHeroImgProps, getBentoHeroPreloadHref } from '../utils/bentoHeroImage';
 import { resolveHeroTagline, resolveFooterTagline } from '../config/resolveSiteTagline';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import { getApiOrigin } from '../utils/apiOrigin';
@@ -556,6 +557,27 @@ export default function Explore() {
     meta.setAttribute('content', d);
   }, [settings.metaDescription]);
 
+  const bentoHeroUrl = useMemo(() => resolveHomeBentoVisuals(settings).hero, [settings]);
+
+  useEffect(() => {
+    const href = getBentoHeroPreloadHref(bentoHeroUrl);
+    if (!href) return undefined;
+    const id = 'tripoli-preload-bento-hero';
+    let link = document.getElementById(id);
+    if (!link) {
+      link = document.createElement('link');
+      link.id = id;
+      link.rel = 'preload';
+      link.as = 'image';
+      document.head.appendChild(link);
+    }
+    link.href = href;
+    link.setAttribute('fetchpriority', 'high');
+    return () => {
+      link?.remove();
+    };
+  }, [bentoHeroUrl]);
+
   useEffect(() => {
     let cancelled = false;
     api
@@ -640,11 +662,9 @@ export default function Explore() {
               <div className="vd-bento-card vd-bento-hero-main">
                 <img
                   className="vd-bento-hero-main-photo"
-                  src={bentoV.hero}
                   alt=""
-                  loading="eager"
-                  decoding="async"
                   draggable={false}
+                  {...getBentoHeroImgProps(bentoV.hero)}
                 />
                 <div className="vd-bento-hero-main-scrim" aria-hidden="true" />
                 <div className="vd-bento-hero-main-content">
