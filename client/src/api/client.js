@@ -5,17 +5,14 @@
  * exponential backoff retries for transient network failures, retry for 5xx responses.
  */
 
+import { getApiOrigin } from '../utils/apiOrigin.js';
+
 /**
  * Empty string = same-origin (Vite dev proxy to API). Avoids wrong default port and CORS issues.
  * Set VITE_API_URL (e.g. http://localhost:3000) when calling the API from a different origin.
  */
 function getBaseUrl() {
-  const raw = import.meta.env.VITE_API_URL;
-  if (raw === '' || raw === undefined || raw === null) {
-    if (typeof window !== 'undefined') return '';
-    return 'http://localhost:3000';
-  }
-  return String(raw).replace(/\/$/, '');
+  return getApiOrigin();
 }
 
 /** Fix malformed extension (e.g. xxxjpg -> xxx.jpg) from old upload bug */

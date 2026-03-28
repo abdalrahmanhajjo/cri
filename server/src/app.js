@@ -35,6 +35,7 @@ const adminInterestsRoutes = require('./routes/admin/interests');
 const adminPlaceOwnersRoutes = require('./routes/admin/placeOwners');
 const adminSiteSettingsRoutes = require('./routes/admin/siteSettings');
 const siteSettingsPublicRoutes = require('./routes/siteSettingsPublic');
+const weatherPublicRoutes = require('./routes/weatherPublic');
 const businessRoutes = require('./routes/business');
 const feedPublicRoutes = require('./routes/feed');
 const promotionsPublicRoutes = require('./routes/promotionsPublic');
@@ -88,7 +89,12 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", 'https://maps.googleapis.com'],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          'https://maps.googleapis.com',
+          'https://www.googletagmanager.com',
+        ],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         imgSrc: ["'self'", 'data:', 'https:', 'http:'],
         mediaSrc: ["'self'", 'data:', 'https:', 'http:', 'blob:'],
@@ -96,6 +102,10 @@ app.use(
           "'self'",
           'https://api.groq.com',
           'https://api.open-meteo.com',
+          'https://api.aladhan.com',
+          'https://www.googletagmanager.com',
+          'https://www.google-analytics.com',
+          'https://*.google-analytics.com',
           'https://*.supabase.co',
           'https://*.pooler.supabase.com',
         ],
@@ -214,6 +224,8 @@ app.use(
 );
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+app.use('/api/public/weather', weatherPublicRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/places', placesRoutes);

@@ -9,6 +9,7 @@ import { CommunityFeedStrip } from '../components/CommunityFeed';
 import { trackEvent } from '../utils/analytics';
 import { resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
+import { getApiOrigin } from '../utils/apiOrigin';
 import { WAYS_CONFIG, groupPlacesByWay, countDirectoryCategoriesForWay } from '../utils/findYourWayGrouping';
 import './Explore.css';
 
@@ -66,9 +67,11 @@ function formatDirectoryCount(n, lang) {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(safe);
 }
 
-const TRIPOLI_LAT = 34.4367;
-const TRIPOLI_LON = 35.8497;
-const OPEN_METEO_URL = `https://api.open-meteo.com/v1/forecast?latitude=${TRIPOLI_LAT}&longitude=${TRIPOLI_LON}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min&timezone=Asia/Beirut`;
+function tripoliWeatherApiUrl() {
+  const base = getApiOrigin();
+  const path = '/api/public/weather/tripoli';
+  return base ? `${base}${path}` : path;
+}
 
 function wmoToConditionKey(code) {
   if (code === 0 || code === 1) return 'weatherSunny';
@@ -100,14 +103,26 @@ function WeatherTripoli({
   const [unit, setUnit] = useState('c');
   useEffect(() => {
     let cancelled = false;
-    fetch(OPEN_METEO_URL)
-      .then((res) => res.json())
+    const url = tripoliWeatherApiUrl();
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(res.status === 502 ? 'Weather temporarily unavailable' : `HTTP ${res.status}`);
+        }
+        return res.json();
+      })
       .then((json) => {
         if (!cancelled) setData(json);
       })
-      .catch((err) => { if (!cancelled) setError(String(err?.message ?? err ?? 'Failed to load')); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .catch((err) => {
+        if (!cancelled) setError(String(err?.message ?? err ?? 'Failed to load'));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading || error || !data || !data.current || !data.daily) {
