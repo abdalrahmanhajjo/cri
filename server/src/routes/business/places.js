@@ -4,6 +4,7 @@ const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware, requirePlaceOwnerParam } = require('../../middleware/placeOwner');
 const { parsePlaceId } = require('../../utils/validate');
 const { validateBusinessPlacePut, validateTranslationPut } = require('../../utils/businessPlaceValidation');
+const { normalizeDbText } = require('../../utils/normalizeDbText');
 
 const router = express.Router();
 router.use(authMiddleware, businessPortalMiddleware);
@@ -24,24 +25,25 @@ function safeJson(val, fallback = []) {
 function rowToEditorPlace(row) {
   const images = safeJson(row.images, []);
   const tags = safeJson(row.tags, []);
+  const tagList = Array.isArray(tags) ? tags.map((x) => (typeof x === 'string' ? normalizeDbText(x) : x)) : [];
   return {
     id: row.id,
-    name: row.name || '',
-    description: row.description || '',
-    location: row.location || '',
+    name: normalizeDbText(row.name || ''),
+    description: normalizeDbText(row.description || ''),
+    location: normalizeDbText(row.location || ''),
     latitude: row.latitude ?? null,
     longitude: row.longitude ?? null,
-    searchName: row.search_name || '',
+    searchName: normalizeDbText(row.search_name || ''),
     images: Array.isArray(images) ? images : [],
-    category: row.category || '',
+    category: normalizeDbText(row.category || ''),
     categoryId: row.category_id || '',
-    duration: row.duration || '',
-    price: row.price || '',
-    bestTime: row.best_time || '',
+    duration: normalizeDbText(row.duration || ''),
+    price: normalizeDbText(row.price || ''),
+    bestTime: normalizeDbText(row.best_time || ''),
     rating: row.rating ?? null,
     reviewCount: row.review_count ?? null,
-    hours: row.hours ?? null,
-    tags: Array.isArray(tags) ? tags : [],
+    hours: typeof row.hours === 'string' ? normalizeDbText(row.hours) : row.hours ?? null,
+    tags: tagList,
   };
 }
 
@@ -59,9 +61,9 @@ router.get('/', async (req, res) => {
     res.json({
       places: rows.map((r) => ({
         id: r.id,
-        name: r.name,
-        location: r.location,
-        category: r.category,
+        name: normalizeDbText(r.name || ''),
+        location: normalizeDbText(r.location || ''),
+        category: normalizeDbText(r.category || ''),
         images: safeJson(r.images, []),
         rating: r.rating,
         latitude: r.latitude,

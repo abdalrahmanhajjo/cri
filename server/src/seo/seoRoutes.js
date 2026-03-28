@@ -9,6 +9,7 @@ const {
   loadClientIndexHtml,
   injectSeoIntoIndexHtml,
 } = require('./seoUtils');
+const { normalizeDbText } = require('../utils/normalizeDbText');
 
 const router = express.Router();
 
@@ -298,9 +299,15 @@ function makeSeoResponder({ clientDistPath }) {
           jsonLd = '';
           ogImage = safeUrlJoin(baseUrl, '/tripoli-hero-bg.png');
         } else {
+          const placeName = normalizeDbText(place.name || '');
+          const placeDesc = normalizeDbText(place.description || '');
+          const placeLoc = normalizeDbText(place.location || '');
+          place.name = placeName;
+          place.description = placeDesc;
+          place.location = placeLoc;
           const canonicalId = normalizeSlugSegment(String(place.search_name || place.id));
-          title = `${place.name} | Visit Tripoli`;
-          description = place.description || `Explore ${place.name} in Tripoli, Lebanon.`;
+          title = `${placeName} | Visit Tripoli`;
+          description = placeDesc || `Explore ${placeName} in Tripoli, Lebanon.`;
           canonical = safeUrlJoin(baseUrl, `/place/${encodeURIComponent(canonicalId)}`);
           alternates = buildAlternates(baseUrl, `/place/${encodeURIComponent(canonicalId)}`);
           const img = pickFirstImage(place.images);
@@ -341,9 +348,13 @@ function makeSeoResponder({ clientDistPath }) {
           description = 'This tour could not be found.';
           jsonLd = '';
         } else {
+          const tourName = normalizeDbText(tour.name || '');
+          const tourDesc = normalizeDbText(tour.description || '');
+          tour.name = tourName;
+          tour.description = tourDesc;
           const canonicalId = normalizeSlugSegment(String(tour.id));
-          title = `${tour.name} | Tours in Tripoli`;
-          description = tour.description || `Tour: ${tour.name}`;
+          title = `${tourName} | Tours in Tripoli`;
+          description = tourDesc || `Tour: ${tourName}`;
           canonical = safeUrlJoin(baseUrl, `/tour/${encodeURIComponent(canonicalId)}`);
           alternates = buildAlternates(baseUrl, `/tour/${encodeURIComponent(canonicalId)}`);
           ogImage = resolveOgImage(baseUrl, tour.image) || ogImage;
@@ -385,12 +396,12 @@ function makeSeoResponder({ clientDistPath }) {
         } else {
           const event = {
             id: row.id,
-            name: row.name,
-            description: row.description,
+            name: normalizeDbText(row.name || ''),
+            description: normalizeDbText(row.description || ''),
             startDate: row.start_date instanceof Date ? row.start_date.toISOString() : row.start_date,
             endDate: row.end_date instanceof Date ? row.end_date.toISOString() : row.end_date,
-            location: row.location,
-            status: row.status,
+            location: normalizeDbText(row.location || ''),
+            status: row.status != null ? normalizeDbText(String(row.status)) : row.status,
           };
           title = `${event.name} | Events in Tripoli`;
           description = event.description || `Event: ${event.name}`;

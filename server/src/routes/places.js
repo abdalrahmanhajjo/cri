@@ -13,6 +13,7 @@ const {
 const router = express.Router();
 const { visitorFollowupsFromDb } = require('../utils/inquiryFollowups');
 const { isMessagingBlocked } = require('../utils/messagingBlocks');
+const { normalizeDbText } = require('../utils/normalizeDbText');
 
 const MAX_VISITOR_FOLLOWUPS_PER_INQUIRY = 50;
 
@@ -121,6 +122,14 @@ function safeParseJson(val, fallback = []) {
   try { return JSON.parse(val); } catch { return fallback; }
 }
 
+function normalizeTags(tags) {
+  if (Array.isArray(tags)) {
+    return tags.map((x) => (typeof x === 'string' ? normalizeDbText(x) : x));
+  }
+  if (typeof tags === 'string') return normalizeDbText(tags);
+  return tags;
+}
+
 function rowToPlace(row, baseUrl) {
   let images = safeParseJson(row.images, []);
   images = resolveImageUrls(images, baseUrl);
@@ -135,23 +144,23 @@ function rowToPlace(row, baseUrl) {
       : null;
   const result = {
     id: row.id,
-    name: row.name,
-    description: row.description || '',
-    location: row.location || '',
+    name: normalizeDbText(row.name),
+    description: normalizeDbText(row.description || ''),
+    location: normalizeDbText(row.location || ''),
     latitude: row.latitude ?? null,
     longitude: row.longitude ?? null,
     images,
-    category: row.category || '',
+    category: normalizeDbText(row.category || ''),
     categoryId: row.category_id,
-    duration: row.duration,
-    price: row.price,
-    bestTime: row.best_time,
+    duration: row.duration != null ? normalizeDbText(String(row.duration)) : row.duration,
+    price: row.price != null ? normalizeDbText(String(row.price)) : row.price,
+    bestTime: row.best_time != null ? normalizeDbText(String(row.best_time)) : row.best_time,
     rating: rating != null && Number.isFinite(rating) ? rating : null,
     reviewCount:
       reviewCount != null && Number.isFinite(reviewCount) ? Math.round(reviewCount) : null,
-    hours: row.hours,
-    tags: row.tags,
-    searchName: row.search_name
+    hours: typeof row.hours === 'string' ? normalizeDbText(row.hours) : row.hours,
+    tags: normalizeTags(row.tags),
+    searchName: row.search_name != null ? normalizeDbText(String(row.search_name)) : row.search_name
   };
   if (row.latitude != null && row.longitude != null) result.coordinates = { lat: row.latitude, lng: row.longitude };
   if (images.length === 1) result.image = images[0];
