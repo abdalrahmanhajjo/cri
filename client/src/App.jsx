@@ -6,36 +6,45 @@ import api, { getToken, getStoredUser } from './api/client';
 import Layout from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 import Explore from './pages/Explore';
-import Discover from './pages/Discover';
-import Messages from './pages/Messages';
+import BusinessGateLoader from './pages/business/BusinessGateLoader';
+
 const MapPage = lazy(() => import('./pages/Map'));
-import Trips from './pages/Trips';
-import TripDetail from './pages/TripDetail';
-import Favourites from './pages/Favourites';
-import Profile from './pages/Profile';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import PlaceDetail from './pages/PlaceDetail';
-import TourDetail from './pages/TourDetail';
-import EventDetail from './pages/EventDetail';
-import ForgotPassword from './pages/ForgotPassword';
-import VerifyEmail from './pages/VerifyEmail';
-import ActivitiesHub from './pages/ActivitiesHub';
-import Plan from './pages/Plan';
-import AiPlanner from './pages/AiPlanner';
-import PlaceDiscover from './pages/PlaceDiscover';
-import BacklinkKit from './pages/BacklinkKit';
-import {
-  ThingsToDoTripoli,
-  OldCityGuide,
-  SouksGuide,
-  SweetsGuide,
-  TravelTipsTripoli,
-  AboutTripoli,
-} from './pages/SeoLanding';
 const AdminApp = lazy(() => import('./pages/admin/AdminApp'));
 const BusinessApp = lazy(() => import('./pages/business/BusinessApp'));
-import BusinessGateLoader from './pages/business/BusinessGateLoader';
+
+const Discover = lazy(() => import('./pages/Discover'));
+const PlaceDiscover = lazy(() => import('./pages/PlaceDiscover'));
+const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
+const TourDetail = lazy(() => import('./pages/TourDetail'));
+const EventDetail = lazy(() => import('./pages/EventDetail'));
+const Trips = lazy(() => import('./pages/Trips'));
+const TripDetail = lazy(() => import('./pages/TripDetail'));
+const Favourites = lazy(() => import('./pages/Favourites'));
+const Messages = lazy(() => import('./pages/Messages'));
+const Plan = lazy(() => import('./pages/Plan'));
+const AiPlanner = lazy(() => import('./pages/AiPlanner'));
+const ActivitiesHub = lazy(() => import('./pages/ActivitiesHub'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const BacklinkKit = lazy(() => import('./pages/BacklinkKit'));
+const Profile = lazy(() => import('./pages/Profile'));
+
+const ThingsToDoTripoli = lazy(() =>
+  import('./pages/SeoLanding').then((m) => ({ default: m.ThingsToDoTripoli }))
+);
+const OldCityGuide = lazy(() => import('./pages/SeoLanding').then((m) => ({ default: m.OldCityGuide })));
+const SouksGuide = lazy(() => import('./pages/SeoLanding').then((m) => ({ default: m.SouksGuide })));
+const SweetsGuide = lazy(() => import('./pages/SeoLanding').then((m) => ({ default: m.SweetsGuide })));
+const TravelTipsTripoli = lazy(() =>
+  import('./pages/SeoLanding').then((m) => ({ default: m.TravelTipsTripoli }))
+);
+const AboutTripoli = lazy(() => import('./pages/SeoLanding').then((m) => ({ default: m.AboutTripoli })));
+
+function LazyBoundary({ children, message = 'Loading…' }) {
+  return <Suspense fallback={<BusinessGateLoader message={message} />}>{children}</Suspense>;
+}
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -128,7 +137,6 @@ function AppRoutes() {
           </BusinessRouteWithKey>
         }
       />
-      {/* Admin: login required – no page opens without auth */}
       <Route
         path="/admin/*"
         element={
@@ -139,18 +147,25 @@ function AppRoutes() {
           </AdminRoute>
         }
       />
-      {/* Auth pages */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/verify-email" element={<VerifyEmail />} />
-      {/* Main app with nav */}
+      <Route path="/login" element={<LazyBoundary message="Loading…"><Login /></LazyBoundary>} />
+      <Route path="/register" element={<LazyBoundary message="Loading…"><Register /></LazyBoundary>} />
+      <Route
+        path="/forgot-password"
+        element={<LazyBoundary message="Loading…"><ForgotPassword /></LazyBoundary>}
+      />
+      <Route path="/verify-email" element={<LazyBoundary message="Loading…"><VerifyEmail /></LazyBoundary>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<Explore />} />
-        <Route path="community/place/:placeId" element={<Discover />} />
-        <Route path="community" element={<Discover />} />
+        <Route
+          path="community/place/:placeId"
+          element={<LazyBoundary message="Loading…"><Discover /></LazyBoundary>}
+        />
+        <Route path="community" element={<LazyBoundary message="Loading…"><Discover /></LazyBoundary>} />
         <Route path="discover/place/:placeId" element={<LegacyDiscoverPlaceRedirect />} />
-        <Route path="discover" element={<PlaceDiscover />} />
+        <Route
+          path="discover"
+          element={<LazyBoundary message="Loading…"><PlaceDiscover /></LazyBoundary>}
+        />
         <Route
           path="map"
           element={
@@ -162,29 +177,107 @@ function AppRoutes() {
           }
         />
         <Route path="spots" element={<Navigate to="/discover" replace />} />
-        <Route path="activities" element={<ActivitiesHub />} />
+        <Route
+          path="activities"
+          element={<LazyBoundary message="Loading…"><ActivitiesHub /></LazyBoundary>}
+        />
         <Route path="experiences" element={<Navigate to="/activities" replace />} />
         <Route path="events" element={<Navigate to="/activities?tab=events" replace />} />
-        <Route path="plan/ai" element={<ProtectedRoute><AiPlanner /></ProtectedRoute>} />
-        <Route path="plan" element={<ProtectedRoute><Plan /></ProtectedRoute>} />
+        <Route
+          path="plan/ai"
+          element={
+            <ProtectedRoute>
+              <LazyBoundary message="Loading…"><AiPlanner /></LazyBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="plan"
+          element={
+            <ProtectedRoute>
+              <LazyBoundary message="Loading…"><Plan /></LazyBoundary>
+            </ProtectedRoute>
+          }
+        />
         <Route path="ways" element={<WaysLegacyRedirect />} />
-        <Route path="place/:id" element={<PlaceDetail />} />
-        <Route path="tour/:id" element={<TourDetail />} />
-        <Route path="event/:id" element={<EventDetail />} />
-        {/* SEO landing pages (public) */}
-        <Route path="things-to-do-in-tripoli-lebanon" element={<ThingsToDoTripoli />} />
-        <Route path="tripoli-old-city-guide" element={<OldCityGuide />} />
-        <Route path="tripoli-souks-guide" element={<SouksGuide />} />
-        <Route path="best-sweets-in-tripoli" element={<SweetsGuide />} />
-        <Route path="tripoli-travel-tips" element={<TravelTipsTripoli />} />
-        <Route path="about-tripoli" element={<AboutTripoli />} />
-        <Route path="partner-link-kit" element={<BacklinkKit />} />
-        <Route path="trips/:tripId" element={<ProtectedRoute><TripDetail /></ProtectedRoute>} />
-        <Route path="trips" element={<ProtectedRoute><Trips /></ProtectedRoute>} />
-        <Route path="favourites" element={<ProtectedRoute><Favourites /></ProtectedRoute>} />
-        <Route path="messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-        <Route path="messages/:placeId" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-        <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route
+          path="place/:id"
+          element={<LazyBoundary message="Loading…"><PlaceDetail /></LazyBoundary>}
+        />
+        <Route
+          path="tour/:id"
+          element={<LazyBoundary message="Loading…"><TourDetail /></LazyBoundary>}
+        />
+        <Route
+          path="event/:id"
+          element={<LazyBoundary message="Loading…"><EventDetail /></LazyBoundary>}
+        />
+        <Route
+          path="things-to-do-in-tripoli-lebanon"
+          element={<LazyBoundary message="Loading…"><ThingsToDoTripoli /></LazyBoundary>}
+        />
+        <Route
+          path="tripoli-old-city-guide"
+          element={<LazyBoundary message="Loading…"><OldCityGuide /></LazyBoundary>}
+        />
+        <Route path="tripoli-souks-guide" element={<LazyBoundary message="Loading…"><SouksGuide /></LazyBoundary>} />
+        <Route path="best-sweets-in-tripoli" element={<LazyBoundary message="Loading…"><SweetsGuide /></LazyBoundary>} />
+        <Route
+          path="tripoli-travel-tips"
+          element={<LazyBoundary message="Loading…"><TravelTipsTripoli /></LazyBoundary>}
+        />
+        <Route path="about-tripoli" element={<LazyBoundary message="Loading…"><AboutTripoli /></LazyBoundary>} />
+        <Route path="partner-link-kit" element={<LazyBoundary message="Loading…"><BacklinkKit /></LazyBoundary>} />
+        <Route
+          path="trips/:tripId"
+          element={
+            <ProtectedRoute>
+              <LazyBoundary message="Loading…"><TripDetail /></LazyBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="trips"
+          element={
+            <ProtectedRoute>
+              <LazyBoundary message="Loading…"><Trips /></LazyBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="favourites"
+          element={
+            <ProtectedRoute>
+              <LazyBoundary message="Loading…"><Favourites /></LazyBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="messages"
+          element={
+            <ProtectedRoute>
+              <LazyBoundary message="Loading…"><Messages /></LazyBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="messages/:placeId"
+          element={
+            <ProtectedRoute>
+              <LazyBoundary message="Loading…"><Messages /></LazyBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="profile"
+          element={
+            <ProtectedRoute>
+              <LazyBoundary message="Loading…">
+                <Profile />
+              </LazyBoundary>
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

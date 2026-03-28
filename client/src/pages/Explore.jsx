@@ -318,64 +318,84 @@ function TopPicksCarousel({ places, t }) {
               const heartAria = user
                 ? (isFavourite ? t('home', 'removeFromFavourites') : t('home', 'addToFavourites'))
                 : t('home', 'signInToSave');
+              const placeCardLabel = `${name}. ${t('home', 'readNow')}`;
               return (
-                <Link
-                  key={placeId}
-                  to={`/place/${placeId}`}
-                  className="vd-top-picks-card"
-                >
-                  <div
-                    className="vd-top-picks-card-bg"
-                    style={{ backgroundImage: safeImg ? `url(${safeImg})` : undefined }}
+                <article key={placeId} className="vd-top-picks-card vd-top-picks-card--split-hit">
+                  <Link
+                    to={`/place/${placeId}`}
+                    className="vd-top-picks-card-hit"
+                    style={{ display: 'contents' }}
+                    aria-label={placeCardLabel}
                   >
-                    {!safeImg && <span className="vd-top-picks-fallback">Place</span>}
-                  </div>
-                  <div className="vd-top-picks-card-overlay">
-                    <span className="vd-top-picks-eyebrow">{t('home', 'topPickEyebrow')}</span>
-                    <h3 className="vd-top-picks-name">{name}</h3>
-                    {desc && (
-                      <p className="vd-top-picks-desc">{desc}</p>
-                    )}
-                    <div className="vd-top-picks-details">
-                      {rating != null && (
-                        <span className="vd-top-picks-detail">
-                          <Icon name="star" size={18} /> {rating.toFixed(1)}
-                        </span>
-                      )}
-                      {loc && (
-                        <span className="vd-top-picks-detail">
-                          <Icon name="location_on" size={18} /> {loc}
-                        </span>
-                      )}
-                      {cat && (
-                        <span className="vd-top-picks-detail">{cat}</span>
-                      )}
+                    <div
+                      className="vd-top-picks-card-bg"
+                      style={{ backgroundImage: safeImg ? `url(${safeImg})` : undefined }}
+                    >
+                      {!safeImg && <span className="vd-top-picks-fallback">Place</span>}
                     </div>
-                    <div className="vd-top-picks-cta-row" onClick={(e) => e.preventDefault()}>
-                      <span className="vd-top-picks-read-now">{t('home', 'readNow')} <Icon name="arrow_forward" size={18} /></span>
-                      <button
-                        type="button"
-                        className={`vd-top-picks-action-btn vd-top-picks-action-btn--heart ${isFavourite ? 'vd-top-picks-action-btn--active' : ''}`}
-                        aria-label={heartAria}
-                        onClick={(e) => toggleFavourite(e, p.id)}
-                      >
-                        <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={22} />
-                      </button>
+                    <div className="vd-top-picks-card-overlay">
+                      <span className="vd-top-picks-eyebrow">{t('home', 'topPickEyebrow')}</span>
+                      <h3 className="vd-top-picks-name">{name}</h3>
+                      {desc && (
+                        <p className="vd-top-picks-desc">{desc}</p>
+                      )}
+                      <div className="vd-top-picks-details">
+                        {rating != null && (
+                          <span className="vd-top-picks-detail">
+                            <Icon name="star" size={18} /> {rating.toFixed(1)}
+                          </span>
+                        )}
+                        {loc && (
+                          <span className="vd-top-picks-detail">
+                            <Icon name="location_on" size={18} /> {loc}
+                          </span>
+                        )}
+                        {cat && (
+                          <span className="vd-top-picks-detail">{cat}</span>
+                        )}
+                      </div>
+                      <div className="vd-top-picks-cta-row">
+                        <span className="vd-top-picks-read-now">
+                          {t('home', 'readNow')} <Icon name="arrow_forward" size={18} />
+                        </span>
+                      </div>
                     </div>
-                    <button type="button" className="vd-top-picks-scroll-top" aria-label="Scroll to top" onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}><Icon name="arrow_upward" size={22} /></button>
+                  </Link>
+                  <div className="vd-top-picks-card-floating-actions">
+                    <button
+                      type="button"
+                      className={`vd-top-picks-action-btn vd-top-picks-action-btn--heart ${isFavourite ? 'vd-top-picks-action-btn--active' : ''}`}
+                      aria-label={heartAria}
+                      onClick={(e) => toggleFavourite(e, p.id)}
+                    >
+                      <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={22} />
+                    </button>
+                    <button
+                      type="button"
+                      className="vd-top-picks-scroll-top"
+                      aria-label={t('home', 'scrollToTop')}
+                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    >
+                      <Icon name="arrow_upward" size={22} />
+                    </button>
                   </div>
-                </Link>
+                </article>
               );
             })}
           </div>
-          <div className="vd-top-picks-dots" aria-hidden="true">
+          <div className="vd-top-picks-dots" role="group" aria-label={t('home', 'topPicksCarouselLabel')}>
             {safePlaces.map((_, i) => (
               <button
                 key={i}
                 type="button"
                 className={`vd-top-picks-dot ${i === index ? 'vd-top-picks-dot--active' : ''}`}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIndex(i); }}
-                aria-label={`Go to slide ${i + 1}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIndex(i);
+                }}
+                aria-label={`${t('home', 'topPicks')} — ${i + 1} / ${safePlaces.length}`}
+                aria-current={i === index ? 'true' : undefined}
               />
             ))}
           </div>

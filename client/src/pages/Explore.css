@@ -978,8 +978,7 @@
     color: var(--color-primary-dark);
   }
 
-  /* When hovering the like button, keep read-now without underline */
-  .vd-top-picks-cta-row:has(.vd-top-picks-action-btn--heart:hover) .vd-top-picks-read-now {
+  .vd-top-picks-card--split-hit:has(.vd-top-picks-action-btn--heart:hover) .vd-top-picks-read-now {
     text-decoration: none !important;
   }
 
@@ -1070,6 +1069,47 @@
 
   .vd-top-picks-scroll-top {
     display: flex !important;
+  }
+}
+
+/* Top picks: link uses display:contents — buttons stay outside <a> (a11y) */
+.vd-top-picks-card-hit {
+  display: contents;
+}
+
+.vd-top-picks-card--split-hit:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+
+.vd-top-picks-card-floating-actions {
+  display: none !important;
+}
+
+@media (min-width: 1024px) {
+  .vd-top-picks-card--split-hit .vd-top-picks-card-floating-actions {
+    display: flex !important;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+    justify-self: end;
+    z-index: 4;
+    margin: 0 40px 100px 0;
+    pointer-events: none;
+  }
+
+  .vd-top-picks-card--split-hit .vd-top-picks-card-floating-actions > * {
+    pointer-events: auto;
+  }
+
+  .vd-top-picks-card--split-hit .vd-top-picks-card-floating-actions .vd-top-picks-scroll-top {
+    position: static;
+    bottom: auto;
+    right: auto;
   }
 }
 
