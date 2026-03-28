@@ -865,7 +865,9 @@
 }
 
 .seo-landing__dbMedia {
+  position: relative;
   display: block;
+  overflow: hidden;
   height: 112px;
   background: linear-gradient(135deg, #e4ecff, #dcf5ef);
   background-size: cover;

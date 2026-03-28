@@ -690,11 +690,17 @@
   background-size: cover;
   background-position: center;
   background-color: var(--color-surface-variant);
+  overflow: hidden;
+}
+
+.vd-top-picks-card-bg .delivery-img-cover {
+  z-index: 0;
 }
 
 .vd-top-picks-fallback {
   position: absolute;
   inset: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4122,6 +4128,8 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 }
 
 .vd-card-fallback {
+  position: relative;
+  z-index: 1;
   font-size: 14px;
   color: var(--color-text-tertiary);
 }
@@ -4129,6 +4137,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 .vd-card-overlay {
   position: absolute;
   inset: auto 0 0 0;
+  z-index: 1;
   padding: 18px 16px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.2) 50%, transparent 100%);
   color: #fff;
@@ -4180,6 +4189,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   position: absolute;
   bottom: 12px;
   left: 12px;
+  z-index: 2;
   padding: 6px 10px;
   background: rgba(0, 0, 0, 0.7);
   color: #fff;

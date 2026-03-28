@@ -1049,6 +1049,8 @@
 }
 
 .ig-proposal-pick-thumb {
+  position: relative;
+  overflow: hidden;
   aspect-ratio: 1;
   width: 100%;
   background-size: cover;

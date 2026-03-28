@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
 import { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import './Explore.css';
 import './Spots.css';
@@ -16,7 +17,8 @@ function SpotCard({ place, viewMode, onMapClick, viewDetailsLabel }) {
 
   return (
     <Link to={`/place/${place.id}`} className={`spots-card spots-card--${viewMode}`}>
-      <div className="spots-card-media" style={{ backgroundImage: img ? `url(${img})` : undefined }}>
+      <div className="spots-card-media">
+        {img ? <DeliveryImg url={img} preset="gridCard" alt="" /> : null}
         {!img && <span className="spots-card-fallback"><Icon name="place" size={32} /></span>}
         <div className="spots-card-overlay" />
         {rating && (
@@ -213,11 +215,20 @@ export default function Spots() {
             </h2>
             <div className="spots-featured-carousel" ref={featuredRef}>
               <div className="spots-featured-track" style={{ transform: `translateX(-${featuredIndex * 100}%)` }}>
-                {featuredPlaces.map((p) => {
+                {featuredPlaces.map((p, fi) => {
                   const img = getPlaceImageUrl(p.image || (p.images && p.images[0]));
                   return (
                     <Link key={p.id} to={`/place/${p.id}`} className="spots-featured-card">
-                      <div className="spots-featured-media" style={{ backgroundImage: img ? `url(${img})` : undefined }}>
+                      <div className="spots-featured-media">
+                        {img ? (
+                          <DeliveryImg
+                            url={img}
+                            preset="topPicks"
+                            alt=""
+                            loading={fi === 0 ? 'eager' : 'lazy'}
+                            fetchPriority={fi === 0 ? 'high' : undefined}
+                          />
+                        ) : null}
                         {!img && <span className="spots-featured-fallback">Place</span>}
                         <div className="spots-featured-overlay" />
                         <div className="spots-featured-content">

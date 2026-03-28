@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
+import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import GlobalSearchBar from '../components/GlobalSearchBar';
@@ -193,7 +194,7 @@ function getPlaceDetails(placeId, apiKey) {
 }
 
 /** Build Google Place Photo URL */
-function placePhotoUrl(photoReference, apiKey, maxWidth = 400) {
+function placePhotoUrl(photoReference, apiKey, maxWidth = 320) {
   if (!photoReference || !apiKey) return '';
   return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${encodeURIComponent(photoReference)}&key=${encodeURIComponent(apiKey)}`;
 }
@@ -1648,13 +1649,21 @@ function buildInfoContent(p, apiKey = '', strings = {}) {
     (Array.isArray(p.images) && p.images[0]) ||
     '';
   const img = rawImg ? (getPlaceImageUrl(rawImg) || rawImg) : '';
+  let imgHtml = '';
+  if (img) {
+    const { src, srcSet, sizes } = getDeliveryImgProps(img, 'similarStrip');
+    const srcEsc = escapeHtml(src);
+    const setEsc = srcSet ? escapeHtml(srcSet) : '';
+    const szEsc = sizes ? escapeHtml(sizes) : '';
+    imgHtml = `<img src="${srcEsc}"${setEsc ? ` srcset="${setEsc}"` : ''}${szEsc ? ` sizes="${szEsc}"` : ''} alt="" loading="lazy" decoding="async" width="280" height="100" style="width:100%;height:100px;object-fit:cover;border-radius:8px 8px 0 0;margin:-8px -8px 8px -8px;" />`;
+  }
   const dirLink =
     placeId != null && String(placeId) !== ''
       ? `<a href="#" class="map-info-directions" data-place-id="${escapeHtml(String(placeId))}" data-trip-name="${encodeURIComponent(name)}" style="display:inline-block;color:#1a73e8;font-weight:600;text-decoration:none;cursor:pointer;">${escapeHtml(s.directions)}</a>`
       : '';
   return `
     <div class="gm-info-content" style="padding:0;min-width:220px;max-width:280px;font-size:14px;">
-      ${img ? `<img src="${escapeHtml(img)}" alt="" style="width:100%;height:100px;object-fit:cover;border-radius:8px 8px 0 0;margin:-8px -8px 8px -8px;" />` : ''}
+      ${imgHtml}
       <strong style="display:block;margin-bottom:4px;font-size:15px;">${escapeHtml(name)}</strong>
       ${address ? `<p style="margin:0 0 6px 0;color:#5f6368;font-size:13px;">${escapeHtml(address)}</p>` : ''}
       ${rating != null ? `<p style="margin:0 0 4px 0;font-size:13px;">★ ${Number(rating).toFixed(1)}${reviews != null ? ` (${reviews} reviews)` : ''}</p>` : ''}

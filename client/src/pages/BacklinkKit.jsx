@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import api, { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import './BacklinkKit.css';
 
@@ -130,12 +131,11 @@ export default function BacklinkKit() {
             <div className="backlink-kit__dbGrid">
               {dbBacklinks.map((item) => (
                 <article key={item.id} className="backlink-kit__dbCard">
-                  <div
-                    className="backlink-kit__dbImage"
-                    style={item.image ? { backgroundImage: `url(${item.image})` } : undefined}
-                    role="img"
-                    aria-label={item.name}
-                  />
+                  <div className="backlink-kit__dbImage" role="img" aria-label={item.name}>
+                    {item.image ? (
+                      <DeliveryImg url={item.image} preset="backlinkDb" alt="" />
+                    ) : null}
+                  </div>
                   <div className="backlink-kit__dbBody">
                     <h3>{item.name}</h3>
                     <p>{item.location}</p>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api, { getPlaceImageUrl, API_ERROR_NETWORK } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
@@ -298,11 +299,12 @@ function DiscoverProposalPanel({ places, t, user }) {
                   className={`ig-proposal-pick-cell ${sel ? 'ig-proposal-pick-cell--selected' : ''}`}
                   onClick={() => setSelectedId(pid)}
                 >
-                  <div
-                    className="ig-proposal-pick-thumb"
-                    style={{ backgroundImage: img ? `url(${img})` : undefined }}
-                  >
-                    {!img && <Icon name="location_city" size={28} className="ig-proposal-pick-fallback" aria-hidden="true" />}
+                  <div className="ig-proposal-pick-thumb">
+                    {img ? (
+                      <DeliveryImg url={img} preset="thumb" alt="" />
+                    ) : (
+                      <Icon name="location_city" size={28} className="ig-proposal-pick-fallback" aria-hidden="true" />
+                    )}
                   </div>
                   <span className="ig-proposal-pick-name" title={place.name}>
                     {place.name}

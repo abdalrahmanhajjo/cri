@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import './Explore.css';
@@ -11,8 +12,8 @@ function TourCard({ tour }) {
   const img = getPlaceImageUrl(tour.image) || null;
   return (
     <Link to={`/tour/${tour.id}`} className="vd-card vd-card--tour activities-hub-card">
-      <div className="vd-card-media" style={{ backgroundImage: img ? `url(${img})` : undefined }}>
-        {!img && <span className="vd-card-fallback">Tour</span>}
+      <div className="vd-card-media">
+        {img ? <DeliveryImg url={img} preset="gridCard" alt="" /> : <span className="vd-card-fallback">Tour</span>}
         {tour.duration && <span className="vd-card-badge">{tour.duration}</span>}
       </div>
       <div className="vd-card-content">
@@ -40,8 +41,8 @@ function EventCard({ event }) {
 
   return (
     <Link to={`/event/${event.id}`} className="vd-card vd-card--event events-card activities-hub-card">
-      <div className="vd-card-media" style={{ backgroundImage: img ? `url(${img})` : undefined }}>
-        {!img && <span className="vd-card-fallback">Event</span>}
+      <div className="vd-card-media">
+        {img ? <DeliveryImg url={img} preset="gridCard" alt="" /> : <span className="vd-card-fallback">Event</span>}
         {date && <span className="vd-card-badge vd-card-date">{date}</span>}
         {status && <span className="events-status-pill">{status}</span>}
       </div>

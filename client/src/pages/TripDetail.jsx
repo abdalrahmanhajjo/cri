@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import Icon from '../components/Icon';
 import { useLanguage } from '../context/LanguageContext';
 import {
@@ -259,10 +260,8 @@ export default function TripDetail() {
                       return (
                         <li key={`${pid}-${si}`} className="trip-detail-stop">
                           <Link to={`/place/${encodeURIComponent(pid)}`} className="trip-detail-stop-link">
-                            <div
-                              className="trip-detail-stop-media"
-                              style={img ? { backgroundImage: `url(${img})` } : undefined}
-                            >
+                            <div className="trip-detail-stop-media">
+                              {img ? <DeliveryImg url={img} preset="tripStop" alt="" /> : null}
                               {!img && <Icon name="place" size={28} aria-hidden />}
                             </div>
                             <div className="trip-detail-stop-body">

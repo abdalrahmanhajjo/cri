@@ -4,6 +4,7 @@ import api from '../api/client';
 import Icon from '../components/Icon';
 import OfferCard from '../components/OfferCard';
 import { getPlaceImageUrl } from '../api/client';
+import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
@@ -497,7 +498,6 @@ export default function PlaceDetail() {
   }
 
   const heroUrl = galleryUrls[galleryIndex] || null;
-  const heroStyle = heroUrl ? { backgroundImage: `url(${heroUrl})` } : {};
   const hasMultiGallery = galleryUrls.length > 1;
 
   const hours = place.hours;
@@ -519,7 +519,18 @@ export default function PlaceDetail() {
         </Link>
 
         <article className="place-detail-article">
-          <header className={`place-detail-hero ${hasMultiGallery ? 'place-detail-hero--gallery' : ''}`} style={heroUrl ? heroStyle : undefined}>
+          <header className={`place-detail-hero ${hasMultiGallery ? 'place-detail-hero--gallery' : ''}`}>
+            {heroUrl && (
+              <img
+                key={heroUrl}
+                className="place-detail-hero__img"
+                alt=""
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+                {...getDeliveryImgProps(heroUrl, 'detailHero')}
+              />
+            )}
             {!heroUrl && (
               <div className="place-detail-hero-fallback">
                 <Icon name="place" size={48} />
@@ -579,7 +590,7 @@ export default function PlaceDetail() {
                       className={`place-detail-hero-thumb ${i === galleryIndex ? 'place-detail-hero-thumb--on' : ''}`}
                       onClick={() => setGalleryIndex(i)}
                     >
-                      <img src={url} alt="" loading="lazy" decoding="async" />
+                      <img alt="" loading="lazy" decoding="async" {...getDeliveryImgProps(url, 'thumb')} />
                     </button>
                   ))}
                 </div>
