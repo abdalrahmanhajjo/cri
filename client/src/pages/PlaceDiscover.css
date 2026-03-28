@@ -69,6 +69,7 @@
   font-weight: 400;
   letter-spacing: -0.035em;
   line-height: 1.1;
+  min-height: calc(1.1em * 2);
   color: var(--pd-forest);
   max-width: 20ch;
   text-wrap: balance;
@@ -199,6 +200,7 @@
   background: #fff;
   border: 1px solid var(--pd-divider);
   box-shadow: 0 4px 24px rgba(11, 61, 54, 0.06), 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  contain: layout style;
 }
 
 .pd-filter-block {
@@ -479,8 +481,8 @@
   gap: 8px;
   align-items: center;
   align-content: flex-start;
-  /* Reserve ~2 pill rows so webfont swap is less likely to reflow the whole toolbar (CLS). */
-  min-height: calc(44px * 2 + 8px);
+  /* Reserve ~3 pill rows — many categories + font swap were still shifting layout (CLS). */
+  min-height: calc(44px * 3 + 16px);
 }
 
 .pd-cat-pill {
@@ -612,6 +614,8 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  min-height: 48px;
+  contain: layout;
 }
 
 .pd-toolbar-left,
