@@ -29,9 +29,47 @@ function multerFileAllowed(file) {
   return false;
 }
 
+function toJpegBuffer(buf) {
+  if (Buffer.isBuffer(buf)) return buf;
+  if (buf instanceof Uint8Array) return Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength);
+  return Buffer.from(buf);
+}
+
+async function heicBufferToJpeg(buffer) {
+  let sharpErr;
+  try {
+    const sharp = require('sharp');
+    const out = await sharp(buffer, { failOn: 'none', sequentialRead: true })
+      .rotate()
+      .jpeg({ quality: 88, mozjpeg: true })
+      .toBuffer();
+    return out;
+  } catch (e) {
+    sharpErr = e;
+  }
+
+  try {
+    const convert = require('heic-convert');
+    const out = await convert({
+      buffer,
+      format: 'JPEG',
+      quality: 0.88,
+    });
+    return toJpegBuffer(out);
+  } catch (e) {
+    console.error('[imageUpload] HEIC→JPEG failed (sharp):', sharpErr?.message || sharpErr);
+    console.error('[imageUpload] HEIC→JPEG failed (heic-convert):', e?.message || e);
+    const err = new Error(
+      'Could not convert HEIC/HEIF to JPEG. Export the photo as JPEG from your device, or try PNG.'
+    );
+    err.code = 'HEIC_CONVERT_FAILED';
+    err.status = 422;
+    throw err;
+  }
+}
+
 /**
- * HEIC/HEIF → JPEG when sharp/libvips supports it (typical on Linux/macOS Windows prebuilds).
- * On failure, returns original buffer so upload still succeeds (some clients may not display .heic URLs).
+ * HEIC/HEIF is always converted to JPEG before storage. Other image types pass through unchanged.
  */
 async function prepareUploadedImage(buffer, mimetype, originalname) {
   const ext = path.extname(originalname || '').toLowerCase();
@@ -46,32 +84,20 @@ async function prepareUploadedImage(buffer, mimetype, originalname) {
     return { buffer, contentType: mimetype, useExtension: null };
   }
 
-  try {
-    const sharp = require('sharp');
-    const out = await sharp(buffer, { failOn: 'none' }).rotate().jpeg({ quality: 88, mozjpeg: true }).toBuffer();
-    return { buffer: out, contentType: 'image/jpeg', useExtension: '.jpg' };
-  } catch (e) {
-    console.warn('[imageUpload] HEIC→JPEG conversion failed, storing original:', e.message);
-    return {
-      buffer,
-      contentType: /^image\//i.test(mimetype || '') ? mimetype : 'image/heic',
-      useExtension: ext === '.heif' ? '.heif' : '.heic',
-    };
-  }
+  const out = await heicBufferToJpeg(buffer);
+  return { buffer: out, contentType: 'image/jpeg', useExtension: '.jpg' };
 }
 
 function pickImageExtension(contentType, rawOriginalName, useExtension) {
   if (useExtension) return useExtension;
   const rawExt = path.extname(rawOriginalName || '') || '';
   const ext = (rawExt.startsWith('.') ? rawExt : rawExt ? `.${rawExt}` : '').toLowerCase();
-  if (/^\.(jpe?g|png|gif|webp|heic|heif)$/i.test(ext)) return ext;
+  if (/^\.(jpe?g|png|gif|webp)$/i.test(ext)) return ext;
   const ct = (contentType || '').toLowerCase();
   if (ct.includes('jpeg') || ct.includes('jpg')) return '.jpg';
   if (ct.includes('png')) return '.png';
   if (ct.includes('gif')) return '.gif';
   if (ct.includes('webp')) return '.webp';
-  if (ct.includes('heif')) return '.heif';
-  if (ct.includes('heic')) return '.heic';
   return '.jpg';
 }
 
