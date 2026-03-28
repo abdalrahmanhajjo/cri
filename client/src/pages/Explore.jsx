@@ -8,6 +8,7 @@ import Icon from '../components/Icon';
 import { CommunityFeedStrip } from '../components/CommunityFeed';
 import { trackEvent } from '../utils/analytics';
 import { resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
+import { resolveHeroTagline, resolveFooterTagline } from '../config/resolveSiteTagline';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import { getApiOrigin } from '../utils/apiOrigin';
 import { WAYS_CONFIG, groupPlacesByWay, countDirectoryCategoriesForWay } from '../utils/findYourWayGrouping';
@@ -571,7 +572,7 @@ export default function Explore() {
   }, []);
 
   const heroTitle = settings.siteName?.trim() || t('home', 'heroTitle');
-  const heroTagline = settings.siteTagline?.trim() || t('home', 'heroTagline');
+  const heroTagline = resolveHeroTagline(settings, t);
   const appStoreHref = settings.appStoreUrl?.trim() || 'https://apps.apple.com';
   const playStoreHref = settings.playStoreUrl?.trim() || 'https://play.google.com';
   const showMap = settings.showMap !== false;
@@ -937,7 +938,7 @@ export default function Explore() {
         <div className="vd-container vd-footer-inner">
           <div className="vd-footer-brand">
             <Link to="/" className="vd-footer-logo">{settings.siteName?.trim() || t('nav', 'visitTripoli')}</Link>
-            <span className="vd-footer-tagline">{settings.siteTagline?.trim() || t('nav', 'tripoliLebanon')}</span>
+            <span className="vd-footer-tagline">{resolveFooterTagline(settings, t)}</span>
           </div>
           {(settings.contactEmail || settings.contactPhone) && (
             <p className="vd-footer-contact-line">
