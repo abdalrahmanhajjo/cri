@@ -2,6 +2,8 @@ const express = require('express');
 const { query } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 
+const { cachePublicList } = require('../middleware/publicCache');
+
 const router = express.Router();
 
 function rowToInterest(row) {
@@ -24,7 +26,7 @@ function rowToInterest(row) {
 }
 
 /** GET /api/interests — same data the mobile app can consume */
-router.get('/', async (req, res) => {
+router.get('/', cachePublicList(120, 600), async (req, res) => {
   try {
     const lang = getRequestLang(req);
     const result = await query(

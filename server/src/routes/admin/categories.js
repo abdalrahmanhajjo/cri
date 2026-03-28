@@ -2,6 +2,7 @@ const express = require('express');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
+const { validateCategoryCreate } = require('../../utils/validateAdminCategory');
 
 const router = express.Router();
 
@@ -19,8 +20,11 @@ function safeJson(val, fallback = []) {
 router.post('/', async (req, res) => {
   try {
     const body = req.body || {};
-    const id = (body.id || '').toString().trim() || (body.name || 'cat').toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '');
-    if (!id) return res.status(400).json({ error: 'Invalid id' });
+    const parsed = validateCategoryCreate(body);
+    if (!parsed.ok) {
+      return res.status(400).json({ error: 'Validation failed', details: parsed.errors });
+    }
+    const { id, name, icon, description, color, count } = parsed.value;
 
     const tags = safeJson(body.tags, []);
     const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
@@ -31,15 +35,7 @@ router.post('/', async (req, res) => {
        ON CONFLICT (id) DO UPDATE SET
          name = EXCLUDED.name, icon = EXCLUDED.icon, description = EXCLUDED.description,
          tags = EXCLUDED.tags, count = EXCLUDED.count, color = EXCLUDED.color`,
-      [
-        id,
-        (body.name || '').toString(),
-        (body.icon || 'fas fa-folder').toString(),
-        (body.description || '').toString(),
-        tagsJson,
-        body.count != null ? parseInt(body.count, 10) : 0,
-        (body.color || '#666666').toString(),
-      ]
+      [id, name, icon, description, tagsJson, count, color]
     );
     res.status(201).json({ id, message: 'Category saved' });
   } catch (err) {

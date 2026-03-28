@@ -474,6 +474,7 @@ export default function Explore() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [communityPosts, setCommunityPosts] = useState([]);
+  const [loadNonce, setLoadNonce] = useState(0);
 
   useEffect(() => {
     const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
@@ -511,7 +512,7 @@ export default function Explore() {
     return () => {
       cancelled = true;
     };
-  }, [lang]);
+  }, [lang, loadNonce]);
 
   useEffect(() => {
     if (loading || error) return;
@@ -580,7 +581,25 @@ export default function Explore() {
         <section className="vd-hero">
           <h1 className="vd-hero-title">{heroTitle}</h1>
         </section>
-        <div className="vd-error">{error}</div>
+        <div className="vd-error vd-error-panel" role="alert">
+          <h2 className="vd-error-panel-title">{t('home', 'loadErrorTitle')}</h2>
+          <p className="vd-error-panel-hint">{t('home', 'loadErrorHint')}</p>
+          <p className="vd-error-panel-detail" style={{ textAlign: 'center' }}>
+            {error}
+          </p>
+          <div className="vd-error-actions">
+            <button
+              type="button"
+              className="vd-btn vd-btn--primary"
+              onClick={() => setLoadNonce((n) => n + 1)}
+            >
+              {t('home', 'loadErrorRetry')}
+            </button>
+            <Link to={PLACES_DISCOVER_PATH} className="vd-btn vd-btn--outline">
+              {t('home', 'loadErrorBrowse')}
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

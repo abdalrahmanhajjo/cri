@@ -13,6 +13,20 @@ export default defineConfig(({ mode }) => {
     resolve: {
       dedupe: ['react', 'react-dom'],
     },
+    build: {
+      // Main chunk still >500k (full i18n in one module); admin/business are lazy. Tune if you split locales.
+      chunkSizeWarningLimit: 1024,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+            if (id.includes('react-router')) return 'react-router';
+            if (id.includes('react-dom')) return 'react-dom';
+            if (id.includes('/react/') || id.includes('\\react\\')) return 'react';
+          },
+        },
+      },
+    },
     server: {
       proxy: {
         '/api': { target: apiTarget, changeOrigin: true },

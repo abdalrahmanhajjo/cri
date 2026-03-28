@@ -2,6 +2,7 @@ const express = require('express');
 const { query } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 const { sendDbAwareError } = require('../utils/dbHttpError');
+const { cachePublicList } = require('../middleware/publicCache');
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ function rowToCategory(row) {
   };
 }
 
-router.get('/', async (req, res) => {
+router.get('/', cachePublicList(120, 600), async (req, res) => {
   try {
     const lang = getRequestLang(req);
     const result = await query(
