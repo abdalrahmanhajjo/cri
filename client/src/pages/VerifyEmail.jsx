@@ -55,7 +55,7 @@ export default function VerifyEmail() {
           <h2 className="auth-title">Verify email</h2>
           <p className="auth-verify-lead">
             Use the same 6-digit code from your email or the Tripoli app. You can open this screen anytime from{' '}
-            <strong>Log in</strong> (button &quot;Enter 6-digit verification code&quot;) or by going to{' '}
+            <strong>Log in</strong> (button “Enter 6-digit verification code”) or by going to{' '}
             <code className="auth-code-inline">/verify-email</code> on this website.
           </p>
           <form onSubmit={handleSubmit} className="auth-form" noValidate>

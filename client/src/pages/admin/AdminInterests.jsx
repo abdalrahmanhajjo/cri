@@ -213,7 +213,7 @@ export default function AdminInterests() {
         <div className="admin-confirm-backdrop" onClick={(e) => e.target === e.currentTarget && setDeleteTarget(null)}>
           <div className="admin-confirm" onClick={(e) => e.stopPropagation()}>
             <h3>Delete interest?</h3>
-            <p>Delete &quot;{deleteTarget.name}&quot;?</p>
+            <p>{`Delete "${deleteTarget.name}"?`}</p>
             <div className="admin-confirm-actions">
               <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
               <button type="button" className="admin-btn admin-btn--danger" onClick={handleDelete}>Delete</button>

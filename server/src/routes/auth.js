@@ -12,94 +12,20 @@ const {
   VERIFICATION_LINK_EXPIRY_MINUTES,
   isSmtpConfigured,
 } = require('../services/emailService');
+const {
+  checkLoginRateLimit,
+  recordFailedLoginAttempt,
+  checkForgotRateLimit,
+  recordForgotPasswordAttempt,
+  checkResetRateLimit,
+  recordResetPasswordAttempt,
+  clearResetPasswordAttempts,
+  canSendVerificationEmailNow,
+  markVerificationEmailSent,
+} = require('../utils/authAbuseTracking');
 
 const router = express.Router();
-const loginAttempts = new Map();
-const forgotAttempts = new Map();
-const resetAttempts = new Map();
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000;
-const MAX_ATTEMPTS = 5;
-const FORGOT_MAX_ATTEMPTS = 3;
-const RESET_MAX_ATTEMPTS = 12;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-dev-only';
-
-function checkRateLimit(ip) {
-  const now = Date.now();
-  const entry = loginAttempts.get(ip);
-  if (!entry) return { ok: true };
-  if (now - entry.firstAttempt > RATE_LIMIT_WINDOW) {
-    loginAttempts.delete(ip);
-    return { ok: true };
-  }
-  if (entry.count >= MAX_ATTEMPTS) return { ok: false, retryAfter: Math.ceil((entry.firstAttempt + RATE_LIMIT_WINDOW - now) / 1000) };
-  return { ok: true };
-}
-
-function recordFailedAttempt(ip) {
-  const now = Date.now();
-  const entry = loginAttempts.get(ip);
-  if (!entry) loginAttempts.set(ip, { count: 1, firstAttempt: now });
-  else if (now - entry.firstAttempt <= RATE_LIMIT_WINDOW) entry.count++;
-  else loginAttempts.set(ip, { count: 1, firstAttempt: now });
-}
-
-function checkForgotRateLimit(ip) {
-  const now = Date.now();
-  const entry = forgotAttempts.get(ip);
-  if (!entry) return { ok: true };
-  if (now - entry.firstAttempt > RATE_LIMIT_WINDOW) { forgotAttempts.delete(ip); return { ok: true }; }
-  if (entry.count >= FORGOT_MAX_ATTEMPTS) return { ok: false, retryAfter: Math.ceil((entry.firstAttempt + RATE_LIMIT_WINDOW - now) / 1000) };
-  return { ok: true };
-}
-
-function recordForgotAttempt(ip) {
-  const now = Date.now();
-  const entry = forgotAttempts.get(ip);
-  if (!entry) forgotAttempts.set(ip, { count: 1, firstAttempt: now });
-  else if (now - entry.firstAttempt <= RATE_LIMIT_WINDOW) entry.count++;
-  else forgotAttempts.set(ip, { count: 1, firstAttempt: now });
-}
-
-function checkResetRateLimit(key) {
-  const now = Date.now();
-  const entry = resetAttempts.get(key);
-  if (!entry) return { ok: true };
-  if (now - entry.firstAttempt > RATE_LIMIT_WINDOW) {
-    resetAttempts.delete(key);
-    return { ok: true };
-  }
-  if (entry.count >= RESET_MAX_ATTEMPTS) {
-    return { ok: false, retryAfter: Math.ceil((entry.firstAttempt + RATE_LIMIT_WINDOW - now) / 1000) };
-  }
-  return { ok: true };
-}
-
-function recordResetAttempt(key) {
-  const now = Date.now();
-  const entry = resetAttempts.get(key);
-  if (!entry) resetAttempts.set(key, { count: 1, firstAttempt: now });
-  else if (now - entry.firstAttempt <= RATE_LIMIT_WINDOW) entry.count++;
-  else resetAttempts.set(key, { count: 1, firstAttempt: now });
-}
-
-function clearResetAttempts(key) {
-  resetAttempts.delete(key);
-}
-
-/** Cooldown per email so repeated login taps do not flood the inbox. */
-const verificationEmailLastSent = new Map();
-const VERIFICATION_RESEND_MS = 90 * 1000;
-
-function canSendVerificationEmailNow(email) {
-  const k = email.toLowerCase();
-  const t = verificationEmailLastSent.get(k);
-  if (t && Date.now() - t < VERIFICATION_RESEND_MS) return false;
-  return true;
-}
-
-function markVerificationEmailSent(email) {
-  verificationEmailLastSent.set(email.toLowerCase(), Date.now());
-}
 
 /** Inserts a new token row and sends mail when SMTP is configured. @returns {Promise<boolean>} true if SMTP accepted the message */
 async function issueEmailVerification(userId, email) {
@@ -188,7 +114,7 @@ router.post('/login', sanitizeAuthInput, async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
-    const rate = checkRateLimit(ip);
+    const rate = await checkLoginRateLimit(ip);
     if (!rate.ok) return res.status(429).json({ error: 'Too many attempts.', retryAfter: rate.retryAfter });
     const result = await query(
       `SELECT u.id, u.email, u.name, u.password_hash, u.email_verified, u.is_business_owner,
@@ -203,7 +129,7 @@ router.post('/login', sanitizeAuthInput, async (req, res) => {
     );
     const user = result.rows[0];
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-      recordFailedAttempt(ip);
+      await recordFailedLoginAttempt(ip);
       return res.status(401).json({ error: 'Wrong email or password. Please try again.' });
     }
     if (user.is_blocked === true) {
@@ -214,11 +140,11 @@ router.post('/login', sanitizeAuthInput, async (req, res) => {
       let verificationEmailDelivered = false;
       let resendTooSoon = false;
       let emailSendFailed = false;
-      if (canSendVerificationEmailNow(emailNorm)) {
+      if (await canSendVerificationEmailNow(emailNorm)) {
         try {
           verificationEmailDelivered = await issueEmailVerification(user.id, user.email);
           if (verificationEmailDelivered) {
-            markVerificationEmailSent(emailNorm);
+            await markVerificationEmailSent(emailNorm);
           }
         } catch (e) {
           emailSendFailed = true;
@@ -279,9 +205,9 @@ router.post('/forgot-password', async (req, res) => {
     const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
     if (!email || email.length > 254) return res.status(400).json({ error: 'Valid email required' });
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
-    const rate = checkForgotRateLimit(ip);
+    const rate = await checkForgotRateLimit(ip);
     if (!rate.ok) return res.status(429).json({ error: 'Too many requests.', retryAfter: rate.retryAfter });
-    recordForgotAttempt(ip);
+    await recordForgotPasswordAttempt(ip);
     const expiryMs = RESET_LINK_EXPIRY_MINUTES * 60 * 1000;
     const result = await query('SELECT id FROM users WHERE LOWER(email) = $1 AND auth_provider = \'email\' AND password_hash IS NOT NULL', [email]);
     const user = result.rows[0];
@@ -328,7 +254,7 @@ router.post('/reset-password', async (req, res) => {
     }
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const resetKey = `${ip}:${email}`;
-    const rate = checkResetRateLimit(resetKey);
+    const rate = await checkResetRateLimit(resetKey);
     if (!rate.ok) {
       return res.status(429).json({
         error: 'Too many reset attempts. Please wait before trying again.',
@@ -341,7 +267,7 @@ router.post('/reset-password', async (req, res) => {
     const userRow = await query('SELECT id FROM users WHERE LOWER(email) = $1 AND auth_provider = \'email\' AND password_hash IS NOT NULL', [email]);
     const user = userRow.rows[0];
     if (!user) {
-      recordResetAttempt(resetKey);
+      await recordResetPasswordAttempt(resetKey);
       return res.status(400).json({ error: 'Invalid or expired code. Request a new one.' });
     }
 
@@ -351,14 +277,14 @@ router.post('/reset-password', async (req, res) => {
       [user.id, tokenHash]
     );
     if (tokenRow.rows.length === 0) {
-      recordResetAttempt(resetKey);
+      await recordResetPasswordAttempt(resetKey);
       return res.status(400).json({ error: 'Invalid or expired code. Request a new one.' });
     }
 
     const hash = await bcrypt.hash(newPassword, 12);
     await query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, user.id]);
     await query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
-    clearResetAttempts(resetKey);
+    await clearResetPasswordAttempts(resetKey);
     res.json({ message: 'Password has been reset. You can now sign in with your new password.' });
   } catch (err) {
     console.error(err);

@@ -166,7 +166,7 @@ export default function Login() {
           )}
 
           <p className="auth-footer">
-            Don&apos;t have an account? <Link to="/register">Sign up</Link>
+            Don’t have an account? <Link to="/register">Sign up</Link>
           </p>
           <p className="auth-footer-note">
             <Link to="/verify-email">Open the verification code page</Link>
