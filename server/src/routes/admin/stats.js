@@ -18,6 +18,8 @@ const STATS_COUNT_TABLES = new Set([
   'feed_posts',
   'interests',
   'saved_places',
+  'place_promotions',
+  'coupons',
 ]);
 
 async function countTable(name) {
@@ -43,6 +45,8 @@ router.get('/', async (req, res) => {
       feedPosts,
       interests,
       savedPlaces,
+      placePromotions,
+      coupons,
     ] = await Promise.all([
       countTable('users'),
       countTable('places'),
@@ -53,6 +57,8 @@ router.get('/', async (req, res) => {
       countTable('feed_posts'),
       countTable('interests'),
       countTable('saved_places'),
+      countTable('place_promotions'),
+      countTable('coupons'),
     ]);
     res.json({
       users,
@@ -64,6 +70,8 @@ router.get('/', async (req, res) => {
       feedPosts,
       interests,
       savedPlaces,
+      placePromotions,
+      coupons,
     });
   } catch (err) {
     console.error(err);

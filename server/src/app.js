@@ -34,6 +34,8 @@ const adminFeedRoutes = require('./routes/admin/feed');
 const adminInterestsRoutes = require('./routes/admin/interests');
 const adminPlaceOwnersRoutes = require('./routes/admin/placeOwners');
 const adminSiteSettingsRoutes = require('./routes/admin/siteSettings');
+const adminPlacePromotionsRoutes = require('./routes/admin/placePromotions');
+const adminCouponsMgmtRoutes = require('./routes/admin/couponsMgmt');
 const siteSettingsPublicRoutes = require('./routes/siteSettingsPublic');
 const weatherPublicRoutes = require('./routes/weatherPublic');
 const businessRoutes = require('./routes/business');
@@ -256,6 +258,8 @@ app.use('/api/admin/feed', adminFeedRoutes);
 app.use('/api/admin/interests', adminInterestsRoutes);
 app.use('/api/admin/place-owners', adminPlaceOwnersRoutes);
 app.use('/api/admin/site-settings', adminSiteSettingsRoutes);
+app.use('/api/admin/place-promotions', adminPlacePromotionsRoutes);
+app.use('/api/admin/coupons', adminCouponsMgmtRoutes);
 app.use('/api/business', businessRoutes);
 
 const serveClientDist =

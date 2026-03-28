@@ -10,6 +10,7 @@ const navItems = [
   { to: '/admin/interests', end: false, icon: 'interest', label: 'Interests' },
   { to: '/admin/experiences', end: false, icon: 'tour', label: 'Experiences' },
   { to: '/admin/events', end: false, icon: 'event', label: 'Events' },
+  { to: '/admin/offers', end: false, icon: 'offer', label: 'Offers & coupons' },
   { to: '/admin/feed', end: false, icon: 'feed', label: 'Feed' },
   { to: '/admin/users', end: false, icon: 'users', label: 'Users' },
   { to: '/admin/user-trips', end: false, icon: 'trips', label: 'User trips' },
@@ -56,6 +57,13 @@ function Icon({ name }) {
           <line x1="16" y1="2" x2="16" y2="6" />
           <line x1="8" y1="2" x2="8" y2="6" />
           <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+      );
+    case 'offer':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+          <line x1="7" y1="7" x2="7.01" y2="7" />
         </svg>
       );
     case 'content':

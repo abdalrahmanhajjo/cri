@@ -463,6 +463,38 @@ export const api = {
       remove: (userId, placeId) =>
         api.delete(`/api/admin/place-owners?userId=${encodeURIComponent(userId)}&placeId=${encodeURIComponent(placeId)}`),
     },
+    /** Venue offers (place_promotions) — full CRUD; public Discover merges with coupons. */
+    placePromotions: {
+      list: (params) => {
+        const qs = new URLSearchParams();
+        if (params && typeof params === 'object') {
+          Object.entries(params).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+          });
+        }
+        const q = qs.toString();
+        return api.get(`/api/admin/place-promotions${q ? `?${q}` : ''}`);
+      },
+      create: (body) => api.post('/api/admin/place-promotions', body),
+      update: (id, body) => api.patch(`/api/admin/place-promotions/${encodeURIComponent(id)}`, body),
+      delete: (id) => api.delete(`/api/admin/place-promotions/${encodeURIComponent(id)}`),
+    },
+    /** App coupons (coupons table) — distinct from POST /api/coupons/redeem for signed-in users. */
+    managedCoupons: {
+      list: (params) => {
+        const qs = new URLSearchParams();
+        if (params && typeof params === 'object') {
+          Object.entries(params).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+          });
+        }
+        const q = qs.toString();
+        return api.get(`/api/admin/coupons${q ? `?${q}` : ''}`);
+      },
+      create: (body) => api.post('/api/admin/coupons', body),
+      update: (id, body) => api.patch(`/api/admin/coupons/${encodeURIComponent(id)}`, body),
+      delete: (id) => api.delete(`/api/admin/coupons/${encodeURIComponent(id)}`),
+    },
     siteSettings: {
       get: () => api.get('/api/admin/site-settings'),
       save: (settings) => api.put('/api/admin/site-settings', { settings }),
