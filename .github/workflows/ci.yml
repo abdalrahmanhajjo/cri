@@ -19,6 +19,9 @@ jobs:
       - name: Install server dependencies
         run: npm ci --prefix server
 
+      - name: Server npm audit (high+)
+        run: npm audit --prefix server --audit-level=high
+
       - name: Server tests
         env:
           NODE_ENV: test
@@ -27,6 +30,9 @@ jobs:
 
       - name: Install client dependencies
         run: npm ci --prefix client
+
+      - name: Client npm audit (high+)
+        run: npm audit --prefix client --audit-level=high
 
       - name: Build client
         run: npm run build --prefix client

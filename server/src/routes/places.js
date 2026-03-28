@@ -14,6 +14,7 @@ const router = express.Router();
 const { visitorFollowupsFromDb } = require('../utils/inquiryFollowups');
 const { isMessagingBlocked } = require('../utils/messagingBlocks');
 const { normalizeDbText } = require('../utils/normalizeDbText');
+const { cachePublicList } = require('../middleware/publicCache');
 
 const MAX_VISITOR_FOLLOWUPS_PER_INQUIRY = 50;
 
@@ -174,7 +175,7 @@ function getUploadsBaseUrl(req) {
   return proto + '://' + host;
 }
 
-router.get('/', async (req, res) => {
+router.get('/', cachePublicList(60, 300), async (req, res) => {
   try {
     const baseUrl = getUploadsBaseUrl(req);
     const lang = getRequestLang(req);

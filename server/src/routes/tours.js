@@ -4,6 +4,7 @@ const { getRequestLang } = require('../utils/requestLang');
 const { parsePlaceId } = require('../utils/validate');
 const { sendDbAwareError } = require('../utils/dbHttpError');
 const { normalizeDbText } = require('../utils/normalizeDbText');
+const { cachePublicList } = require('../middleware/publicCache');
 
 const router = express.Router();
 
@@ -61,7 +62,7 @@ function rowToTour(row) {
   };
 }
 
-router.get('/', async (req, res) => {
+router.get('/', cachePublicList(60, 300), async (req, res) => {
   try {
     const lang = getRequestLang(req);
     const result = await query(

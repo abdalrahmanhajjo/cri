@@ -4,6 +4,7 @@ const { getRequestLang } = require('../utils/requestLang');
 const { parsePositiveInt } = require('../utils/validate');
 const { sendDbAwareError } = require('../utils/dbHttpError');
 const { normalizeDbText } = require('../utils/normalizeDbText');
+const { cachePublicList } = require('../middleware/publicCache');
 
 const router = express.Router();
 
@@ -25,7 +26,7 @@ function rowToEvent(row) {
   };
 }
 
-router.get('/', async (req, res) => {
+router.get('/', cachePublicList(45, 240), async (req, res) => {
   try {
     const lang = getRequestLang(req);
     const result = await query(

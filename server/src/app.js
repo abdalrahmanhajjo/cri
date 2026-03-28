@@ -10,6 +10,8 @@ const helmet = require('helmet');
 const { sanitizeBody } = require('./middleware/security');
 
 const healthRoutes = require('./routes/health');
+const metricsRoutes = require('./routes/metrics');
+const { logError, useJson: structuredLogs } = require('./utils/logger');
 const authRoutes = require('./routes/auth');
 const placesRoutes = require('./routes/places');
 const toursRoutes = require('./routes/tours');
@@ -92,6 +94,7 @@ app.use(
         connectSrc: [
           "'self'",
           'https://api.groq.com',
+          'https://api.open-meteo.com',
           'https://*.supabase.co',
           'https://*.pooler.supabase.com',
         ],
@@ -146,6 +149,8 @@ app.use('/api', (req, res, next) => {
 });
 
 app.use(healthRoutes);
+
+app.use('/api/metrics', metricsRoutes);
 
 app.use(
   '/api',
@@ -281,7 +286,14 @@ app.use((err, req, res, next) => {
       console.error('Database connectivity:', msg);
     }
   } else {
-    console.error(err);
+    logError('request_error', {
+      requestId: req.id,
+      method: req.method,
+      path: req.originalUrl?.split('?')[0],
+      message: msg,
+      stack: !isProd && err.stack ? String(err.stack).slice(0, 2000) : undefined,
+    });
+    if (!structuredLogs) console.error(err);
   }
   const status = err.status != null ? err.status : dbDown ? 503 : 500;
   const error = dbDown

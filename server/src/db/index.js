@@ -51,6 +51,15 @@ const poolMax = process.env.DB_POOL_SIZE
       : 15
     : 20;
 
+const { logWarn } = require('../utils/logger');
+
+const SLOW_MS = (() => {
+  const raw = process.env.DB_SLOW_QUERY_MS;
+  if (raw == null || String(raw).trim() === '') return 750;
+  const n = parseInt(String(raw), 10);
+  return Number.isFinite(n) && n >= 0 ? n : 750;
+})();
+
 const pool = new Pool({
   connectionString: connectionString || undefined,
   max: poolMax,
@@ -135,7 +144,18 @@ async function verifyDatabaseConnection() {
  * Run parameterized SQL only: use $1, $2, … for values — never concatenate user input into `text`.
  */
 function query(text, params) {
-  return pool.query(text, params);
+  const start = Date.now();
+  return pool.query(text, params).then(
+    (result) => {
+      const ms = Date.now() - start;
+      if (SLOW_MS > 0 && ms >= SLOW_MS) {
+        const snippet = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 220);
+        logWarn('slow_query', { ms, sql: snippet });
+      }
+      return result;
+    },
+    (err) => Promise.reject(err)
+  );
 }
 
 function closePool() {

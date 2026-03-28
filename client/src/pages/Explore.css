@@ -4803,6 +4803,50 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   font-weight: 500;
 }
 
+.vd-error-panel {
+  max-width: 32rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.vd-error-panel-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 12px;
+}
+
+.vd-error-panel-hint {
+  font-size: 15px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
+
+.vd-error-panel-detail {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  text-align: left;
+  background: var(--color-surface-alt, rgba(0, 0, 0, 0.04));
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin: 0 0 20px;
+  word-break: break-word;
+}
+
+.vd-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+
+.vd-error-actions .vd-btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+
 /* ----- Legacy explore (kept for reference, can remove if unused) ----- */
 .explore {
   min-height: 100%;

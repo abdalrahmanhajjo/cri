@@ -33,22 +33,8 @@ import {
   TravelTipsTripoli,
   AboutTripoli,
 } from './pages/SeoLanding';
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminPlaces from './pages/admin/AdminPlaces';
-import AdminCategories from './pages/admin/AdminCategories';
-import AdminExperiences from './pages/admin/AdminExperiences';
-import AdminEvents from './pages/admin/AdminEvents';
-import AdminSettings from './pages/admin/AdminSettings';
-import AdminUsers from './pages/admin/AdminUsers';
-import AdminUserTrips from './pages/admin/AdminUserTrips';
-import AdminFeed from './pages/admin/AdminFeed';
-import AdminInterests from './pages/admin/AdminInterests';
-import AdminPlaceOwners from './pages/admin/AdminPlaceOwners';
-import BusinessLayout from './pages/business/BusinessLayout';
-import BusinessDashboard from './pages/business/BusinessDashboard';
-import BusinessPlaceEdit from './pages/business/BusinessPlaceEdit';
-import BusinessPlaceFeed from './pages/business/BusinessPlaceFeed';
+const AdminApp = lazy(() => import('./pages/admin/AdminApp'));
+const BusinessApp = lazy(() => import('./pages/business/BusinessApp'));
 import BusinessGateLoader from './pages/business/BusinessGateLoader';
 
 function ProtectedRoute({ children }) {
@@ -132,25 +118,27 @@ function WaysLegacyRedirect() {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/business" element={<BusinessRouteWithKey><BusinessLayout /></BusinessRouteWithKey>}>
-        <Route index element={<BusinessDashboard />} />
-        <Route path="places" element={<BusinessPlaceFeed />} />
-        <Route path="places/:placeId" element={<BusinessPlaceEdit />} />
-      </Route>
+      <Route
+        path="/business/*"
+        element={
+          <BusinessRouteWithKey>
+            <Suspense fallback={<BusinessGateLoader />}>
+              <BusinessApp />
+            </Suspense>
+          </BusinessRouteWithKey>
+        }
+      />
       {/* Admin: login required – no page opens without auth */}
-      <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-        <Route index element={<AdminDashboard />} />
-        <Route path="places" element={<AdminPlaces />} />
-        <Route path="categories" element={<AdminCategories />} />
-        <Route path="experiences" element={<AdminExperiences />} />
-        <Route path="events" element={<AdminEvents />} />
-        <Route path="settings" element={<AdminSettings />} />
-        <Route path="users" element={<AdminUsers />} />
-        <Route path="user-trips" element={<AdminUserTrips />} />
-        <Route path="feed" element={<AdminFeed />} />
-        <Route path="interests" element={<AdminInterests />} />
-        <Route path="place-owners" element={<AdminPlaceOwners />} />
-      </Route>
+      <Route
+        path="/admin/*"
+        element={
+          <AdminRoute>
+            <Suspense fallback={<BusinessGateLoader message="Loading admin…" />}>
+              <AdminApp />
+            </Suspense>
+          </AdminRoute>
+        }
+      />
       {/* Auth pages */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
