@@ -2235,7 +2235,7 @@ export const translations = {
     home: {
       heroTitle: 'Explorer Tripoli',
       heroTagline:
-        'Découvrez les meilleurs adresses de Tripoli, les expériences locales et des parcours tout prêts — le tout au même endroit.',
+        'Découvrez les meilleures adresses de Tripoli, les expériences locales et des parcours tout prêts — le tout au même endroit.',
       discoverMore: 'Voir plus',
       learnMore: 'En savoir plus',
       exploreDining: 'Explorer les restaurants',
@@ -3015,12 +3015,28 @@ export function clearTranslationOverrides() {
   localStorage.removeItem(OVERRIDES_KEY);
 }
 
+/**
+ * CMS overrides (DB / localStorage) must not pin old marketing copy on the home bento.
+ * These keys always use values from this file so deploys update the live site.
+ */
+function translationOverrideAllowed(namespace, key) {
+  if (namespace === 'nav' && key === 'navBrandTagline') return false;
+  if (
+    namespace === 'home' &&
+    (key === 'heroTagline' || key === 'useWebCta' || String(key).startsWith('bento'))
+  ) {
+    return false;
+  }
+  return true;
+}
+
 /** Get merged translation value (base + overrides) */
 export function getTranslation(lang, namespace, key) {
   const base = translations[lang]?.[namespace]?.[key];
   const overrides = getTranslationOverrides();
   const override = overrides[lang]?.[namespace]?.[key];
-  return override !== undefined ? override : base ?? key;
+  if (translationOverrideAllowed(namespace, key) && override !== undefined) return override;
+  return base ?? key;
 }
 
 export function getStoredLanguage() {

@@ -12,7 +12,9 @@ This document supports **layer 4** goals: calm production operations, observabil
 | `SENTRY_ENABLED` | Optional killswitch: `off`, `false`, `0`, or `no` disables Sentry even if `SENTRY_DSN` is set. |
 | `GOOGLE_SITE_VERIFICATION` | Search Console HTML-tag value (injected by SEO middleware). |
 
-**Site settings (`site_settings` row):** If the admin **Tagline** field still holds an old English sentence, the public home page used to show it for every language. The web app now falls back to **i18n** hero copy when the tagline is empty, matches the built-in default, or matches a few known legacy strings. To force a single custom line for all locales, save a **new** tagline in Admin → Settings; to rely on translations only, clear the tagline and save.
+**Site settings:** The web home **hero tagline** and **nav brand tagline** come from the client i18n bundles (`client/src/i18n/translations.js`), not from `site_settings.siteTagline`, so deploys update that copy.
+
+**Translation overrides (`translation_overrides` table):** Admin CMS overrides still apply to most strings, but **not** to `home.heroTagline`, `nav.navBrandTagline`, `home.useWebCta`, or any `home.bento*` key — those always follow the shipped bundle so marketing copy cannot stay stuck in the database.
 
 ## Health and uptime
 
