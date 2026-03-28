@@ -1,7 +1,15 @@
+import { getApiOrigin } from './apiOrigin';
+
 /** Tripoli — same coordinates as Explore.jsx Plan your visit widget. */
 export const TRIPOLI_LAT = 34.4367;
 export const TRIPOLI_LON = 35.8497;
 export const TRIPOLI_TIMEZONE = 'Asia/Beirut';
+
+function dayWeatherProxyUrl(ymd) {
+  const base = getApiOrigin();
+  const path = `/api/public/weather/day?start_date=${encodeURIComponent(ymd)}&end_date=${encodeURIComponent(ymd)}`;
+  return base ? `${base}${path}` : path;
+}
 
 /**
  * WMO weather code for one calendar day (Open-Meteo daily).
@@ -23,10 +31,7 @@ export function wmoCodeIsPoorForOutdoor(code) {
 export async function fetchPoorOutdoorWeatherForDate(ymd) {
   const d = String(ymd || '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
-  const url =
-    `https://api.open-meteo.com/v1/forecast?latitude=${TRIPOLI_LAT}&longitude=${TRIPOLI_LON}` +
-    `&daily=weather_code&timezone=${encodeURIComponent(TRIPOLI_TIMEZONE)}` +
-    `&start_date=${d}&end_date=${d}`;
+  const url = dayWeatherProxyUrl(d);
   let res;
   try {
     res = await fetch(url);
