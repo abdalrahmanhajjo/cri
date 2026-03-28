@@ -19,6 +19,9 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id) {
+            if (id.includes('translations.js') || id.includes('i18n\\translations')) {
+              return 'i18n';
+            }
             if (!id.includes('node_modules')) return;
             if (id.includes('react-router')) return 'react-router';
             if (id.includes('react-dom')) return 'react-dom';
