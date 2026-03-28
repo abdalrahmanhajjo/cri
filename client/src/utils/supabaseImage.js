@@ -1,6 +1,7 @@
 /**
  * Supabase Storage public URLs → `/render/image` transforms (resize + WebP when supported).
- * Requires a Supabase plan with image transformations; set VITE_SUPABASE_IMAGE_TRANSFORM=0 to disable.
+ * **Opt-in only** (`VITE_SUPABASE_IMAGE_TRANSFORM=1`): many projects use tiers where transforms
+ * are unavailable; rewriting URLs then 404s every image. Default leaves original `/object/public/` URLs.
  *
  * @see https://supabase.com/docs/guides/storage/serving/image-transformations
  */
@@ -10,7 +11,7 @@ const RENDER_PUBLIC = '/storage/v1/render/image/public/';
 
 export function isSupabaseImageTransformDisabled() {
   const v = import.meta.env.VITE_SUPABASE_IMAGE_TRANSFORM;
-  return v === '0' || v === 'false';
+  return v !== '1' && v !== 'true';
 }
 
 /**
