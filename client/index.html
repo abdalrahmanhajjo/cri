@@ -27,6 +27,21 @@
     </noscript>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Visit Tripoli – Best spots, experiences & plans</title>
+    <!-- Tiny critical paint while async CSS loads (matches theme.css) -->
+    <style>
+      html {
+        background: #fafaf9;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #fafaf9;
+        color: #1c1917;
+      }
+      #root {
+        min-height: 100vh;
+      }
+    </style>
   </head>
   <body>
     <!-- GTM after idle / load — cuts main-thread JS during LCP; tags still fire same session -->
