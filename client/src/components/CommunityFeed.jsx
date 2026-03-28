@@ -95,7 +95,7 @@ export function CommunityFeedCard({ post, t }) {
             aria-label={fullCap.slice(0, 120) || reelLabel}
           />
         ) : img ? (
-          <img src={img} alt="" className="vd-community-feed-img" />
+          <img src={img} alt="" className="vd-community-feed-img" loading="lazy" decoding="async" />
         ) : (
           <div className="vd-community-feed-placeholder" aria-hidden="true" />
         )}
@@ -123,7 +123,15 @@ export function CommunityFeedCard({ post, t }) {
                 ? getPlaceImageUrl(String(post.place_image_url).trim())
                 : null;
               return av ? (
-                <img src={av} alt="" className="vd-community-feed-place-avatar" width={36} height={36} />
+                <img
+                  src={av}
+                  alt=""
+                  className="vd-community-feed-place-avatar"
+                  width={36}
+                  height={36}
+                  loading="lazy"
+                  decoding="async"
+                />
               ) : (
                 <span className="vd-community-feed-place-avatar vd-community-feed-place-avatar--icon" aria-hidden>
                   <Icon name="storefront" size={18} />
@@ -202,7 +210,7 @@ export function CommunityFeedStrip({ posts, t, moreTo, layout = 'scroll' }) {
                       className={`vd-community-feed-mosaic-cell vd-community-feed-mosaic-cell--${i + 1}`}
                     >
                       {src ? (
-                        <img src={src} alt="" className="vd-community-feed-mosaic-img" />
+                        <img src={src} alt="" className="vd-community-feed-mosaic-img" loading="lazy" decoding="async" />
                       ) : (
                         <span className="vd-community-feed-mosaic-fallback">
                           <Icon name={isCommunityFeedVideo(p) ? 'play_circle' : 'photo_camera'} size={22} />
