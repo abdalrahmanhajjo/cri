@@ -74,3 +74,22 @@ export function getBentoHeroPreloadHref(src) {
   if (parsed) return unsplashUrl(parsed.base, 1280, parsed.q);
   return src.trim();
 }
+
+/**
+ * Absolute http(s) URL safe for <link rel="preload" as="image"> (avoids empty/invalid href console warnings).
+ * @param {string} raw
+ * @returns {string | null}
+ */
+export function normalizePreloadImageHref(raw) {
+  if (typeof raw !== 'string') return null;
+  const s = raw.trim();
+  if (!s || /^data:/i.test(s) || /^blob:/i.test(s) || /^\s*javascript:/i.test(s)) return null;
+  if (typeof window === 'undefined' || !window.location?.origin) return null;
+  try {
+    const abs = new URL(s, window.location.origin);
+    if (abs.protocol !== 'http:' && abs.protocol !== 'https:') return null;
+    return abs.href;
+  } catch {
+    return null;
+  }
+}

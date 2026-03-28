@@ -7,8 +7,8 @@ import { useSiteSettings } from '../context/SiteSettingsContext';
 import Icon from '../components/Icon';
 import { CommunityFeedStrip } from '../components/CommunityFeed';
 import { trackEvent } from '../utils/analytics';
-import { resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
-import { getBentoHeroImgProps, getBentoHeroPreloadHref } from '../utils/bentoHeroImage';
+import { homeBentoDefaults, resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
+import { getBentoHeroImgProps, getBentoHeroPreloadHref, normalizePreloadImageHref } from '../utils/bentoHeroImage';
 import { resolveHeroTagline, resolveFooterTagline } from '../config/resolveSiteTagline';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import { getApiOrigin } from '../utils/apiOrigin';
@@ -560,9 +560,20 @@ export default function Explore() {
   const bentoHeroUrl = useMemo(() => resolveHomeBentoVisuals(settings).hero, [settings]);
 
   useEffect(() => {
-    const href = getBentoHeroPreloadHref(bentoHeroUrl);
-    if (!href) return undefined;
     const id = 'tripoli-preload-bento-hero';
+    const heroTrim = (bentoHeroUrl || '').trim();
+    const defaultHero = (homeBentoDefaults.hero || '').trim();
+    /* index.html preloads default /city.png; skip JS tag to avoid duplicate requests */
+    if (heroTrim === defaultHero) {
+      document.getElementById(id)?.remove();
+      return undefined;
+    }
+    const raw = getBentoHeroPreloadHref(bentoHeroUrl);
+    const href = normalizePreloadImageHref(raw);
+    if (!href) {
+      document.getElementById(id)?.remove();
+      return undefined;
+    }
     let link = document.getElementById(id);
     if (!link) {
       link = document.createElement('link');
