@@ -50,7 +50,7 @@ router.get('/:id/promotions', async (req, res) => {
       if (err.code !== '42P01') throw err;
       try {
         ({ rows } = await dbQuery(SQL_PLACE_PROMOTIONS_FALLBACK, [placeId, 200]));
-      } catch (e2) {
+      } catch {
         rows = [];
       }
     }

@@ -4,6 +4,21 @@
 
 const FORBIDDEN_PROTOCOLS = /^\s*(javascript|data|vbscript|file):/i;
 
+function hasAsciiControlChars(s) {
+  for (let i = 0; i < s.length; i += 1) {
+    if (s.charCodeAt(i) <= 0x1f) return true;
+  }
+  return false;
+}
+
+function hasInvalidTripIdChars(s) {
+  for (let i = 0; i < s.length; i += 1) {
+    const c = s.charCodeAt(i);
+    if (c <= 0x1f || c === 0x27 || c === 0x22 || c === 0x5c) return true;
+  }
+  return false;
+}
+
 /**
  * Parse a value as a positive integer. Use for IDs in params/body.
  * @param {*} value - req.params.id or req.body.placeId etc.
@@ -26,7 +41,7 @@ function parsePlaceId(value) {
   if (value == null) return { valid: false };
   const s = typeof value === 'number' ? String(value) : String(value).trim();
   if (!s || s.length > 255) return { valid: false };
-  if (/[\x00-\x1f]/.test(s)) return { valid: false };
+  if (hasAsciiControlChars(s)) return { valid: false };
   return { valid: true, value: s };
 }
 
@@ -39,7 +54,7 @@ function parseTripId(value) {
   if (value == null) return { valid: false };
   const s = String(value).trim();
   if (!s || s.length > 100) return { valid: false };
-  if (/[\x00-\x1f'"\\]/.test(s)) return { valid: false };
+  if (hasInvalidTripIdChars(s)) return { valid: false };
   return { valid: true, value: s };
 }
 

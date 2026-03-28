@@ -15,7 +15,9 @@ const LOCAL_FEED_VIDEOS = path.join(__dirname, '../../../uploads/feed/videos');
 try {
   fs.mkdirSync(LOCAL_PLACES, { recursive: true });
   fs.mkdirSync(LOCAL_FEED_VIDEOS, { recursive: true });
-} catch (_) {}
+} catch {
+  void 0; /* dirs may already exist */
+}
 
 function isImageMime(m) {
   return /^image\/(jpeg|png|gif|webp)$/i.test(m || '');

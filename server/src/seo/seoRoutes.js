@@ -106,7 +106,7 @@ function jsonLdWebsite({ baseUrl }) {
   };
 }
 
-function jsonLdPlace({ baseUrl, place, canonical, image }) {
+function jsonLdPlace({ baseUrl: _baseUrl, place, canonical, image }) {
   const name = place?.name || 'Place in Tripoli';
   const desc = clampText(place?.description || '', 300);
   const loc = place?.location ? String(place.location) : 'Tripoli, Lebanon';

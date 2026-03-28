@@ -51,7 +51,7 @@ async function callGroqOnce(messages, temperature = 0.5, maxTokens = 2048) {
     signal: AbortSignal.timeout(60000),
   });
   const bodyText = await res.text();
-  let json = null;
+  let json;
   try {
     json = bodyText ? JSON.parse(bodyText) : null;
   } catch {

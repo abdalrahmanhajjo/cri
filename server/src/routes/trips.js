@@ -127,7 +127,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', validate(createTripSchema), async (req, res) => {
   const userId = req.user.userId;
-  const { name, startDate, endDate, description, days } = req.body;
+  const { name, startDate, endDate, description } = req.body;
 
   if (startDate > endDate) return res.status(400).json({ error: 'startDate must be on or before endDate' });
   const postOverlaps = await findOverlappingTrips(userId, startDate, endDate, null);

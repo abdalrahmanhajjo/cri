@@ -40,7 +40,9 @@ async function restore() {
       const url = new URL(conn);
       url.searchParams.delete('sslmode');
       conn = url.toString();
-    } catch (_) { /* keep original */ }
+    } catch {
+      void 0; /* keep original connection string */
+    }
   }
   const pool = new Pool({
     connectionString: conn,

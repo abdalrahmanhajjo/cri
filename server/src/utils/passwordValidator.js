@@ -25,7 +25,7 @@ function validatePassword(password) {
   if (!/[0-9]/.test(p)) {
     return { valid: false, error: 'Password must contain a number' };
   }
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(p)) {
+  if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(p)) {
     return { valid: false, error: 'Password must contain a special character (!@#$%^&* etc.)' };
   }
   if (WEAK_PASSWORDS.has(p.toLowerCase())) {

@@ -42,8 +42,8 @@ router.put('/', async (req, res) => {
       const prev = await dbQuery('SELECT data FROM site_settings WHERE id = $1', [ROW_ID]);
       const row = prev.rows[0]?.data;
       if (row && typeof row === 'object') existing = row;
-    } catch (_) {
-      /* ignore */
+    } catch {
+      void 0; /* no prior row */
     }
     const data = stripDeprecatedSiteSettings({ ...existing, ...incoming });
     await dbQuery(

@@ -43,7 +43,6 @@ function buildListWhere(status, discoverable, q, format) {
       `(fp.caption ILIKE $${i} OR fp.author_name ILIKE $${i} OR fp.place_id ILIKE $${i} OR u.email ILIKE $${i})`
     );
     params.push(like);
-    i++;
   }
 
   const where = parts.length ? `WHERE ${parts.join(' AND ')}` : '';
@@ -84,8 +83,8 @@ router.get('/', async (req, res) => {
         'SELECT COUNT(*)::int AS n FROM feed_posts WHERE moderation_status = \'pending\''
       );
       pendingCount = pc.rows[0]?.n ?? 0;
-    } catch (_) {
-      /* column missing until migration */
+    } catch {
+      void 0; /* column missing until migration */
     }
 
     res.json({ posts: rows, pendingCount });

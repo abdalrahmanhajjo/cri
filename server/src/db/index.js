@@ -35,7 +35,9 @@ if (connectionString) {
       }
     }
     connectionString = url.toString();
-  } catch (_) { /* keep original */ }
+  } catch {
+    void 0; /* keep original connection string */
+  }
 }
 
 const usePgBouncerForPool =

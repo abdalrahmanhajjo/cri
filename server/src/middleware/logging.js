@@ -1,4 +1,4 @@
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 /** Simple structured logger */
 const logger = {
@@ -11,7 +11,7 @@ const logger = {
  * Request ID and logging middleware
  */
 const requestLogger = (req, res, next) => {
-  req.id = uuidv4();
+  req.id = crypto.randomUUID();
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;

@@ -384,7 +384,9 @@ router.post('/post/:postId/comments/:commentId/like', authMiddleware, async (req
       if (client) {
         try {
           await client.query('ROLLBACK');
-        } catch (_) {}
+        } catch {
+          void 0; /* rollback best-effort */
+        }
       }
       throw e;
     } finally {
@@ -619,7 +621,9 @@ router.post('/post/:postId/like', authMiddleware, async (req, res) => {
       if (client) {
         try {
           await client.query('ROLLBACK');
-        } catch (_) {}
+        } catch {
+          void 0; /* rollback best-effort */
+        }
       }
       if (err.code === '40P01' && attempt === 0) {
         await new Promise((r) => setTimeout(r, 55));

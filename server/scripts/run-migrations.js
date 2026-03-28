@@ -36,8 +36,8 @@ function createPool() {
       const url = new URL(conn);
       url.searchParams.delete('sslmode');
       conn = url.toString();
-    } catch (_) {
-      /* keep */
+    } catch {
+      void 0; /* keep connection string */
     }
   }
   return new Pool({
