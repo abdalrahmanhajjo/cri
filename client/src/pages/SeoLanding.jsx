@@ -88,7 +88,7 @@ function Page({ title, intro, sections, links, dbTitle = 'Featured places from d
             <div className="seo-landing__card">
               <h2 className="seo-landing__sideTitle">{t('nav', 'visitTripoli') || 'Visit Tripoli'}</h2>
               <p className="seo-landing__sideP">
-                {t('nav', 'navBrandTagline') || 'Places, experiences & events'}
+                {t('nav', 'navBrandTagline') || 'Best spots, experiences & plans'}
               </p>
               <div className="seo-landing__ctaRow">
                 <Link to="/discover" className="seo-landing__btn seo-landing__btn--primary">

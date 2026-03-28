@@ -673,9 +673,9 @@ export const translations = {
         'AI trip planning works on this site and in the Tripoli app (iOS & Android). Save routes to your account and keep exploring the full guide in your browser.',
       bentoWebHubCta: 'Plan your visit',
       bentoSiteGuideLead:
-        'Verified venues on an interactive map, plus the city feed — the same data the app uses, kept current on the web.',
+        'Best spots and experiences on an interactive map, plus the live city feed — the same trusted data as the app, updated on the web.',
       bentoSiteGuideAppNote:
-        'Ask questions in plain language and get tailored itineraries on the web or in the Tripoli app (iOS & Android). The full listing index always stays in your browser.',
+        'Ask in plain language for itineraries on the web or in the Tripoli app (iOS & Android). The full directory of listings stays in your browser.',
       bentoSiteGuideAppStoreLabel: 'Get the app · iOS & Android',
     },
     discover: {
@@ -1656,9 +1656,9 @@ export const translations = {
         'تخطيط الرحلة بالذكاء الاصطناعي يعمل على هذا الموقع وفي تطبيق طرابلس (آبل وأندرويد). احفظ البرامج في حسابك واستمر باستكشاف الدليل الكامل من المتصفح.',
       bentoWebHubCta: 'خطط لزيارتك',
       bentoSiteGuideLead:
-        'أماكن موثوقة على خريطة تفاعلية، مع خلاصة المدينة — نفس البيانات التي يعتمدها التطبيق، محدّثة على الويب.',
+        'أفضل الأماكن والتجارب على خريطة تفاعلية، مع خلاصة حية للمدينة — نفس بيانات التطبيق الموثوقة، محدّثة على الويب.',
       bentoSiteGuideAppNote:
-        'اطرح أسئلتك بلغة بسيطة واحصل على برامج مخصّصة على الويب أو في تطبيق طرابلس (آبل وأندرويد). فهرس الأماكن الكامل يبقى في المتصفح.',
+        'اطرح أسئلتك بلغة بسيطة للحصول على برامج على الويب أو في تطبيق طرابلس (آبل وأندرويد). دليل الأماكن الكامل يبقى في المتصفح.',
       bentoSiteGuideAppStoreLabel: 'حمّل التطبيق · آي أو إس وأندرويد',
     },
     discover: {
@@ -2639,9 +2639,9 @@ export const translations = {
         'La planification de voyage par IA fonctionne sur ce site et dans l’app Tripoli (iOS et Android). Enregistrez vos itinéraires sur votre compte et poursuivez la visite du guide complet dans le navigateur.',
       bentoWebHubCta: 'Planifier votre visite',
       bentoSiteGuideLead:
-        'Établissements vérifiés sur une carte interactive, plus l’actualité du fil de la ville — les mêmes données que l’app, tenues à jour sur le web.',
+        'Meilleures adresses et expériences sur une carte interactive, plus l’actualité du fil — les mêmes données fiables que l’app, tenues à jour sur le web.',
       bentoSiteGuideAppNote:
-        'Posez des questions en langage courant et obtenez des itinéraires sur mesure sur le web ou dans l’app Tripoli (iOS et Android). L’index complet des fiches reste dans le navigateur.',
+        'Demandez en langage courant des itinéraires sur le web ou dans l’app Tripoli (iOS et Android). L’index complet des fiches reste dans le navigateur.',
       bentoSiteGuideAppStoreLabel: 'Télécharger · iOS et Android',
     },
     discover: {

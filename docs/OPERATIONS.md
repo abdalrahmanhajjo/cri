@@ -12,6 +12,8 @@ This document supports **layer 4** goals: calm production operations, observabil
 | `SENTRY_ENABLED` | Optional killswitch: `off`, `false`, `0`, or `no` disables Sentry even if `SENTRY_DSN` is set. |
 | `GOOGLE_SITE_VERIFICATION` | Search Console HTML-tag value (injected by SEO middleware). |
 
+**Site settings (`site_settings` row):** If the admin **Tagline** field still holds an old English sentence, the public home page used to show it for every language. The web app now falls back to **i18n** hero copy when the tagline is empty, matches the built-in default, or matches a few known legacy strings. To force a single custom line for all locales, save a **new** tagline in Admin → Settings; to rely on translations only, clear the tagline and save.
+
 ## Health and uptime
 
 - **Liveness:** `GET /health` — process is up (used in `render.yaml`).
