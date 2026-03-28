@@ -429,10 +429,13 @@ export default function PlaceDiscover() {
           </div>
         </section>
 
+        <h2 id="pd-results-heading" className="pd-sr-only">
+          {t('placeDiscover', 'resultsHeading')}
+        </h2>
         {filteredPlaces.length === 0 ? (
           <p className="pd-empty">{t('home', 'noSpots')}</p>
         ) : (
-          <div className={`pd-mosaic pd-mosaic--${viewMode}`}>
+          <section className={`pd-mosaic pd-mosaic--${viewMode}`} aria-labelledby="pd-results-heading">
             {filteredPlaces.map((p) => (
               <DiscoverCard
                 key={p.id}
@@ -445,7 +448,7 @@ export default function PlaceDiscover() {
                 addToTripLabel={t('placeDiscover', 'addToTrip')}
               />
             ))}
-          </div>
+          </section>
         )}
       </div>
 

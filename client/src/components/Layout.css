@@ -293,12 +293,12 @@ button.nav-icon {
   width: 100%;
   margin-top: 1px;
   font-size: 9px;
-  font-weight: 400;
+  font-weight: 500;
   line-height: 1.35;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-text-tertiary);
-  opacity: 0.9;
+  /* Secondary meets ~4.5:1 on light header / body backgrounds (tertiary failed contrast at 9px). */
+  color: var(--color-text-secondary);
 }
 
 [dir='rtl'] .header--vd .logo-tagline--brand {
@@ -318,6 +318,10 @@ button.nav-icon {
 }
 .logo-wrap:hover .logo-tagline {
   color: var(--color-text-secondary);
+}
+
+.logo-wrap:hover .logo-tagline--brand {
+  color: var(--color-text-primary);
 }
 .logo-wrap:hover {
   text-decoration: none;

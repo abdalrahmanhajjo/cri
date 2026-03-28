@@ -141,9 +141,12 @@ export default function GlobalSearchBar({
           className="global-search-bar__input"
           placeholder={t('placeDiscover', 'searchPlaceholder')}
           aria-label={t('nav', 'search')}
+          role="combobox"
+          aria-haspopup="listbox"
           aria-autocomplete="list"
           aria-controls={listId}
           aria-expanded={showPanel}
+          aria-busy={showPanel && loading}
           autoComplete="off"
           value={query}
           onChange={(e) => {
@@ -173,25 +176,40 @@ export default function GlobalSearchBar({
         {endAdornment}
       </div>
       {showPanel ? (
-        <div id={listId} className="global-search-bar__panel" role="listbox" aria-label={t('nav', 'search')}>
-          {loading ? <p className="global-search-bar__meta">{t('detail', 'loading')}</p> : null}
-          {!loading && suggestions.length === 0 ? (
-            <p className="global-search-bar__empty">{t('nav', 'globalSearchNoResults')}</p>
+        <div className="global-search-bar__panel">
+          {loading ? (
+            <p className="global-search-bar__meta" role="status" aria-live="polite">
+              {t('detail', 'loading')}
+            </p>
           ) : null}
-          {!loading
-            && suggestions.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                role="option"
-                className="global-search-bar__option"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => pickPlace(p)}
-              >
-                <span className="global-search-bar__option-name">{p.name}</span>
-                {p.location ? <span className="global-search-bar__option-loc">{p.location}</span> : null}
-              </button>
-            ))}
+          {!loading && suggestions.length === 0 && query.trim().length >= 1 ? (
+            <p className="global-search-bar__empty" role="status">
+              {t('nav', 'globalSearchNoResults')}
+            </p>
+          ) : null}
+          <div
+            id={listId}
+            role="listbox"
+            aria-label={t('nav', 'search')}
+            aria-busy={loading}
+            hidden={loading || suggestions.length === 0}
+            className="global-search-bar__listbox"
+          >
+            {!loading
+              && suggestions.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="option"
+                  className="global-search-bar__option"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => pickPlace(p)}
+                >
+                  <span className="global-search-bar__option-name">{p.name}</span>
+                  {p.location ? <span className="global-search-bar__option-loc">{p.location}</span> : null}
+                </button>
+              ))}
+          </div>
           {!loading && query.trim().length >= 1 ? (
             <button type="button" className="global-search-bar__see-all" onClick={goDiscoverAll}>
               {t('nav', 'globalSearchSeeAll')}
