@@ -54,7 +54,7 @@ const server = app.listen(basePort, listenHost, () => {
   console.log(
     `  AI planner: ${groqOk ? 'GROQ_API_KEY set' : n8nOk ? 'N8N_WEBHOOK_URL set' : 'not configured'}`
   );
-  console.log(`  Sentry: ${sentryEnabled() ? 'enabled (SENTRY_DSN)' : 'off (set SENTRY_DSN to capture errors)'}`);
+  console.log(`  Sentry: ${sentryEnabled() ? 'on' : 'off'}`);
   void verifyDatabaseConnection();
 });
 

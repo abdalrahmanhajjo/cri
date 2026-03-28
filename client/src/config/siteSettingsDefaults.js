@@ -4,7 +4,8 @@
  */
 export const siteSettingsDefaults = {
   siteName: 'Visit Tripoli',
-  siteTagline: 'Places, experiences & events',
+  siteTagline:
+    "Discover Tripoli's best spots, local experiences, and ready-made plans — all in one place.",
   defaultLanguage: 'en',
   showMap: true,
   contactEmail: '',

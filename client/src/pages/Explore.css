@@ -3195,8 +3195,12 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   }
 
   .vd-bento-mosaic-panel {
-    padding: 10px 11px 11px;
+    padding: 14px 14px 16px;
     border-radius: 14px;
+  }
+
+  .vd-bento-mosaic-panel-copy {
+    text-align: center;
   }
 
   .vd-bento-panel-kicker--desktop,
@@ -3207,10 +3211,27 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 
   .vd-bento-panel-lead-short {
     display: block;
+    font-size: clamp(15px, 4.1vw, 17px);
+    line-height: 1.42;
+    max-width: 28ch;
+    margin-inline: auto;
   }
 
   .vd-bento-mosaic-panel-grid {
-    gap: 10px;
+    gap: 14px;
+  }
+
+  /* Stats strip: secondary cue vs full-width “Explore all” below */
+  .vd-bento-mosaic-snap-arrow {
+    width: 30px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    box-shadow: none;
+  }
+
+  .vd-bento-mosaic-snap-arrow .material-symbols-outlined {
+    font-size: 16px !important;
   }
 
   .vd-bento-mosaic-panel-apps {
@@ -3270,18 +3291,21 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 
   .vd-bento-mosaic-footer {
     justify-content: stretch;
-    margin-top: 0;
+    margin-top: 10px;
     padding-top: 0;
   }
 
   .vd-bento-mosaic-cta {
     width: 100%;
     justify-content: center;
-    min-height: 38px;
-    padding: 7px 12px;
-    font-size: 12px;
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 13px;
     font-weight: 700;
-    background: rgba(255, 255, 255, 0.14);
+    letter-spacing: 0.02em;
+    background: rgba(255, 255, 255, 0.24);
+    border-color: rgba(255, 255, 255, 0.45);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
   }
 
   .vd-why-dots {

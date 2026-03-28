@@ -32,7 +32,7 @@ export const translations = {
       globalSearchNoResults: 'No matching places. Try another word or see all results.',
       globalSearchSeeAll: 'See all results',
       visitTripoli: 'Visit Tripoli',
-      navBrandTagline: 'Places, experiences & events',
+      navBrandTagline: 'Best spots · experiences · plans',
       tripoliLebanon: 'Tripoli, Lebanon',
       tripoli: 'Tripoli',
       lebanon: 'Lebanon',
@@ -271,7 +271,7 @@ export const translations = {
     home: {
       heroTitle: 'Explore Tripoli',
       heroTagline:
-        'Historic souks, seaside charm and culture. Official visitor information to help you plan your stay.',
+        "Discover Tripoli's best spots, local experiences, and ready-made plans — all in one place.",
       discoverMore: 'See more',
       learnMore: 'Learn more',
       exploreDining: 'Explore dining options',
@@ -655,7 +655,7 @@ export const translations = {
       bentoMosaicSnapCategoriesUnit: 'categories',
       bentoMosaicSnapSub: 'Map · feed · listings',
       bentoSiteGuideLeadShort:
-        'Trusted venues in your browser. Conversational trip help stays in the Tripoli app.',
+        "Discover Tripoli's best spots, local experiences, and ready-made plans — all in one place.",
       bentoAvatarStackAria: 'Browse places and community',
       waysInThisPage: 'In this page',
       downloadAppTitle: 'Official Tripoli app',
@@ -668,7 +668,7 @@ export const translations = {
       heroDownloadCta: 'Get the app',
       bentoWebHubTitle: 'Tripoli in your browser',
       bentoWebHubSub:
-        'Interactive map, vetted listings, and what’s happening in the city — the full guide, no install.',
+        'Interactive map, vetted spots, and ready-made plans — the full guide in your browser, no install.',
       bentoWebHubFootnote:
         'AI trip planning works on this site and in the Tripoli app (iOS & Android). Save routes to your account and keep exploring the full guide in your browser.',
       bentoWebHubCta: 'Plan your visit',
@@ -676,7 +676,7 @@ export const translations = {
         'Verified venues on an interactive map, plus the city feed — the same data the app uses, kept current on the web.',
       bentoSiteGuideAppNote:
         'Ask questions in plain language and get tailored itineraries on the web or in the Tripoli app (iOS & Android). The full listing index always stays in your browser.',
-      bentoSiteGuideAppStoreLabel: 'Tripoli app · companion mobile app',
+      bentoSiteGuideAppStoreLabel: 'Get the app · iOS & Android',
     },
     discover: {
       brandTitle: 'Community',
@@ -1016,7 +1016,7 @@ export const translations = {
       globalSearchNoResults: 'لا توجد أماكن مطابقة. جرّب كلمة أخرى أو اعرض كل النتائج.',
       globalSearchSeeAll: 'عرض كل النتائج',
       visitTripoli: 'زيارة طرابلس',
-      navBrandTagline: 'أماكن وتجارب وفعاليات',
+      navBrandTagline: 'أفضل الأماكن · التجارب · الخطط',
       tripoliLebanon: 'طرابلس، لبنان',
       tripoli: 'طرابلس',
       lebanon: 'لبنان',
@@ -1255,7 +1255,7 @@ export const translations = {
     home: {
       heroTitle: 'استكشف طرابلس',
       heroTagline:
-        'أسواق تاريخية، سحر بحري وثقافة أصيلة. معلومات رسمية للزوار لتخطيط إقامتك.',
+        'اكتشف أفضل أماكن طرابلس، تجارب محلية، وخططاً جاهزة — كل ذلك في مكان واحد.',
       discoverMore: 'اكتشف المزيد',
       learnMore: 'اعرف المزيد',
       exploreDining: 'استكشف خيارات المطاعم',
@@ -1638,7 +1638,7 @@ export const translations = {
       bentoMosaicSnapCategoriesUnit: 'فئات',
       bentoMosaicSnapSub: 'خريطة · خلاصة · قوائم',
       bentoSiteGuideLeadShort:
-        'الأماكن الموثوقة في المتصفح. المساعدة الذكية للرحلة في تطبيق طرابلس.',
+        'اكتشف أفضل أماكن طرابلس، تجارب محلية، وخططاً جاهزة — كل ذلك في مكان واحد.',
       bentoAvatarStackAria: 'تصفح الأماكن والمجتمع',
       waysInThisPage: 'في هذه الصفحة',
       downloadAppTitle: 'التطبيق الرسمي لطرابلس',
@@ -1650,7 +1650,8 @@ export const translations = {
       useWebCta: 'دليل رسمي على الويب',
       heroDownloadCta: 'تحميل التطبيق',
       bentoWebHubTitle: 'طرابلس من المتصفح',
-      bentoWebHubSub: 'خريطة تفاعلية وقوائم موثوقة وما يحدث في المدينة — الدليل كاملاً دون تثبيت.',
+      bentoWebHubSub:
+        'خريطة تفاعلية وأماكن موثوقة وخطط جاهزة — الدليل الكامل في المتصفح دون تثبيت.',
       bentoWebHubFootnote:
         'تخطيط الرحلة بالذكاء الاصطناعي يعمل على هذا الموقع وفي تطبيق طرابلس (آبل وأندرويد). احفظ البرامج في حسابك واستمر باستكشاف الدليل الكامل من المتصفح.',
       bentoWebHubCta: 'خطط لزيارتك',
@@ -1658,7 +1659,7 @@ export const translations = {
         'أماكن موثوقة على خريطة تفاعلية، مع خلاصة المدينة — نفس البيانات التي يعتمدها التطبيق، محدّثة على الويب.',
       bentoSiteGuideAppNote:
         'اطرح أسئلتك بلغة بسيطة واحصل على برامج مخصّصة على الويب أو في تطبيق طرابلس (آبل وأندرويد). فهرس الأماكن الكامل يبقى في المتصفح.',
-      bentoSiteGuideAppStoreLabel: 'تطبيق طرابلس · للهاتف',
+      bentoSiteGuideAppStoreLabel: 'حمّل التطبيق · آي أو إس وأندرويد',
     },
     discover: {
       brandTitle: 'المجتمع',
@@ -1994,7 +1995,7 @@ export const translations = {
       globalSearchNoResults: 'Aucun lieu correspondant. Essayez un autre mot ou affichez tous les résultats.',
       globalSearchSeeAll: 'Voir tous les résultats',
       visitTripoli: 'Visiter Tripoli',
-      navBrandTagline: 'Lieux, expériences et événements',
+      navBrandTagline: 'Meilleurs lieux · expériences · parcours',
       tripoliLebanon: 'Tripoli, Liban',
       tripoli: 'Tripoli',
       lebanon: 'Liban',
@@ -2234,7 +2235,7 @@ export const translations = {
     home: {
       heroTitle: 'Explorer Tripoli',
       heroTagline:
-        'Souks historiques, charme maritime et culture authentique. Informations officielles pour planifier votre séjour.',
+        'Découvrez les meilleurs adresses de Tripoli, les expériences locales et des parcours tout prêts — le tout au même endroit.',
       discoverMore: 'Voir plus',
       learnMore: 'En savoir plus',
       exploreDining: 'Explorer les restaurants',
@@ -2620,7 +2621,7 @@ export const translations = {
       bentoMosaicSnapCategoriesUnit: 'catégories',
       bentoMosaicSnapSub: 'Carte · fil · fiches',
       bentoSiteGuideLeadShort:
-        'Adresses vérifiées dans le navigateur. L’assistant voyage reste dans l’app Tripoli.',
+        'Découvrez les meilleurs adresses de Tripoli, les expériences locales et des parcours tout prêts — le tout au même endroit.',
       bentoAvatarStackAria: 'Parcourir lieux et communauté',
       waysInThisPage: 'Sur cette page',
       downloadAppTitle: 'Application officielle Tripoli',
@@ -2633,7 +2634,7 @@ export const translations = {
       heroDownloadCta: 'Télécharger l’app',
       bentoWebHubTitle: 'Tripoli dans le navigateur',
       bentoWebHubSub:
-        'Carte interactive, adresses vérifiées et actualité locale — le guide complet, sans installation.',
+        'Carte interactive, adresses vérifiées et parcours prêts à l’emploi — le guide complet dans le navigateur, sans installation.',
       bentoWebHubFootnote:
         'La planification de voyage par IA fonctionne sur ce site et dans l’app Tripoli (iOS et Android). Enregistrez vos itinéraires sur votre compte et poursuivez la visite du guide complet dans le navigateur.',
       bentoWebHubCta: 'Planifier votre visite',
@@ -2641,7 +2642,7 @@ export const translations = {
         'Établissements vérifiés sur une carte interactive, plus l’actualité du fil de la ville — les mêmes données que l’app, tenues à jour sur le web.',
       bentoSiteGuideAppNote:
         'Posez des questions en langage courant et obtenez des itinéraires sur mesure sur le web ou dans l’app Tripoli (iOS et Android). L’index complet des fiches reste dans le navigateur.',
-      bentoSiteGuideAppStoreLabel: 'App Tripoli · mobile',
+      bentoSiteGuideAppStoreLabel: 'Télécharger · iOS et Android',
     },
     discover: {
       brandTitle: 'Communauté',
