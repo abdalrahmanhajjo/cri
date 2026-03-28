@@ -4,8 +4,10 @@ Web version of Tripoli Explorer: same theme and quality as the mobile app. **Sep
 
 ## Structure
 
-- **client/** – React (Vite) SPA – Explore, Map, Place/Tour/Event detail, Login, Register, Forgot password, Trips, Profile.
+- **client/** – React (Vite) SPA – Explore, Map, Place/Tour/Event detail, Login, Register, Trips, Profile.
 - **server/** – Node.js (Express) API – same DB as the Flutter app; auth, places, tours, events, categories, user profile, trips.
+- **server/src/index.js** – Process bootstrap: loads `.env`, validates production env, starts HTTP server, graceful shutdown, DB pool drain.
+- **server/src/app.js** – Express application only (Helmet CSP, CORS, rate limits, routes, `/health` + `/ready`, error handler). Used by tests via `require('./app')`.
 
 ## Setup
 
@@ -21,37 +23,54 @@ Use the **same database** as your Tripoli Explorer mobile app:
 ```bash
 cd server
 cp .env.example .env
-# Edit .env: set DATABASE_URL (same as mobile app), JWT_SECRET, CORS_ORIGIN=http://localhost:5173
+# Edit .env: DATABASE_URL, JWT_SECRET, CORS_ORIGIN=http://localhost:5173, PORT=3095 (default)
 npm install
 npm run dev
 ```
 
-API runs at http://localhost:3000. Uses the same `DATABASE_URL` and (optionally) same `JWT_SECRET` as the mobile backend so accounts and data are shared.
+The API listens on **http://localhost:3095** by default (`PORT`). **GET /health** is liveness; **GET /ready** runs `SELECT 1` and returns **503** if Postgres is unreachable.
+
+**Production:** `DATABASE_URL`, `JWT_SECRET`, and **`CORS_ORIGIN`** are required at boot (the process exits if they are missing). Use comma-separated origins or `*` only for controlled testing.
 
 ### 3. Web client
 
 ```bash
 cd client
 cp .env.example .env
-# .env: VITE_API_URL=http://localhost:3000 (default)
+```
+
+**Local dev:** leave **`VITE_API_URL` empty** so Vite proxies `/api` and `/uploads` to the API (**`DEV_API_PROXY_TARGET`**, default `http://127.0.0.1:3095`). Do not use port **3000** for this API.
+
+**Split hosting:** set **`VITE_API_URL`** to your public API origin (no trailing slash).
+
+```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173. Log in with the same account as the app; data comes from the same DB via this server.
+Open http://localhost:5173.
 
 ## Server (.env)
 
 | Variable        | Description |
 |----------------|-------------|
-| `PORT`         | API port (default 3000). |
+| `PORT`         | API port (default **3095**). |
+| `HOST`         | Bind address (default `0.0.0.0`). |
 | `DATABASE_URL` | Postgres connection string – **same DB as mobile app** (e.g. Supabase). |
-| `JWT_SECRET`   | Secret for JWT (min 32 chars in production). Use same as Figma1 backend to share sessions. |
-| `CORS_ORIGIN`  | Allowed origin(s), e.g. `http://localhost:5173`. |
-| `UPLOADS_BASE_URL` | Optional: base URL for place/tour images. |
+| `JWT_SECRET`   | Secret for JWT (min 32 chars in production). |
+| `CORS_ORIGIN`  | Comma-separated browser origins, or `*`. **Required in production** (fail-closed at boot if unset). |
+| `UPLOADS_BASE_URL` | Optional: public base for `/uploads/*` when using local disk + split hosting. |
+| `SERVE_CLIENT_DIST` | `true` to serve the built SPA from Node (Docker / single VM). |
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` (repo root) | API + Vite together |
+| `npm run test` (repo root) | Server Jest smoke tests (`/health`, `/ready`) |
+| `npm run build --prefix client` | Production client bundle |
 
 ## Tech
 
-- **Frontend:** React 18, Vite, React Router, CSS (theme variables).
-- **Backend:** Node.js, Express, pg, JWT, bcrypt – same API shape as mobile backend.
-- **DB:** Same Postgres/Supabase as the mobile app; no separate DB for web.
+- **Frontend:** React 19, Vite, React Router, CSS (theme variables).
+- **Backend:** Node.js, Express, `pg`, JWT, bcrypt.

@@ -138,4 +138,8 @@ function query(text, params) {
   return pool.query(text, params);
 }
 
-module.exports = { pool, query, verifyDatabaseConnection };
+function closePool() {
+  return pool.end();
+}
+
+module.exports = { pool, query, verifyDatabaseConnection, closePool };
