@@ -304,7 +304,12 @@ export const api = {
       const q = qs.toString();
       return api.get(`/api/places/${encodeURIComponent(id)}${q ? `?${q}` : ''}`);
     },
-    promotions: (id) => api.get(`/api/places/${encodeURIComponent(id)}/promotions`),
+    promotions: (id, opts) => {
+      const qs = new URLSearchParams();
+      if (opts?.lang) qs.set('lang', String(opts.lang));
+      const q = qs.toString();
+      return api.get(`/api/places/${encodeURIComponent(id)}/promotions${q ? `?${q}` : ''}`);
+    },
     /** Public: reviews left on Visit Tripoli (not Google). */
     reviews: (id) => api.get(`/api/places/${encodeURIComponent(id)}/reviews`),
     /** Auth: create or replace current user’s review for this place. */
@@ -597,6 +602,7 @@ export const api = {
   publicPromotions: (params) => {
     const qs = new URLSearchParams();
     if (params?.limit != null && params.limit !== '') qs.set('limit', String(params.limit));
+    if (params?.lang) qs.set('lang', String(params.lang));
     const q = qs.toString();
     return api.get(`/api/promotions${q ? `?${q}` : ''}`);
   },
