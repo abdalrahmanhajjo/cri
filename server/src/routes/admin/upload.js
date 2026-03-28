@@ -61,7 +61,11 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const ok = multerFileAllowed(file);
     cb(
-      ok ? null : new Error('Only images (JPEG, PNG, GIF, WebP, HEIC/HEIF) or videos (MP4, WebM, MOV) allowed'),
+      ok
+        ? null
+        : new Error(
+            'Only images (JPEG, PNG, GIF, WebP, HEIC/HEIF — HEIC is saved as JPEG) or videos (MP4, WebM, MOV) allowed'
+          ),
       ok
     );
   },
@@ -85,11 +89,18 @@ router.post('/', upload.single('file'), async (req, res) => {
     safeExt = /^\.(mp4|webm|mov|m4v)$/i.test(ext) ? ext : fromMime;
     storagePrefix = 'feed/videos';
   } else {
-    const prep = await prepareUploadedImage(uploadBuffer, req.file.mimetype, req.file.originalname);
-    uploadBuffer = prep.buffer;
-    contentType = prep.contentType;
-    safeExt = pickImageExtension(contentType, req.file.originalname, prep.useExtension);
-    storagePrefix = 'places';
+    try {
+      const prep = await prepareUploadedImage(uploadBuffer, req.file.mimetype, req.file.originalname);
+      uploadBuffer = prep.buffer;
+      contentType = prep.contentType;
+      safeExt = pickImageExtension(contentType, req.file.originalname, prep.useExtension);
+      storagePrefix = 'places';
+    } catch (e) {
+      if (e.code === 'HEIC_CONVERT_FAILED') {
+        return res.status(e.status || 422).json({ error: e.message });
+      }
+      throw e;
+    }
   }
 
   const filename = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
