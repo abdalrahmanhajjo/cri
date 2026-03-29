@@ -498,7 +498,7 @@ function themeCategoryStats(bucket, categories) {
   return { categoryCount: resolved, listingCount: (bucket || []).length };
 }
 
-/** Home “Find your way” — themes + indirect category framing (no named places). */
+/** Home browse-by-category deck — directory categories grouped into a few friendly rows. */
 export function ExperienceTripoliSection({ t, lang, places = [], categories = [] }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const placesByWay = groupPlacesByWay(places, categories);

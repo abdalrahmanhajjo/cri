@@ -1,4 +1,4 @@
-/* Section names and keywords — shared by home “Find your way” strip and /ways page. */
+/* Section names and keywords — home category deck and /ways detail page. */
 export const WAYS_CONFIG = [
   { wayKey: 'explorer', titleKey: 'wayExplorer', descKey: 'wayExplorerDesc', detailKey: 'wayExplorerDetail', icon: 'explore', keywords: ['attraction', 'landmark', 'souq', 'souk', 'market', 'explore', 'sightseeing', 'old city', 'shopping', 'bazaar'] },
   { wayKey: 'food', titleKey: 'wayFood', descKey: 'wayFoodDesc', detailKey: 'wayFoodDetail', icon: 'restaurant', keywords: ['restaurant', 'food', 'cafe', 'café', 'dining', 'cuisine', 'sweet', 'sweets', 'bakery', 'coffee', 'eat', 'meal'] },
