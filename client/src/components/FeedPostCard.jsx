@@ -9,6 +9,7 @@ import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../utils/feedPostImages'
 import { isLikelyImageFile, isLikelyVideoFile, ACCEPT_IMAGES_WITH_HEIC } from '../utils/imageUploadAccept';
 import { COMMUNITY_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
 import { isLikelyDirectStreamableVideo } from '../utils/feedVideoPlayback';
+import { useReelPreferLowBandwidth, reelLowBandwidthSrcFromMain } from '../utils/reelAdaptiveVideo';
 
 function mediaUrl(url) {
   if (!url || typeof url !== 'string') return '';
@@ -140,13 +141,26 @@ export default function FeedPostCard({
     return getPlaceImageUrl(String(raw).trim());
   })();
   const isVideo = isCommunityFeedVideo(post);
+  const preferLowBandwidth = useReelPreferLowBandwidth();
+  const [feedVideoForceHigh, setFeedVideoForceHigh] = useState(false);
+  useEffect(() => {
+    setFeedVideoForceHigh(false);
+  }, [post.id, post.video_url, preferLowBandwidth]);
+
   const gallerySrcs = useMemo(() => {
     const raw = rawFeedImageUrls(post);
     return raw.map((u) => mediaUrl(u)).filter(Boolean);
   }, [post.id, post.image_url, post.image_urls]);
   const img = gallerySrcs[0] || '';
-  const vid = post.video_url ? mediaUrl(post.video_url) : '';
-  const showVideo = isVideo && vid && isLikelyDirectStreamableVideo(vid, post.video_url);
+  const vidHigh = post.video_url ? mediaUrl(post.video_url) : '';
+  const vidLowRaw =
+    post.video_url && preferLowBandwidth
+      ? reelLowBandwidthSrcFromMain(String(post.video_url).trim())
+      : '';
+  const vidLow = vidLowRaw ? mediaUrl(vidLowRaw) : '';
+  const vid =
+    !feedVideoForceHigh && preferLowBandwidth && vidLow ? vidLow : vidHigh;
+  const showVideo = isVideo && vidHigh && isLikelyDirectStreamableVideo(vidHigh, post.video_url);
   const externalVideo = isVideo && post.video_url && !showVideo;
   const timeLabel = formatFeedTime(post.created_at, lang);
   const hideLikes = post.hide_likes === true;
@@ -1121,7 +1135,7 @@ export default function FeedPostCard({
           <div className="ig-reel-media-layer" role="presentation" {...mediaTapProps}>
             {showVideo ? (
               <video
-                key={`${post.id}-${isActiveReel ? 'active' : 'idle'}`}
+                key={`${post.id}-${isActiveReel ? 'active' : 'idle'}-${feedVideoForceHigh || !preferLowBandwidth || !vidLow ? 'hq' : 'lb'}`}
                 ref={reelVideoRef}
                 className="ig-reel-video"
                 src={vid}
@@ -1131,7 +1145,14 @@ export default function FeedPostCard({
                 loop
                 autoPlay={isActiveReel}
                 controls={isDesktop}
-                preload={isDesktop ? 'auto' : 'metadata'}
+                preload={
+                  preferLowBandwidth ? 'metadata' : isDesktop ? 'auto' : 'metadata'
+                }
+                onError={() => {
+                  if (preferLowBandwidth && vidLow && !feedVideoForceHigh) {
+                    setFeedVideoForceHigh(true);
+                  }
+                }}
                 onTimeUpdate={(e) => {
                   const el = e.currentTarget;
                   if (el.duration) setReelProgress(el.currentTime / el.duration);
@@ -1422,7 +1443,20 @@ export default function FeedPostCard({
           <div className="ig-feed-media-wrap" role="presentation" {...mediaTapProps}>
             <div className="ig-feed-media">
               {showVideo ? (
-                <video className="ig-feed-video" src={vid} controls playsInline preload="metadata" poster={img || undefined} />
+                <video
+                  key={`${post.id}-feedvid-${feedVideoForceHigh || !preferLowBandwidth || !vidLow ? 'hq' : 'lb'}`}
+                  className="ig-feed-video"
+                  src={vid}
+                  controls
+                  playsInline
+                  preload={preferLowBandwidth ? 'metadata' : 'metadata'}
+                  poster={img || undefined}
+                  onError={() => {
+                    if (preferLowBandwidth && vidLow && !feedVideoForceHigh) {
+                      setFeedVideoForceHigh(true);
+                    }
+                  }}
+                />
               ) : gallerySrcs.length > 1 ? (
                 <div className="ig-feed-gallery">
                   <div
