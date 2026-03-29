@@ -295,6 +295,32 @@ if (serveClientDist) {
 }
 
 let lastDbConnectivityLog = 0;
+
+/** Multer / upload filter errors must stay readable in production (global handler would hide them). */
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  try {
+    const multer = require('multer');
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'File too large. Maximum size is 80 MB.' });
+      }
+      return res.status(400).json({ error: err.message || 'Upload rejected.' });
+    }
+  } catch (_) {
+    /* multer not available */
+  }
+  const uploadMsg = String(err.message || '');
+  if (
+    uploadMsg.includes('Only images (JPEG') ||
+    uploadMsg.includes('videos (MP4') ||
+    uploadMsg.includes('HEIC is saved as JPEG')
+  ) {
+    return res.status(400).json({ error: uploadMsg });
+  }
+  next(err);
+});
+
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   const msg = String(err.message || err);
