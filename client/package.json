@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run favicons",
     "build": "vite build",
+    "favicons": "node scripts/generate-favicons.mjs",
     "optimize:city": "node scripts/optimize-city-hero.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -27,6 +29,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "png-to-ico": "^3.0.1",
     "sharp": "^0.34.5",
     "vite": "^7.3.1"
   }
