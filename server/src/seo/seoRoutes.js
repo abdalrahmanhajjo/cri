@@ -510,6 +510,7 @@ function makeSeoResponder({ clientDistPath }) {
         lang,
         jsonLd,
         alternates,
+        baseUrl,
       });
       res.status(status).type('text/html').send(out);
     } catch (err) {
