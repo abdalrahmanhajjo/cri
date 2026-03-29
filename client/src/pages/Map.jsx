@@ -19,12 +19,6 @@ const MAP_FIT_PADDING = 64;
 const PLACES_REGION = 'Tripoli, Lebanon';
 const GOOGLE_PLACES_CONCURRENCY = 3;
 const GOOGLE_PLACES_DELAY_MS = 200;
-const MAP_TYPES = Object.freeze([
-  { id: 'roadmap', label: 'Map', icon: 'map' },
-  { id: 'satellite', label: 'Satellite', icon: 'satellite_alt' },
-  { id: 'terrain', label: 'Terrain', icon: 'terrain' },
-]);
-
 /** Car & walking only (matches product request; avoids transit/bike in web nav). */
 const TRAVEL_MODES = Object.freeze([
   { id: 'DRIVING', icon: 'directions_car', labelKey: 'travelModeCar' },
@@ -744,6 +738,7 @@ export default function MapPage() {
           zoom: DEFAULT_ZOOM,
           minZoom: 2,
           maxZoom: 21,
+          mapTypeId: 'satellite',
           mapTypeControl: false,
           streetViewControl: true,
           fullscreenControl: false,
@@ -783,12 +778,6 @@ export default function MapPage() {
       infoWindowRef.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-    map.setMapTypeId(mapTypeId);
-  }, [mapTypeId]);
 
   /* Live reload: resize map when layout changes (panel open/close) or window resize */
   const triggerMapResize = useCallback(() => {
@@ -1257,22 +1246,6 @@ export default function MapPage() {
         >
           <Icon name={listOpen ? 'close' : 'list'} size={24} />
         </button>
-
-        {/* Map type selector — hidden during live navigation for a cleaner view */}
-        <div className={`map-type-pill${liveNavigation ? ' map-type-pill--hidden' : ''}`}>
-          {MAP_TYPES.map((type) => (
-            <button
-              key={type.id}
-              type="button"
-              className={`map-type-btn ${mapTypeId === type.id ? 'map-type-btn--active' : ''}`}
-              onClick={() => setMapTypeId(type.id)}
-              aria-pressed={mapTypeId === type.id}
-            >
-              <Icon name={type.icon} size={18} />
-              <span>{type.label}</span>
-            </button>
-          ))}
-        </div>
 
         {/* My location */}
         <button
