@@ -11,12 +11,6 @@ const REEL_TIMEOUT_MS = parseInt(process.env.REEL_TRANSCODE_TIMEOUT_MS || '30000
 const OUTPUT_VS_INPUT_MAX =
   Number.parseFloat(process.env.REEL_TRANSCODE_MAX_OUTPUT_RATIO || '') || 1.25;
 
-function isReelUploadPurpose(body) {
-  if (!body || typeof body !== 'object') return false;
-  const p = String(body.purpose || body.uploadPurpose || '').toLowerCase().trim();
-  return p === 'reel';
-}
-
 /** Prefer system ffmpeg (Docker/Alpine: /usr/bin/ffmpeg); npm installer binary often breaks on musl. */
 function resolveFfmpegPath() {
   const explicit = process.env.FFMPEG_PATH?.trim();
@@ -182,13 +176,12 @@ async function encodeFileToWebReelMp4(inputPath, outputPath, opts = {}) {
 }
 
 /**
- * Transcode reel from a path (no extra full-file buffer in Node).
+ * Transcode any feed-bucket video upload to H.264/AAC MP4 (reels and "video" posts).
  * Caller must delete `inputPath` after success. Call `cleanup()` after reading/uploading `outputPath`.
  * @returns {Promise<{ outputPath: string, contentType: string, extension: string, cleanup: () => Promise<void> } | null>}
  */
 async function transcodeReelVideoFromPath(inputPath, originalname, mimetype, body) {
   if (process.env.DISABLE_REEL_TRANSCODE === '1') return null;
-  if (!isReelUploadPurpose(body)) return null;
   if (!inputPath || !fs.existsSync(inputPath)) return null;
 
   const maxMb = parseInt(process.env.REEL_TRANSCODE_MAX_INPUT_MB || '0', 10);
@@ -241,13 +234,11 @@ async function transcodeReelVideoFromPath(inputPath, originalname, mimetype, bod
 }
 
 /**
- * When `purpose=reel` on multipart upload: normalize to H.264 MP4, cap long edge for web reels,
- * AAC audio (or none), faststart for streaming. Falls back to original buffer on any failure.
+ * Normalize feed video buffer to H.264 MP4 (same pipeline as disk-path upload). Falls back to null on failure.
  * @returns {Promise<{ buffer: Buffer, contentType: string, extension: string } | null>}
  */
 async function transcodeReelVideoIfNeeded(buffer, originalname, mimetype, body) {
   if (process.env.DISABLE_REEL_TRANSCODE === '1') return null;
-  if (!isReelUploadPurpose(body)) return null;
   if (!buffer || buffer.length < 1) return null;
 
   const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'visit-reel-in-'));
@@ -277,7 +268,6 @@ async function transcodeReelVideoIfNeeded(buffer, originalname, mimetype, body) 
 }
 
 module.exports = {
-  isReelUploadPurpose,
   resolveFfmpegPath,
   buildFfmpegArgs,
   runFfmpegWebReelEncode,
