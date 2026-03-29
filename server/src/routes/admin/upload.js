@@ -163,12 +163,16 @@ router.post('/', upload.single('file'), async (req, res) => {
     supabaseBody = await fs.promises.readFile(uploadDiskPath);
   }
 
+  const uploadContentType =
+    (contentType && String(contentType).trim()) ||
+    (storagePrefix === 'feed/videos' ? 'video/mp4' : 'application/octet-stream');
+
   if (supabase) {
     try {
       const { data, error } = await supabase.storage
         .from(BUCKET)
         .upload(filePath, supabaseBody, {
-          contentType,
+          contentType: uploadContentType,
           upsert: false,
         });
 
@@ -181,7 +185,7 @@ router.post('/', upload.single('file'), async (req, res) => {
         const bucketReady = await ensureBucket(supabase);
         if (bucketReady) {
           const retry = await supabase.storage.from(BUCKET).upload(filePath, supabaseBody, {
-            contentType,
+            contentType: uploadContentType,
             upsert: false,
           });
           if (!retry.error) {

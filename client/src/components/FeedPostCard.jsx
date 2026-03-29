@@ -6,7 +6,7 @@ import { isCommunityFeedVideo } from './CommunityFeed';
 import { useLanguage } from '../context/LanguageContext';
 import { formatFeedTime } from '../utils/feedTime';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../utils/feedPostImages';
-import { isLikelyImageFile, ACCEPT_IMAGES_WITH_HEIC } from '../utils/imageUploadAccept';
+import { isLikelyImageFile, isLikelyVideoFile, ACCEPT_IMAGES_WITH_HEIC } from '../utils/imageUploadAccept';
 import { COMMUNITY_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
 
 function mediaUrl(url) {
@@ -722,7 +722,7 @@ export default function FeedPostCard({
       setFeedActionMsg('This post is not linked to a place. Upload from Business dashboard.');
       return;
     }
-    if (!/^video\//i.test(file.type)) {
+    if (!isLikelyVideoFile(file)) {
       setFeedActionMsg('Choose a video file (MP4, WebM, MOV).');
       return;
     }

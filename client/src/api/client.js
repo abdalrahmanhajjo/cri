@@ -175,6 +175,34 @@ function clearAuthStorageAndNotify() {
   }
 }
 
+/** Parse multipart upload response: JSON error or a short snippet from HTML/plain bodies. */
+async function parseStorageUploadResponse(response, token) {
+  const raw = await response.text();
+  let data = {};
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      const oneLine = raw.replace(/\s+/g, ' ').trim();
+      data = { error: oneLine ? oneLine.slice(0, 240) : `HTTP ${response.status}` };
+    }
+  }
+  if (!response.ok) {
+    if (response.status === 401 && token) clearAuthStorageAndNotify();
+    const msg =
+      (typeof data.error === 'string' && data.error) ||
+      (response.status === 413 ? 'File too large (max 80 MB).' : '') ||
+      (response.status === 502 ? 'Storage unavailable. Try a smaller file or again later.' : '') ||
+      response.statusText ||
+      'Upload failed';
+    throw new Error(msg);
+  }
+  if (data.error) throw new Error(typeof data.error === 'string' ? data.error : 'Upload failed');
+  const url = data.url || '';
+  if (!url) throw new Error('Server did not return a file URL.');
+  return url;
+}
+
 async function requestWithDedupe(path, options = {}) {
   const url = `${getBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
   const method = (options.method || 'GET').toUpperCase();
@@ -511,16 +539,8 @@ export const api = {
       const headers = {};
       const token = getToken();
       if (token) headers.Authorization = `Bearer ${token}`;
-      return fetchWithNetworkRetry(url, { method: 'POST', body: formData, headers, credentials: 'include' }).then(
-        async (r) => {
-          const data = await r.json().catch(() => ({}));
-          if (!r.ok) {
-            if (r.status === 401 && token) clearAuthStorageAndNotify();
-            throw new Error(data.error || r.statusText || 'Upload failed');
-          }
-          if (data.error) throw new Error(data.error);
-          return data.url || '';
-        }
+      return fetchWithNetworkRetry(url, { method: 'POST', body: formData, headers, credentials: 'include' }).then((r) =>
+        parseStorageUploadResponse(r, token)
       );
     },
   },
@@ -547,15 +567,8 @@ export const api = {
       const headers = {};
       const token = getToken();
       if (token) headers.Authorization = `Bearer ${token}`;
-      return fetchWithNetworkRetry(url, { method: 'POST', body: formData, headers, credentials: 'include' }).then(
-        async (r) => {
-          const data = await r.json().catch(() => ({}));
-          if (!r.ok) {
-            if (r.status === 401 && token) clearAuthStorageAndNotify();
-            throw new Error(data.error || r.statusText || 'Upload failed');
-          }
-          return data.url || '';
-        }
+      return fetchWithNetworkRetry(url, { method: 'POST', body: formData, headers, credentials: 'include' }).then((r) =>
+        parseStorageUploadResponse(r, token)
       );
     },
     feed: {

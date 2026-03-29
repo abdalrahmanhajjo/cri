@@ -10,3 +10,15 @@ export function isLikelyImageFile(file) {
   const n = (file.name || '').toLowerCase();
   return n.endsWith('.heic') || n.endsWith('.heif');
 }
+
+/** Treat as video (many phones send empty type or application/octet-stream + .mov). */
+export function isLikelyVideoFile(file) {
+  if (!file) return false;
+  const t = (file.type || '').toLowerCase();
+  if (t.startsWith('video/')) return true;
+  if (t === 'application/octet-stream' || t === '') {
+    const n = (file.name || '').toLowerCase();
+    return /\.(mp4|webm|mov|m4v|3gp|3g2|mkv)$/i.test(n);
+  }
+  return false;
+}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
-import { isLikelyImageFile, ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
+import { isLikelyImageFile, isLikelyVideoFile, ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
 import './Admin.css';
 
 function contentKind(t) {
@@ -264,7 +264,7 @@ export default function AdminFeed() {
       await uploadEditImages([file]);
       return;
     }
-    if (!/^video\//i.test(file.type)) {
+    if (!isLikelyVideoFile(file)) {
       setError('Choose a video file.');
       return;
     }

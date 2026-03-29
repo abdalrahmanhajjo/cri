@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
-import { isLikelyImageFile, ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
+import { isLikelyImageFile, isLikelyVideoFile, ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
 import './Business.css';
 
 const BASE_TITLE = 'Business — Visit Tripoli';
@@ -334,7 +334,7 @@ export default function BusinessPlaceFeed() {
 
   const uploadFormVideo = async (file) => {
     if (!formPlace || !file) return;
-    if (!/^video\//i.test(file.type)) {
+    if (!isLikelyVideoFile(file)) {
       setError('Choose a video file (MP4, WebM, MOV).');
       return;
     }
@@ -383,7 +383,7 @@ export default function BusinessPlaceFeed() {
 
   const uploadEditVideo = async (file) => {
     if (!editing?.id || !file) return;
-    if (!/^video\//i.test(file.type)) {
+    if (!isLikelyVideoFile(file)) {
       setError('Choose a video file (MP4, WebM, MOV).');
       return;
     }
