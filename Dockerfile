@@ -38,8 +38,7 @@ ENV HOST=0.0.0.0
 ENV SERVE_CLIENT_DIST=true
 # Prefer distro ffmpeg (full codecs). Override only if you use a custom binary.
 ENV FFMPEG_PATH=/usr/bin/ffmpeg
-# Feed videos re-encoded to web MP4 (1080×1920 max, H.264 medium+CRF20). If 502/timeouts persist, set DISABLE_REEL_TRANSCODE=1.
-ENV DISABLE_REEL_TRANSCODE=0
+# Feed videos: uploads are stored as received. ffmpeg is for optional ops (e.g. scripts/recompress-feed-reel-videos.js).
 
 EXPOSE 3095
 CMD ["node", "src/index.js"]

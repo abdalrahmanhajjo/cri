@@ -9,7 +9,7 @@
 # JWT_SECRET is auto-generated below (generateValue). To set your own, remove that block and add JWT_SECRET in the dashboard.
 # Run DB migrations once from your machine: DATABASE_URL="…" npm run db:migrate
 # Free tier: service sleeps after ~15 min idle (first request may take ~1 min). Disk is ephemeral — prefer Supabase Storage for uploads.
-# Reel uploads: re-encoded to smaller MP4 by default. If you see 502 on free tier, set DISABLE_REEL_TRANSCODE=1 or use a larger instance.
+# Feed video uploads: stored as uploaded (no server re-encode). ffmpeg in the image is only for optional batch scripts (recompress-reels).
 
 services:
   - type: web
@@ -29,5 +29,3 @@ services:
         value: true
       - key: JWT_SECRET
         generateValue: true
-      - key: DISABLE_REEL_TRANSCODE
-        value: "0"
