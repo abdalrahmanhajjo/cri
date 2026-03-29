@@ -9,7 +9,8 @@
     "test": "jest",
     "export-sql": "node scripts/export-supabase-sql.js",
     "db:restore": "node scripts/restore-database.js",
-    "db:migrate": "node scripts/run-migrations.js"
+    "db:migrate": "node scripts/run-migrations.js",
+    "recompress-reels": "node scripts/recompress-feed-reel-videos.js"
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",

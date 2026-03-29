@@ -35,9 +35,8 @@ ENV HOST=0.0.0.0
 ENV SERVE_CLIENT_DIST=true
 # Prefer distro ffmpeg (full codecs). Override only if you use a custom binary.
 ENV FFMPEG_PATH=/usr/bin/ffmpeg
-# Free/small hosts: reel transcoding often hits Render 502 (timeout/OOM). Upload original video instead.
-# On a larger instance, set DISABLE_REEL_TRANSCODE=0 in the host env to re-enable normalization.
-ENV DISABLE_REEL_TRANSCODE=1
+# Reels are re-encoded to a smaller web MP4 (720×1280 max, H.264 fast+CRF24). If 502/timeouts persist, set DISABLE_REEL_TRANSCODE=1.
+ENV DISABLE_REEL_TRANSCODE=0
 
 EXPOSE 3095
 CMD ["node", "src/index.js"]
