@@ -509,6 +509,12 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
         <header className="vd-find-your-way-header">
           <h2 className="vd-find-your-way-title">{safeT('home', 'findYourWayTitle')}</h2>
           <p className="vd-find-your-way-sub">{safeT('home', 'findYourWaySub')}</p>
+          <p className="vd-find-your-way-community">
+            <Link to={COMMUNITY_PATH} className="vd-find-your-way-community-link">
+              {safeT('home', 'findYourWayCommunityHint')}
+              <Icon name="arrow_forward" size={18} aria-hidden />
+            </Link>
+          </p>
         </header>
         <div className="vd-find-your-way-deck" role="list">
           {WAYS_CONFIG.map((way, i) => {

@@ -2914,6 +2914,27 @@ a.ig-feed-avatar--link:focus-visible {
   color: #fff;
 }
 
+/* Tablet/desktop: reel column narrower than feed photo posts — compact frame, cover = crisp */
+@media (min-width: 768px) {
+  .ig-feed-stack--reels .ig-feed-post--reel {
+    max-width: min(400px, 100%);
+    margin-inline: auto;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .ig-feed-stack--reels .ig-reel-theater {
+    max-height: min(70vh, 680px);
+    border-radius: 0;
+  }
+
+  .ig-feed-stack--reels .ig-reel-video,
+  .ig-feed-stack--reels .ig-reel-img {
+    object-fit: cover;
+    object-position: center;
+  }
+}
+
 .ig-reel-media-layer {
   position: absolute;
   inset: 0;

@@ -1501,6 +1501,20 @@ a.vd-top-picks-card-bg--hit {
   font-weight: 400;
 }
 
+.vd-ways-hero .vd-find-your-way-community {
+  margin-top: 14px;
+}
+
+.vd-ways-hero .vd-find-your-way-community-link {
+  color: #fff;
+  opacity: 0.95;
+}
+
+.vd-ways-hero .vd-find-your-way-community-link:hover {
+  opacity: 1;
+  color: #fff;
+}
+
 /* Shared page hero (Spots, Experiences, Events, Plan, Map) – same style as Ways */
 .vd-page-hero {
   background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 50%, #0a5c56 100%);
@@ -1790,6 +1804,30 @@ a.vd-top-picks-card-bg--hit {
   margin: 0;
   line-height: 1.55;
   font-weight: 400;
+}
+
+.vd-find-your-way-community {
+  margin: 14px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.vd-find-your-way-community-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  text-decoration: none;
+  border-radius: 8px;
+  padding: 4px 2px;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.vd-find-your-way-community-link:hover {
+  color: var(--color-primary);
+  text-decoration: none;
+  opacity: 0.92;
 }
 
 @media (min-width: 768px) {
