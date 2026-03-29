@@ -200,7 +200,7 @@ async function parseStorageUploadResponse(response, token) {
     if (response.status === 401 && token) clearAuthStorageAndNotify();
     const msg =
       (typeof data.error === 'string' && data.error) ||
-      (response.status === 413 ? 'File too large (max 80 MB).' : '') ||
+      (response.status === 413 ? 'File too large for this server.' : '') ||
       (response.status === 502 ? 'Storage unavailable. Try a smaller file or again later.' : '') ||
       response.statusText ||
       'Upload failed';
