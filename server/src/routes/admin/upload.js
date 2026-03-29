@@ -15,6 +15,7 @@ const {
   VIDEO_MIME_TO_EXT,
 } = require('../../utils/imageUpload');
 const { getMulterFileSizeLimit } = require('../../utils/uploadLimits');
+const { prepareFeedVideoDiskPath } = require('../../utils/feedVideoUploadPrepare');
 
 const router = express.Router();
 const BUCKET = 'place-images';
@@ -127,17 +128,24 @@ router.post('/', upload.single('file'), async (req, res) => {
   const filename = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
   const filePath = `${storagePrefix}/${filename}`;
 
+  let pathToCleanupAfterSuccess = multerPath;
+  if (uploadDiskPath && storagePrefix === 'feed/videos') {
+    const prep = await prepareFeedVideoDiskPath(multerPath, safeExt);
+    uploadDiskPath = prep.diskPath;
+    pathToCleanupAfterSuccess = prep.cleanupPath;
+  }
+
   const isProd = process.env.NODE_ENV === 'production';
   const supabase = getSupabase();
   if (!supabase && isProd) {
-    await fs.promises.unlink(multerPath).catch(() => {});
+    await fs.promises.unlink(pathToCleanupAfterSuccess).catch(() => {});
     return res.status(503).json({
       error: 'Uploads are not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on the server.',
     });
   }
 
   async function cleanupAfterStored() {
-    await fs.promises.unlink(multerPath).catch(() => {});
+    await fs.promises.unlink(pathToCleanupAfterSuccess).catch(() => {});
   }
 
   /** Supabase Node client is unreliable with fs ReadStream for large bodies; use a single buffer. */
@@ -148,7 +156,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     }
   } catch (readErr) {
     console.error('Upload read failed:', readErr);
-    await fs.promises.unlink(multerPath).catch(() => {});
+    await fs.promises.unlink(pathToCleanupAfterSuccess).catch(() => {});
     return res.status(500).json({ error: 'Could not read the uploaded file. Try a smaller video or another format.' });
   }
 
@@ -215,7 +223,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     res.json({ url: `${publicPrefix}/${filename}` });
   } catch (err) {
     console.error('Local upload error:', err);
-    await fs.promises.unlink(multerPath).catch(() => {});
+    await fs.promises.unlink(pathToCleanupAfterSuccess).catch(() => {});
     res.status(500).json({ error: err?.message || 'Upload failed' });
   }
 });

@@ -1131,7 +1131,7 @@ export default function FeedPostCard({
                 loop
                 autoPlay={isActiveReel}
                 controls={isDesktop}
-                preload={isDesktop ? 'auto' : 'metadata'}
+                preload={isActiveReel || isDesktop ? 'auto' : 'metadata'}
                 onTimeUpdate={(e) => {
                   const el = e.currentTarget;
                   if (el.duration) setReelProgress(el.currentTime / el.duration);
@@ -1422,7 +1422,7 @@ export default function FeedPostCard({
           <div className="ig-feed-media-wrap" role="presentation" {...mediaTapProps}>
             <div className="ig-feed-media">
               {showVideo ? (
-                <video className="ig-feed-video" src={vid} controls playsInline preload="metadata" poster={img || undefined} />
+                <video className="ig-feed-video" src={vid} controls playsInline preload="auto" poster={img || undefined} />
               ) : gallerySrcs.length > 1 ? (
                 <div className="ig-feed-gallery">
                   <div
