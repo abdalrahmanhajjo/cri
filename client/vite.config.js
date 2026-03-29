@@ -28,7 +28,7 @@ function buildStaticSeoHead(siteUrl) {
     <meta name="application-name" content="${brand}" />
     <meta name="apple-mobile-web-app-title" content="${brand}" />
     <link rel="manifest" href="/site.webmanifest" />
-    <link rel="apple-touch-icon" href="/tripoli-lebanon-icon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="${title}" />
     <meta property="og:description" content="${desc}" />

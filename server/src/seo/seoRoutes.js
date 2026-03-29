@@ -68,7 +68,7 @@ function organizationSameAsFromEnv() {
 }
 
 function jsonLdOrg({ baseUrl }) {
-  const logoUrl = safeUrlJoin(baseUrl, '/tripoli-lebanon-icon.svg');
+  const logoUrl = safeUrlJoin(baseUrl, '/icon-192.png');
   const sameAs = organizationSameAsFromEnv();
   const out = {
     '@context': 'https://schema.org',
