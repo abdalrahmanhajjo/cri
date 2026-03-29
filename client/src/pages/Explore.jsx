@@ -18,6 +18,7 @@ import {
 import { cityHeroWebpSrcSet, CITY_HERO_SIZES } from '../constants/cityHero';
 import { resolveHeroTagline, resolveFooterTagline } from '../config/resolveSiteTagline';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
+import { applyHomeSeoFromSettings } from '../utils/siteSeo';
 import { getApiOrigin } from '../utils/apiOrigin';
 import { WAYS_CONFIG, groupPlacesByWay, countDirectoryCategoriesForWay } from '../utils/findYourWayGrouping';
 import { supabaseOptimizeForThumbnail } from '../utils/supabaseImage.js';
@@ -650,16 +651,8 @@ export default function Explore() {
   }, [user]);
 
   useEffect(() => {
-    const d = settings.metaDescription?.trim();
-    if (!d) return;
-    let meta = document.querySelector('meta[name="description"]');
-    if (!meta) {
-      meta = document.createElement('meta');
-      meta.setAttribute('name', 'description');
-      document.head.appendChild(meta);
-    }
-    meta.setAttribute('content', d);
-  }, [settings.metaDescription]);
+    applyHomeSeoFromSettings(settings);
+  }, [settings.metaDescription, settings.siteName]);
 
   const bentoHeroUrl = useMemo(() => resolveHomeBentoVisuals(settings).hero, [settings]);
 

@@ -3,6 +3,7 @@
 #   DATABASE_URL (Supabase Postgres), CORS_ORIGIN (https://YOUR-SERVICE.onrender.com)
 #   SMTP_*, SUPABASE_* — see server/.env.example
 # Optional (SEO): add GOOGLE_SITE_VERIFICATION in the dashboard (value from Search Console HTML-tag verification).
+# Optional (SEO / social cards): set VITE_PUBLIC_SITE_URL=https://your-domain.com (build-time; Docker ARG or Vite build).
 # Optional (LCP / images): VITE_SUPABASE_ORIGIN=https://YOUR_PROJECT.supabase.co (preconnect).
 #   VITE_SUPABASE_IMAGE_TRANSFORM=1 only if your Supabase plan supports transforms (omit otherwise).
 # JWT_SECRET is auto-generated below (generateValue). To set your own, remove that block and add JWT_SECRET in the dashboard.

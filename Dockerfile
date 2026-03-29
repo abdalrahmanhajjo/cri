@@ -12,6 +12,9 @@ COPY client/ ./
 # Same-origin: leave VITE_API_URL empty so the browser uses /api on this host.
 ARG VITE_API_URL=
 ENV VITE_API_URL=$VITE_API_URL
+# Canonical site URL (no trailing slash) for SEO: canonical, og:url, og:image, JSON-LD in index.html.
+ARG VITE_PUBLIC_SITE_URL=
+ENV VITE_PUBLIC_SITE_URL=$VITE_PUBLIC_SITE_URL
 ARG VITE_GOOGLE_MAPS_API_KEY=
 ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
 # Optional: https://YOUR_PROJECT.supabase.co — injects preconnect in index.html at build time.
