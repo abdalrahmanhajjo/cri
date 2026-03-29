@@ -55,6 +55,27 @@ function loadClientIndexHtml(clientDistPath) {
   return cachedIndex;
 }
 
+/**
+ * Crawlers, Chrome history, and the omnibox often resolve icons better with absolute https URLs.
+ * Skips if this origin is already present (idempotent).
+ */
+function injectAbsoluteFaviconLinks(html, baseUrl) {
+  const b = String(baseUrl || '').trim().replace(/\/$/, '');
+  if (!b || !/^https?:\/\//i.test(b)) return html;
+  const marker = `${b}/favicon.ico`;
+  if (html.includes(marker)) return html;
+
+  const fav = [
+    `<link rel="shortcut icon" href="${escapeAttr(`${b}/favicon.ico`)}" />`,
+    `<link rel="icon" href="${escapeAttr(`${b}/favicon.ico`)}" sizes="any" />`,
+    `<link rel="icon" type="image/png" href="${escapeAttr(`${b}/favicon-48.png`)}" sizes="48x48" />`,
+    `<link rel="icon" type="image/svg+xml" href="${escapeAttr(`${b}/tripoli-lebanon-icon.svg`)}" sizes="any" />`,
+    `<link rel="apple-touch-icon" href="${escapeAttr(`${b}/apple-touch-icon.png`)}" sizes="180x180" />`,
+  ].join('\n    ');
+
+  return html.replace(/<head>/i, `<head>\n    ${fav}\n`);
+}
+
 function injectSeoIntoIndexHtml(indexHtml, seo) {
   const title = seo?.title ? String(seo.title) : 'Visit Tripoli';
   const description = seo?.description ? String(seo.description) : '';
@@ -118,6 +139,10 @@ function injectSeoIntoIndexHtml(indexHtml, seo) {
     html = html.replace(/<\/head>/i, `${insert}\n  </head>`);
   }
 
+  if (seo?.baseUrl) {
+    html = injectAbsoluteFaviconLinks(html, seo.baseUrl);
+  }
+
   return html;
 }
 
@@ -128,5 +153,6 @@ module.exports = {
   resolveOgImage,
   loadClientIndexHtml,
   injectSeoIntoIndexHtml,
+  injectAbsoluteFaviconLinks,
 };
 

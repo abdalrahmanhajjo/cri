@@ -44,6 +44,7 @@ const promotionsPublicRoutes = require('./routes/promotionsPublic');
 const couponsRoutes = require('./routes/coupons');
 const aiRoutes = require('./routes/ai');
 const { seoRouter, makeSeoResponder } = require('./seo/seoRoutes');
+const { injectAbsoluteFaviconLinks, getBaseUrl } = require('./seo/seoUtils');
 const { isDatabaseConnectivityError, userFacingDbUnavailableMessage } = require('./utils/dbHttpError');
 
 const app = express();
@@ -284,7 +285,18 @@ if (serveClientDist) {
         return next();
       }
       if (path.extname(req.path)) return next();
-      res.sendFile(path.join(clientDistPath, 'index.html'), (err) => next(err));
+      const indexPath = path.join(clientDistPath, 'index.html');
+      try {
+        const st = fs.statSync(indexPath);
+        if (!cachedSpaIndexHtml || st.mtimeMs !== cachedSpaIndexMtime) {
+          cachedSpaIndexHtml = fs.readFileSync(indexPath, 'utf8');
+          cachedSpaIndexMtime = st.mtimeMs;
+        }
+        const html = injectAbsoluteFaviconLinks(cachedSpaIndexHtml, getBaseUrl(req));
+        res.type('text/html').send(html);
+      } catch (e) {
+        res.sendFile(indexPath, (err) => next(err || e));
+      }
     });
     console.log(`Serving SPA from ${clientDistPath} (SERVE_CLIENT_DIST)`);
   } else {
@@ -293,6 +305,9 @@ if (serveClientDist) {
     );
   }
 }
+
+let cachedSpaIndexHtml = null;
+let cachedSpaIndexMtime = 0;
 
 let lastDbConnectivityLog = 0;
 
