@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getImageUrl, fixImageUrlExtension, getPlaceImageUrl } from '../api/client';
 import Icon from './Icon';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
 import { isLikelyDirectStreamableVideo } from '../utils/feedVideoPlayback';
+import { useReelPreferLowBandwidth, reelLowBandwidthSrcFromMain } from '../utils/reelAdaptiveVideo';
 import { rawFeedImageUrls } from '../utils/feedPostImages';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { optimizeVideoPosterUrl } from '../utils/supabaseImage.js';
@@ -63,14 +64,27 @@ function feedMediaUrl(url) {
 
 export function CommunityFeedCard({ post, t }) {
   const isVideo = isCommunityFeedVideo(post);
+  const preferLowBandwidth = useReelPreferLowBandwidth();
+  const [videoForceHigh, setVideoForceHigh] = useState(false);
+  useEffect(() => {
+    setVideoForceHigh(false);
+  }, [post.id, post.video_url, preferLowBandwidth]);
+
   const fullCap = post.caption != null ? String(post.caption) : '';
   const caption = fullCap.slice(0, 160);
   const placeId = post.place_id != null ? String(post.place_id) : '';
   const placeName = post.place_name != null ? String(post.place_name).trim() : '';
   const firstRaw = rawFeedImageUrls(post)[0];
   const img = firstRaw ? feedMediaUrl(firstRaw) : '';
-  const vid = post.video_url ? feedMediaUrl(post.video_url) : '';
-  const showVideo = isVideo && vid && isLikelyDirectStreamableVideo(vid, post.video_url);
+  const vidHigh = post.video_url ? feedMediaUrl(post.video_url) : '';
+  const vidLowRaw =
+    post.video_url && preferLowBandwidth
+      ? reelLowBandwidthSrcFromMain(String(post.video_url).trim())
+      : '';
+  const vidLow = vidLowRaw ? feedMediaUrl(vidLowRaw) : '';
+  const vid =
+    !videoForceHigh && preferLowBandwidth && vidLow ? vidLow : vidHigh;
+  const showVideo = isVideo && vidHigh && isLikelyDirectStreamableVideo(vidHigh, post.video_url);
   const externalVideo = isVideo && post.video_url && !showVideo;
   const typeLower = String(post?.type || '').toLowerCase();
   const reelLabel =
@@ -81,13 +95,17 @@ export function CommunityFeedCard({ post, t }) {
       <div className="vd-community-feed-card-media">
         {showVideo ? (
           <video
+            key={`${post.id}-comm-${videoForceHigh || !preferLowBandwidth || !vidLow ? 'hq' : 'lb'}`}
             className="vd-community-feed-video"
             src={vid}
             controls
             playsInline
-            preload="metadata"
+            preload={preferLowBandwidth ? 'metadata' : 'metadata'}
             poster={img ? optimizeVideoPosterUrl(img) : undefined}
             aria-label={fullCap.slice(0, 120) || reelLabel}
+            onError={() => {
+              if (preferLowBandwidth && vidLow && !videoForceHigh) setVideoForceHigh(true);
+            }}
           />
         ) : img ? (
           <img alt="" className="vd-community-feed-img" loading="lazy" decoding="async" {...getDeliveryImgProps(img, 'gridCard')} />

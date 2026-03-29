@@ -32,6 +32,32 @@ try {
   fs.mkdirSync(MULTER_TMP, { recursive: true });
 } catch (_) {}
 
+function feedVideoLowBasename(filename) {
+  if (!filename || typeof filename !== 'string') return null;
+  return /\.mp4$/i.test(filename) ? filename.replace(/\.mp4$/i, '-lb.mp4') : null;
+}
+
+async function uploadFeedVideoLowToSupabase(supabase, body, storagePrefix, filename, uploadContentType) {
+  const lowName = feedVideoLowBasename(filename);
+  if (!supabase || !body?.length || !lowName || storagePrefix !== 'feed/videos') return null;
+  const lowPath = `${storagePrefix}/${lowName}`;
+  try {
+    const { data, error } = await supabase.storage.from(BUCKET).upload(lowPath, body, {
+      contentType: uploadContentType,
+      upsert: false,
+    });
+    if (error) {
+      console.warn('[upload] low rendition:', error.message || error);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
+    return urlData.publicUrl;
+  } catch (e) {
+    console.warn('[upload] low rendition:', e.message);
+    return null;
+  }
+}
+
 function getSupabase() {
   const url = process.env.SUPABASE_URL?.trim();
   const key = (process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)?.trim();
@@ -112,6 +138,7 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
   let safeExt;
   let storagePrefix;
   let reelCleanup = null;
+  let reelOut = null;
 
   try {
     if (isLikelyVideoUpload(req.file)) {
@@ -121,7 +148,7 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
       safeExt = /^\.(mp4|webm|mov|m4v|3gp|3g2|mkv)$/i.test(ext) ? ext : fromMime;
       storagePrefix = 'feed/videos';
 
-      const reelOut = await transcodeReelVideoFromPath(
+      reelOut = await transcodeReelVideoFromPath(
         multerPath,
         req.file.originalname,
         req.file.mimetype,
@@ -179,9 +206,17 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
 
   /** Supabase Node client is unreliable with fs ReadStream for large bodies; use a single buffer. */
   let supabaseBody = uploadBuffer;
+  let supabaseLowBody = null;
   try {
     if (uploadDiskPath) {
       supabaseBody = await fs.promises.readFile(uploadDiskPath);
+      if (reelOut?.lowOutputPath) {
+        try {
+          supabaseLowBody = await fs.promises.readFile(reelOut.lowOutputPath);
+        } catch (_) {
+          supabaseLowBody = null;
+        }
+      }
     }
   } catch (readErr) {
     console.error('Upload read failed:', readErr);
@@ -204,9 +239,16 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
         });
 
       if (!error) {
+        const urlLow = await uploadFeedVideoLowToSupabase(
+          supabase,
+          supabaseLowBody,
+          storagePrefix,
+          filename,
+          uploadContentType
+        );
         await cleanupAfterStored();
         const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
-        return res.json({ url: urlData.publicUrl });
+        return res.json(urlLow ? { url: urlData.publicUrl, urlLow } : { url: urlData.publicUrl });
       }
       if (error.message?.includes('Bucket not found') || error.message?.includes('not found')) {
         const bucketReady = await ensureBucket(supabase);
@@ -216,9 +258,16 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
             upsert: false,
           });
           if (!retry.error) {
+            const urlLow = await uploadFeedVideoLowToSupabase(
+              supabase,
+              supabaseLowBody,
+              storagePrefix,
+              filename,
+              uploadContentType
+            );
             await cleanupAfterStored();
             const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(retry.data.path);
-            return res.json({ url: urlData.publicUrl });
+            return res.json(urlLow ? { url: urlData.publicUrl, urlLow } : { url: urlData.publicUrl });
           }
         }
       }
@@ -248,9 +297,20 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
     } else {
       await fs.promises.writeFile(localPath, uploadBuffer);
     }
+    const lowName = feedVideoLowBasename(filename);
+    if (lowName && supabaseLowBody?.length) {
+      try {
+        await fs.promises.writeFile(path.join(localDir, lowName), supabaseLowBody);
+      } catch (e) {
+        console.warn('[upload] local low rendition:', e.message);
+      }
+    }
     await cleanupAfterStored();
     const publicPrefix = storagePrefix === 'places' ? '/uploads/places' : '/uploads/feed/videos';
-    res.json({ url: `${publicPrefix}/${filename}` });
+    const mainUrl = `${publicPrefix}/${filename}`;
+    const urlLow =
+      lowName && supabaseLowBody?.length ? `${publicPrefix}/${lowName}` : undefined;
+    res.json(urlLow ? { url: mainUrl, urlLow } : { url: mainUrl });
   } catch (err) {
     console.error('Local upload error:', err);
     if (reelCleanup) await reelCleanup().catch(() => {});
