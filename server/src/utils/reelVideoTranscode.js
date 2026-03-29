@@ -68,16 +68,20 @@ function parseDimEnv(name, fallback) {
 }
 
 /**
- * Web-optimized reel: H.264 + AAC, capped resolution, CRF + fast preset for smaller files at good visual quality.
- * Tuning: lower resolution cap + CRF 24 + preset fast beats ultrafast+CRF22 for size/quality on short clips.
+ * Web-optimized reel: H.264 + AAC, capped resolution, CRF + fast preset.
+ * force_divisible_by=2 + format=yuv420p: odd sizes with yuv420p often decode as black in browsers.
+ * main@L4.1 + bt709 tagging: broad mobile/Desktop compatibility (phone HDR/HEVC sources).
  */
 function buildFfmpegArgs(inFile, outFile, withAudio) {
   const maxW = parseDimEnv('REEL_MAX_WIDTH', 720);
   const maxH = parseDimEnv('REEL_MAX_HEIGHT', 1280);
-  const vf = `scale=w='min(${maxW},iw)':h='min(${maxH},ih)':force_original_aspect_ratio=decrease`;
+  const scale = `scale=w='min(${maxW},iw)':h='min(${maxH},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2`;
+  const vf = `${scale},setsar=1,format=yuv420p`;
   const crf = process.env.REEL_TRANSCODE_CRF || '24';
   const preset = process.env.REEL_TRANSCODE_PRESET || 'fast';
   const audioK = process.env.REEL_AUDIO_BITRATE || '96k';
+  const tune = (process.env.REEL_X264_TUNE || '').trim();
+
   const args = [
     '-hide_banner',
     '-loglevel',
@@ -85,25 +89,39 @@ function buildFfmpegArgs(inFile, outFile, withAudio) {
     '-y',
     '-i',
     inFile,
+    '-sws_flags',
+    'lanczos+accurate_rnd+full_chroma_int',
     '-c:v',
     'libx264',
     '-profile:v',
-    'high',
+    'main',
+    '-level',
+    '4.1',
     '-pix_fmt',
     'yuv420p',
     '-crf',
     crf,
     '-preset',
     preset,
-    '-tune',
-    'film',
     '-vf',
     vf,
+    '-color_range',
+    'tv',
+    '-colorspace',
+    'bt709',
+    '-color_primaries',
+    'bt709',
+    '-color_trc',
+    'bt709',
     '-movflags',
     '+faststart',
   ];
+  if (tune) {
+    const vfIdx = args.indexOf('-vf');
+    if (vfIdx !== -1) args.splice(vfIdx, 0, '-tune', tune);
+  }
   if (withAudio) {
-    args.push('-c:a', 'aac', '-b:a', audioK);
+    args.push('-c:a', 'aac', '-b:a', audioK, '-ar', '48000');
   } else {
     args.push('-an');
   }
