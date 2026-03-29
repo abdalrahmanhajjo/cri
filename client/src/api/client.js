@@ -533,8 +533,8 @@ export const api = {
     },
     upload: (file, options = {}) => {
       const formData = new FormData();
-      formData.append('file', file);
       if (options.purpose === 'reel') formData.append('purpose', 'reel');
+      formData.append('file', file);
       const url = `${getBaseUrl()}/api/admin/upload`;
       const headers = {};
       const token = getToken();
@@ -560,9 +560,9 @@ export const api = {
     },
     upload: (file, placeId, options = {}) => {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('placeId', placeId);
+      formData.append('placeId', String(placeId));
       if (options.purpose === 'reel') formData.append('purpose', 'reel');
+      formData.append('file', file);
       const url = `${getBaseUrl()}/api/business/upload`;
       const headers = {};
       const token = getToken();

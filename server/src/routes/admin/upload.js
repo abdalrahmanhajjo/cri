@@ -88,6 +88,7 @@ router.post('/', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
   const multerPath = req.file.path;
+  let multerRemovedEarly = false;
   let uploadBuffer = null;
   let uploadDiskPath = null;
   let contentType = req.file.mimetype;
@@ -114,6 +115,8 @@ router.post('/', upload.single('file'), async (req, res) => {
         contentType = reelOut.contentType;
         safeExt = reelOut.extension;
         reelCleanup = reelOut.cleanup;
+        await fs.promises.unlink(multerPath).catch(() => {});
+        multerRemovedEarly = true;
       } else {
         uploadDiskPath = multerPath;
         if (!contentType || contentType === 'application/octet-stream') {
@@ -146,7 +149,7 @@ router.post('/', upload.single('file'), async (req, res) => {
   const supabase = getSupabase();
   if (!supabase && isProd) {
     if (reelCleanup) await reelCleanup().catch(() => {});
-    await fs.promises.unlink(multerPath).catch(() => {});
+    if (!multerRemovedEarly) await fs.promises.unlink(multerPath).catch(() => {});
     return res.status(503).json({
       error: 'Uploads are not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on the server.',
     });
@@ -154,13 +157,20 @@ router.post('/', upload.single('file'), async (req, res) => {
 
   async function cleanupAfterStored() {
     if (reelCleanup) await reelCleanup().catch(() => {});
-    await fs.promises.unlink(multerPath).catch(() => {});
+    if (!multerRemovedEarly) await fs.promises.unlink(multerPath).catch(() => {});
   }
 
   /** Supabase Node client is unreliable with fs ReadStream for large bodies; use a single buffer. */
   let supabaseBody = uploadBuffer;
-  if (uploadDiskPath) {
-    supabaseBody = await fs.promises.readFile(uploadDiskPath);
+  try {
+    if (uploadDiskPath) {
+      supabaseBody = await fs.promises.readFile(uploadDiskPath);
+    }
+  } catch (readErr) {
+    console.error('Upload read failed:', readErr);
+    if (reelCleanup) await reelCleanup().catch(() => {});
+    if (!multerRemovedEarly) await fs.promises.unlink(multerPath).catch(() => {});
+    return res.status(500).json({ error: 'Could not read the uploaded file. Try a smaller video or another format.' });
   }
 
   const uploadContentType =
@@ -227,7 +237,7 @@ router.post('/', upload.single('file'), async (req, res) => {
   } catch (err) {
     console.error('Local upload error:', err);
     if (reelCleanup) await reelCleanup().catch(() => {});
-    await fs.promises.unlink(multerPath).catch(() => {});
+    if (!multerRemovedEarly) await fs.promises.unlink(multerPath).catch(() => {});
     res.status(500).json({ error: err?.message || 'Upload failed' });
   }
 });
