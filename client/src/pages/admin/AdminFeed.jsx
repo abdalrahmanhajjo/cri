@@ -221,7 +221,7 @@ export default function AdminFeed() {
     setComposerUploading(kind);
     setError(null);
     try {
-      const url = await api.admin.upload(file);
+      const url = await api.admin.upload(file, composerContentKind === 'reel' ? { purpose: 'reel' } : {});
       if (!url) return;
       setComposerVideo(url);
     } catch (err) {
@@ -271,7 +271,10 @@ export default function AdminFeed() {
     setEditUploading(kind);
     setError(null);
     try {
-      const url = await api.admin.upload(file);
+      const url = await api.admin.upload(
+        file,
+        contentKind(editPost.type) === 'reel' ? { purpose: 'reel' } : {}
+      );
       if (!url) return;
       setEditPost((x) => ({ ...x, video_url: url }));
     } catch (err) {
@@ -398,7 +401,7 @@ export default function AdminFeed() {
           <div className="admin-card-header">
             <h2 className="admin-card-title">Create post or reel (any place)</h2>
             <p className="admin-subtitle" style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', opacity: 0.9 }}>
-              Same upload pipeline as place photos (Supabase or local). Images for posts; MP4/WebM/MOV for reels (~80MB max). The web player shows reels in a compact portrait frame—export 9:16 at 1080p for best clarity. Optional cover image for reels.
+              Same pipeline as place photos (Supabase or local). Images for posts; MP4/WebM/MOV for reels (~80MB before processing). Reel videos are normalized on the server to H.264 MP4 (up to ~1080×1920, streaming-friendly) when ffmpeg is available—large uploads may take a minute. Optional cover for reels.
             </p>
           </div>
           <button

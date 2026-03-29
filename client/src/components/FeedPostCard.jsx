@@ -678,7 +678,11 @@ export default function FeedPostCard({
     }
     setOwnerEditUploading('video');
     try {
-      const url = await api.business.upload(file, placeId);
+      const url = await api.business.upload(
+        file,
+        placeId,
+        contentKind(post.type) === 'reel' ? { purpose: 'reel' } : {}
+      );
       if (url) setOwnerEditVideoUrl(url);
     } catch (e) {
       showFeedActionError(e);

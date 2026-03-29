@@ -341,7 +341,11 @@ export default function BusinessPlaceFeed() {
     setUploading('video');
     setError(null);
     try {
-      const url = await api.business.upload(file, formPlace);
+      const url = await api.business.upload(
+        file,
+        formPlace,
+        formContentKind === 'reel' ? { purpose: 'reel' } : {}
+      );
       if (url) setFormVideo(url);
     } catch (err) {
       setError(err.message || 'Upload failed');
@@ -386,7 +390,11 @@ export default function BusinessPlaceFeed() {
     setEditUploading('video');
     setError(null);
     try {
-      const url = await api.business.upload(file, editing.place_id || formPlace);
+      const url = await api.business.upload(
+        file,
+        editing.place_id || formPlace,
+        contentKind(editing.type) === 'reel' ? { purpose: 'reel' } : {}
+      );
       if (url) setEditing((x) => ({ ...x, video_url: url }));
     } catch (err) {
       setError(err.message || 'Upload failed');
@@ -622,6 +630,9 @@ export default function BusinessPlaceFeed() {
                 <>
                   <div className="business-field">
                     <label>Reel video *</label>
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', color: '#6b7280' }}>
+                      Uploads are normalized to a streaming-friendly MP4 on the server (may take up to a few minutes for large files).
+                    </p>
                     <div
                       className="business-upload-zone"
                       onDragOver={(e) => {
