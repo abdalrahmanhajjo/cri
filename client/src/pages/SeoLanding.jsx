@@ -11,7 +11,7 @@ function placeSlug(place) {
     .toLowerCase();
 }
 
-function Page({ title, intro, sections, links, dbTitle = 'Featured places from database' }) {
+function Page({ title, intro, sections, dbTitle = 'Featured places from database' }) {
   const { t, lang } = useLanguage();
   const [places, setPlaces] = useState([]);
   const [loadingPlaces, setLoadingPlaces] = useState(true);
@@ -47,23 +47,14 @@ function Page({ title, intro, sections, links, dbTitle = 'Featured places from d
   }, [langParam]);
 
   const dbPlaces = useMemo(() => {
-    const bySlug = new Map(
-      (places || [])
-        .map((p) => [placeSlug(p), p])
-        .filter(([slug]) => Boolean(slug))
-    );
-    const fromLinks = (links || [])
-      .map((l) => {
-        const slug = String(l.to || '')
-          .replace(/^\/place\//, '')
-          .trim()
-          .toLowerCase();
-        return bySlug.get(slug) || null;
-      })
-      .filter(Boolean);
-    if (fromLinks.length > 0) return fromLinks.slice(0, 8);
-    return (places || []).slice(0, 8);
-  }, [places, links]);
+    const list = places || [];
+    const withSlug = list
+      .map((p) => ({ p, slug: placeSlug(p) }))
+      .filter((x) => Boolean(x.slug));
+    return withSlug.slice(0, 8).map((x) => x.p);
+  }, [places]);
+
+  const sidebarPlaces = useMemo(() => dbPlaces.slice(0, 6), [dbPlaces]);
 
   return (
     <div className="seo-landing">
@@ -103,13 +94,25 @@ function Page({ title, intro, sections, links, dbTitle = 'Featured places from d
 
             <div className="seo-landing__card">
               <h3 className="seo-landing__sideTitleSm">Top places</h3>
-              <ul className="seo-landing__list">
-                {links.map((l) => (
-                  <li key={l.to} className="seo-landing__li">
-                    <Link to={l.to} className="seo-landing__link">{l.label}</Link>
-                  </li>
-                ))}
-              </ul>
+              {loadingPlaces && <p className="seo-landing__sideP">Loading…</p>}
+              {!loadingPlaces && sidebarPlaces.length === 0 && (
+                <p className="seo-landing__sideP">Browse the directory for venues.</p>
+              )}
+              {!loadingPlaces && sidebarPlaces.length > 0 && (
+                <ul className="seo-landing__list">
+                  {sidebarPlaces.map((p) => {
+                    const slug = placeSlug(p);
+                    const to = `/place/${encodeURIComponent(slug)}`;
+                    return (
+                      <li key={slug} className="seo-landing__li">
+                        <Link to={to} className="seo-landing__link">
+                          {p.name || slug}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           </aside>
         </div>
@@ -162,20 +165,11 @@ function Page({ title, intro, sections, links, dbTitle = 'Featured places from d
   );
 }
 
-const placeLinks = [
-  { to: '/place/clock_tower', label: 'Clock Tower' },
-  { to: '/place/great_mosque_tripoli', label: 'Great Mosque of Tripoli' },
-  { to: '/place/taynal_mosque', label: 'Taynal Mosque' },
-  { to: '/place/spice_market', label: 'Spice Market' },
-  { to: '/place/hallab_sweets', label: 'Hallab Sweets' },
-];
-
 export function ThingsToDoTripoli() {
   return (
     <Page
       title="Things to do in Tripoli, Lebanon"
       intro="Tripoli is Lebanon’s northern coastal city — famous for historic souks, beautiful mosques, traditional sweets, and a walkable old city. Here are the best things to do for a first visit."
-      links={placeLinks}
       sections={[
         {
           id: 'old-city',
@@ -219,7 +213,6 @@ export function OldCityGuide() {
     <Page
       title="Tripoli Old City guide (Lebanon)"
       intro="The old city is the heart of Tripoli: narrow streets, historic buildings, and the liveliest markets in North Lebanon. Use this guide to plan your walk."
-      links={placeLinks}
       sections={[
         {
           id: 'start',
@@ -255,7 +248,6 @@ export function SouksGuide() {
     <Page
       title="Tripoli Souks guide: markets, spices & crafts"
       intro="Tripoli’s souks are a living heritage: spices, soap, textiles, and everyday shopping in historic streets. This guide helps you choose what to see and what to buy."
-      links={placeLinks}
       sections={[
         {
           id: 'spices',
@@ -291,7 +283,6 @@ export function SweetsGuide() {
     <Page
       title="Best sweets in Tripoli, Lebanon"
       intro="Tripoli’s sweets are famous across Lebanon. Use this guide to pick a classic shop, understand what to try, and plan the perfect tasting walk."
-      links={placeLinks}
       sections={[
         {
           id: 'what',
@@ -327,7 +318,6 @@ export function TravelTipsTripoli() {
     <Page
       title="Tripoli, Lebanon travel tips"
       intro="Simple travel tips to make your Tripoli day smooth: what to wear, when to go, and how to plan a safe, comfortable walk through the old city."
-      links={placeLinks}
       sections={[
         {
           id: 'when',

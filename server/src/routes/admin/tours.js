@@ -2,6 +2,7 @@ const express = require('express');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
+const { invalidateSitemapCache } = require('../../seo/seoRoutes');
 
 const router = express.Router();
 
@@ -130,6 +131,7 @@ router.delete('/:id', async (req, res) => {
     const id = req.params.id;
     const result = await query('DELETE FROM tours WHERE id = $1', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Tour not found' });
+    invalidateSitemapCache();
     res.json({ message: 'Tour deleted' });
   } catch (err) {
     console.error(err);
