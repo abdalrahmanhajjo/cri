@@ -157,8 +157,9 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
   const filename = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
   const filePath = `${storagePrefix}/${filename}`;
 
+  const isProd = process.env.NODE_ENV === 'production';
   const supabase = getSupabase();
-  if (!supabase && process.env.NODE_ENV === 'production') {
+  if (!supabase && isProd) {
     if (reelCleanup) await reelCleanup().catch(() => {});
     await fs.promises.unlink(multerPath).catch(() => {});
     return res.status(503).json({
@@ -166,44 +167,60 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
     });
   }
 
-  function makeSupabasePayload() {
-    if (uploadDiskPath) return fs.createReadStream(uploadDiskPath);
-    return uploadBuffer;
+  async function cleanupAfterStored() {
+    if (reelCleanup) await reelCleanup().catch(() => {});
+    await fs.promises.unlink(multerPath).catch(() => {});
+  }
+
+  /** Supabase Node client is unreliable with fs ReadStream for large bodies; use a single buffer. */
+  let supabaseBody = uploadBuffer;
+  if (uploadDiskPath) {
+    supabaseBody = await fs.promises.readFile(uploadDiskPath);
   }
 
   if (supabase) {
     try {
       const { data, error } = await supabase.storage
         .from(BUCKET)
-        .upload(filePath, makeSupabasePayload(), {
+        .upload(filePath, supabaseBody, {
           contentType,
           upsert: false,
         });
 
       if (!error) {
-        if (reelCleanup) await reelCleanup().catch(() => {});
-        await fs.promises.unlink(multerPath).catch(() => {});
+        await cleanupAfterStored();
         const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
         return res.json({ url: urlData.publicUrl });
       }
       if (error.message?.includes('Bucket not found') || error.message?.includes('not found')) {
         const bucketReady = await ensureBucket(supabase);
         if (bucketReady) {
-          const retry = await supabase.storage.from(BUCKET).upload(filePath, makeSupabasePayload(), {
+          const retry = await supabase.storage.from(BUCKET).upload(filePath, supabaseBody, {
             contentType,
             upsert: false,
           });
           if (!retry.error) {
-            if (reelCleanup) await reelCleanup().catch(() => {});
-            await fs.promises.unlink(multerPath).catch(() => {});
+            await cleanupAfterStored();
             const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(retry.data.path);
             return res.json({ url: urlData.publicUrl });
           }
         }
       }
       console.error('Supabase storage upload error:', error);
+      if (isProd) {
+        await cleanupAfterStored();
+        return res.status(502).json({
+          error:
+            error.message ||
+            'Could not store the file. Check Storage bucket policies and file size limits.',
+        });
+      }
     } catch (err) {
       console.error('Supabase upload error:', err);
+      if (isProd) {
+        await cleanupAfterStored();
+        return res.status(502).json({ error: err?.message || 'Storage upload failed' });
+      }
     }
   }
 
@@ -215,8 +232,7 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
     } else {
       await fs.promises.writeFile(localPath, uploadBuffer);
     }
-    if (reelCleanup) await reelCleanup().catch(() => {});
-    await fs.promises.unlink(multerPath).catch(() => {});
+    await cleanupAfterStored();
     const publicPrefix = storagePrefix === 'places' ? '/uploads/places' : '/uploads/feed/videos';
     res.json({ url: `${publicPrefix}/${filename}` });
   } catch (err) {
