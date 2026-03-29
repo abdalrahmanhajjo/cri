@@ -1975,6 +1975,74 @@ a.ig-feed-avatar--link:focus-visible {
   position: relative;
   max-width: min(96vw, 1200px);
   max-height: 92vh;
+  width: 100%;
+}
+
+.ig-feed-image-zoom-track {
+  display: flex;
+  width: 100%;
+  max-height: 92vh;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-radius: 10px;
+}
+
+.ig-feed-image-zoom-track::-webkit-scrollbar {
+  display: none;
+}
+
+.ig-feed-image-zoom-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 100%;
+  max-height: 92vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.ig-feed-image-zoom-slide .ig-feed-image-zoom-img {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.ig-feed-image-zoom-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 4px;
+  flex-wrap: wrap;
+}
+
+.ig-feed-image-zoom-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.ig-feed-image-zoom-dot:hover,
+.ig-feed-image-zoom-dot:focus-visible {
+  opacity: 1;
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+
+.ig-feed-image-zoom-dot--active {
+  background: rgba(255, 255, 255, 0.95);
+  opacity: 1;
 }
 
 .ig-feed-image-zoom-close {

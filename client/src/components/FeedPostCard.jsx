@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension, getPlaceImageUrl, API_ERROR_NETWORK } from '../api/client';
 import Icon from './Icon';
@@ -116,7 +116,11 @@ export default function FeedPostCard({
   const [ownerEditShowAdvanced, setOwnerEditShowAdvanced] = useState(false);
   const [ownerSaving, setOwnerSaving] = useState(false);
   const [imageZoomOpen, setImageZoomOpen] = useState(false);
-  const [imageZoomSrc, setImageZoomSrc] = useState('');
+  /** Which slide is shown in the full-screen image viewer (swipe / keys). */
+  const [imageZoomSlideIndex, setImageZoomSlideIndex] = useState(0);
+  const imageZoomTrackRef = useRef(null);
+  /** Slide index to snap when lightbox opens (avoids stale layout effect vs swipe). */
+  const imageZoomOpenTargetRef = useRef(0);
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : false
   );
@@ -289,11 +293,57 @@ export default function FeedPostCard({
   useEffect(() => {
     if (!imageZoomOpen) return undefined;
     const onKey = (e) => {
-      if (e.key === 'Escape') setImageZoomOpen(false);
+      if (e.key === 'Escape') {
+        setImageZoomOpen(false);
+        return;
+      }
+      if (gallerySrcs.length < 2) return;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setImageZoomSlideIndex((i) => {
+          const next = Math.max(0, i - 1);
+          requestAnimationFrame(() => {
+            const track = imageZoomTrackRef.current;
+            if (track) {
+              const ww = track.clientWidth || 1;
+              track.scrollTo({ left: next * ww, behavior: 'smooth' });
+            }
+          });
+          return next;
+        });
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setImageZoomSlideIndex((i) => {
+          const next = Math.min(gallerySrcs.length - 1, i + 1);
+          requestAnimationFrame(() => {
+            const track = imageZoomTrackRef.current;
+            if (track) {
+              const ww = track.clientWidth || 1;
+              track.scrollTo({ left: next * ww, behavior: 'smooth' });
+            }
+          });
+          return next;
+        });
+      }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [imageZoomOpen]);
+  }, [imageZoomOpen, gallerySrcs.length]);
+
+  /** Snap track when lightbox opens to the slide that was tapped (see imageZoomOpenTargetRef). */
+  useLayoutEffect(() => {
+    if (!imageZoomOpen || gallerySrcs.length < 2 || !imageZoomTrackRef.current) return;
+    const el = imageZoomTrackRef.current;
+    const idx = imageZoomOpenTargetRef.current;
+    const apply = () => {
+      const w = el.clientWidth;
+      if (w > 0) el.scrollLeft = idx * w;
+    };
+    apply();
+    const id = requestAnimationFrame(apply);
+    return () => cancelAnimationFrame(id);
+  }, [imageZoomOpen, gallerySrcs.length, post.id]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
@@ -1400,7 +1450,8 @@ export default function FeedPostCard({
                           loading={i === 0 ? 'eager' : 'lazy'}
                           decoding="async"
                           onClick={() => {
-                            setImageZoomSrc(src);
+                            imageZoomOpenTargetRef.current = i;
+                            setImageZoomSlideIndex(i);
                             setImageZoomOpen(true);
                           }}
                         />
@@ -1424,7 +1475,8 @@ export default function FeedPostCard({
                   loading="lazy"
                   decoding="async"
                   onClick={() => {
-                    setImageZoomSrc(gallerySrcs[0]);
+                    imageZoomOpenTargetRef.current = 0;
+                    setImageZoomSlideIndex(0);
                     setImageZoomOpen(true);
                   }}
                 />
@@ -1536,13 +1588,23 @@ export default function FeedPostCard({
 
       {!showReelTheater && !commentsDisabled ? renderCommentsPanel() : null}
 
-      {imageZoomOpen && imageZoomSrc ? (
+      {imageZoomOpen && gallerySrcs.length > 0 ? (
         <div
           className="ig-feed-image-zoom-backdrop"
           role="presentation"
           onClick={() => setImageZoomOpen(false)}
         >
-          <div className="ig-feed-image-zoom-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="ig-feed-image-zoom-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              gallerySrcs.length > 1
+                ? `${t('discover', 'feedImageLightbox')} ${imageZoomSlideIndex + 1} / ${gallerySrcs.length}`
+                : t('discover', 'feedImageLightbox')
+            }
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               className="ig-feed-image-zoom-close"
@@ -1551,7 +1613,49 @@ export default function FeedPostCard({
             >
               <Icon name="close" size={20} />
             </button>
-            <img src={imageZoomSrc} alt="" className="ig-feed-image-zoom-img" />
+            {gallerySrcs.length > 1 ? (
+              <>
+                <div
+                  ref={imageZoomTrackRef}
+                  className="ig-feed-image-zoom-track"
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    const w = el.clientWidth || 1;
+                    const i = Math.round(el.scrollLeft / w);
+                    const clamped = Math.min(gallerySrcs.length - 1, Math.max(0, i));
+                    setImageZoomSlideIndex((prev) => (prev === clamped ? prev : clamped));
+                  }}
+                >
+                  {gallerySrcs.map((src, zi) => (
+                    <div key={zi} className="ig-feed-image-zoom-slide">
+                      <img src={src} alt="" className="ig-feed-image-zoom-img" loading={zi === 0 ? 'eager' : 'lazy'} />
+                    </div>
+                  ))}
+                </div>
+                <div className="ig-feed-image-zoom-dots" role="tablist" aria-label={t('discover', 'feedImageLightboxTabs')}>
+                  {gallerySrcs.map((_, zi) => (
+                    <button
+                      key={zi}
+                      type="button"
+                      role="tab"
+                      aria-selected={zi === imageZoomSlideIndex}
+                      className={`ig-feed-image-zoom-dot${zi === imageZoomSlideIndex ? ' ig-feed-image-zoom-dot--active' : ''}`}
+                      onClick={() => {
+                        imageZoomOpenTargetRef.current = zi;
+                        setImageZoomSlideIndex(zi);
+                        const track = imageZoomTrackRef.current;
+                        if (track) {
+                          const ww = track.clientWidth || 1;
+                          track.scrollTo({ left: zi * ww, behavior: 'smooth' });
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <img src={gallerySrcs[0]} alt="" className="ig-feed-image-zoom-img" />
+            )}
           </div>
         </div>
       ) : null}
