@@ -398,7 +398,7 @@ export default function AdminFeed() {
           <div className="admin-card-header">
             <h2 className="admin-card-title">Create post or reel (any place)</h2>
             <p className="admin-subtitle" style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', opacity: 0.9 }}>
-              Same upload pipeline as place photos (Supabase or local dev). Drop an image for posts; reels use a video file (MP4, WebM, MOV). Optional cover image for reels.
+              Same upload pipeline as place photos (Supabase or local). Images for posts; MP4/WebM/MOV for reels (~80MB max). The web player shows reels in a compact portrait frame—export 9:16 at 1080p for best clarity. Optional cover image for reels.
             </p>
           </div>
           <button

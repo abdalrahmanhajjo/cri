@@ -5,6 +5,7 @@ import api, { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
 import Icon from '../components/Icon';
 import { WAYS_CONFIG, groupPlacesByWay, FIND_YOUR_WAY_WAY_KEYS } from '../utils/findYourWayGrouping';
+import { COMMUNITY_PATH } from '../utils/discoverPaths';
 import './Explore.css';
 
 function PlaceCard({ place }) {
@@ -98,6 +99,12 @@ export default function FindYourWay() {
         <div className="vd-container vd-ways-hero-inner">
           <h1 className="vd-ways-hero-title">{safeT('home', 'findYourWayTitle')}</h1>
           <p className="vd-ways-hero-sub">{safeT('home', 'findYourWaySub')}</p>
+          <p className="vd-find-your-way-community">
+            <Link to={COMMUNITY_PATH} className="vd-find-your-way-community-link">
+              {safeT('home', 'findYourWayCommunityHint')}
+              <Icon name="arrow_forward" size={18} aria-hidden />
+            </Link>
+          </p>
         </div>
       </header>
       <div className="vd-container vd-ways-detail">
