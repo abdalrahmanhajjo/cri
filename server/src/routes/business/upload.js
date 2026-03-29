@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { authMiddleware } = require('../../middleware/auth');
@@ -9,22 +10,25 @@ const { businessPortalMiddleware } = require('../../middleware/placeOwner');
 const { query } = require('../../db');
 const { parsePlaceId } = require('../../utils/validate');
 const {
-  isVideoMime,
+  isLikelyVideoUpload,
   multerFileAllowed,
   prepareUploadedImage,
   pickImageExtension,
   VIDEO_MIME_TO_EXT,
 } = require('../../utils/imageUpload');
-const { transcodeReelVideoIfNeeded } = require('../../utils/reelVideoTranscode');
+const { transcodeReelVideoFromPath } = require('../../utils/reelVideoTranscode');
 
 const router = express.Router();
 const BUCKET = 'place-images';
 const LOCAL_PLACES = path.join(__dirname, '../../../uploads/places');
 const LOCAL_FEED_VIDEOS = path.join(__dirname, '../../../uploads/feed/videos');
 
+const MULTER_TMP = path.join(os.tmpdir(), 'visit-multer-uploads');
+
 try {
   fs.mkdirSync(LOCAL_PLACES, { recursive: true });
   fs.mkdirSync(LOCAL_FEED_VIDEOS, { recursive: true });
+  fs.mkdirSync(MULTER_TMP, { recursive: true });
 } catch (_) {}
 
 function getSupabase() {
@@ -57,9 +61,14 @@ async function ensureBucket(supabase) {
   }
 }
 
-const memoryStorage = multer.memoryStorage();
 const uploadMw = multer({
-  storage: memoryStorage,
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, MULTER_TMP),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || '') || '';
+      cb(null, `${crypto.randomBytes(16).toString('hex')}${ext}`);
+    },
+  }),
   limits: { fileSize: 80 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ok = multerFileAllowed(file);
@@ -93,41 +102,56 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
     return res.status(500).json({ error: 'Failed to verify place' });
   }
 
-  let uploadBuffer = req.file.buffer;
+  const multerPath = req.file.path;
+  let uploadBuffer = null;
+  let uploadDiskPath = null;
   let contentType = req.file.mimetype;
   let safeExt;
   let storagePrefix;
+  let reelCleanup = null;
 
-  if (isVideoMime(req.file.mimetype)) {
-    const rawExt = path.extname(req.file.originalname) || '';
-    const ext = (rawExt.startsWith('.') ? rawExt : rawExt ? `.${rawExt}` : '').toLowerCase();
-    const fromMime = VIDEO_MIME_TO_EXT[req.file.mimetype.toLowerCase()] || '.mp4';
-    safeExt = /^\.(mp4|webm|mov|m4v)$/i.test(ext) ? ext : fromMime;
-    storagePrefix = 'feed/videos';
-    const reelOut = await transcodeReelVideoIfNeeded(
-      uploadBuffer,
-      req.file.originalname,
-      req.file.mimetype,
-      req.body
-    );
-    if (reelOut) {
-      uploadBuffer = reelOut.buffer;
-      contentType = reelOut.contentType;
-      safeExt = reelOut.extension;
-    }
-  } else {
-    try {
+  try {
+    if (isLikelyVideoUpload(req.file)) {
+      const rawExt = path.extname(req.file.originalname) || '';
+      const ext = (rawExt.startsWith('.') ? rawExt : rawExt ? `.${rawExt}` : '').toLowerCase();
+      const fromMime = VIDEO_MIME_TO_EXT[(req.file.mimetype || '').toLowerCase()] || '.mp4';
+      safeExt = /^\.(mp4|webm|mov|m4v|3gp|3g2|mkv)$/i.test(ext) ? ext : fromMime;
+      storagePrefix = 'feed/videos';
+
+      const reelOut = await transcodeReelVideoFromPath(
+        multerPath,
+        req.file.originalname,
+        req.file.mimetype,
+        req.body
+      );
+      if (reelOut) {
+        uploadDiskPath = reelOut.outputPath;
+        contentType = reelOut.contentType;
+        safeExt = reelOut.extension;
+        reelCleanup = reelOut.cleanup;
+      } else {
+        uploadDiskPath = multerPath;
+        if (!contentType || contentType === 'application/octet-stream') {
+          contentType = 'video/mp4';
+        }
+      }
+    } else {
+      uploadBuffer = await fs.promises.readFile(multerPath);
+      await fs.promises.unlink(multerPath).catch(() => {});
       const prep = await prepareUploadedImage(uploadBuffer, req.file.mimetype, req.file.originalname);
       uploadBuffer = prep.buffer;
       contentType = prep.contentType;
       safeExt = pickImageExtension(contentType, req.file.originalname, prep.useExtension);
       storagePrefix = 'places';
-    } catch (e) {
-      if (e.code === 'HEIC_CONVERT_FAILED') {
-        return res.status(e.status || 422).json({ error: e.message });
-      }
-      throw e;
     }
+  } catch (e) {
+    if (e.code === 'HEIC_CONVERT_FAILED') {
+      await fs.promises.unlink(multerPath).catch(() => {});
+      return res.status(e.status || 422).json({ error: e.message });
+    }
+    await fs.promises.unlink(multerPath).catch(() => {});
+    if (reelCleanup) await reelCleanup().catch(() => {});
+    throw e;
   }
 
   const filename = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
@@ -135,31 +159,43 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
 
   const supabase = getSupabase();
   if (!supabase && process.env.NODE_ENV === 'production') {
+    if (reelCleanup) await reelCleanup().catch(() => {});
+    await fs.promises.unlink(multerPath).catch(() => {});
     return res.status(503).json({
       error: 'Uploads are not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on the server.',
     });
   }
+
+  function makeSupabasePayload() {
+    if (uploadDiskPath) return fs.createReadStream(uploadDiskPath);
+    return uploadBuffer;
+  }
+
   if (supabase) {
     try {
       const { data, error } = await supabase.storage
         .from(BUCKET)
-        .upload(filePath, uploadBuffer, {
+        .upload(filePath, makeSupabasePayload(), {
           contentType,
           upsert: false,
         });
 
       if (!error) {
+        if (reelCleanup) await reelCleanup().catch(() => {});
+        await fs.promises.unlink(multerPath).catch(() => {});
         const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
         return res.json({ url: urlData.publicUrl });
       }
       if (error.message?.includes('Bucket not found') || error.message?.includes('not found')) {
         const bucketReady = await ensureBucket(supabase);
         if (bucketReady) {
-          const retry = await supabase.storage.from(BUCKET).upload(filePath, uploadBuffer, {
+          const retry = await supabase.storage.from(BUCKET).upload(filePath, makeSupabasePayload(), {
             contentType,
             upsert: false,
           });
           if (!retry.error) {
+            if (reelCleanup) await reelCleanup().catch(() => {});
+            await fs.promises.unlink(multerPath).catch(() => {});
             const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(retry.data.path);
             return res.json({ url: urlData.publicUrl });
           }
@@ -174,11 +210,19 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
   try {
     const localDir = storagePrefix === 'places' ? LOCAL_PLACES : LOCAL_FEED_VIDEOS;
     const localPath = path.join(localDir, filename);
-    fs.writeFileSync(localPath, uploadBuffer);
+    if (uploadDiskPath) {
+      await fs.promises.copyFile(uploadDiskPath, localPath);
+    } else {
+      await fs.promises.writeFile(localPath, uploadBuffer);
+    }
+    if (reelCleanup) await reelCleanup().catch(() => {});
+    await fs.promises.unlink(multerPath).catch(() => {});
     const publicPrefix = storagePrefix === 'places' ? '/uploads/places' : '/uploads/feed/videos';
     res.json({ url: `${publicPrefix}/${filename}` });
   } catch (err) {
     console.error('Local upload error:', err);
+    if (reelCleanup) await reelCleanup().catch(() => {});
+    await fs.promises.unlink(multerPath).catch(() => {});
     res.status(500).json({ error: err?.message || 'Upload failed' });
   }
 });

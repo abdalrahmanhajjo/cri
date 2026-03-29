@@ -57,7 +57,8 @@ function buildFfmpegArgs(inFile, outFile, withAudio) {
   const vf =
     "scale=w='min(1080,iw)':h='min(1920,ih)':force_original_aspect_ratio=decrease";
   const crf = process.env.REEL_TRANSCODE_CRF || '22';
-  const preset = process.env.REEL_TRANSCODE_PRESET || 'medium';
+  /** `veryfast` keeps CPU time down on small hosts (avoids proxy timeouts / OOM during reel upload). */
+  const preset = process.env.REEL_TRANSCODE_PRESET || 'veryfast';
   const args = [
     '-hide_banner',
     '-loglevel',
@@ -90,14 +91,14 @@ function buildFfmpegArgs(inFile, outFile, withAudio) {
 }
 
 /**
- * When `purpose=reel` on multipart upload: normalize to H.264 MP4, cap long edge for web reels,
- * AAC audio (or none), faststart for streaming. Falls back to original buffer on any failure.
- * @returns {Promise<{ buffer: Buffer, contentType: string, extension: string } | null>}
+ * Transcode reel from a path (no extra full-file buffer in Node).
+ * Caller must delete `inputPath` after success. Call `cleanup()` after reading/uploading `outputPath`.
+ * @returns {Promise<{ outputPath: string, contentType: string, extension: string, cleanup: () => Promise<void> } | null>}
  */
-async function transcodeReelVideoIfNeeded(buffer, originalname, mimetype, body) {
+async function transcodeReelVideoFromPath(inputPath, originalname, mimetype, body) {
   if (process.env.DISABLE_REEL_TRANSCODE === '1') return null;
   if (!isReelUploadPurpose(body)) return null;
-  if (!buffer || buffer.length < 1) return null;
+  if (!inputPath || !fs.existsSync(inputPath)) return null;
 
   const ffmpegPath = resolveFfmpegPath();
   if (!ffmpegPath) {
@@ -106,15 +107,15 @@ async function transcodeReelVideoIfNeeded(buffer, originalname, mimetype, body) 
   }
 
   const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'visit-reel-'));
-  const inExt = path.extname(originalname || '') || '.mp4';
-  const inFile = path.join(tmpDir, `src${inExt}`);
   const outFile = path.join(tmpDir, 'out.mp4');
 
-  try {
-    await fs.promises.writeFile(inFile, buffer);
+  const cleanup = async () => {
+    await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  };
 
+  try {
     const run = async (withAudio) => {
-      const args = buildFfmpegArgs(inFile, outFile, withAudio);
+      const args = buildFfmpegArgs(inputPath, outFile, withAudio);
       await spawnFfmpeg(ffmpegPath, args);
     };
 
@@ -124,20 +125,60 @@ async function transcodeReelVideoIfNeeded(buffer, originalname, mimetype, body) 
       await run(false);
     }
 
-    const outBuf = await fs.promises.readFile(outFile);
-    if (!outBuf.length) throw new Error('empty transcoder output');
-
-    const ratio = outBuf.length / buffer.length;
+    const outStat = await fs.promises.stat(outFile);
+    if (!outStat.size) throw new Error('empty transcoder output');
+    let inSize = 1;
+    try {
+      inSize = (await fs.promises.stat(inputPath)).size || 1;
+    } catch (_) {}
+    const ratio = outStat.size / inSize;
     if (ratio > 1.2) {
       console.warn('[reelTranscode] output > 120% of input; keeping original');
+      await cleanup();
       return null;
     }
 
     return {
-      buffer: outBuf,
+      outputPath: outFile,
       contentType: 'video/mp4',
       extension: '.mp4',
+      cleanup,
     };
+  } catch (e) {
+    console.warn('[reelTranscode]', e.message);
+    await cleanup();
+    return null;
+  }
+}
+
+/**
+ * When `purpose=reel` on multipart upload: normalize to H.264 MP4, cap long edge for web reels,
+ * AAC audio (or none), faststart for streaming. Falls back to original buffer on any failure.
+ * @returns {Promise<{ buffer: Buffer, contentType: string, extension: string } | null>}
+ */
+async function transcodeReelVideoIfNeeded(buffer, originalname, mimetype, body) {
+  if (process.env.DISABLE_REEL_TRANSCODE === '1') return null;
+  if (!isReelUploadPurpose(body)) return null;
+  if (!buffer || buffer.length < 1) return null;
+
+  const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'visit-reel-in-'));
+  const inExt = path.extname(originalname || '') || '.mp4';
+  const inFile = path.join(tmpDir, `src${inExt}`);
+
+  try {
+    await fs.promises.writeFile(inFile, buffer);
+    const out = await transcodeReelVideoFromPath(inFile, originalname, mimetype, body);
+    if (!out) return null;
+    try {
+      const outBuf = await fs.promises.readFile(out.outputPath);
+      return {
+        buffer: outBuf,
+        contentType: out.contentType,
+        extension: out.extension,
+      };
+    } finally {
+      await out.cleanup();
+    }
   } catch (e) {
     console.warn('[reelTranscode]', e.message);
     return null;
@@ -148,5 +189,6 @@ async function transcodeReelVideoIfNeeded(buffer, originalname, mimetype, body) 
 
 module.exports = {
   isReelUploadPurpose,
+  transcodeReelVideoFromPath,
   transcodeReelVideoIfNeeded,
 };

@@ -5,6 +5,9 @@ const VIDEO_MIME_TO_EXT = {
   'video/webm': '.webm',
   'video/quicktime': '.mov',
   'video/x-m4v': '.m4v',
+  'video/3gpp': '.3gp',
+  'video/3gpp2': '.3g2',
+  'video/x-matroska': '.mkv',
 };
 
 function isImageMime(m) {
@@ -12,12 +15,17 @@ function isImageMime(m) {
 }
 
 function isVideoMime(m) {
-  return /^video\/(mp4|webm|quicktime|x-m4v)$/i.test(m || '');
+  return /^video\/(mp4|webm|quicktime|x-m4v|3gpp2?|x-matroska)$/i.test(m || '');
 }
 
 function isHeicByFilename(name) {
   const n = (name || '').toLowerCase();
   return n.endsWith('.heic') || n.endsWith('.heif');
+}
+
+/** Android/iOS sometimes send video as octet-stream; match common extensions. */
+function isVideoByFilename(name) {
+  return /\.(mp4|webm|mov|m4v|3gp|3g2|mkv)$/i.test(name || '');
 }
 
 /** Multer fileFilter: images (incl. HEIC) + short videos. */
@@ -26,6 +34,7 @@ function multerFileAllowed(file) {
   if (isImageMime(file.mimetype)) return true;
   const m = (file.mimetype || '').toLowerCase();
   if (isHeicByFilename(file.originalname) && (m === 'application/octet-stream' || m === '')) return true;
+  if (isVideoByFilename(file.originalname) && (m === 'application/octet-stream' || m === '')) return true;
   return false;
 }
 
@@ -88,6 +97,11 @@ async function prepareUploadedImage(buffer, mimetype, originalname) {
   return { buffer: out, contentType: 'image/jpeg', useExtension: '.jpg' };
 }
 
+/** Video branch in upload handlers (incl. application/octet-stream + .mov from some phones). */
+function isLikelyVideoUpload(file) {
+  return isVideoMime(file.mimetype) || isVideoByFilename(file.originalname);
+}
+
 function pickImageExtension(contentType, rawOriginalName, useExtension) {
   if (useExtension) return useExtension;
   const rawExt = path.extname(rawOriginalName || '') || '';
@@ -104,6 +118,7 @@ function pickImageExtension(contentType, rawOriginalName, useExtension) {
 module.exports = {
   isImageMime,
   isVideoMime,
+  isLikelyVideoUpload,
   multerFileAllowed,
   prepareUploadedImage,
   pickImageExtension,
