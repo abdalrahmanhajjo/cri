@@ -1131,7 +1131,7 @@ export default function FeedPostCard({
                 loop
                 autoPlay={isActiveReel}
                 controls={isDesktop}
-                preload={isActiveReel || isDesktop ? 'auto' : 'metadata'}
+                preload="auto"
                 onTimeUpdate={(e) => {
                   const el = e.currentTarget;
                   if (el.duration) setReelProgress(el.currentTime / el.duration);
