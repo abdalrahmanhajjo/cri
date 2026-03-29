@@ -22,6 +22,8 @@ ENV VITE_SUPABASE_IMAGE_TRANSFORM=$VITE_SUPABASE_IMAGE_TRANSFORM
 RUN npm run build
 
 FROM node:22-alpine AS server-prod
+# Reel transcoding: @ffmpeg-installer/ffmpeg often ships a glibc-linked binary that won't run on Alpine (musl).
+RUN apk add --no-cache ffmpeg
 WORKDIR /app/server
 COPY server/package.json server/package-lock.json* ./
 RUN npm ci --omit=dev
@@ -31,6 +33,8 @@ COPY --from=client-build /app/client/dist /app/client/dist
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV SERVE_CLIENT_DIST=true
+# Prefer distro ffmpeg (full codecs). Override only if you use a custom binary.
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
 
 EXPOSE 3095
 CMD ["node", "src/index.js"]

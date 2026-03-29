@@ -13,9 +13,14 @@ function isReelUploadPurpose(body) {
   return p === 'reel';
 }
 
+/** Prefer system ffmpeg (Docker/Alpine: /usr/bin/ffmpeg); npm installer binary often breaks on musl. */
 function resolveFfmpegPath() {
   const explicit = process.env.FFMPEG_PATH?.trim();
   if (explicit && fs.existsSync(explicit)) return explicit;
+  const distro = ['/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg'];
+  for (const p of distro) {
+    if (fs.existsSync(p)) return p;
+  }
   try {
     const p = require('@ffmpeg-installer/ffmpeg').path;
     if (p && fs.existsSync(p)) return p;
@@ -57,8 +62,8 @@ function buildFfmpegArgs(inFile, outFile, withAudio) {
   const vf =
     "scale=w='min(1080,iw)':h='min(1920,ih)':force_original_aspect_ratio=decrease";
   const crf = process.env.REEL_TRANSCODE_CRF || '22';
-  /** `veryfast` keeps CPU time down on small hosts (avoids proxy timeouts / OOM during reel upload). */
-  const preset = process.env.REEL_TRANSCODE_PRESET || 'veryfast';
+  /** `ultrafast` minimizes CPU time on small hosts (proxy timeouts during reel upload). */
+  const preset = process.env.REEL_TRANSCODE_PRESET || 'ultrafast';
   const args = [
     '-hide_banner',
     '-loglevel',
@@ -99,6 +104,21 @@ async function transcodeReelVideoFromPath(inputPath, originalname, mimetype, bod
   if (process.env.DISABLE_REEL_TRANSCODE === '1') return null;
   if (!isReelUploadPurpose(body)) return null;
   if (!inputPath || !fs.existsSync(inputPath)) return null;
+
+  const maxMb = parseInt(process.env.REEL_TRANSCODE_MAX_INPUT_MB || '0', 10);
+  if (maxMb > 0) {
+    try {
+      const st = await fs.promises.stat(inputPath);
+      if (st.size > maxMb * 1024 * 1024) {
+        console.warn(
+          `[reelTranscode] skipping transcode: ${(st.size / (1024 * 1024)).toFixed(1)}MB > REEL_TRANSCODE_MAX_INPUT_MB=${maxMb}`
+        );
+        return null;
+      }
+    } catch (_) {
+      /* continue */
+    }
+  }
 
   const ffmpegPath = resolveFfmpegPath();
   if (!ffmpegPath) {
