@@ -1,0 +1,17 @@
+{
+  "name": "Visit Tripoli",
+  "short_name": "Visit Tripoli",
+  "description": "Discover Tripoli, Lebanon: heritage, food, events, maps, and trip planning.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafaf9",
+  "theme_color": "#0D5C55",
+  "icons": [
+    {
+      "src": "/tripoli-lebanon-icon.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,6 +1,64 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { cityHeroPreloadLinkAttrs } from './src/constants/cityHero.js'
+import {
+  SITE_BRAND_NAME,
+  SITE_DEFAULT_DESCRIPTION,
+  SITE_DEFAULT_TITLE,
+  SITE_OG_IMAGE_PATH,
+  SITE_THEME_COLOR,
+} from './src/config/siteSeo.js'
+
+function escAttr(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function buildStaticSeoHead(siteUrl) {
+  const title = escAttr(SITE_DEFAULT_TITLE)
+  const desc = escAttr(SITE_DEFAULT_DESCRIPTION)
+  const brand = escAttr(SITE_BRAND_NAME)
+  let block = `
+    <meta name="description" content="${desc}" />
+    <meta name="theme-color" content="${SITE_THEME_COLOR}" />
+    <meta name="application-name" content="${brand}" />
+    <meta name="apple-mobile-web-app-title" content="${brand}" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="apple-touch-icon" href="/tripoli-lebanon-icon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="${title}" />
+    <meta property="og:description" content="${desc}" />
+    <meta property="og:site_name" content="${brand}" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="${title}" />
+    <meta name="twitter:description" content="${desc}" />`
+  const base = (siteUrl || '').trim().replace(/\/$/, '')
+  if (base) {
+    const ogImage = escAttr(`${base}${SITE_OG_IMAGE_PATH}`)
+    const canon = escAttr(`${base}/`)
+    block += `
+    <link rel="canonical" href="${canon}" />
+    <meta property="og:url" content="${canon}" />
+    <meta property="og:image" content="${ogImage}" />
+    <meta name="twitter:image" content="${ogImage}" />`
+    const ld = {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: SITE_BRAND_NAME,
+      url: `${base}/`,
+      description: SITE_DEFAULT_DESCRIPTION,
+      inLanguage: ['en', 'ar', 'fr'],
+    }
+    block += `
+    <script type="application/ld+json">${JSON.stringify(ld)}</script>`
+  }
+  return block
+}
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -14,6 +72,7 @@ export default defineConfig(({ mode }) => {
     supabaseOrigin && /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(supabaseOrigin)
       ? `\n    <link rel="preconnect" href="${supabaseOrigin}" crossorigin />`
       : ''
+  const publicSiteUrl = env.VITE_PUBLIC_SITE_URL || ''
 
   return {
     plugins: [
@@ -24,6 +83,7 @@ export default defineConfig(({ mode }) => {
           order: 'post',
           handler(html) {
             let out = html
+            out = out.replace(/<\/title>/i, `</title>${buildStaticSeoHead(publicSiteUrl)}`)
             if (supabasePreconnect) {
               out = out.replace(/<head>/i, `<head>${supabasePreconnect}`)
             }
