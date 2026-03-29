@@ -7,6 +7,10 @@ const { spawn } = require('child_process');
 
 const REEL_TIMEOUT_MS = parseInt(process.env.REEL_TRANSCODE_TIMEOUT_MS || '300000', 10);
 
+/** Reject transcoded output if larger than input × this (saves CPU when source is already efficient). */
+const OUTPUT_VS_INPUT_MAX =
+  Number.parseFloat(process.env.REEL_TRANSCODE_MAX_OUTPUT_RATIO || '') || 1.25;
+
 function isReelUploadPurpose(body) {
   if (!body || typeof body !== 'object') return false;
   const p = String(body.purpose || body.uploadPurpose || '').toLowerCase().trim();
@@ -58,12 +62,22 @@ function spawnFfmpeg(ffmpegPath, args) {
   });
 }
 
+function parseDimEnv(name, fallback) {
+  const n = parseInt(process.env[name] || '', 10);
+  return Number.isFinite(n) && n >= 320 && n <= 4096 ? n : fallback;
+}
+
+/**
+ * Web-optimized reel: H.264 + AAC, capped resolution, CRF + fast preset for smaller files at good visual quality.
+ * Tuning: lower resolution cap + CRF 24 + preset fast beats ultrafast+CRF22 for size/quality on short clips.
+ */
 function buildFfmpegArgs(inFile, outFile, withAudio) {
-  const vf =
-    "scale=w='min(1080,iw)':h='min(1920,ih)':force_original_aspect_ratio=decrease";
-  const crf = process.env.REEL_TRANSCODE_CRF || '22';
-  /** `ultrafast` minimizes CPU time on small hosts (proxy timeouts during reel upload). */
-  const preset = process.env.REEL_TRANSCODE_PRESET || 'ultrafast';
+  const maxW = parseDimEnv('REEL_MAX_WIDTH', 720);
+  const maxH = parseDimEnv('REEL_MAX_HEIGHT', 1280);
+  const vf = `scale=w='min(${maxW},iw)':h='min(${maxH},ih)':force_original_aspect_ratio=decrease`;
+  const crf = process.env.REEL_TRANSCODE_CRF || '24';
+  const preset = process.env.REEL_TRANSCODE_PRESET || 'fast';
+  const audioK = process.env.REEL_AUDIO_BITRATE || '96k';
   const args = [
     '-hide_banner',
     '-loglevel',
@@ -81,18 +95,72 @@ function buildFfmpegArgs(inFile, outFile, withAudio) {
     crf,
     '-preset',
     preset,
+    '-tune',
+    'film',
     '-vf',
     vf,
     '-movflags',
     '+faststart',
   ];
   if (withAudio) {
-    args.push('-c:a', 'aac', '-b:a', '128k');
+    args.push('-c:a', 'aac', '-b:a', audioK);
   } else {
     args.push('-an');
   }
   args.push(outFile);
   return args;
+}
+
+/**
+ * Run shared web-reel encode (upload + batch). Throws on failure.
+ */
+async function runFfmpegWebReelEncode(inputPath, outputPath) {
+  const ffmpegPath = resolveFfmpegPath();
+  if (!ffmpegPath) throw new Error('ffmpeg not found');
+  const run = async (withAudio) => {
+    const args = buildFfmpegArgs(inputPath, outputPath, withAudio);
+    await spawnFfmpeg(ffmpegPath, args);
+  };
+  try {
+    await run(true);
+  } catch (e1) {
+    await run(false);
+  }
+}
+
+/**
+ * Encode an on-disk video to optimized MP4. Returns size stats; caller decides whether to use output.
+ * @param {string} inputPath
+ * @param {string} outputPath
+ * @param {{ maxOutputVsInput?: number }} [opts] maxOutputVsInput default REEL_TRANSCODE_MAX_OUTPUT_RATIO / OUTPUT_VS_INPUT_MAX
+ * @returns {Promise<{ ok: boolean, bytesIn: number, bytesOut: number, reason?: string }>}
+ */
+async function encodeFileToWebReelMp4(inputPath, outputPath, opts = {}) {
+  const maxRatio = opts.maxOutputVsInput ?? OUTPUT_VS_INPUT_MAX;
+  let bytesIn = 0;
+  try {
+    bytesIn = (await fs.promises.stat(inputPath)).size;
+  } catch (_) {
+    return { ok: false, bytesIn: 0, bytesOut: 0, reason: 'stat input failed' };
+  }
+  try {
+    await fs.promises.unlink(outputPath).catch(() => {});
+    await runFfmpegWebReelEncode(inputPath, outputPath);
+  } catch (e) {
+    return { ok: false, bytesIn, bytesOut: 0, reason: e.message || 'ffmpeg failed' };
+  }
+  let bytesOut = 0;
+  try {
+    bytesOut = (await fs.promises.stat(outputPath)).size;
+  } catch (_) {
+    return { ok: false, bytesIn, bytesOut: 0, reason: 'no output file' };
+  }
+  if (!bytesOut) return { ok: false, bytesIn, bytesOut: 0, reason: 'empty output' };
+  if (bytesOut > bytesIn * maxRatio) {
+    await fs.promises.unlink(outputPath).catch(() => {});
+    return { ok: false, bytesIn, bytesOut, reason: `output larger than input (ratio ${(bytesOut / bytesIn).toFixed(2)} > ${maxRatio})` };
+  }
+  return { ok: true, bytesIn, bytesOut };
 }
 
 /**
@@ -134,26 +202,9 @@ async function transcodeReelVideoFromPath(inputPath, originalname, mimetype, bod
   };
 
   try {
-    const run = async (withAudio) => {
-      const args = buildFfmpegArgs(inputPath, outFile, withAudio);
-      await spawnFfmpeg(ffmpegPath, args);
-    };
-
-    try {
-      await run(true);
-    } catch (e1) {
-      await run(false);
-    }
-
-    const outStat = await fs.promises.stat(outFile);
-    if (!outStat.size) throw new Error('empty transcoder output');
-    let inSize = 1;
-    try {
-      inSize = (await fs.promises.stat(inputPath)).size || 1;
-    } catch (_) {}
-    const ratio = outStat.size / inSize;
-    if (ratio > 1.2) {
-      console.warn('[reelTranscode] output > 120% of input; keeping original');
+    const result = await encodeFileToWebReelMp4(inputPath, outFile, { maxOutputVsInput: OUTPUT_VS_INPUT_MAX });
+    if (!result.ok) {
+      console.warn('[reelTranscode]', result.reason || 'encode rejected');
       await cleanup();
       return null;
     }
@@ -209,6 +260,10 @@ async function transcodeReelVideoIfNeeded(buffer, originalname, mimetype, body) 
 
 module.exports = {
   isReelUploadPurpose,
+  resolveFfmpegPath,
+  buildFfmpegArgs,
+  runFfmpegWebReelEncode,
+  encodeFileToWebReelMp4,
   transcodeReelVideoFromPath,
   transcodeReelVideoIfNeeded,
 };
