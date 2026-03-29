@@ -183,8 +183,17 @@ async function parseStorageUploadResponse(response, token) {
     try {
       data = JSON.parse(raw);
     } catch {
-      const oneLine = raw.replace(/\s+/g, ' ').trim();
-      data = { error: oneLine ? oneLine.slice(0, 240) : `HTTP ${response.status}` };
+      const looksLikeHtml = /^<!DOCTYPE/i.test(raw) || /<html[\s>]/i.test(raw);
+      let errMsg = raw.replace(/\s+/g, ' ').trim().slice(0, 240);
+      if (looksLikeHtml) {
+        errMsg =
+          response.status === 502 || response.status === 504
+            ? 'The server stopped responding (often a timeout on large videos). Try a shorter or smaller file, or ask the host to allow reel transcoding only on a larger plan.'
+            : `Request failed (${response.status}). The server returned an error page instead of JSON.`;
+      } else if (!errMsg) {
+        errMsg = `HTTP ${response.status}`;
+      }
+      data = { error: errMsg };
     }
   }
   if (!response.ok) {
