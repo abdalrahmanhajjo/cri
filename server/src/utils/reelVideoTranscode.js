@@ -7,9 +7,9 @@ const { spawn } = require('child_process');
 
 const REEL_TIMEOUT_MS = parseInt(process.env.REEL_TRANSCODE_TIMEOUT_MS || '300000', 10);
 
-/** Reject transcoded output if larger than input × this (saves CPU when source is already efficient). */
+/** Reject transcoded output if larger than input × this (phone masters are often HEAVY compressed — allow a looser ratio so we still emit web-safe H.264). */
 const OUTPUT_VS_INPUT_MAX =
-  Number.parseFloat(process.env.REEL_TRANSCODE_MAX_OUTPUT_RATIO || '') || 1.25;
+  Number.parseFloat(process.env.REEL_TRANSCODE_MAX_OUTPUT_RATIO || '') || 2.5;
 
 /** Prefer system ffmpeg (Docker/Alpine: /usr/bin/ffmpeg); npm installer binary often breaks on musl. */
 function resolveFfmpegPath() {
@@ -62,19 +62,24 @@ function parseDimEnv(name, fallback) {
 }
 
 /**
- * Web-optimized reel: H.264 + AAC, capped resolution, CRF + fast preset.
- * force_divisible_by=2 + format=yuv420p: odd sizes with yuv420p often decode as black in browsers.
- * main@L4.1 + bt709 tagging: broad mobile/Desktop compatibility (phone HDR/HEVC sources).
+ * Web feed video: H.264 + AAC, capped resolution, CRF + preset.
+ * - force_divisible_by=2 + yuv420p: avoids black frames in browsers on odd dimensions.
+ * - Do NOT force bt709/tv metadata: phone HDR / full-range clips often go black or crushed when tagged wrong.
+ * - Lanczos scale in-filter only (omit global sws_flags — fewer edge cases across ffmpeg builds).
  */
 function buildFfmpegArgs(inFile, outFile, withAudio) {
-  const maxW = parseDimEnv('REEL_MAX_WIDTH', 720);
-  const maxH = parseDimEnv('REEL_MAX_HEIGHT', 1280);
-  const scale = `scale=w='min(${maxW},iw)':h='min(${maxH},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2`;
+  const maxW = parseDimEnv('REEL_MAX_WIDTH', 1080);
+  const maxH = parseDimEnv('REEL_MAX_HEIGHT', 1920);
+  const scale = `scale=w='min(${maxW},iw)':h='min(${maxH},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:flags=lanczos`;
   const vf = `${scale},setsar=1,format=yuv420p`;
-  const crf = process.env.REEL_TRANSCODE_CRF || '24';
-  const preset = process.env.REEL_TRANSCODE_PRESET || 'fast';
-  const audioK = process.env.REEL_AUDIO_BITRATE || '96k';
+  const crf = process.env.REEL_TRANSCODE_CRF || '20';
+  const preset = process.env.REEL_TRANSCODE_PRESET || 'medium';
+  const audioK = process.env.REEL_AUDIO_BITRATE || '128k';
   const tune = (process.env.REEL_X264_TUNE || '').trim();
+  const profile = (process.env.REEL_X264_PROFILE || 'high').trim() || 'high';
+  const level = (process.env.REEL_X264_LEVEL || '4.2').trim() || '4.2';
+  const maxrate = (process.env.REEL_X264_MAXRATE || '').trim();
+  const bufsize = (process.env.REEL_X264_BUFSIZE || '').trim();
 
   const args = [
     '-hide_banner',
@@ -83,36 +88,21 @@ function buildFfmpegArgs(inFile, outFile, withAudio) {
     '-y',
     '-i',
     inFile,
-    '-sws_flags',
-    'lanczos+accurate_rnd+full_chroma_int',
     '-c:v',
     'libx264',
     '-profile:v',
-    'main',
+    profile,
     '-level',
-    '4.1',
+    level,
     '-pix_fmt',
     'yuv420p',
-    '-crf',
-    crf,
     '-preset',
     preset,
-    '-vf',
-    vf,
-    '-color_range',
-    'tv',
-    '-colorspace',
-    'bt709',
-    '-color_primaries',
-    'bt709',
-    '-color_trc',
-    'bt709',
-    '-movflags',
-    '+faststart',
   ];
-  if (tune) {
-    const vfIdx = args.indexOf('-vf');
-    if (vfIdx !== -1) args.splice(vfIdx, 0, '-tune', tune);
+  if (tune) args.push('-tune', tune);
+  args.push('-crf', crf, '-vf', vf, '-movflags', '+faststart');
+  if (maxrate) {
+    args.push('-maxrate', maxrate, '-bufsize', bufsize || '12M');
   }
   if (withAudio) {
     args.push('-c:a', 'aac', '-b:a', audioK, '-ar', '48000');

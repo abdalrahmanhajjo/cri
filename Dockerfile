@@ -38,7 +38,7 @@ ENV HOST=0.0.0.0
 ENV SERVE_CLIENT_DIST=true
 # Prefer distro ffmpeg (full codecs). Override only if you use a custom binary.
 ENV FFMPEG_PATH=/usr/bin/ffmpeg
-# Reels are re-encoded to a smaller web MP4 (720×1280 max, H.264 fast+CRF24). If 502/timeouts persist, set DISABLE_REEL_TRANSCODE=1.
+# Feed videos re-encoded to web MP4 (1080×1920 max, H.264 medium+CRF20). If 502/timeouts persist, set DISABLE_REEL_TRANSCODE=1.
 ENV DISABLE_REEL_TRANSCODE=0
 
 EXPOSE 3095

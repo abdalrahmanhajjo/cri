@@ -1904,6 +1904,13 @@ a.ig-feed-avatar--link:focus-visible {
   display: block;
 }
 
+/* Ensure no parent filter/backdrop stack blurs decoded video pixels */
+.ig-feed-video,
+.ig-reel-video {
+  filter: none;
+  -webkit-filter: none;
+}
+
 .ig-feed-img {
   object-fit: cover;
 }

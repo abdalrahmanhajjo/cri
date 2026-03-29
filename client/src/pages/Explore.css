@@ -6630,6 +6630,8 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 
 .vd-community-feed-video {
   background: #1a1a1a;
+  filter: none;
+  -webkit-filter: none;
 }
 
 .vd-community-feed-placeholder {
