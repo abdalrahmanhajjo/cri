@@ -3,9 +3,11 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const { spawn } = require('child_process');
 
 const REEL_TIMEOUT_MS = parseInt(process.env.REEL_TRANSCODE_TIMEOUT_MS || '300000', 10);
+const FASTSTART_TIMEOUT_MS = parseInt(process.env.FEED_VIDEO_FASTSTART_TIMEOUT_MS || '120000', 10);
 
 /** Reject transcoded output if larger than input × this (phone masters are often HEAVY compressed — allow a looser ratio so we still emit web-safe H.264). */
 const OUTPUT_VS_INPUT_MAX =
@@ -28,7 +30,7 @@ function resolveFfmpegPath() {
   return null;
 }
 
-function spawnFfmpeg(ffmpegPath, args) {
+function spawnFfmpeg(ffmpegPath, args, timeoutMs = REEL_TIMEOUT_MS) {
   return new Promise((resolve, reject) => {
     const child = spawn(ffmpegPath, args, {
       windowsHide: true,
@@ -43,7 +45,7 @@ function spawnFfmpeg(ffmpegPath, args) {
         child.kill('SIGKILL');
       } catch (_) {}
       reject(new Error('Reel transcode timed out'));
-    }, REEL_TIMEOUT_MS);
+    }, timeoutMs);
     child.on('error', (e) => {
       clearTimeout(timer);
       reject(e);
@@ -285,6 +287,69 @@ async function transcodeReelVideoIfNeeded(buffer, originalname, mimetype, body) 
   }
 }
 
+/**
+ * Remux MP4/MOV for progressive playback: move moov to file start (-c copy, no re-encode or resize).
+ * Browser "takes forever to start" is often moov-at-end phone exports; this fixes that.
+ * @param {string} inputPath
+ * @param {string} safeExt extension with dot, e.g. ".mp4"
+ * @returns {Promise<string | null>} new temp path, or null to keep inputPath
+ */
+async function faststartFeedVideoIfApplicable(inputPath, safeExt) {
+  if (process.env.FEED_VIDEO_FASTSTART === '0') return null;
+  const ext = (safeExt || '').toLowerCase();
+  if (!['.mp4', '.m4v', '.mov'].includes(ext)) return null;
+
+  const ffmpegPath = resolveFfmpegPath();
+  if (!ffmpegPath) return null;
+
+  const maxMb = parseInt(process.env.FEED_VIDEO_FASTSTART_MAX_INPUT_MB || '0', 10);
+  if (maxMb > 0) {
+    try {
+      const st = await fs.promises.stat(inputPath);
+      if (st.size > maxMb * 1024 * 1024) {
+        console.warn(`[feedVideoFaststart] skip: larger than FEED_VIDEO_FASTSTART_MAX_INPUT_MB=${maxMb}`);
+        return null;
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+
+  const outPath = path.join(
+    os.tmpdir(),
+    `visit-faststart-${crypto.randomBytes(12).toString('hex')}${ext}`
+  );
+  try {
+    await spawnFfmpeg(
+      ffmpegPath,
+      [
+        '-hide_banner',
+        '-loglevel',
+        'error',
+        '-y',
+        '-i',
+        inputPath,
+        '-c',
+        'copy',
+        '-movflags',
+        '+faststart',
+        outPath,
+      ],
+      FASTSTART_TIMEOUT_MS
+    );
+    const stOut = await fs.promises.stat(outPath);
+    if (stOut.size < 256) {
+      await fs.promises.unlink(outPath).catch(() => {});
+      return null;
+    }
+    return outPath;
+  } catch (e) {
+    console.warn('[feedVideoFaststart]', e.message);
+    await fs.promises.unlink(outPath).catch(() => {});
+    return null;
+  }
+}
+
 module.exports = {
   resolveFfmpegPath,
   buildFfmpegArgs,
@@ -293,4 +358,5 @@ module.exports = {
   encodeLowRenditionFromHighMp4,
   transcodeReelVideoFromPath,
   transcodeReelVideoIfNeeded,
+  faststartFeedVideoIfApplicable,
 };

@@ -85,7 +85,7 @@ export function CommunityFeedCard({ post, t }) {
             src={vid}
             controls
             playsInline
-            preload="metadata"
+            preload="auto"
             poster={img ? optimizeVideoPosterUrl(img) : undefined}
             aria-label={fullCap.slice(0, 120) || reelLabel}
           />
