@@ -1,6 +1,7 @@
 const express = require('express');
 const { query } = require('../../db');
 const { authMiddleware } = require('../../middleware/auth');
+const { invalidateSitemapCache } = require('../../seo/seoRoutes');
 const { adminMiddleware } = require('../../middleware/admin');
 
 const router = express.Router();
@@ -90,6 +91,7 @@ router.delete('/:id', async (req, res) => {
     const id = req.params.id;
     const result = await query('DELETE FROM events WHERE id = $1', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Event not found' });
+    invalidateSitemapCache();
     res.json({ message: 'Event deleted' });
   } catch (err) {
     console.error(err);

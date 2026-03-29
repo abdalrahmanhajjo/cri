@@ -512,5 +512,10 @@ function makeSeoResponder({ clientDistPath }) {
   };
 }
 
-module.exports = { seoRouter: router, makeSeoResponder };
+/** Call after places/tours/events are deleted or merged so /sitemap.xml drops stale URLs immediately. */
+function invalidateSitemapCache() {
+  sitemapCache = { xml: null, ts: 0 };
+}
+
+module.exports = { seoRouter: router, makeSeoResponder, invalidateSitemapCache };
 
