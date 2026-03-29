@@ -15,6 +15,7 @@ const {
   VIDEO_MIME_TO_EXT,
 } = require('../../utils/imageUpload');
 const { transcodeReelVideoFromPath } = require('../../utils/reelVideoTranscode');
+const { getMulterFileSizeLimit } = require('../../utils/uploadLimits');
 
 const router = express.Router();
 const BUCKET = 'place-images';
@@ -59,6 +60,7 @@ async function ensureBucket(supabase) {
   }
 }
 
+const multerFileLimits = getMulterFileSizeLimit();
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, MULTER_TMP),
@@ -67,7 +69,7 @@ const upload = multer({
       cb(null, `${crypto.randomBytes(16).toString('hex')}${ext}`);
     },
   }),
-  limits: { fileSize: 80 * 1024 * 1024 },
+  ...(multerFileLimits ? { limits: multerFileLimits } : {}),
   fileFilter: (req, file, cb) => {
     const ok = multerFileAllowed(file);
     cb(

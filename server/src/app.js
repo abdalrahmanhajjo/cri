@@ -303,7 +303,11 @@ app.use((err, req, res, next) => {
     const multer = require('multer');
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({ error: 'File too large. Maximum size is 80 MB.' });
+        const cap = process.env.UPLOAD_MAX_FILE_BYTES?.trim();
+        const msg = cap
+          ? `File too large. Maximum is ${cap} bytes (UPLOAD_MAX_FILE_BYTES).`
+          : 'File too large.';
+        return res.status(413).json({ error: msg });
       }
       return res.status(400).json({ error: err.message || 'Upload rejected.' });
     }
