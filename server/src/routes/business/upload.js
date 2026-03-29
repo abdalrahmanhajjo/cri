@@ -15,6 +15,7 @@ const {
   pickImageExtension,
   VIDEO_MIME_TO_EXT,
 } = require('../../utils/imageUpload');
+const { transcodeReelVideoIfNeeded } = require('../../utils/reelVideoTranscode');
 
 const router = express.Router();
 const BUCKET = 'place-images';
@@ -103,6 +104,17 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
     const fromMime = VIDEO_MIME_TO_EXT[req.file.mimetype.toLowerCase()] || '.mp4';
     safeExt = /^\.(mp4|webm|mov|m4v)$/i.test(ext) ? ext : fromMime;
     storagePrefix = 'feed/videos';
+    const reelOut = await transcodeReelVideoIfNeeded(
+      uploadBuffer,
+      req.file.originalname,
+      req.file.mimetype,
+      req.body
+    );
+    if (reelOut) {
+      uploadBuffer = reelOut.buffer;
+      contentType = reelOut.contentType;
+      safeExt = reelOut.extension;
+    }
   } else {
     try {
       const prep = await prepareUploadedImage(uploadBuffer, req.file.mimetype, req.file.originalname);

@@ -503,9 +503,10 @@ export const api = {
       get: () => api.get('/api/admin/content'),
       save: (overrides) => api.put('/api/admin/content', { overrides }),
     },
-    upload: (file) => {
+    upload: (file, options = {}) => {
       const formData = new FormData();
       formData.append('file', file);
+      if (options.purpose === 'reel') formData.append('purpose', 'reel');
       const url = `${getBaseUrl()}/api/admin/upload`;
       const headers = {};
       const token = getToken();
@@ -537,10 +538,11 @@ export const api = {
       save: (placeId, lang, body) =>
         api.put(`/api/business/places/${encodeURIComponent(placeId)}/translations/${encodeURIComponent(lang)}`, body),
     },
-    upload: (file, placeId) => {
+    upload: (file, placeId, options = {}) => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('placeId', placeId);
+      if (options.purpose === 'reel') formData.append('purpose', 'reel');
       const url = `${getBaseUrl()}/api/business/upload`;
       const headers = {};
       const token = getToken();
