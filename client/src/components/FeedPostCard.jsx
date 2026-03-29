@@ -8,17 +8,11 @@ import { formatFeedTime } from '../utils/feedTime';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../utils/feedPostImages';
 import { isLikelyImageFile, isLikelyVideoFile, ACCEPT_IMAGES_WITH_HEIC } from '../utils/imageUploadAccept';
 import { COMMUNITY_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
+import { isLikelyDirectStreamableVideo } from '../utils/feedVideoPlayback';
 
 function mediaUrl(url) {
   if (!url || typeof url !== 'string') return '';
   return getImageUrl(fixImageUrlExtension(url));
-}
-
-function isLikelyStreamableVideoUrl(url) {
-  if (!url || typeof url !== 'string') return false;
-  const u = url.trim().toLowerCase();
-  if (u.includes('youtube.com') || u.includes('youtu.be') || u.includes('vimeo.com')) return false;
-  return /^https?:\/\//i.test(u) || u.startsWith('/');
 }
 
 /** Group flat API list into roots with nested replies (one level). */
@@ -152,7 +146,7 @@ export default function FeedPostCard({
   }, [post.id, post.image_url, post.image_urls]);
   const img = gallerySrcs[0] || '';
   const vid = post.video_url ? mediaUrl(post.video_url) : '';
-  const showVideo = isVideo && vid && isLikelyStreamableVideoUrl(post.video_url);
+  const showVideo = isVideo && vid && isLikelyDirectStreamableVideo(vid, post.video_url);
   const externalVideo = isVideo && post.video_url && !showVideo;
   const timeLabel = formatFeedTime(post.created_at, lang);
   const hideLikes = post.hide_likes === true;
