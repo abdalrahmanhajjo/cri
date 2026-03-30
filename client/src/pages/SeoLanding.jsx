@@ -18,12 +18,6 @@ function AboutSplitParagraphs({ text, firstClassName = 'seo-landing__p', classNa
   ));
 }
 
-function wikipediaTripoliUrl(lang) {
-  if (lang === 'ar') return 'https://ar.wikipedia.org/wiki/%D8%B7%D8%B1%D8%A7%D8%A8%D9%84%D8%B3';
-  if (lang === 'fr') return 'https://fr.wikipedia.org/wiki/Tripoli_(Liban)';
-  return 'https://en.wikipedia.org/wiki/Tripoli,_Lebanon';
-}
-
 function placeSlug(place) {
   return String(place?.searchName || place?.search_name || place?.id || '')
     .trim()
@@ -368,33 +362,8 @@ export function TravelTipsTripoli() {
 }
 
 export function AboutTripoli() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const tt = (key, fallback) => t('aboutTripoli', key) || fallback;
-  const wikiUrl = wikipediaTripoliUrl(lang);
-  // Lightweight scroll reveal (no big libraries)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const els = Array.from(document.querySelectorAll('[data-reveal]'));
-    if (els.length === 0) return;
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    if (reduce) {
-      els.forEach((el) => el.setAttribute('data-revealed', 'true'));
-      return;
-    }
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.setAttribute('data-revealed', 'true');
-            obs.unobserve(e.target);
-          }
-        });
-      },
-      { threshold: 0.12, rootMargin: '0px 0px -10% 0px' }
-    );
-    els.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, []);
 
   const infoboxRows = [
     { label: tt('infobox_country_l', 'Country'), value: tt('infobox_country_v', 'Lebanon') },
@@ -454,7 +423,7 @@ export function AboutTripoli() {
   return (
     <div className="seo-landing seo-landing--about">
       <div className="seo-landing__container">
-        <header className="seo-landing__aboutHero" data-reveal>
+        <header className="seo-landing__aboutHero">
           <p className="seo-landing__aboutEyebrow">{t('nav', 'megaAboutTripoli') || 'About Tripoli'}</p>
           <h1 className="seo-landing__title">{tt('title', 'Tripoli, Lebanon')}</h1>
           <AboutSplitParagraphs
@@ -475,7 +444,7 @@ export function AboutTripoli() {
           </div>
         </header>
 
-        <div className="seo-landing__aboutWikiLayout" data-reveal>
+        <div className="seo-landing__aboutWikiLayout">
           <div className="seo-landing__aboutWikiMain">
             <nav className="seo-landing__aboutToc" aria-label={tt('toc_title', 'Contents')}>
               <h2 className="seo-landing__aboutTocTitle">{tt('toc_title', 'Contents')}</h2>
@@ -491,7 +460,7 @@ export function AboutTripoli() {
             <section id="about-overview" className="seo-landing__aboutSection">
               <h2 className="seo-landing__aboutSectionH">{tt('sec_overview_h', 'Overview')}</h2>
               <div className="seo-landing__aboutLead seo-landing__aboutLead--inWiki">
-                <div className="seo-landing__aboutLeadMedia">
+                <figure className="seo-landing__aboutLeadMedia">
                   <img
                     className="seo-landing__aboutLeadImg"
                     src="/tripoli-history-hero.png"
@@ -499,10 +468,13 @@ export function AboutTripoli() {
                       'lead_img_alt',
                       'Citadel above Tripoli’s old city, Lebanon.'
                     )}
-                    loading="lazy"
+                    width={1200}
+                    height={630}
+                    loading="eager"
                     decoding="async"
+                    fetchPriority="high"
                   />
-                </div>
+                </figure>
                 <div className="seo-landing__aboutLeadBody">
                   <AboutSplitParagraphs
                     text={tt(
@@ -637,14 +609,6 @@ export function AboutTripoli() {
                   </tr>
                 </tbody>
               </table>
-              <a
-                className="seo-landing__aboutWikiExt"
-                href={wikiUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                {tt('wiki_read_more', 'Encyclopedia article (Wikipedia)')}
-              </a>
             </div>
           </aside>
         </div>

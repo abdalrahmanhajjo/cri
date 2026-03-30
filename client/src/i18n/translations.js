@@ -130,7 +130,6 @@ export const translations = {
       infobox_coord_l: 'Coordinates',
       infobox_coord_v: '34°26′N 35°50′E',
       infobox_web_l: 'Website',
-      wiki_read_more: 'Encyclopedia article (Wikipedia)',
       sec_overview_h: 'Overview',
       sec_names_h: 'Names',
       sec_names_p:
@@ -1348,7 +1347,6 @@ export const translations = {
       infobox_coord_l: 'الإحداثيات',
       infobox_coord_v: '34°26′ شمالاً 35°50′ شرقاً',
       infobox_web_l: 'الموقع',
-      wiki_read_more: 'مقالة موسوعية (ويكيبيديا)',
       sec_overview_h: 'نظرة عامة',
       sec_names_h: 'الأسماء والاشتقاق',
       sec_names_p:
@@ -2556,7 +2554,6 @@ export const translations = {
       infobox_coord_l: 'Coordonnées',
       infobox_coord_v: '34°26′N 35°50′E',
       infobox_web_l: 'Site',
-      wiki_read_more: 'Article encyclopédique (Wikipédia)',
       sec_overview_h: 'Vue d’ensemble',
       sec_names_h: 'Noms et étymologie',
       sec_names_p:
