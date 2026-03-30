@@ -98,7 +98,7 @@ export default function Layout() {
 
   return (
     <div className="layout">
-      <header className={`header header--vd ${menuOpen ? 'menu-open' : ''}`}>
+      <header id="site-header" className={`header header--vd ${menuOpen ? 'menu-open' : ''}`}>
         <div className="header-inner">
           <div className="header-row header-row--main">
             <button

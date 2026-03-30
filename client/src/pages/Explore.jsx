@@ -19,6 +19,7 @@ import {
 import { cityHeroWebpSrcSet, CITY_HERO_SIZES } from '../constants/cityHero';
 import { resolveHeroTagline, resolveFooterTagline } from '../config/resolveSiteTagline';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
+import { PLAN_TRIP_AREA_NAV, PLAN_TRIP_AREA_I18N_KEYS } from '../config/planTripAreas';
 import { applyHomeSeoFromSettings } from '../utils/siteSeo';
 import { getApiOrigin } from '../utils/apiOrigin';
 import {
@@ -29,19 +30,6 @@ import {
 } from '../utils/findYourWayGrouping';
 import { supabaseOptimizeForThumbnail } from '../utils/supabaseImage.js';
 import './Explore.css';
-
-const PLAN_TRIP_AREA_I18N_KEYS = {
-  old_city: { name: 'areaOldCity', desc: 'areaOldCityDesc' },
-  mina: { name: 'areaMina', desc: 'areaMinaDesc' },
-  tell: { name: 'areaTel', desc: 'areaTelDesc' },
-};
-
-/** Discover search hints — Tripoli quarters, not listing counts */
-const PLAN_TRIP_AREA_NAV = [
-  { key: 'old_city', discoverQ: 'Old City' },
-  { key: 'mina', discoverQ: 'Al-Mina' },
-  { key: 'tell', discoverQ: 'Al-Tell' },
-];
 
 const TRIPOLI_TIMEZONE = 'Asia/Beirut';
 
@@ -534,8 +522,8 @@ function themeCategoryStats(bucket, categories) {
   return { categoryCount: resolved, listingCount: (bucket || []).length };
 }
 
-/** Home browse-by-category deck — directory categories grouped into a few friendly rows. */
-export function ExperienceTripoliSection({ t, lang, places = [], categories = [] }) {
+/** Home: quarters → Discover, directory themes → Discover with tailored `q`, transport & stay. */
+export function ExperienceTripoliSection({ t, lang, places = [], categories = [], showMap = true, showTips = true }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const placesByWay = groupPlacesByWay(places, categories);
   const stepClass = ['vd-find-your-way-row--a', 'vd-find-your-way-row--b', 'vd-find-your-way-row--c', 'vd-find-your-way-row--d'];
@@ -552,6 +540,80 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
             </Link>
           </p>
         </header>
+
+        <div className="vd-find-your-way-main-grid">
+          <div className="vd-find-your-way-areas-panel">
+            <div id="areas" className="vd-plan-trip-block vd-find-your-way-areas-card">
+              <h3 className="vd-plan-trip-block-title">{safeT('home', 'areasTitle')}</h3>
+              <p className="vd-plan-trip-block-desc">{safeT('home', 'areasSub')}</p>
+              <div className="vd-plan-trip-areas vd-find-your-way-areas-list">
+                {PLAN_TRIP_AREA_NAV.map((nav) => {
+                  const keys = PLAN_TRIP_AREA_I18N_KEYS[nav.key];
+                  if (!keys) return null;
+                  const discoverTo = `${PLACES_DISCOVER_PATH}?q=${encodeURIComponent(nav.discoverQ)}`;
+                  const areaName = safeT('home', keys.name);
+                  return (
+                    <Link
+                      key={nav.key}
+                      to={discoverTo}
+                      className="vd-plan-trip-area vd-plan-trip-area--link"
+                      aria-label={safeT('home', 'planTripAreaExploreAria').replace(/\{name\}/g, areaName)}
+                    >
+                      <span className="vd-plan-trip-area-main">
+                        <span className="vd-plan-trip-area-name">{areaName}</span>
+                        <span className="vd-plan-trip-area-desc">{safeT('home', keys.desc)}</span>
+                      </span>
+                      <Icon name="arrow_forward" size={18} className="vd-plan-trip-area-chevron" aria-hidden />
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <div className="vd-find-your-way-side-stack">
+            <div className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card">
+              <h3 className="vd-plan-trip-block-title">{safeT('home', 'gettingThereTitle')}</h3>
+              <p className="vd-plan-trip-block-desc">{safeT('home', 'gettingThereSub')}</p>
+              <Link to="/plan" className="vd-plan-trip-cta vd-btn vd-btn--primary">
+                {safeT('home', 'gettingThereCta')}
+                <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
+              </Link>
+            </div>
+            <div className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card">
+              <h3 className="vd-plan-trip-block-title">{safeT('home', 'stayTitle')}</h3>
+              <p className="vd-plan-trip-block-desc">{safeT('home', 'staySub')}</p>
+              <Link to={showMap ? '/map' : '/plan'} className="vd-plan-trip-cta vd-btn vd-btn--primary">
+                {safeT('home', 'stayCta')}
+                <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
+              </Link>
+            </div>
+            {showTips ? (
+              <div
+                id="plan-trip"
+                className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card vd-find-your-way-tips-block"
+              >
+                <h3 className="vd-plan-trip-block-title">{safeT('home', 'tipsTitle')}</h3>
+                <p className="vd-plan-trip-block-desc">{safeT('home', 'tipsSub')}</p>
+                <div className="vd-plan-trip-inline-actions vd-find-your-way-tips-actions">
+                  <Link to={COMMUNITY_PATH} className="vd-plan-trip-inline-link">
+                    {safeT('home', 'planTripTipsCommunityCta')}
+                    <Icon name="arrow_forward" size={18} aria-hidden />
+                  </Link>
+                  <a href="#areas" className="vd-plan-trip-inline-link">
+                    {safeT('home', 'planTripLinkAreas')}
+                    <Icon name="arrow_forward" size={18} aria-hidden />
+                  </a>
+                  <a href="#plan" className="vd-plan-trip-inline-link">
+                    {safeT('home', 'tipsCta')}
+                    <Icon name="arrow_forward" size={18} aria-hidden />
+                  </a>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <h3 className="vd-find-your-way-deck-heading">{safeT('home', 'findYourWayThemeDeckLabel')}</h3>
         <div className="vd-find-your-way-deck" role="list">
           {WAYS_CONFIG.map((way, i) => {
             const bucket = placesByWay.get(way.wayKey) || [];
@@ -579,10 +641,13 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
               (n) => safeT('home', 'findYourWayThemeMore').split('{count}').join(String(n))
             );
             const rowTitle = titleFromCategories || safeT('home', way.titleKey);
+            const discoverTo = way.discoverQ
+              ? `${PLACES_DISCOVER_PATH}?q=${encodeURIComponent(way.discoverQ)}`
+              : PLACES_DISCOVER_PATH;
             return (
               <Link
                 key={way.wayKey}
-                to={PLACES_DISCOVER_PATH}
+                to={discoverTo}
                 className={`vd-find-your-way-row ${stagger}`}
                 role="listitem"
               >
@@ -617,6 +682,7 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
             );
           })}
         </div>
+
         <div className="vd-find-your-way-cta-wrap">
           <Link to={PLACES_DISCOVER_PATH} className="vd-find-your-way-cta">
             {safeT('home', 'seeAllWays')}
@@ -681,7 +747,7 @@ export default function Explore() {
   useEffect(() => {
     if (loading || error) return;
     const hash = window.location.hash;
-    const allowedHashes = ['#plan', '#experience', '#why', '#plan-trip', '#download-app', '#community'];
+    const allowedHashes = ['#plan', '#experience', '#why', '#plan-trip', '#download-app', '#community', '#areas'];
     if (hash && allowedHashes.includes(hash)) {
       const el = document.querySelector(hash);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -904,8 +970,6 @@ export default function Explore() {
 
             <div className="vd-bento-card vd-bento-hero-side vd-bento-web-hub">
               <div className="vd-bento-web-hub-inner">
-                <span className="vd-bento-web-hub-ambient" aria-hidden="true" />
-                <span className="vd-bento-web-hub-gridlines" aria-hidden="true" />
                 <p className="vd-bento-web-hub-kicker">{t('home', 'useWebCta')}</p>
                 <div className="vd-bento-web-hub-header">
                   <div className="vd-bento-web-hub-icon" aria-hidden="true">
@@ -1033,85 +1097,42 @@ export default function Explore() {
         <TopPicksCarousel places={topPicks} t={t} />
       )}
 
-      <ExperienceTripoliSection t={t} lang={lang} places={placesList} categories={categories} />
+      <ExperienceTripoliSection
+        t={t}
+        lang={lang}
+        places={placesList}
+        categories={categories}
+        showMap={showMap}
+        showTips={user?.showTips !== false}
+      />
 
       {communityPosts.length > 0 && (
         <CommunityFeedStrip posts={communityPosts} t={t} moreTo={COMMUNITY_PATH} layout="bento" />
       )}
 
-      {/* Plan your trip – one section: areas, getting there, stay, tips */}
-      <section id="plan-trip" className="vd-section vd-plan-trip-one">
-        <div className="vd-container">
-          <header className="vd-plan-trip-header">
-            <h2 className="vd-plan-trip-section-title">{t('home', 'planTitle')}</h2>
-            <p className="vd-plan-trip-section-sub">{t('home', 'planTripSectionSub')}</p>
-          </header>
-          <div className="vd-plan-trip-layout">
-            <div className="vd-plan-trip-primary">
-              <div className="vd-plan-trip-block vd-plan-trip-block--areas">
-                <h3 className="vd-plan-trip-block-title">{t('home', 'areasTitle')}</h3>
-                <p className="vd-plan-trip-block-desc">{t('home', 'planTripAreasIntro')}</p>
-                <div className="vd-plan-trip-areas">
-                  {PLAN_TRIP_AREA_NAV.map((nav) => {
-                    const keys = PLAN_TRIP_AREA_I18N_KEYS[nav.key];
-                    if (!keys) return null;
-                    const discoverTo = `${PLACES_DISCOVER_PATH}?q=${encodeURIComponent(nav.discoverQ)}`;
-                    const areaName = t('home', keys.name);
-                    return (
-                      <Link
-                        key={nav.key}
-                        to={discoverTo}
-                        className="vd-plan-trip-area vd-plan-trip-area--link"
-                        aria-label={t('home', 'planTripAreaExploreAria').replace(/\{name\}/g, areaName)}
-                      >
-                        <span className="vd-plan-trip-area-main">
-                          <span className="vd-plan-trip-area-name">{areaName}</span>
-                          <span className="vd-plan-trip-area-desc">{t('home', keys.desc)}</span>
-                        </span>
-                        <Icon name="arrow_forward" size={18} className="vd-plan-trip-area-chevron" aria-hidden />
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-            <div className="vd-plan-trip-stack">
-              <div className="vd-plan-trip-block vd-plan-trip-block--compact">
-                <h3 className="vd-plan-trip-block-title">{t('home', 'gettingThereTitle')}</h3>
-                <p className="vd-plan-trip-block-desc">{t('home', 'gettingThereSub')}</p>
-                <Link to="/plan" className="vd-plan-trip-cta vd-btn vd-btn--primary">
+      {user?.showTips === false && (
+        <section id="plan-trip" className="vd-section vd-plan-trip-one vd-plan-trip-one--tips">
+          <div className="vd-container">
+            <header className="vd-plan-trip-header">
+              <h2 className="vd-plan-trip-section-title">{t('home', 'planTripTipsSectionTitle')}</h2>
+              <p className="vd-plan-trip-section-sub">{t('home', 'planTripTipsSectionSub')}</p>
+            </header>
+            <div className="vd-plan-trip-block vd-plan-trip-block--compact">
+              <p className="vd-plan-trip-block-desc">{t('home', 'planTripTipsFallback')}</p>
+              <div className="vd-plan-trip-inline-actions">
+                <Link to="/plan" className="vd-plan-trip-inline-link">
                   {t('home', 'gettingThereCta')}
-                  <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
+                  <Icon name="arrow_forward" size={18} />
+                </Link>
+                <Link to={PLACES_DISCOVER_PATH} className="vd-plan-trip-inline-link">
+                  {t('home', 'seeAllWays')}
+                  <Icon name="arrow_forward" size={18} />
                 </Link>
               </div>
-              <div className="vd-plan-trip-block vd-plan-trip-block--compact">
-                <h3 className="vd-plan-trip-block-title">{t('home', 'stayTitle')}</h3>
-                <p className="vd-plan-trip-block-desc">{t('home', 'staySub')}</p>
-                <Link to={showMap ? '/map' : '/plan'} className="vd-plan-trip-cta vd-btn vd-btn--primary">
-                  {t('home', 'stayCta')}
-                  <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
-                </Link>
-              </div>
-              {user?.showTips !== false && (
-                <div className="vd-plan-trip-block vd-plan-trip-block--compact">
-                  <h3 className="vd-plan-trip-block-title">{t('home', 'tipsTitle')}</h3>
-                  <p className="vd-plan-trip-block-desc">{t('home', 'tipsSub')}</p>
-                  <div className="vd-plan-trip-inline-actions">
-                    <Link to={COMMUNITY_PATH} className="vd-plan-trip-inline-link">
-                      {t('home', 'planTripTipsCommunityCta')}
-                      <Icon name="arrow_forward" size={18} />
-                    </Link>
-                    <a href="#plan" className="vd-plan-trip-inline-link">
-                      {t('home', 'tipsCta')}
-                      <Icon name="arrow_forward" size={18} />
-                    </a>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Plan your visit – one card: time + weather, then description & View map */}
       <section id="plan" className="vd-section vd-plan">

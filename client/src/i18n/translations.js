@@ -273,6 +273,8 @@ export const translations = {
       chipEditBudget: 'Edit budget',
       jumpChatTop: 'Chat start',
       jumpChatTopAria: 'Scroll to the beginning of the chat',
+      scrollToSiteNav: 'Site menu',
+      scrollToSiteNavAria: 'Go to main site navigation',
       unnamedTrip: 'Saved trip',
       overlapActionsHint: 'Resolve the clash without leaving the planner:',
       overlapDeleteTrip: 'Delete saved trip “{name}”',
@@ -370,6 +372,11 @@ export const translations = {
       planTitle: 'Plan your visit',
       planTripSectionSub:
         'Tripoli at a glance: how the city is laid out, how to get here, where to stay, and practical notes for visitors.',
+      planTripTipsSectionTitle: 'Practical notes',
+      planTripTipsSectionSub:
+        'Etiquette, seasonality and more — neighbourhoods and transport are in Find your way above.',
+      planTripLinkAreas: 'Areas & neighbourhoods',
+      planTripTipsFallback: 'Plan routes in the trip planner or open the full places directory.',
       planText: 'Use the official map to explore Tripoli, save your favourite spots and plan your trip.',
       planEmptyHint: 'Create a trip below, then add places directly from the directory while editing — saving favourites first is optional.',
       createTrip: 'Create new trip',
@@ -684,7 +691,8 @@ export const translations = {
       expHistory: 'History and heritage',
       findYourWayTitle: 'Find your way in Tripoli',
       findYourWaySub:
-        'Same category labels as the Places directory—heritage, souks, dining, coast, parks and more—grouped into a few calm themes. See how categories cluster, then open listings. Venues publish short reels and updates in Community.',
+        'Three quarters that help visitors get their bearings — each link opens the guide with a search tailored to that part of Tripoli.',
+      findYourWayThemeDeckLabel: 'Browse the directory by theme',
       findYourWayCommunityHint: 'Community — venue reels & posts',
       findYourWayRowKicker: 'Theme',
       findYourWayThemeMore: '+{count} more',
@@ -1397,6 +1405,8 @@ export const translations = {
       chipEditBudget: 'تعديل الميزانية',
       jumpChatTop: 'بداية المحادثة',
       jumpChatTopAria: 'الانتقال إلى بداية المحادثة',
+      scrollToSiteNav: 'قائمة الموقع',
+      scrollToSiteNavAria: 'الانتقال إلى شريط التنقل الرئيسي',
       unnamedTrip: 'رحلة محفوظة',
       overlapActionsHint: 'يمكنك حل التعارض من هنا:',
       overlapDeleteTrip: 'حذف الرحلة المحفوظة «{name}»',
@@ -1491,6 +1501,11 @@ export const translations = {
       planTitle: 'خطط لزيارتك',
       planTripSectionSub:
         'طرابلس بإيجاز: تخطيط المدينة، الوصول، الإقامة، وآداب الزيارة العملية.',
+      planTripTipsSectionTitle: 'ملاحظات عملية',
+      planTripTipsSectionSub:
+        'الآداب والفصول وأكثر — الأحياء والمواصلات في قسم «اعثر على طريقك» أعلاه.',
+      planTripLinkAreas: 'الأحياء والمناطق',
+      planTripTipsFallback: 'خطط المسارات في مُخطّط الرحلات أو افتح دليل الأماكن الكامل.',
       planText: 'استخدم الخريطة الرسمية لاستكشاف طرابلس، احفظ أماكنك المفضلة وخطط لرحلتك.',
       planEmptyHint: 'أنشئ رحلة أدناه ثم أضف الأماكن مباشرة من الدليل أثناء التعديل — لا حاجة لحفظ المفضلة أولاً.',
       createTrip: 'إنشاء رحلة جديدة',
@@ -1804,7 +1819,8 @@ export const translations = {
       expHistory: 'التاريخ والتراث',
       findYourWayTitle: 'اعثر على طريقك في طرابلس',
       findYourWaySub:
-        'نفس تصنيفات دليل الأماكن—التراث، الأسواق، المأكولات، الساحل، الحدائق وغيرها—مجمّعة في ثيمات مريحة. اطلع على تجميع الفئات ثم افتح القوائم. الأماكن تنشر ريلز قصيرة وتحديثات في «المجتمع».',
+        'ثلاث مناطق تساعد الزائر على التوجه — كل رابط يفتح الدليل مع بحث مناسب لذلك الجزء من طرابلس.',
+      findYourWayThemeDeckLabel: 'تصفح الدليل حسب الثيمة',
       findYourWayCommunityHint: 'المجتمع — ريلز ومنشورات الأماكن',
       findYourWayRowKicker: 'ثيمة',
       findYourWayThemeMore: '+{count} أخرى',
@@ -2510,6 +2526,8 @@ export const translations = {
       chipEditBudget: 'Modifier le budget',
       jumpChatTop: 'Début du chat',
       jumpChatTopAria: 'Aller au début de la conversation',
+      scrollToSiteNav: 'Menu du site',
+      scrollToSiteNavAria: 'Aller à la navigation principale',
       unnamedTrip: 'Voyage enregistré',
       overlapActionsHint: 'Résoudre le chevauchement sans quitter le planificateur :',
       overlapDeleteTrip: 'Supprimer le voyage « {name} »',
@@ -2607,6 +2625,11 @@ export const translations = {
       planTitle: 'Planifiez votre visite',
       planTripSectionSub:
         'Tripoli en bref : organisation de la ville, accès, hébergement et conseils pratiques aux visiteurs.',
+      planTripTipsSectionTitle: 'Notes pratiques',
+      planTripTipsSectionSub:
+        'Usages de visite, saisonnalité et plus — quartiers et transports sont dans Trouvez votre chemin ci-dessus.',
+      planTripLinkAreas: 'Quartiers et secteurs',
+      planTripTipsFallback: 'Tracez des itinéraires dans le planificateur ou ouvrez l’annuaire complet des lieux.',
       planText: 'Utilisez la carte officielle pour explorer Tripoli, enregistrer vos favoris et planifier votre séjour.',
       planEmptyHint: 'Créez un voyage ci-dessous, puis ajoutez des lieux directement depuis l’annuaire pendant l’édition — les favoris d’abord sont facultatifs.',
       createTrip: 'Créer un voyage',
@@ -2923,7 +2946,8 @@ export const translations = {
       expHistory: 'Histoire et patrimoine',
       findYourWayTitle: 'Trouvez votre chemin à Tripoli',
       findYourWaySub:
-        'Les mêmes catégories que l’annuaire des lieux—patrimoine, souks, restauration, littoral, parcs, etc.—réunies en quelques thèmes faciles à parcourir. Voyez comment les catégories se regroupent, puis ouvrez les fiches. Les lieux publient des reels et actus dans Communauté.',
+        'Trois quartiers pour prendre ses repères — chaque lien ouvre le guide avec une recherche adaptée à ce secteur de Tripoli.',
+      findYourWayThemeDeckLabel: 'Parcourir l’annuaire par thème',
       findYourWayCommunityHint: 'Communauté — reels et publications des lieux',
       findYourWayRowKicker: 'Thème',
       findYourWayThemeMore: '+{count} de plus',
