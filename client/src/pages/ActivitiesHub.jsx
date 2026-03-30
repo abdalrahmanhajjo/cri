@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
@@ -7,6 +7,21 @@ import Icon from '../components/Icon';
 import './Explore.css';
 import './Events.css';
 import './ActivitiesHub.css';
+
+function normalizeHaystack(s) {
+  return String(s ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '');
+}
+
+function matchesQuery(obj, fields, qRaw) {
+  const q = normalizeHaystack(qRaw.trim());
+  if (!q) return true;
+  const parts = fields.map((f) => (typeof f === 'function' ? f(obj) : obj[f]));
+  const blob = normalizeHaystack(parts.filter((x) => x != null && x !== '').join(' '));
+  return blob.includes(q);
+}
 
 function TourCard({ tour }) {
   const img = getPlaceImageUrl(tour.image) || null;
@@ -82,6 +97,16 @@ export default function ActivitiesHub() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [expQuery, setExpQuery] = useState('');
+  const [expDifficulty, setExpDifficulty] = useState('');
+  const [expDuration, setExpDuration] = useState('');
+  const [expSort, setExpSort] = useState('default');
+
+  const [evtQuery, setEvtQuery] = useState('');
+  const [evtCategory, setEvtCategory] = useState('');
+  const [evtStatus, setEvtStatus] = useState('');
+  const [evtSort, setEvtSort] = useState('dateDesc');
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -121,6 +146,121 @@ export default function ActivitiesHub() {
     () => ({ tours: tours.length, events: events.length }),
     [tours.length, events.length]
   );
+
+  const collator = useMemo(() => {
+    try {
+      return new Intl.Collator(lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en', { sensitivity: 'base' });
+    } catch {
+      return new Intl.Collator('en', { sensitivity: 'base' });
+    }
+  }, [lang]);
+
+  const difficultyOptions = useMemo(() => {
+    const set = new Set();
+    tours.forEach((x) => {
+      const d = String(x.difficulty ?? '').trim();
+      if (d) set.add(d);
+    });
+    return [...set].sort((a, b) => collator.compare(a, b));
+  }, [tours, collator]);
+
+  const anyTourHasDurationHours = useMemo(
+    () => tours.some((x) => x.durationHours != null && !Number.isNaN(Number(x.durationHours))),
+    [tours]
+  );
+
+  const categoryOptions = useMemo(() => {
+    const set = new Set();
+    events.forEach((e) => {
+      const c = String(e.category ?? '').trim();
+      if (c) set.add(c);
+    });
+    return [...set].sort((a, b) => collator.compare(a, b));
+  }, [events, collator]);
+
+  const statusOptions = useMemo(() => {
+    const set = new Set();
+    events.forEach((e) => {
+      const s = String(e.status ?? '').trim();
+      if (s) set.add(s);
+    });
+    return [...set].sort((a, b) => collator.compare(a, b));
+  }, [events, collator]);
+
+  const filteredTours = useMemo(() => {
+    let list = tours.filter((x) =>
+      matchesQuery(x, ['name', 'duration', 'priceDisplay', 'badge', 'description', 'difficulty', 'locations', 'price'], expQuery)
+    );
+
+    if (expDifficulty) {
+      const nd = normalizeHaystack(expDifficulty);
+      list = list.filter((x) => normalizeHaystack(x.difficulty || '') === nd);
+    }
+
+    if (expDuration && expDuration !== 'any') {
+      list = list.filter((x) => {
+        const h = x.durationHours;
+        if (h == null || Number.isNaN(Number(h))) return false;
+        const n = Number(h);
+        if (expDuration === 'short') return n <= 3;
+        if (expDuration === 'half') return n > 3 && n <= 6;
+        if (expDuration === 'full') return n > 6;
+        return true;
+      });
+    }
+
+    const out = [...list];
+    if (expSort === 'name') out.sort((a, b) => collator.compare(a.name || '', b.name || ''));
+    else if (expSort === 'durationAsc')
+      out.sort((a, b) => (Number(a.durationHours) || 1e9) - (Number(b.durationHours) || 1e9));
+    else if (expSort === 'durationDesc')
+      out.sort((a, b) => (Number(b.durationHours) || -1e9) - (Number(a.durationHours) || -1e9));
+    else if (expSort === 'priceAsc') out.sort((a, b) => (Number(a.price) || 1e9) - (Number(b.price) || 1e9));
+    else if (expSort === 'ratingDesc') out.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
+
+    return out;
+  }, [tours, expQuery, expDifficulty, expDuration, expSort, collator]);
+
+  const filteredEvents = useMemo(() => {
+    let list = events.filter((e) =>
+      matchesQuery(e, ['name', 'category', 'location', 'organizer', 'priceDisplay', 'status', 'description', 'price'], evtQuery)
+    );
+
+    if (evtCategory) {
+      const nc = normalizeHaystack(evtCategory);
+      list = list.filter((e) => normalizeHaystack(e.category || '') === nc);
+    }
+    if (evtStatus) {
+      const ns = normalizeHaystack(evtStatus);
+      list = list.filter((e) => normalizeHaystack(e.status || '') === ns);
+    }
+
+    const out = [...list];
+    if (evtSort === 'dateAsc')
+      out.sort((a, b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
+    else if (evtSort === 'dateDesc')
+      out.sort((a, b) => new Date(b.startDate || 0).getTime() - new Date(a.startDate || 0).getTime());
+    else if (evtSort === 'name') out.sort((a, b) => collator.compare(a.name || '', b.name || ''));
+
+    return out;
+  }, [events, evtQuery, evtCategory, evtStatus, evtSort, collator]);
+
+  const expFiltersActive = Boolean(expQuery.trim() || expDifficulty || (expDuration && expDuration !== 'any') || expSort !== 'default');
+  const evtFiltersActive = Boolean(evtQuery.trim() || evtCategory || evtStatus || evtSort !== 'dateDesc');
+
+  const clearExperiences = useCallback(() => {
+    setExpQuery('');
+    setExpDifficulty('');
+    setExpDuration('');
+    setExpSort('default');
+  }, []);
+
+  const clearEvents = useCallback(() => {
+    setEvtQuery('');
+    setEvtCategory('');
+    setEvtStatus('');
+    setEvtSort('dateDesc');
+  }, []);
 
   if (loading) {
     return (
@@ -189,11 +329,87 @@ export default function ActivitiesHub() {
               </h2>
               <p className="activities-hub-panel-desc">{t('nav', 'megaExperiencesDesc')}</p>
             </div>
+
+            <div className="activities-hub-toolbar" role="search">
+              <label className="activities-hub-search">
+                <Icon name="search" size={20} className="activities-hub-search-icon" aria-hidden />
+                <input
+                  type="search"
+                  className="activities-hub-search-input"
+                  placeholder={t('home', 'activitiesHubSearchTours')}
+                  aria-label={t('home', 'activitiesHubSearchToursAria')}
+                  value={expQuery}
+                  onChange={(e) => setExpQuery(e.target.value)}
+                  autoComplete="off"
+                />
+              </label>
+              <div className="activities-hub-filters">
+                {difficultyOptions.length > 0 ? (
+                  <select
+                    className="activities-hub-select"
+                    aria-label={t('home', 'activitiesHubDifficulty')}
+                    value={expDifficulty}
+                    onChange={(e) => setExpDifficulty(e.target.value)}
+                  >
+                    <option value="">{t('home', 'activitiesHubDifficultyAll')}</option>
+                    {difficultyOptions.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                {anyTourHasDurationHours ? (
+                  <select
+                    className="activities-hub-select"
+                    aria-label={t('home', 'activitiesHubDuration')}
+                    value={expDuration}
+                    onChange={(e) => setExpDuration(e.target.value)}
+                  >
+                    <option value="">{t('home', 'activitiesHubDurationAll')}</option>
+                    <option value="short">{t('home', 'activitiesHubDurationShort')}</option>
+                    <option value="half">{t('home', 'activitiesHubDurationHalf')}</option>
+                    <option value="full">{t('home', 'activitiesHubDurationFull')}</option>
+                  </select>
+                ) : null}
+                <select
+                  className="activities-hub-select"
+                  aria-label={t('home', 'activitiesHubSort')}
+                  value={expSort}
+                  onChange={(e) => setExpSort(e.target.value)}
+                >
+                  <option value="default">{t('home', 'activitiesHubSortToursDefault')}</option>
+                  <option value="name">{t('home', 'activitiesHubSortName')}</option>
+                  {anyTourHasDurationHours ? (
+                    <>
+                      <option value="durationAsc">{t('home', 'activitiesHubSortDurationAsc')}</option>
+                      <option value="durationDesc">{t('home', 'activitiesHubSortDurationDesc')}</option>
+                    </>
+                  ) : null}
+                  <option value="priceAsc">{t('home', 'activitiesHubSortPriceAsc')}</option>
+                  <option value="ratingDesc">{t('home', 'activitiesHubSortRating')}</option>
+                </select>
+                {expFiltersActive ? (
+                  <button type="button" className="activities-hub-clear" onClick={clearExperiences}>
+                    {t('home', 'activitiesHubClear')}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            <p className="activities-hub-results-meta" aria-live="polite">
+              {t('home', 'activitiesHubResultsOfTotal')
+                .replace('{shown}', String(filteredTours.length))
+                .replace('{total}', String(tours.length))}
+            </p>
+
             {tours.length === 0 ? (
               <p className="vd-empty">{t('home', 'noTours')}</p>
+            ) : filteredTours.length === 0 ? (
+              <p className="vd-empty">{t('home', 'activitiesHubNoMatches')}</p>
             ) : (
               <div className="vd-grid vd-grid--4 activities-hub-grid">
-                {tours.map((tour) => (
+                {filteredTours.map((tour) => (
                   <TourCard key={tour.id} tour={tour} />
                 ))}
               </div>
@@ -212,11 +428,82 @@ export default function ActivitiesHub() {
                 </p>
               </div>
             </div>
+
+            <div className="activities-hub-toolbar" role="search">
+              <label className="activities-hub-search">
+                <Icon name="search" size={20} className="activities-hub-search-icon" aria-hidden />
+                <input
+                  type="search"
+                  className="activities-hub-search-input"
+                  placeholder={t('home', 'activitiesHubSearchEvents')}
+                  aria-label={t('home', 'activitiesHubSearchEventsAria')}
+                  value={evtQuery}
+                  onChange={(e) => setEvtQuery(e.target.value)}
+                  autoComplete="off"
+                />
+              </label>
+              <div className="activities-hub-filters">
+                {categoryOptions.length > 0 ? (
+                  <select
+                    className="activities-hub-select"
+                    aria-label={t('home', 'activitiesHubCategory')}
+                    value={evtCategory}
+                    onChange={(e) => setEvtCategory(e.target.value)}
+                  >
+                    <option value="">{t('home', 'activitiesHubCategoryAll')}</option>
+                    {categoryOptions.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                {statusOptions.length > 0 ? (
+                  <select
+                    className="activities-hub-select"
+                    aria-label={t('home', 'activitiesHubStatus')}
+                    value={evtStatus}
+                    onChange={(e) => setEvtStatus(e.target.value)}
+                  >
+                    <option value="">{t('home', 'activitiesHubStatusAll')}</option>
+                    {statusOptions.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                <select
+                  className="activities-hub-select"
+                  aria-label={t('home', 'activitiesHubSort')}
+                  value={evtSort}
+                  onChange={(e) => setEvtSort(e.target.value)}
+                >
+                  <option value="dateDesc">{t('home', 'activitiesHubSortDateNew')}</option>
+                  <option value="dateAsc">{t('home', 'activitiesHubSortDateOld')}</option>
+                  <option value="name">{t('home', 'activitiesHubSortName')}</option>
+                </select>
+                {evtFiltersActive ? (
+                  <button type="button" className="activities-hub-clear" onClick={clearEvents}>
+                    {t('home', 'activitiesHubClear')}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            <p className="activities-hub-results-meta" aria-live="polite">
+              {t('home', 'activitiesHubResultsOfTotal')
+                .replace('{shown}', String(filteredEvents.length))
+                .replace('{total}', String(events.length))}
+            </p>
+
             {events.length === 0 ? (
               <p className="vd-empty">{t('home', 'noEvents')}</p>
+            ) : filteredEvents.length === 0 ? (
+              <p className="vd-empty">{t('home', 'activitiesHubNoMatches')}</p>
             ) : (
               <div className="events-grid activities-hub-events-grid">
-                {events.map((e) => (
+                {filteredEvents.map((e) => (
                   <EventCard key={e.id} event={e} />
                 ))}
               </div>

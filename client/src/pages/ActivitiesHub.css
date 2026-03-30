@@ -192,6 +192,117 @@
   max-width: 52ch;
 }
 
+/* Search + filters (experiences & events) */
+.activities-hub-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg, 12px);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e7e5e4);
+  box-shadow: 0 1px 3px rgba(28, 25, 23, 0.05);
+}
+
+.activities-hub-search {
+  flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #e7e5e4);
+  background: var(--color-background, #fafaf9);
+}
+
+.activities-hub-search:focus-within {
+  border-color: var(--color-primary, #0d9488);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+.activities-hub-search-icon {
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.activities-hub-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  color: var(--color-text-primary, #1c1917);
+  outline: none;
+}
+
+.activities-hub-search-input::placeholder {
+  color: var(--color-text-muted, #a8a29e);
+}
+
+.activities-hub-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  flex: 2 1 280px;
+  justify-content: flex-end;
+}
+
+[dir='rtl'] .activities-hub-filters {
+  justify-content: flex-start;
+}
+
+.activities-hub-select {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #e7e5e4);
+  background: var(--color-surface, #fff);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary, #1c1917);
+  cursor: pointer;
+  max-width: 100%;
+}
+
+.activities-hub-select:focus {
+  outline: none;
+  border-color: var(--color-primary, #0d9488);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+.activities-hub-clear {
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary-dark, #0f766e);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.activities-hub-clear:hover {
+  color: var(--color-primary, #0d9488);
+}
+
+.activities-hub-results-meta {
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary, #57534e);
+}
+
 .activities-hub-summary {
   margin-top: 16px;
   margin-bottom: 0;
