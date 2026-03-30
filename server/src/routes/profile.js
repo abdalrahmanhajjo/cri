@@ -1,12 +1,46 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const crypto = require('crypto');
 const { authMiddleware } = require('../middleware/auth');
 const { query } = require('../db');
 const { validatePassword } = require('../utils/passwordValidator');
+const { isImageMime, prepareUploadedImage, pickImageExtension } = require('../utils/imageUpload');
+const { getMulterFileSizeLimit } = require('../utils/uploadLimits');
 
 const router = express.Router();
 router.use(authMiddleware);
 const { visitorFollowupsFromDb } = require('../utils/inquiryFollowups');
+
+const LOCAL_AVATARS = path.join(__dirname, '../../uploads/avatars');
+const MULTER_TMP = path.join(os.tmpdir(), 'visit-multer-uploads');
+try {
+  fs.mkdirSync(LOCAL_AVATARS, { recursive: true });
+  fs.mkdirSync(MULTER_TMP, { recursive: true });
+} catch (_) {}
+
+const multerFileLimits = getMulterFileSizeLimit();
+const avatarUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, MULTER_TMP),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || '') || '';
+      cb(null, `${crypto.randomBytes(16).toString('hex')}${ext}`);
+    },
+  }),
+  ...(multerFileLimits ? { limits: multerFileLimits } : {}),
+  fileFilter: (req, file, cb) => {
+    const m = (file.mimetype || '').toLowerCase();
+    const ok =
+      isImageMime(m) ||
+      // iOS sometimes sends HEIC as octet-stream; imageUpload.prepareUploadedImage handles conversion
+      (m === 'application/octet-stream' && /\.(heic|heif|jpe?g|png|gif|webp)$/i.test(file.originalname || ''));
+    cb(ok ? null : new Error('Only image uploads are allowed for profile photos'), ok);
+  },
+});
 
 function sanitizeProfileInput(body) {
   const out = {};
@@ -119,6 +153,54 @@ router.patch('/profile', async (req, res) => {
     if (err.code === '42P01') return res.status(400).json({ error: 'Profile table not configured' });
     console.error(err);
     res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+/** POST /api/user/profile/avatar — upload and set profile photo */
+router.post('/profile/avatar', avatarUpload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const userId = req.user.userId;
+
+  const multerPath = req.file.path;
+  try {
+    const buf0 = await fs.promises.readFile(multerPath);
+    await fs.promises.unlink(multerPath).catch(() => {});
+    const prep = await prepareUploadedImage(buf0, req.file.mimetype, req.file.originalname);
+    const ext = pickImageExtension(prep.contentType, req.file.originalname, prep.useExtension);
+    const fileName = `${crypto.randomBytes(18).toString('hex')}${ext}`;
+    const diskPath = path.join(LOCAL_AVATARS, fileName);
+    await fs.promises.writeFile(diskPath, prep.buffer);
+
+    // Best-effort: cleanup old avatar when it is a local /uploads/avatars path.
+    try {
+      const prev = await query('SELECT avatar_url FROM users WHERE id = $1', [userId]);
+      const prevUrl = prev.rows[0]?.avatar_url;
+      if (typeof prevUrl === 'string' && prevUrl.startsWith('/uploads/avatars/')) {
+        const prevName = prevUrl.replace('/uploads/avatars/', '');
+        if (prevName && !prevName.includes('..') && !prevName.includes('/') && prevName !== fileName) {
+          const prevDisk = path.join(LOCAL_AVATARS, prevName);
+          await fs.promises.unlink(prevDisk).catch(() => {});
+        }
+      }
+    } catch (_) {}
+
+    const relativeUrl = `/uploads/avatars/${fileName}`;
+    await query('UPDATE users SET avatar_url = $1 WHERE id = $2', [relativeUrl, userId]);
+
+    const baseUrl =
+      (req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http')) +
+      '://' +
+      (req.get('x-forwarded-host') ||
+        req.get('host') ||
+        'localhost:' + (process.env.PORT || 3000));
+    const avatarUrl = baseUrl + relativeUrl;
+    res.json({ avatarUrl, avatarPath: relativeUrl });
+  } catch (err) {
+    await fs.promises.unlink(multerPath).catch(() => {});
+    if (err.code === 'HEIC_CONVERT_FAILED') return res.status(422).json({ error: err.message });
+    if (err instanceof multer.MulterError) return res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to upload avatar' });
   }
 });
 
