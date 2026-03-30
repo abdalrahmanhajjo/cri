@@ -8,14 +8,13 @@
     "prebuild": "npm run favicons",
     "build": "vite build",
     "favicons": "node scripts/generate-favicons.mjs",
-    "icons:variants": "node scripts/gen-lottie-variants.mjs",
     "optimize:city": "node scripts/optimize-city-hero.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "bootstrap-icons": "^1.13.1",
     "leaflet": "^1.9.4",
-    "lottie-react": "^2.4.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-leaflet": "^5.0.0",
