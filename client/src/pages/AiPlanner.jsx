@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import Icon from '../components/Icon';
 import {
   chatForTripPlan,
@@ -11,7 +12,12 @@ import {
   getSlotConflictIndices,
   suggestedTimeToMinutes,
 } from '../services/aiPlannerService';
-import { tripHasDateConflict, formatYMD } from '../utils/tripPlannerHelpers';
+import {
+  tripHasDateConflict,
+  formatYMD,
+  findOverlappingTrips,
+  findNextNonOverlappingDateRange,
+} from '../utils/tripPlannerHelpers';
 import './AiPlanner.css';
 
 function apiBase() {
@@ -57,9 +63,11 @@ function buildDraftPlanContextLine(slots, placeById, durationDays) {
 
 export default function AiPlanner() {
   const { t, lang } = useLanguage();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const messagesEndRef = useRef(null);
+  const messagesScrollRef = useRef(null);
   const chipsBarRef = useRef(null);
   const composerRef = useRef(null);
   /** Lifts composer above mobile on-screen keyboard (visualViewport gap). */
@@ -210,6 +218,39 @@ export default function AiPlanner() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, sending]);
+
+  const scrollChatToTop = useCallback(() => {
+    const el = messagesScrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const applyAiTripSettingsToState = useCallback(
+    (tripSettings) => {
+      if (!tripSettings) return;
+      if (tripSettings.durationDays != null) setDurationDays(tripSettings.durationDays);
+      if (tripSettings.placesPerDay != null) setPlacesPerDay(tripSettings.placesPerDay);
+      if (tripSettings.budget != null) setBudget(tripSettings.budget);
+      if (tripSettings.startDate)
+        setSelectedDate(new Date(`${tripSettings.startDate}T12:00:00`));
+      if (tripSettings.interestNames?.length && interestsList.length > 0) {
+        setInterestIds((prev) => {
+          const next = new Set(prev);
+          const lower = (s) => String(s).toLowerCase().trim();
+          for (const raw of tripSettings.interestNames) {
+            const q = lower(raw);
+            const hit = interestsList.find((i) => {
+              const n = lower(i.name || '');
+              return n === q || n.includes(q) || q.includes(n);
+            });
+            if (hit) next.add(String(hit.id));
+          }
+          return next;
+        });
+      }
+    },
+    [interestsList]
+  );
 
   useEffect(() => {
     if (!activeChipEditor) return;
@@ -368,7 +409,7 @@ export default function AiPlanner() {
           .filter(Boolean)
           .join(' ');
 
-        const { text: reply, slots } = await chatForTripPlan({
+        const { text: reply, slots, tripSettings } = await chatForTripPlan({
           conversationHistory,
           userMessage: trimmed,
           places,
@@ -383,6 +424,8 @@ export default function AiPlanner() {
           previousPlaces: lastPlaces,
           singleReplaceSlotIndex: null,
         });
+
+        applyAiTripSettingsToState(tripSettings);
 
         let resolvedPlaces = null;
         if (slots?.length) {
@@ -426,6 +469,7 @@ export default function AiPlanner() {
       lastPlaces,
       placeById,
       t,
+      applyAiTripSettingsToState,
     ]
   );
 
@@ -462,7 +506,7 @@ export default function AiPlanner() {
         .filter(Boolean)
         .join(' ');
 
-      const { text: reply, slots } = await chatForTripPlan({
+      const { text: reply, slots, tripSettings } = await chatForTripPlan({
         conversationHistory,
         userMessage: userLine,
         places,
@@ -477,6 +521,8 @@ export default function AiPlanner() {
         previousPlaces: previousSlotsSnapshot.map((s) => placeById[s.placeId]).filter(Boolean),
         singleReplaceSlotIndex: slotIndex,
       });
+
+      applyAiTripSettingsToState(tripSettings);
 
       let resolvedPlaces = null;
       if (slots?.length) {
@@ -516,7 +562,126 @@ export default function AiPlanner() {
     interestNames,
     langParam,
     t,
+    applyAiTripSettingsToState,
   ]);
+
+  const pushDateOverlapAssistantMessage = useCallback(
+    (startStr, endStr, existingTrips) => {
+      const overlapTrips = findOverlappingTrips(existingTrips, startStr, endStr, null);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: t('home', 'tripDateOverlap'),
+          error: true,
+          overlapTrips,
+          overlapRange: { startStr, endStr },
+        },
+      ]);
+    },
+    [t]
+  );
+
+  const handleDeleteOverlapTrip = useCallback(
+    async (tripId, messageIndex) => {
+      const row = messages[messageIndex];
+      const tripMeta = row?.overlapTrips?.find((x) => String(x.id) === String(tripId));
+      const name = (tripMeta?.name && String(tripMeta.name).trim()) || t('aiPlanner', 'unnamedTrip');
+      if (!window.confirm(t('aiPlanner', 'overlapDeleteConfirm').replace(/\{name\}/g, name))) return;
+      try {
+        await api.user.deleteTrip(tripId);
+        const range = row?.overlapRange;
+        if (!range?.startStr || !range?.endStr) {
+          setMessages((prev) =>
+            prev.map((m, j) =>
+              j === messageIndex
+                ? {
+                    role: 'assistant',
+                    content: t('aiPlanner', 'overlapResolvedRetrySave'),
+                    error: false,
+                  }
+                : m
+            )
+          );
+          return;
+        }
+        const tripsRes = await api.user.trips();
+        const existing = tripsRes.trips || [];
+        const still = findOverlappingTrips(existing, range.startStr, range.endStr, null);
+        if (still.length === 0) {
+          setMessages((prev) =>
+            prev.map((m, j) =>
+              j === messageIndex
+                ? {
+                    role: 'assistant',
+                    content: t('aiPlanner', 'overlapResolvedRetrySave'),
+                    error: false,
+                  }
+                : m
+            )
+          );
+        } else {
+          setMessages((prev) =>
+            prev.map((m, j) => (j === messageIndex ? { ...m, overlapTrips: still } : m))
+          );
+        }
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: t('aiPlanner', 'applyFailed'), error: true },
+        ]);
+      }
+    },
+    [messages, t]
+  );
+
+  const handleShiftOverlapDates = useCallback(
+    async (messageIndex) => {
+      const row = messages[messageIndex];
+      const range = row?.overlapRange;
+      if (!range?.startStr || !range?.endStr) return;
+      try {
+        const tripsRes = await api.user.trips();
+        const existing = tripsRes.trips || [];
+        const nextRange = findNextNonOverlappingDateRange(
+          existing,
+          range.startStr,
+          range.endStr
+        );
+        if (!nextRange) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: t('aiPlanner', 'overlapNoFreeRange'),
+              error: true,
+            },
+          ]);
+          return;
+        }
+        setSelectedDate(new Date(`${nextRange.startDate}T12:00:00`));
+        setMessages((prev) =>
+          prev.map((m, j) =>
+            j === messageIndex
+              ? {
+                  role: 'assistant',
+                  content: t('aiPlanner', 'overlapDatesShifted')
+                    .replace(/\{start\}/g, nextRange.startDate)
+                    .replace(/\{end\}/g, nextRange.endDate),
+                  error: false,
+                }
+              : m
+          )
+        );
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: t('aiPlanner', 'applyFailed'), error: true },
+        ]);
+      }
+    },
+    [messages, t]
+  );
 
   const handleApplyTrip = useCallback(async () => {
     if (!lastSlots?.length || applying || planConflicts.size > 0) return;
@@ -530,14 +695,7 @@ export default function AiPlanner() {
       const tripsRes = await api.user.trips();
       const existingTrips = tripsRes.trips || [];
       if (tripHasDateConflict(existingTrips, startStr, endStr, null)) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: t('home', 'tripDateOverlap'),
-            error: true,
-          },
-        ]);
+        pushDateOverlapAssistantMessage(startStr, endStr, existingTrips);
         return;
       }
       const trip = await api.user.createTrip({
@@ -547,21 +705,59 @@ export default function AiPlanner() {
         description: t('aiPlanner', 'tripDescriptionAi'),
         days,
       });
+      showToast(t('feedback', 'aiTripSaved'), 'success');
       navigate(`/plan?edit=${encodeURIComponent(trip.id)}`);
     } catch (e) {
       const overlap = e?.data?.code === 'TRIP_DATE_OVERLAP';
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: overlap ? t('home', 'tripDateOverlap') : e.message || t('aiPlanner', 'applyFailed'),
-          error: true,
-        },
-      ]);
+      if (overlap) {
+        try {
+          const end = new Date(selectedDate);
+          end.setDate(end.getDate() + durationDays - 1);
+          const startStr = formatYMD(selectedDate);
+          const endStr = formatYMD(end);
+          const tripsRes = await api.user.trips();
+          pushDateOverlapAssistantMessage(startStr, endStr, tripsRes.trips || []);
+        } catch {
+          const end = new Date(selectedDate);
+          end.setDate(end.getDate() + durationDays - 1);
+          const startStr = formatYMD(selectedDate);
+          const endStr = formatYMD(end);
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: t('home', 'tripDateOverlap'),
+              error: true,
+              overlapTrips: [],
+              overlapRange: { startStr, endStr },
+            },
+          ]);
+        }
+      } else {
+        showToast(e.message || t('aiPlanner', 'applyFailed'), 'error');
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: e.message || t('aiPlanner', 'applyFailed'),
+            error: true,
+          },
+        ]);
+      }
     } finally {
       setApplying(false);
     }
-  }, [lastSlots, durationDays, selectedDate, applying, navigate, t, planConflicts]);
+  }, [
+    lastSlots,
+    durationDays,
+    selectedDate,
+    applying,
+    navigate,
+    t,
+    planConflicts,
+    pushDateOverlapAssistantMessage,
+    showToast,
+  ]);
 
   const dayHeaderLabel = useCallback(
     (dayIndex) => {
@@ -811,7 +1007,20 @@ export default function AiPlanner() {
       </div>
 
       <div className="ai-planner__chat">
-        <div className="ai-planner__messages">
+        {messages.length > 1 && (
+          <div className="ai-planner__chat-toolbar">
+            <button
+              type="button"
+              className="ai-planner__chat-top"
+              onClick={scrollChatToTop}
+              aria-label={t('aiPlanner', 'jumpChatTopAria')}
+            >
+              <Icon name="vertical_align_top" size={20} aria-hidden />
+              <span>{t('aiPlanner', 'jumpChatTop')}</span>
+            </button>
+          </div>
+        )}
+        <div ref={messagesScrollRef} className="ai-planner__messages">
           {messages.map((m, i) => (
             <div key={i}>
               <div
@@ -831,6 +1040,31 @@ export default function AiPlanner() {
                       }}
                     >
                       {t('aiPlanner', 'tryAgain')}
+                    </button>
+                  </div>
+                )}
+                {m.overlapRange && (
+                  <div className="ai-planner__overlap-actions">
+                    <p className="ai-planner__overlap-hint">{t('aiPlanner', 'overlapActionsHint')}</p>
+                    {(m.overlapTrips || []).map((trip) => (
+                      <button
+                        key={trip.id}
+                        type="button"
+                        className="ai-planner__overlap-btn ai-planner__overlap-btn--danger"
+                        onClick={() => handleDeleteOverlapTrip(trip.id, i)}
+                      >
+                        {t('aiPlanner', 'overlapDeleteTrip').replace(
+                          /\{name\}/g,
+                          (trip.name && String(trip.name).trim()) || t('aiPlanner', 'unnamedTrip')
+                        )}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className="ai-planner__overlap-btn"
+                      onClick={() => handleShiftOverlapDates(i)}
+                    >
+                      {t('aiPlanner', 'overlapShiftDates')}
                     </button>
                   </div>
                 )}

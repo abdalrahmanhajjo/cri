@@ -668,6 +668,7 @@ export default function Plan() {
           days: JSON.stringify(nextDays),
         };
         showToast(t('home', 'planToastTripUpdated'));
+        navigate(`/trips/${encodeURIComponent(editingTripId)}`);
       })
       .catch((err) => {
         const msg =

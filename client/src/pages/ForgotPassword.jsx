@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import Icon from '../components/Icon';
 import {
   checkPasswordRequirements,
@@ -10,6 +12,8 @@ import {
 import './Auth.css';
 
 export default function ForgotPassword() {
+  const { t } = useLanguage();
+  const { showToast } = useToast();
   const [step, setStep] = useState('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -38,6 +42,7 @@ export default function ForgotPassword() {
       setResetEmailDelivered(res.emailDelivered !== false);
       setCode('');
       setStep('reset');
+      showToast(t('feedback', 'resetCodeSent'), 'success');
     } catch (err) {
       const retryAfter = Number(err?.data?.retryAfter);
       if (Number.isFinite(retryAfter) && retryAfter > 0) {
@@ -45,6 +50,7 @@ export default function ForgotPassword() {
       } else {
         setError(err.message || 'Failed to send code. Try again.');
       }
+      showToast(t('feedback', 'actionFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -57,6 +63,7 @@ export default function ForgotPassword() {
     setLoading(true);
     try {
       await api.auth.resetPassword(email, code.trim(), newPassword);
+      showToast(t('feedback', 'resetPasswordDone'), 'success');
       setStep('success');
     } catch (err) {
       const retryAfter = Number(err?.data?.retryAfter);
@@ -65,6 +72,7 @@ export default function ForgotPassword() {
       } else {
         setError(err.message || 'Failed to reset password. Check the code and try again.');
       }
+      showToast(t('feedback', 'actionFailed'), 'error');
     } finally {
       setLoading(false);
     }

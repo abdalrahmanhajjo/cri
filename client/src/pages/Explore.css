@@ -2383,7 +2383,7 @@ a.vd-top-picks-card-bg--hit {
   }
 
   /* “Tripoli in your browser” — desktop/tablet sidebar only (beat later .vd-bento-hero-side { display:flex }) */
-  a.vd-bento-card.vd-bento-hero-side.vd-bento-web-hub {
+  .vd-bento-card.vd-bento-hero-side.vd-bento-web-hub {
     display: none !important;
   }
 
@@ -2835,6 +2835,29 @@ a.vd-top-picks-card-bg--hit {
   }
 }
 
+.vd-bento-web-hub-facts {
+  position: relative;
+  z-index: 4;
+  list-style: none;
+  margin: 2px 0 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.vd-bento-web-hub-facts li {
+  margin: 0;
+  padding-inline-start: 14px;
+  border-inline-start: 2px solid rgba(15, 118, 110, 0.22);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
 .vd-bento-web-hub-footnote {
   position: relative;
   margin: 12px 0 0 0;
@@ -2880,11 +2903,17 @@ a.vd-top-picks-card-bg--hit {
       animation: vd-web-hub-accent-pulse 4.5s ease-in-out infinite;
     }
 
-    .vd-bento-web-hub:hover .vd-bento-web-hub-footnote::before {
+    .vd-bento-web-hub:hover .vd-bento-web-hub-footnote::before,
+    .vd-bento-web-hub:focus-within .vd-bento-web-hub-footnote::before {
       animation: none;
       opacity: 1;
     }
   }
+}
+
+a.vd-bento-web-hub-cta {
+  text-decoration: none;
+  color: #fff;
 }
 
 .vd-bento-web-hub-cta {
@@ -2942,17 +2971,20 @@ a.vd-top-picks-card-bg--hit {
   color: #fff;
 }
 
-.vd-bento-web-hub:hover .vd-bento-web-hub-cta {
+.vd-bento-web-hub:hover .vd-bento-web-hub-cta,
+.vd-bento-web-hub:focus-within .vd-bento-web-hub-cta {
   background: linear-gradient(155deg, var(--color-primary-dark) 0%, #0a4f49 55%, #083d38 100%);
   box-shadow: 0 6px 24px rgba(15, 118, 110, 0.35), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .vd-bento-web-hub:hover .vd-bento-web-hub-cta::before {
+  .vd-bento-web-hub:hover .vd-bento-web-hub-cta::before,
+  .vd-bento-web-hub:focus-within .vd-bento-web-hub-cta::before {
     transform: translateX(100%);
   }
 
-  .vd-bento-web-hub:hover .vd-bento-web-hub-icon {
+  .vd-bento-web-hub:hover .vd-bento-web-hub-icon,
+  .vd-bento-web-hub:focus-within .vd-bento-web-hub-icon {
     transform: translateY(-1px) scale(1.02);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.85) inset,
@@ -2965,7 +2997,8 @@ a.vd-top-picks-card-bg--hit {
   text-decoration: none;
 }
 
-.vd-bento-web-hub:hover .vd-bento-web-hub-inner {
+.vd-bento-web-hub:hover .vd-bento-web-hub-inner,
+.vd-bento-web-hub:focus-within .vd-bento-web-hub-inner {
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.8) inset,
     0 8px 32px rgba(15, 118, 110, 0.12),
@@ -2983,16 +3016,19 @@ a.vd-top-picks-card-bg--hit {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vd-bento-web-hub:hover .vd-bento-web-hub-inner {
+  .vd-bento-web-hub:hover .vd-bento-web-hub-inner,
+  .vd-bento-web-hub:focus-within .vd-bento-web-hub-inner {
     transform: none;
   }
 
-  .vd-bento-web-hub:hover .vd-bento-web-hub-cta::before {
+  .vd-bento-web-hub:hover .vd-bento-web-hub-cta::before,
+  .vd-bento-web-hub:focus-within .vd-bento-web-hub-cta::before {
     transform: none !important;
     transition: none;
   }
 
-  .vd-bento-web-hub:hover .vd-bento-web-hub-icon {
+  .vd-bento-web-hub:hover .vd-bento-web-hub-icon,
+  .vd-bento-web-hub:focus-within .vd-bento-web-hub-icon {
     transform: none;
   }
 
@@ -4396,23 +4432,46 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   }
 }
 
-.vd-plan-trip-grid {
+/* Plan trip — asymmetric layout: data-heavy areas + stacked tools */
+.vd-plan-trip-layout {
   display: grid;
   grid-template-columns: 1fr;
   gap: 28px;
+  align-items: start;
 }
 
-@media (min-width: 600px) {
-  .vd-plan-trip-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 32px;
+.vd-plan-trip-primary {
+  min-width: 0;
+}
+
+.vd-plan-trip-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+@media (min-width: 600px) and (max-width: 899px) {
+  .vd-plan-trip-stack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 28px;
+    align-items: stretch;
+  }
+
+  .vd-plan-trip-stack .vd-plan-trip-block:last-child {
+    grid-column: 1 / -1;
   }
 }
 
 @media (min-width: 900px) {
-  .vd-plan-trip-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 28px;
+  .vd-plan-trip-layout {
+    grid-template-columns: minmax(280px, 1.22fr) minmax(260px, 0.78fr);
+    gap: 32px;
+  }
+
+  .vd-plan-trip-stack {
+    gap: 20px;
   }
 }
 
@@ -4428,6 +4487,14 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 .vd-plan-trip-block:hover {
   border-color: rgba(15, 118, 110, 0.2);
   box-shadow: 0 2px 12px rgba(15, 118, 110, 0.06);
+}
+
+.vd-plan-trip-block--compact {
+  padding: 22px 20px;
+}
+
+.vd-plan-trip-block--areas {
+  padding-bottom: 26px;
 }
 
 .vd-plan-trip-block-title {
@@ -4520,6 +4587,16 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   border-radius: 999px;
   background: rgba(15, 118, 110, 0.14);
   color: var(--color-primary-dark);
+}
+
+.vd-plan-trip-area-chevron {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  opacity: 0.88;
+}
+
+[dir='rtl'] .vd-plan-trip-area-chevron {
+  transform: scaleX(-1);
 }
 
 [dir='rtl'] .vd-plan-trip-area--link {
@@ -7591,8 +7668,8 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 }
 
 @media (min-width: 1024px) {
-  .vd-home .vd-plan-trip-grid {
-    gap: 32px;
+  .vd-home .vd-plan-trip-layout {
+    gap: 36px;
   }
 }
 

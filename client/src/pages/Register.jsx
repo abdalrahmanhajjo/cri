@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import api from '../api/client';
 import Icon from '../components/Icon';
 import {
@@ -28,6 +30,8 @@ export default function Register() {
   const usernameInputRef = useRef(null);
   const usernameCheckGenRef = useRef(0);
   const { register } = useAuth();
+  const { t } = useLanguage();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const requirements = useMemo(
@@ -112,10 +116,12 @@ export default function Register() {
       const q = new URLSearchParams();
       q.set('email', email.trim());
       if (result?.verificationEmailDelivered === false) q.set('nosmtp', '1');
+      showToast(t('feedback', 'registerCheckEmail'), 'success');
       navigate(`/verify-email?${q.toString()}`, { replace: true });
     } catch (err) {
       const msg = err.message || 'Registration failed. Please try again.';
       setError(msg);
+      showToast(msg, 'error');
       if (/username.*taken|already taken/i.test(msg) && usernameInputRef.current) {
         setUsernameAvailability('taken');
         usernameInputRef.current.focus();

@@ -266,7 +266,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 280px;
+  min-height: 0;
   /* Space for fixed composer + mobile send bar + safe area */
   padding: 0 var(--page-padding, 16px) calc(120px + env(safe-area-inset-bottom, 0px));
 }
@@ -275,11 +275,91 @@
   padding-bottom: calc(176px + env(safe-area-inset-bottom, 0px));
 }
 
+.ai-planner__chat-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0 8px;
+}
+
+.ai-planner__chat-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border, #e7e5e4);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary, #1c1917);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.ai-planner__chat-top:hover {
+  border-color: var(--color-primary, #0f766e);
+  color: var(--color-primary, #0f766e);
+  background: rgba(15, 118, 110, 0.06);
+}
+
 .ai-planner__messages {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ai-planner__overlap-actions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-planner__bubble--error .ai-planner__overlap-actions {
+  border-top-color: rgba(185, 28, 28, 0.25);
+}
+
+.ai-planner__overlap-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 500;
+  opacity: 0.95;
+}
+
+.ai-planner__overlap-btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--color-primary, #0f766e);
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--color-primary-dark, #0d5c56);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: start;
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ai-planner__overlap-btn:hover {
+  background: rgba(15, 118, 110, 0.14);
+}
+
+.ai-planner__overlap-btn--danger {
+  border-color: #b91c1c;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.ai-planner__overlap-btn--danger:hover {
+  background: #fee2e2;
 }
 
 .ai-planner__bubble {

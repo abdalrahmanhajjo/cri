@@ -238,6 +238,15 @@ export function tripHasDateConflict(trips, startStr, endStr, excludeTripId) {
   });
 }
 
+/** Trips whose [startDate,endDate] overlaps [startStr,endStr] inclusive (calendar days). */
+export function findOverlappingTrips(trips, startStr, endStr, excludeTripId) {
+  const list = Array.isArray(trips) ? trips : [];
+  return list.filter((trip) => {
+    if (excludeTripId != null && String(trip.id) === String(excludeTripId)) return false;
+    return tripCalendarRangesOverlap(startStr, endStr, trip.startDate, trip.endDate);
+  });
+}
+
 /**
  * Same calendar length as [preferredStartYmd, preferredEndYmd], shifted forward until it does not
  * overlap any trip in `trips` (inclusive calendar-day overlap). Used when duplicating a trip.
