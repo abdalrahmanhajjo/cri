@@ -11,7 +11,7 @@ import {
   getSlotConflictIndices,
   suggestedTimeToMinutes,
 } from '../services/aiPlannerService';
-import { tripHasDateConflict } from '../utils/tripPlannerHelpers';
+import { tripHasDateConflict, formatYMD } from '../utils/tripPlannerHelpers';
 import './AiPlanner.css';
 
 function apiBase() {
@@ -40,14 +40,32 @@ function buildDayGroupsForDisplay(slots, durationDays) {
   return rows;
 }
 
+/** Compact draft summary so the model respects user edits when refining the plan. */
+function buildDraftPlanContextLine(slots, placeById, durationDays) {
+  if (!Array.isArray(slots) || slots.length === 0) return '';
+  const groups = buildDayGroupsForDisplay(slots, durationDays);
+  const parts = groups.map(({ dayIndex, items }) => {
+    const label = items.length
+      ? items
+          .map(({ s }) => placeById[String(s.placeId)]?.name || String(s.placeId))
+          .join('; ')
+      : '—';
+    return `Day ${dayIndex + 1}: ${label}`;
+  });
+  return `Draft itinerary (user may have edited times, days, or places): ${parts.join(' | ')}.`;
+}
+
 export default function AiPlanner() {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const messagesEndRef = useRef(null);
   const chipsBarRef = useRef(null);
+  const composerRef = useRef(null);
   /** Lifts composer above mobile on-screen keyboard (visualViewport gap). */
   const [keyboardInsetPx, setKeyboardInsetPx] = useState(0);
+  const [composerHeight, setComposerHeight] = useState(76);
+  const [planDockDayActive, setPlanDockDayActive] = useState(0);
 
   const [places, setPlaces] = useState([]);
   const [interestsList, setInterestsList] = useState([]);
@@ -103,6 +121,22 @@ export default function AiPlanner() {
     });
     return m;
   }, [places]);
+
+  useEffect(() => {
+    let ro;
+    const raf = requestAnimationFrame(() => {
+      const el = composerRef.current;
+      if (!el || typeof ResizeObserver === 'undefined') return;
+      const measure = () => setComposerHeight(el.offsetHeight || 76);
+      measure();
+      ro = new ResizeObserver(measure);
+      ro.observe(el);
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const vv = window.visualViewport;
@@ -277,6 +311,35 @@ export default function AiPlanner() {
     [clampSlot, placeById]
   );
 
+  /** When trip length shrinks, clamp day indices on the latest plan in one pass. */
+  useEffect(() => {
+    setMessages((prev) => {
+      let idx = -1;
+      for (let i = prev.length - 1; i >= 0; i -= 1) {
+        if (prev[i].role === 'assistant' && Array.isArray(prev[i].slots)) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx < 0) return prev;
+      const m = prev[idx];
+      if (!m?.slots?.length) return prev;
+      const slots = m.slots.map((row) => clampSlot({ ...row }));
+      const changed = slots.some((s, j) => s.dayIndex !== m.slots[j].dayIndex);
+      if (!changed) return prev;
+      const newPlaces = slots.map((s) => placeById[s.placeId]).filter(Boolean);
+      const next = [...prev];
+      next[idx] = { ...m, slots, places: newPlaces };
+      return next;
+    });
+  }, [durationDays, clampSlot, placeById]);
+
+  useEffect(() => {
+    if (durationDays > 0) {
+      setPlanDockDayActive((d) => Math.min(Math.max(0, d), durationDays - 1));
+    }
+  }, [durationDays]);
+
   const conversationHistory = useMemo(
     () =>
       messages.map((m) => ({
@@ -296,10 +359,14 @@ export default function AiPlanner() {
       setSending(true);
 
       try {
-        const activityContext =
-          interestNames.length > 0
-            ? `User selected interest themes: ${interestNames.join(', ')}.`
-            : '';
+        const draftCtx =
+          lastSlots?.length > 0 ? buildDraftPlanContextLine(lastSlots, placeById, durationDays) : '';
+        const activityContext = [
+          interestNames.length > 0 ? `User selected interest themes: ${interestNames.join(', ')}.` : '',
+          draftCtx,
+        ]
+          .filter(Boolean)
+          .join(' ');
 
         const { text: reply, slots } = await chatForTripPlan({
           conversationHistory,
@@ -386,12 +453,14 @@ export default function AiPlanner() {
     setMessages((p) => [...p, { role: 'user', content: userLine }]);
 
     try {
-      const activityContext =
-        interestNames.length > 0
-          ? `User selected interest themes: ${interestNames.join(', ')}.`
-          : '';
-
       const previousSlotsSnapshot = prevMsg.slots.map((s) => ({ ...s }));
+      const draftCtx = buildDraftPlanContextLine(previousSlotsSnapshot, placeById, durationDays);
+      const activityContext = [
+        interestNames.length > 0 ? `User selected interest themes: ${interestNames.join(', ')}.` : '',
+        draftCtx,
+      ]
+        .filter(Boolean)
+        .join(' ');
 
       const { text: reply, slots } = await chatForTripPlan({
         conversationHistory,
@@ -456,8 +525,8 @@ export default function AiPlanner() {
       const days = slotsToTripDays(lastSlots, durationDays, selectedDate);
       const end = new Date(selectedDate);
       end.setDate(end.getDate() + durationDays - 1);
-      const startStr = selectedDate.toISOString().slice(0, 10);
-      const endStr = end.toISOString().slice(0, 10);
+      const startStr = formatYMD(selectedDate);
+      const endStr = formatYMD(end);
       const tripsRes = await api.user.trips();
       const existingTrips = tripsRes.trips || [];
       if (tripHasDateConflict(existingTrips, startStr, endStr, null)) {
@@ -534,8 +603,51 @@ export default function AiPlanner() {
     setActiveChipEditor((prev) => (prev === key ? null : key));
   }, []);
 
+  const showPlanDayDock = lastSlots?.length > 0 && lastPlanMessageIndex >= 0;
+
+  const scrollToPlanDaySection = useCallback(
+    (dayIndex) => {
+      const safe = Math.min(durationDays - 1, Math.max(0, dayIndex));
+      const mi = lastPlanMessageIndex;
+      if (mi < 0) return;
+      const id =
+        durationDays > 1 ? `ai-planner-plan-${mi}-day-${safe}` : `ai-planner-plan-${mi}-anchor`;
+      requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      setPlanDockDayActive(safe);
+    },
+    [durationDays, lastPlanMessageIndex]
+  );
+
+  useEffect(() => {
+    if (!showPlanDayDock || durationDays <= 1 || lastPlanMessageIndex < 0) return undefined;
+    const mi = lastPlanMessageIndex;
+    const nodes = Array.from({ length: durationDays }, (_, d) =>
+      document.getElementById(`ai-planner-plan-${mi}-day-${d}`)
+    ).filter(Boolean);
+    if (nodes.length === 0) return undefined;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting && e.intersectionRatio > 0.06)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        const top = visible[0];
+        if (top?.target?.id) {
+          const m = new RegExp(`^ai-planner-plan-${mi}-day-(\\d+)$`).exec(top.target.id);
+          if (m) setPlanDockDayActive(Number(m[1], 10));
+        }
+      },
+      { threshold: [0.08, 0.18, 0.35], rootMargin: '-10% 0px -48% 0px' }
+    );
+    nodes.forEach((n) => obs.observe(n));
+    return () => obs.disconnect();
+  }, [showPlanDayDock, durationDays, lastPlanMessageIndex, messages.length]);
+
+  const dockBottomOffset = keyboardInsetPx + composerHeight;
+
   return (
-    <div className="ai-planner">
+    <div className={`ai-planner${showPlanDayDock ? ' ai-planner--day-dock' : ''}`}>
       <header className="ai-planner__top">
         <Link to="/plan" className="ai-planner__back">
           <Icon name="arrow_back" size={22} /> {t('aiPlanner', 'back')}
@@ -664,7 +776,7 @@ export default function AiPlanner() {
                   <input
                     id="ai-chip-field-date"
                     type="date"
-                    value={selectedDate.toISOString().slice(0, 10)}
+                    value={formatYMD(selectedDate)}
                     onChange={(e) => {
                       const v = e.target.value;
                       if (v) setSelectedDate(new Date(`${v}T12:00:00`));
@@ -727,7 +839,10 @@ export default function AiPlanner() {
                 const editable = i === lastPlanMessageIndex;
                 const conflictForMsg = editable ? getSlotConflictIndices(m.slots) : new Set();
                 return (
-                  <div className="ai-planner__plan">
+                  <div
+                    className="ai-planner__plan"
+                    id={i === lastPlanMessageIndex ? `ai-planner-plan-${i}-anchor` : undefined}
+                  >
                     <p className="ai-planner__plan-title">{t('aiPlanner', 'proposedPlan')}</p>
                     {editable && (
                       <>
@@ -742,7 +857,11 @@ export default function AiPlanner() {
                     )}
                     <div className="ai-planner__plan-days">
                       {buildDayGroupsForDisplay(m.slots, durationDays).map(({ dayIndex, items }) => (
-                        <div key={dayIndex} className="ai-planner__plan-day">
+                        <div
+                          key={dayIndex}
+                          className="ai-planner__plan-day"
+                          id={`ai-planner-plan-${i}-day-${dayIndex}`}
+                        >
                           <div className="ai-planner__plan-day-head">
                             <span className="ai-planner__plan-day-title">{dayHeaderLabel(dayIndex)}</span>
                             <span className="ai-planner__plan-day-count">{items.length}</span>
@@ -850,6 +969,29 @@ export default function AiPlanner() {
                                       <div className="ai-planner__stop-name">
                                         {pl?.name || s.placeId}
                                       </div>
+                                      {editable && durationDays > 1 && (
+                                        <div className="ai-planner__stop-day-inline">
+                                          <label className="ai-planner__stop-day-inline-label" htmlFor={`ai-day-inline-${i}-${slotIndex}`}>
+                                            {t('aiPlanner', 'whichDay')}
+                                          </label>
+                                          <select
+                                            id={`ai-day-inline-${i}-${slotIndex}`}
+                                            className="ai-planner__stop-day-select ai-planner__stop-day-select--inline"
+                                            value={Math.min(durationDays - 1, Math.max(0, s.dayIndex ?? 0))}
+                                            onChange={(e) =>
+                                              patchSlotField(i, slotIndex, {
+                                                dayIndex: Number(e.target.value),
+                                              })
+                                            }
+                                          >
+                                            {Array.from({ length: durationDays }, (_, d) => (
+                                              <option key={d} value={d}>
+                                                {t('aiPlanner', 'dayLabel')} {d + 1}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      )}
                                       {pl?.category && (
                                         <div className="ai-planner__stop-cat">{pl.category}</div>
                                       )}
@@ -904,7 +1046,68 @@ export default function AiPlanner() {
         </div>
       </div>
 
+      {showPlanDayDock && (
+        <div
+          className="ai-planner__day-dock"
+          style={{ bottom: dockBottomOffset }}
+          role="region"
+          aria-label={t('aiPlanner', 'dayDockAria')}
+        >
+          <div className="ai-planner__day-dock-tabs" role="tablist" aria-label={t('aiPlanner', 'dayDockTabsAria')}>
+            {durationDays > 1 ? (
+              Array.from({ length: durationDays }, (_, d) => (
+                <button
+                  key={d}
+                  type="button"
+                  role="tab"
+                  aria-selected={planDockDayActive === d}
+                  className={`ai-planner__day-dock-tab${planDockDayActive === d ? ' ai-planner__day-dock-tab--active' : ''}`}
+                  onClick={() => scrollToPlanDaySection(d)}
+                >
+                  <span className="ai-planner__day-dock-tab-short">{t('aiPlanner', 'dayLabel')} {d + 1}</span>
+                  <span className="ai-planner__day-dock-tab-long" aria-hidden>
+                    {dayHeaderLabel(d)}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <button
+                type="button"
+                className="ai-planner__day-dock-tab ai-planner__day-dock-tab--solo"
+                onClick={() => scrollToPlanDaySection(0)}
+              >
+                {t('aiPlanner', 'dayDockScrollPlan')}
+              </button>
+            )}
+          </div>
+          {lastPlanMessageIndex >= 0 && (
+            <button
+              type="button"
+              className="ai-planner__day-dock-apply"
+              disabled={
+                applying ||
+                planConflicts.size > 0 ||
+                !lastSlots?.length ||
+                sending ||
+                !aiConfigured
+              }
+              title={
+                planConflicts.size > 0
+                  ? t('aiPlanner', 'saveBlockedConflicts')
+                  : !lastSlots?.length
+                    ? t('aiPlanner', 'saveNeedStops')
+                    : undefined
+              }
+              onClick={() => void handleApplyTrip()}
+            >
+              {applying ? t('aiPlanner', 'applying') : t('aiPlanner', 'applyTrip')}
+            </button>
+          )}
+        </div>
+      )}
+
       <div
+        ref={composerRef}
         className="ai-planner__composer"
         style={keyboardInsetPx > 0 ? { bottom: keyboardInsetPx } : undefined}
       >
@@ -953,10 +1156,10 @@ export default function AiPlanner() {
               <input
                 id="ai-trip-date"
                 type="date"
-                value={selectedDate.toISOString().slice(0, 10)}
+                value={formatYMD(selectedDate)}
                 onChange={(e) => {
                   const v = e.target.value;
-                  if (v) setSelectedDate(new Date(v + 'T12:00:00'));
+                  if (v) setSelectedDate(new Date(`${v}T12:00:00`));
                 }}
               />
             </div>
