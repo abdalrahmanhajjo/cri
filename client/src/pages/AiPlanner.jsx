@@ -72,6 +72,44 @@ function buildDraftPlanContextLine(slots, placeById, durationDays) {
   return `Draft itinerary (user may have edited times, days, or places): ${parts.join(' | ')}.`;
 }
 
+function clampIntRange(n, lo, hi) {
+  const x = Math.floor(Number(n));
+  if (!Number.isFinite(x)) return null;
+  return Math.max(lo, Math.min(hi, x));
+}
+
+/**
+ * Best-effort parse of user chat for settings like "2 days", "3 places", "low budget".
+ * This updates the settings chips immediately when the user types those properties.
+ */
+function inferTripSettingsFromUserText(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return null;
+
+  const lower = text.toLowerCase();
+  const next = {};
+
+  const durationMatch =
+    lower.match(/\b(\d{1,2})\s*[- ]?\s*(day|days|jour|jours)\b/i) ||
+    lower.match(/\b(\d{1,2})\s*[- ]?\s*(يوم|أيام)\b/i);
+  if (durationMatch?.[1]) {
+    const d = clampIntRange(durationMatch[1], 1, 7);
+    if (d != null) next.durationDays = d;
+  }
+
+  const placesMatch = lower.match(/\b(\d{1,2})\s*(?:x\s*)?(place|places|stop|stops)\b/i);
+  if (placesMatch?.[1]) {
+    const p = clampIntRange(placesMatch[1], 2, 8);
+    if (p != null) next.placesPerDay = p;
+  }
+
+  if (/\blow\b/.test(lower) || /\bcheap\b/.test(lower)) next.budget = 'low';
+  if (/\bmoderate\b/.test(lower) || /\bmid\b/.test(lower) || /\bmedium\b/.test(lower)) next.budget = 'moderate';
+  if (/\bluxury\b/.test(lower) || /\bhigh\b/.test(lower) || /\bexpensive\b/.test(lower)) next.budget = 'luxury';
+
+  return Object.keys(next).length ? next : null;
+}
+
 export default function AiPlanner() {
   const { t, lang } = useLanguage();
   const { user } = useAuth();
@@ -526,6 +564,11 @@ export default function AiPlanner() {
       const trimmed = (text || '').trim();
       if (!trimmed || sending || dataLoading) return;
 
+      const inferred = inferTripSettingsFromUserText(trimmed);
+      if (inferred?.durationDays != null) setDurationDays(inferred.durationDays);
+      if (inferred?.placesPerDay != null) setPlacesPerDay(inferred.placesPerDay);
+      if (inferred?.budget) setBudget(inferred.budget);
+
       setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
       setInput('');
       setSending(true);
@@ -634,6 +677,11 @@ export default function AiPlanner() {
     const note = (aiReplaceNote || '').trim();
     const userLine =
       `${t('aiPlanner', 'aiReplaceStopLead')} ${dayLead}${placeName}. ${note || t('aiPlanner', 'aiReplaceDefaultIntent')}`.trim();
+
+    const inferred = inferTripSettingsFromUserText(userLine);
+    if (inferred?.durationDays != null) setDurationDays(inferred.durationDays);
+    if (inferred?.placesPerDay != null) setPlacesPerDay(inferred.placesPerDay);
+    if (inferred?.budget) setBudget(inferred.budget);
 
     setAiReplaceSheet(null);
     setAiReplaceNote('');
