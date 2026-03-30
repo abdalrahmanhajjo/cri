@@ -232,7 +232,7 @@
   gap: 8px;
 }
 
-.vd-hero--unified .vd-download-app-badge .material-symbols-outlined {
+.vd-hero--unified .vd-download-app-badge .icon--feather {
   font-size: 20px !important;
 }
 
@@ -1213,7 +1213,7 @@ a.vd-top-picks-card-bg--hit {
     flex-shrink: 0;
   }
 
-  .vd-top-picks-action-btn .material-symbols-outlined,
+  .vd-top-picks-action-btn .icon--feather,
   .vd-top-picks-action-btn .icon {
     text-decoration: none !important;
   }
@@ -2203,7 +2203,7 @@ a.vd-top-picks-card-bg--hit {
   text-decoration: none !important;
 }
 
-.vd-find-your-way-cta .material-symbols-outlined,
+.vd-find-your-way-cta .icon--feather,
 .vd-find-your-way-cta .icon {
   font-size: 20px;
 }
@@ -2397,13 +2397,13 @@ a.vd-top-picks-card-bg--hit {
   color: var(--color-primary-dark);
 }
 
-.vd-exp-tour-card-cta .material-symbols-outlined,
+.vd-exp-tour-card-cta .icon--feather,
 .vd-exp-tour-card-cta .icon {
   font-size: 16px;
   transition: transform 0.2s ease;
 }
 
-.vd-exp-tour-card:hover .vd-exp-tour-card-cta .material-symbols-outlined,
+.vd-exp-tour-card:hover .vd-exp-tour-card-cta .icon--feather,
 .vd-exp-tour-card:hover .vd-exp-tour-card-cta .icon {
   transform: translateX(3px);
 }
@@ -2921,7 +2921,7 @@ a.vd-bento-web-hub-cta {
 }
 
 .vd-bento-web-hub-cta .icon,
-.vd-bento-web-hub-cta .material-symbols-outlined {
+.vd-bento-web-hub-cta .icon--feather {
   position: relative;
   flex-shrink: 0;
   color: #fff;
@@ -2941,15 +2941,15 @@ a.vd-bento-web-hub-cta {
 
   .vd-bento-web-hub:hover .vd-bento-web-hub-cta .icon,
   .vd-bento-web-hub:focus-within .vd-bento-web-hub-cta .icon,
-  .vd-bento-web-hub:hover .vd-bento-web-hub-cta .material-symbols-outlined,
-  .vd-bento-web-hub:focus-within .vd-bento-web-hub-cta .material-symbols-outlined {
+  .vd-bento-web-hub:hover .vd-bento-web-hub-cta .icon--feather,
+  .vd-bento-web-hub:focus-within .vd-bento-web-hub-cta .icon--feather {
     transform: translateX(3px);
   }
 
   [dir='rtl'] .vd-bento-web-hub:hover .vd-bento-web-hub-cta > .icon:last-of-type,
   [dir='rtl'] .vd-bento-web-hub:focus-within .vd-bento-web-hub-cta > .icon:last-of-type,
-  [dir='rtl'] .vd-bento-web-hub:hover .vd-bento-web-hub-cta > .material-symbols-outlined:last-of-type,
-  [dir='rtl'] .vd-bento-web-hub:focus-within .vd-bento-web-hub-cta > .material-symbols-outlined:last-of-type {
+  [dir='rtl'] .vd-bento-web-hub:hover .vd-bento-web-hub-cta > .icon--feather:last-of-type,
+  [dir='rtl'] .vd-bento-web-hub:focus-within .vd-bento-web-hub-cta > .icon--feather:last-of-type {
     transform: scaleX(-1) translateX(-3px);
   }
 
@@ -2984,8 +2984,8 @@ a.vd-bento-web-hub-cta {
   .vd-bento-web-hub:focus-within .vd-bento-web-hub-cta,
   .vd-bento-web-hub:hover .vd-bento-web-hub-cta .icon,
   .vd-bento-web-hub:focus-within .vd-bento-web-hub-cta .icon,
-  .vd-bento-web-hub:hover .vd-bento-web-hub-cta .material-symbols-outlined,
-  .vd-bento-web-hub:focus-within .vd-bento-web-hub-cta .material-symbols-outlined {
+  .vd-bento-web-hub:hover .vd-bento-web-hub-cta .icon--feather,
+  .vd-bento-web-hub:focus-within .vd-bento-web-hub-cta .icon--feather {
     transform: none;
   }
 
@@ -2997,7 +2997,7 @@ a.vd-bento-web-hub-cta {
   .vd-bento-web-hub-inner,
   .vd-bento-web-hub-cta,
   .vd-bento-web-hub-cta .icon,
-  .vd-bento-web-hub-cta .material-symbols-outlined,
+  .vd-bento-web-hub-cta .icon--feather,
   .vd-bento-web-hub-icon {
     transition: none;
   }
@@ -3009,7 +3009,7 @@ a.vd-bento-web-hub-cta {
 }
 
 [dir='rtl'] .vd-bento-web-hub-cta > .icon:last-of-type,
-[dir='rtl'] .vd-bento-web-hub-cta > .material-symbols-outlined:last-of-type {
+[dir='rtl'] .vd-bento-web-hub-cta > .icon--feather:last-of-type {
   transform: scaleX(-1);
 }
 
@@ -3139,12 +3139,12 @@ a.vd-bento-fab {
   border-radius: 6px;
 }
 
-.vd-bento-why-intro-link .material-symbols-outlined {
+.vd-bento-why-intro-link .icon--feather {
   color: currentColor;
   font-size: 20px !important;
 }
 
-[dir='rtl'] .vd-bento-why-intro-link .material-symbols-outlined {
+[dir='rtl'] .vd-bento-why-intro-link .icon--feather {
   transform: scaleX(-1);
 }
 
@@ -3304,12 +3304,12 @@ a.vd-bento-fab {
   box-shadow: 0 2px 10px rgba(15, 118, 110, 0.45);
 }
 
-.vd-bento-mosaic-snap-arrow .material-symbols-outlined {
+.vd-bento-mosaic-snap-arrow .icon--feather {
   font-size: 18px !important;
   color: #fff !important;
 }
 
-[dir='rtl'] .vd-bento-mosaic-snap-arrow .material-symbols-outlined {
+[dir='rtl'] .vd-bento-mosaic-snap-arrow .icon--feather {
   transform: scaleX(-1);
 }
 
@@ -3421,12 +3421,12 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   flex-shrink: 0;
 }
 
-.vd-bento-stat-cta .material-symbols-outlined {
+.vd-bento-stat-cta .icon--feather {
   font-size: 16px !important;
   color: #fff !important;
 }
 
-[dir='rtl'] .vd-bento-stat-cta .material-symbols-outlined {
+[dir='rtl'] .vd-bento-stat-cta .icon--feather {
   transform: scaleX(-1);
 }
 
@@ -3585,7 +3585,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
 }
 
-.vd-bento-mosaic .vd-download-app-badge--apple .material-symbols-outlined {
+.vd-bento-mosaic .vd-download-app-badge--apple .icon--feather {
   color: #f5f5f5 !important;
 }
 
@@ -3601,12 +3601,12 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   box-shadow: 0 3px 14px rgba(0, 133, 86, 0.35);
 }
 
-.vd-bento-mosaic .vd-download-app-badge--google .material-symbols-outlined {
+.vd-bento-mosaic .vd-download-app-badge--google .icon--feather {
   color: #fff !important;
 }
 
 .vd-bento-mosaic .vd-download-app-badge .icon,
-.vd-bento-mosaic .vd-download-app-badge .material-symbols-outlined {
+.vd-bento-mosaic .vd-download-app-badge .icon--feather {
   font-size: 18px !important;
 }
 
@@ -3645,7 +3645,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 }
 
 .vd-bento-mosaic-cta .icon,
-.vd-bento-mosaic-cta .material-symbols-outlined {
+.vd-bento-mosaic-cta .icon--feather {
   font-size: 16px !important;
 }
 
@@ -3866,7 +3866,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
     box-shadow: none;
   }
 
-  .vd-bento-mosaic-snap-arrow .material-symbols-outlined {
+  .vd-bento-mosaic-snap-arrow .icon--feather {
     font-size: 16px !important;
   }
 
@@ -3908,12 +3908,12 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   }
 
   .vd-bento-mosaic .vd-download-app-badge .icon,
-  .vd-bento-mosaic .vd-download-app-badge .material-symbols-outlined {
+  .vd-bento-mosaic .vd-download-app-badge .icon--feather {
     font-size: 22px !important;
     margin: 0;
   }
 
-  .vd-bento-mosaic .vd-download-app-badge > span:not(.material-symbols-outlined) {
+  .vd-bento-mosaic .vd-download-app-badge > span:not(.icon--feather) {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -6752,12 +6752,12 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   border-radius: 4px;
 }
 
-.vd-community-feed-more .material-symbols-outlined,
+.vd-community-feed-more .icon--feather,
 .vd-community-feed-more .icon {
   transition: transform 0.2s ease;
 }
 
-.vd-community-feed-more:hover .material-symbols-outlined,
+.vd-community-feed-more:hover .icon--feather,
 .vd-community-feed-more:hover .icon {
   transform: translateX(3px);
 }
@@ -7161,7 +7161,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   color: var(--color-text-secondary);
 }
 
-.vd-community-feed-stat .material-symbols-outlined,
+.vd-community-feed-stat .icon--feather,
 .vd-community-feed-stat .icon {
   color: var(--color-text-tertiary);
   opacity: 0.95;
@@ -7186,12 +7186,12 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   text-decoration: none !important;
 }
 
-.vd-community-feed-cta .material-symbols-outlined,
+.vd-community-feed-cta .icon--feather,
 .vd-community-feed-cta .icon {
   transition: transform 0.2s ease;
 }
 
-.vd-community-feed-cta:hover .material-symbols-outlined,
+.vd-community-feed-cta:hover .icon--feather,
 .vd-community-feed-cta:hover .icon {
   transform: translateX(3px);
 }
@@ -7203,9 +7203,9 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   .vd-community-feed-card:hover {
     transform: none;
   }
-  .vd-community-feed-more:hover .material-symbols-outlined,
+  .vd-community-feed-more:hover .icon--feather,
   .vd-community-feed-more:hover .icon,
-  .vd-community-feed-cta:hover .material-symbols-outlined,
+  .vd-community-feed-cta:hover .icon--feather,
   .vd-community-feed-cta:hover .icon {
     transform: none;
   }

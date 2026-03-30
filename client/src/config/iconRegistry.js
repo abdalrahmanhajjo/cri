@@ -1,34 +1,9 @@
 /**
- * Icon semantics for `<Icon name="…" />` (static Material Symbols in `components/Icon.jsx`).
- * `flaticonAnimated` on each entry is optional reference copy only; the UI uses the Google font glyph.
+ * Icon semantics for `<Icon name="…" />` (Feather SVGs in `components/Icon.jsx`, `/public/feather`).
+ * `flaticonAnimated` is legacy reference text only.
  *
  * @typedef {{ variant: string, description: string, flaticonAnimated: string }} IconDoc
  */
-
-/** Visual family → colored pulse Lottie in `src/assets/lottie-by-variant/`. */
-export const ICON_VARIANTS = [
-  'nav',
-  'favorite',
-  'location',
-  'time',
-  'action',
-  'status',
-  'warning',
-  'media',
-  'social',
-  'tool',
-  'transport',
-  'ui',
-  'communication',
-  'security',
-  'ai',
-  'brand',
-  'commerce',
-  'discover',
-  'nature',
-];
-
-/** @typedef {(typeof ICON_VARIANTS)[number]} IconVariant */
 
 /** @type {Record<string, IconDoc>} */
 export const ICON_DOCS = {

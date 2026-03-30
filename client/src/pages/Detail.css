@@ -184,7 +184,7 @@
   background: var(--color-surface-variant);
 }
 
-.place-detail-hero-fallback .material-symbols-outlined {
+.place-detail-hero-fallback .icon--feather {
   opacity: 0.5;
 }
 
@@ -545,7 +545,7 @@
   color: var(--color-primary);
 }
 
-.place-detail-btn--icon.place-detail-btn--active .material-symbols-outlined {
+.place-detail-btn--icon.place-detail-btn--active .icon--feather {
   color: var(--color-primary);
 }
 
