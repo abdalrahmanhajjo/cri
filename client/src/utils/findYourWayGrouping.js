@@ -1,10 +1,51 @@
 /* Section names and keywords — home category deck and /ways detail page. */
+/* discoverQ: opens Places directory with this search (aligned with quarter / theme browsing). */
 export const WAYS_CONFIG = [
-  { wayKey: 'explorer', titleKey: 'wayExplorer', descKey: 'wayExplorerDesc', detailKey: 'wayExplorerDetail', icon: 'explore', keywords: ['attraction', 'landmark', 'souq', 'souk', 'market', 'explore', 'sightseeing', 'old city', 'shopping', 'bazaar'] },
-  { wayKey: 'food', titleKey: 'wayFood', descKey: 'wayFoodDesc', detailKey: 'wayFoodDetail', icon: 'restaurant', keywords: ['restaurant', 'food', 'cafe', 'café', 'dining', 'cuisine', 'sweet', 'sweets', 'bakery', 'coffee', 'eat', 'meal'] },
-  { wayKey: 'history', titleKey: 'wayHistory', descKey: 'wayHistoryDesc', detailKey: 'wayHistoryDetail', icon: 'account_balance', keywords: ['history', 'heritage', 'culture', 'citadel', 'mosque', 'museum', 'historic', 'monument', 'religious', 'archaeology'] },
-  { wayKey: 'sea', titleKey: 'waySea', descKey: 'waySeaDesc', detailKey: 'waySeaDetail', icon: 'waves', keywords: ['beach', 'sea', 'coast', 'corniche', 'nature', 'mina', 'water', 'port', 'marina', 'outdoors'] },
-  { wayKey: 'family', titleKey: 'wayFamily', descKey: 'wayFamilyDesc', detailKey: 'wayFamilyDetail', icon: 'family_restroom', keywords: ['family', 'park', 'kids', 'children', 'relax', 'garden', 'playground'] },
+  {
+    wayKey: 'explorer',
+    titleKey: 'wayExplorer',
+    descKey: 'wayExplorerDesc',
+    detailKey: 'wayExplorerDetail',
+    icon: 'explore',
+    discoverQ: 'Old City',
+    keywords: ['attraction', 'landmark', 'souq', 'souk', 'market', 'explore', 'sightseeing', 'old city', 'shopping', 'bazaar'],
+  },
+  {
+    wayKey: 'food',
+    titleKey: 'wayFood',
+    descKey: 'wayFoodDesc',
+    detailKey: 'wayFoodDetail',
+    icon: 'restaurant',
+    discoverQ: 'restaurant',
+    keywords: ['restaurant', 'food', 'cafe', 'café', 'dining', 'cuisine', 'sweet', 'sweets', 'bakery', 'coffee', 'eat', 'meal'],
+  },
+  {
+    wayKey: 'history',
+    titleKey: 'wayHistory',
+    descKey: 'wayHistoryDesc',
+    detailKey: 'wayHistoryDetail',
+    icon: 'account_balance',
+    discoverQ: 'heritage',
+    keywords: ['history', 'heritage', 'culture', 'citadel', 'mosque', 'museum', 'historic', 'monument', 'religious', 'archaeology'],
+  },
+  {
+    wayKey: 'sea',
+    titleKey: 'waySea',
+    descKey: 'waySeaDesc',
+    detailKey: 'waySeaDetail',
+    icon: 'waves',
+    discoverQ: 'Al-Mina',
+    keywords: ['beach', 'sea', 'coast', 'corniche', 'nature', 'mina', 'water', 'port', 'marina', 'outdoors'],
+  },
+  {
+    wayKey: 'family',
+    titleKey: 'wayFamily',
+    descKey: 'wayFamilyDesc',
+    detailKey: 'wayFamilyDetail',
+    icon: 'family_restroom',
+    discoverQ: 'park',
+    keywords: ['family', 'park', 'kids', 'children', 'relax', 'garden', 'playground'],
+  },
 ];
 
 export const FIND_YOUR_WAY_WAY_KEYS = WAYS_CONFIG.map((w) => w.wayKey);

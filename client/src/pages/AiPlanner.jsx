@@ -74,6 +74,7 @@ export default function AiPlanner() {
   const [keyboardInsetPx, setKeyboardInsetPx] = useState(0);
   const [composerHeight, setComposerHeight] = useState(76);
   const [planDockDayActive, setPlanDockDayActive] = useState(0);
+  const [navFabVisible, setNavFabVisible] = useState(false);
 
   const [places, setPlaces] = useState([]);
   const [interestsList, setInterestsList] = useState([]);
@@ -842,6 +843,24 @@ export default function AiPlanner() {
 
   const dockBottomOffset = keyboardInsetPx + composerHeight;
 
+  useEffect(() => {
+    const onScroll = () => setNavFabVisible(window.scrollY > 160);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const scrollToSiteNav = useCallback(() => {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const behavior = reduce ? 'auto' : 'smooth';
+    const el = document.getElementById('site-header');
+    if (el) {
+      el.scrollIntoView({ behavior, block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior });
+    }
+  }, []);
+
   return (
     <div className={`ai-planner${showPlanDayDock ? ' ai-planner--day-dock' : ''}`}>
       <header className="ai-planner__top">
@@ -1569,6 +1588,18 @@ export default function AiPlanner() {
             </button>
           </div>
         </>
+      )}
+
+      {navFabVisible && (
+        <button
+          type="button"
+          className={`ai-planner__nav-fab${showPlanDayDock ? ' ai-planner__nav-fab--with-dock' : ''}`}
+          onClick={scrollToSiteNav}
+          aria-label={t('aiPlanner', 'scrollToSiteNavAria')}
+          title={t('aiPlanner', 'scrollToSiteNav')}
+        >
+          <Icon name="expand_less" size={24} aria-hidden />
+        </button>
       )}
     </div>
   );
