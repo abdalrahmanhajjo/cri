@@ -32,7 +32,7 @@ img {
   pointer-events: none;
 }
 
-/* Material Symbols – icon font from Google (Chrome-friendly) */
+/* Material Symbols – fallback when Lottie data missing (should be rare) */
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
@@ -44,4 +44,12 @@ img {
   -webkit-font-smoothing: antialiased;
   display: inline-block;
   vertical-align: middle;
+}
+
+.icon.icon--lottie {
+  flex-shrink: 0;
+}
+
+.icon.icon--lottie svg {
+  display: block;
 }

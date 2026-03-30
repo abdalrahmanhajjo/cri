@@ -522,16 +522,115 @@ function themeCategoryStats(bucket, categories) {
   return { categoryCount: resolved, listingCount: (bucket || []).length };
 }
 
-/** Home: quarters → Discover, directory themes → Discover with tailored `q`, transport & stay. */
-export function ExperienceTripoliSection({ t, lang, places = [], categories = [], showMap = true, showTips = true }) {
+/** Map browse by theme — own section, placed above community on the home page. */
+function BrowseMapByThemeSection({ t, lang, places = [], categories = [] }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const placesByWay = groupPlacesByWay(places, categories);
   const stepClass = ['vd-find-your-way-row--a', 'vd-find-your-way-row--b', 'vd-find-your-way-row--c', 'vd-find-your-way-row--d'];
   return (
-    <section id="experience" className="vd-section vd-experience-tripoli vd-find-your-way vd-find-your-way--deck">
+    <section
+      id="experience"
+      className="vd-section vd-experience-tripoli vd-find-your-way vd-find-your-way--deck vd-find-your-way--map-themes"
+      aria-labelledby="browse-map-themes-title"
+    >
       <div className="vd-container">
         <header className="vd-find-your-way-header">
-          <h2 className="vd-find-your-way-title">{safeT('home', 'findYourWayTitle')}</h2>
+          <h2 id="browse-map-themes-title" className="vd-find-your-way-title">
+            {safeT('home', 'findYourWayThemeDeckLabel')}
+          </h2>
+        </header>
+
+        <div className="vd-find-your-way-deck" role="list">
+          {WAYS_CONFIG.map((way, i) => {
+            const bucket = placesByWay.get(way.wayKey) || [];
+            const { categoryCount: categoriesWithListings, listingCount } = themeCategoryStats(bucket, categories);
+            const directoryCategoryCount = countDirectoryCategoriesForWay(way.wayKey, categories);
+            const categoryCount = Math.max(directoryCategoryCount, categoriesWithListings);
+            const idx = String(i + 1).padStart(2, '0');
+            const stagger = stepClass[i % stepClass.length];
+            const asideNumber =
+              categoryCount > 0
+                ? formatDirectoryCount(categoryCount, lang)
+                : listingCount > 0
+                  ? formatDirectoryCount(listingCount, lang)
+                  : null;
+            const asideLabel =
+              categoryCount > 0
+                ? safeT('home', 'findYourWayCategoriesUnit')
+                : listingCount > 0
+                  ? safeT('home', 'findYourWayThemeEntriesLabel')
+                  : null;
+            const titleFromCategories = formatFindYourWayThemeTitle(
+              way.wayKey,
+              categories,
+              lang,
+              (n) => safeT('home', 'findYourWayThemeMore').split('{count}').join(String(n))
+            );
+            const rowTitle = titleFromCategories || safeT('home', way.titleKey);
+            const mapTo = way.discoverQ ? mapSearchUrl(way.discoverQ) : mapSearchUrl('');
+            return (
+              <Link
+                key={way.wayKey}
+                to={mapTo}
+                className={`vd-find-your-way-row ${stagger}`}
+                role="listitem"
+              >
+                <span className="vd-find-your-way-row-index" aria-hidden="true">
+                  {idx}
+                </span>
+                <span className="vd-find-your-way-row-glyph" aria-hidden="true">
+                  <Icon name={way.icon} size={26} />
+                </span>
+                <div className="vd-find-your-way-row-copy">
+                  <span className="vd-find-your-way-row-theme">{safeT('home', 'findYourWayRowKicker')}</span>
+                  <h3 className="vd-find-your-way-row-title">{rowTitle}</h3>
+                  <p className="vd-find-your-way-row-desc">{safeT('home', way.descKey)}</p>
+                  <p className="vd-find-your-way-row-detail">{safeT('home', way.detailKey)}</p>
+                </div>
+                <div className="vd-find-your-way-row-aside">
+                  {asideNumber != null ? (
+                    <span className="vd-find-your-way-count">
+                      <strong>{asideNumber}</strong>
+                      <span className="vd-find-your-way-count-label">{asideLabel}</span>
+                    </span>
+                  ) : (
+                    <span className="vd-find-your-way-count vd-find-your-way-count--empty">
+                      {safeT('home', 'findYourWayComingSoon')}
+                    </span>
+                  )}
+                  <span className="vd-find-your-way-row-chevron" aria-hidden="true">
+                    <Icon name="arrow_forward" size={22} />
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="vd-find-your-way-cta-wrap">
+          <Link to={mapSearchUrl('')} className="vd-find-your-way-cta">
+            {safeT('home', 'seeAllWaysMap')}
+            <Icon name="arrow_forward" size={20} />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Areas, transport/stay/tips — below community + featured picks on the home page. */
+function FindYourWayPracticalSection({ t, showMap = true, showTips = true }) {
+  const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
+  return (
+    <section
+      className="vd-section vd-experience-tripoli vd-find-your-way vd-find-your-way--practical"
+      aria-labelledby="find-your-way-practical-title"
+    >
+      <div className="vd-container">
+        <header className="vd-find-your-way-header">
+          <h2 id="find-your-way-practical-title" className="vd-find-your-way-title">
+            {safeT('home', 'findYourWayTitle')}
+          </h2>
           <p className="vd-find-your-way-sub">{safeT('home', 'findYourWaySub')}</p>
           <p className="vd-find-your-way-community">
             <Link to={COMMUNITY_PATH} className="vd-find-your-way-community-link">
@@ -611,81 +710,6 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
               </div>
             ) : null}
           </div>
-        </div>
-
-        <h3 className="vd-find-your-way-deck-heading">{safeT('home', 'findYourWayThemeDeckLabel')}</h3>
-        <div className="vd-find-your-way-deck" role="list">
-          {WAYS_CONFIG.map((way, i) => {
-            const bucket = placesByWay.get(way.wayKey) || [];
-            const { categoryCount: categoriesWithListings, listingCount } = themeCategoryStats(bucket, categories);
-            const directoryCategoryCount = countDirectoryCategoriesForWay(way.wayKey, categories);
-            const categoryCount = Math.max(directoryCategoryCount, categoriesWithListings);
-            const idx = String(i + 1).padStart(2, '0');
-            const stagger = stepClass[i % stepClass.length];
-            const asideNumber =
-              categoryCount > 0
-                ? formatDirectoryCount(categoryCount, lang)
-                : listingCount > 0
-                  ? formatDirectoryCount(listingCount, lang)
-                  : null;
-            const asideLabel =
-              categoryCount > 0
-                ? safeT('home', 'findYourWayCategoriesUnit')
-                : listingCount > 0
-                  ? safeT('home', 'findYourWayThemeEntriesLabel')
-                  : null;
-            const titleFromCategories = formatFindYourWayThemeTitle(
-              way.wayKey,
-              categories,
-              lang,
-              (n) => safeT('home', 'findYourWayThemeMore').split('{count}').join(String(n))
-            );
-            const rowTitle = titleFromCategories || safeT('home', way.titleKey);
-            const mapTo = way.discoverQ ? mapSearchUrl(way.discoverQ) : mapSearchUrl('');
-            return (
-              <Link
-                key={way.wayKey}
-                to={mapTo}
-                className={`vd-find-your-way-row ${stagger}`}
-                role="listitem"
-              >
-                <span className="vd-find-your-way-row-index" aria-hidden="true">
-                  {idx}
-                </span>
-                <span className="vd-find-your-way-row-glyph" aria-hidden="true">
-                  <Icon name={way.icon} size={26} />
-                </span>
-                <div className="vd-find-your-way-row-copy">
-                  <span className="vd-find-your-way-row-theme">{safeT('home', 'findYourWayRowKicker')}</span>
-                  <h3 className="vd-find-your-way-row-title">{rowTitle}</h3>
-                  <p className="vd-find-your-way-row-desc">{safeT('home', way.descKey)}</p>
-                  <p className="vd-find-your-way-row-detail">{safeT('home', way.detailKey)}</p>
-                </div>
-                <div className="vd-find-your-way-row-aside">
-                  {asideNumber != null ? (
-                    <span className="vd-find-your-way-count">
-                      <strong>{asideNumber}</strong>
-                      <span className="vd-find-your-way-count-label">{asideLabel}</span>
-                    </span>
-                  ) : (
-                    <span className="vd-find-your-way-count vd-find-your-way-count--empty">
-                      {safeT('home', 'findYourWayComingSoon')}
-                    </span>
-                  )}
-                  <span className="vd-find-your-way-row-chevron" aria-hidden="true">
-                    <Icon name="arrow_forward" size={22} />
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-
-        <div className="vd-find-your-way-cta-wrap">
-          <Link to={mapSearchUrl('')} className="vd-find-your-way-cta">
-            {safeT('home', 'seeAllWaysMap')}
-            <Icon name="arrow_forward" size={20} />
-          </Link>
         </div>
       </div>
     </section>
@@ -1090,20 +1114,20 @@ export default function Explore() {
         </div>
       </section>
 
-      {/* Highlights — curated picks before thematic browsing (DMO-style flow) */}
-      {topPicks.length > 0 && (
-        <TopPicksCarousel places={topPicks} t={t} />
-      )}
+      {/* Map by theme — first; #experience hash targets this block */}
+      <BrowseMapByThemeSection t={t} lang={lang} places={placesList} categories={categories} />
 
       {communityPosts.length > 0 && (
         <CommunityFeedStrip posts={communityPosts} t={t} moreTo={COMMUNITY_PATH} layout="bento" />
       )}
 
-      <ExperienceTripoliSection
+      {/* Featured picks + areas / practical cards — after community */}
+      {topPicks.length > 0 && (
+        <TopPicksCarousel places={topPicks} t={t} />
+      )}
+
+      <FindYourWayPracticalSection
         t={t}
-        lang={lang}
-        places={placesList}
-        categories={categories}
         showMap={showMap}
         showTips={user?.showTips !== false}
       />

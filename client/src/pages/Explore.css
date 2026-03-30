@@ -1756,6 +1756,15 @@ a.vd-top-picks-card-bg--hit {
   background: var(--color-background);
 }
 
+/* Theme deck only — separated from areas/practical block below community */
+.vd-find-your-way--map-themes {
+  padding-bottom: clamp(48px, 6vw, 72px);
+}
+
+.vd-find-your-way--practical .vd-find-your-way-main-grid {
+  margin-bottom: 0;
+}
+
 .vd-find-your-way--deck .vd-find-your-way-header {
   border-bottom: none;
   padding-bottom: 0;
