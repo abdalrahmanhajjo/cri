@@ -76,11 +76,12 @@ function buildFfmpegArgs(inFile, outFile, withAudio, tier = 'default') {
   const maxH = parseDimEnv(isLow ? 'REEL_LOW_MAX_HEIGHT' : 'REEL_MAX_HEIGHT', isLow ? 960 : 1920);
   const scale = `scale=w='min(${maxW},iw)':h='min(${maxH},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:flags=lanczos`;
   const vf = `${scale},setsar=1,format=yuv420p`;
-  const crf = (isLow ? process.env.REEL_LOW_TRANSCODE_CRF : process.env.REEL_TRANSCODE_CRF) || (isLow ? '26' : '20');
+  const crf = (isLow ? process.env.REEL_LOW_TRANSCODE_CRF : process.env.REEL_TRANSCODE_CRF) || (isLow ? '26' : '23');
   const preset =
-    (isLow ? process.env.REEL_LOW_TRANSCODE_PRESET : process.env.REEL_TRANSCODE_PRESET) || (isLow ? 'fast' : 'medium');
+    (isLow ? process.env.REEL_LOW_TRANSCODE_PRESET : process.env.REEL_TRANSCODE_PRESET) ||
+    (isLow ? 'fast' : 'veryfast');
   const audioK =
-    (isLow ? process.env.REEL_LOW_AUDIO_BITRATE : process.env.REEL_AUDIO_BITRATE) || (isLow ? '64k' : '128k');
+    (isLow ? process.env.REEL_LOW_AUDIO_BITRATE : process.env.REEL_AUDIO_BITRATE) || (isLow ? '64k' : '96k');
   const tune = (process.env.REEL_X264_TUNE || '').trim();
   const profile =
     (isLow ? process.env.REEL_LOW_X264_PROFILE : process.env.REEL_X264_PROFILE) || (isLow ? 'main' : 'high');
