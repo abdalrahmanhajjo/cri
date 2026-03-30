@@ -2,6 +2,10 @@
 export const ACCEPT_IMAGES_WITH_HEIC =
   'image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,.heic,.heif';
 
+/** Reel / feed video uploads — matches server feed video extensions. */
+export const ACCEPT_FEED_REEL_VIDEOS =
+  'video/mp4,video/webm,video/quicktime,video/x-m4v,video/3gpp,video/3gpp2,.mp4,.webm,.mov,.m4v,.3gp,.3g2,.mkv';
+
 /** Treat as image for validation (iOS often uses image/heic or octet-stream + .heic). */
 export function isLikelyImageFile(file) {
   if (!file) return false;
