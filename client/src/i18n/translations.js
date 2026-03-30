@@ -692,7 +692,7 @@ export const translations = {
       findYourWayTitle: 'Find your way in Tripoli',
       findYourWaySub:
         'Three quarters that help visitors get their bearings — each link opens the map with a search tailored to that part of Tripoli.',
-      findYourWayThemeDeckLabel: 'Browse on the map by theme',
+      findYourWayThemeDeckLabel: 'Browse places by theme',
       findYourWayCommunityHint: 'Community — venue reels & posts',
       findYourWayRowKicker: 'Theme',
       findYourWayThemeMore: '+{count} more',
@@ -721,6 +721,7 @@ export const translations = {
       wayFamilyDetail:
         'Highlights family-oriented and respite categories so planners can scan softer, slower rhythms in one pass.',
       seeAllWays: 'Browse all categories & places',
+      seeAllWaysDiscover: 'Browse all places',
       seeAllWaysMap: 'Open the interactive map',
       bentoStatPlaces: 'Places listed',
       bentoStatCategories: 'Categories',
@@ -1821,7 +1822,7 @@ export const translations = {
       findYourWayTitle: 'اعثر على طريقك في طرابلس',
       findYourWaySub:
         'ثلاث مناطق تساعد الزائر على التوجه — كل رابط يفتح الخريطة مع بحث مناسب لذلك الجزء من طرابلس.',
-      findYourWayThemeDeckLabel: 'تصفح الخريطة حسب الثيمة',
+      findYourWayThemeDeckLabel: 'تصفح الأماكن حسب الثيمة',
       findYourWayCommunityHint: 'المجتمع — ريلز ومنشورات الأماكن',
       findYourWayRowKicker: 'ثيمة',
       findYourWayThemeMore: '+{count} أخرى',
@@ -1850,6 +1851,7 @@ export const translations = {
       wayFamilyDetail:
         'يبرز فئات العائلة والاستراحة لتسهيل مقارنة إيقاعات أهدأ في نظرة واحدة.',
       seeAllWays: 'كل الفئات والأماكن',
+      seeAllWaysDiscover: 'تصفح كل الأماكن',
       seeAllWaysMap: 'افتح الخريطة التفاعلية',
       bentoStatPlaces: 'أماكن مدرجة',
       bentoStatCategories: 'فئات',
@@ -2949,7 +2951,7 @@ export const translations = {
       findYourWayTitle: 'Trouvez votre chemin à Tripoli',
       findYourWaySub:
         'Trois quartiers pour prendre ses repères — chaque lien ouvre la carte avec une recherche adaptée à ce secteur de Tripoli.',
-      findYourWayThemeDeckLabel: 'Parcourir la carte par thème',
+      findYourWayThemeDeckLabel: 'Parcourir les lieux par thème',
       findYourWayCommunityHint: 'Communauté — reels et publications des lieux',
       findYourWayRowKicker: 'Thème',
       findYourWayThemeMore: '+{count} de plus',
@@ -2978,6 +2980,7 @@ export const translations = {
       wayFamilyDetail:
         'Met l’accent sur les catégories famille et pause pour comparer des rythmes plus calmes d’un coup d’œil.',
       seeAllWays: 'Toutes les catégories et lieux',
+      seeAllWaysDiscover: 'Parcourir tous les lieux',
       seeAllWaysMap: 'Ouvrir la carte interactive',
       bentoStatPlaces: 'Lieux répertoriés',
       bentoStatCategories: 'Catégories',

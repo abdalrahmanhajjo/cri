@@ -71,7 +71,7 @@
   border: 1px solid transparent;
 }
 
-.activities-hub-tab .icon--bootstrap {
+.activities-hub-tab .material-symbols-outlined {
   opacity: 0.75;
 }
 
@@ -87,7 +87,7 @@
   box-shadow: 0 6px 20px rgba(13, 148, 136, 0.35);
 }
 
-.activities-hub-tab--active .icon--bootstrap {
+.activities-hub-tab--active .material-symbols-outlined {
   opacity: 1;
   font-variation-settings: 'FILL' 1;
 }

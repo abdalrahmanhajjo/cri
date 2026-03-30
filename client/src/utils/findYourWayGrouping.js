@@ -1,5 +1,5 @@
 /* Section names and keywords — home category deck and /ways detail page. */
-/* discoverQ: opens Places directory with this search (aligned with quarter / theme browsing). */
+/* discoverQ: `/discover?q=…` search token (names, areas, categories). */
 export const WAYS_CONFIG = [
   {
     wayKey: 'explorer',
