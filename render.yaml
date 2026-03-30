@@ -9,7 +9,7 @@
 # JWT_SECRET is auto-generated below (generateValue). To set your own, remove that block and add JWT_SECRET in the dashboard.
 # Run DB migrations once from your machine: DATABASE_URL="…" npm run db:migrate
 # Free tier: service sleeps after ~15 min idle (first request may take ~1 min). Disk is ephemeral — prefer Supabase Storage for uploads.
-# Feed video uploads: stored as uploaded (no server re-encode). ffmpeg in the image is only for optional batch scripts (recompress-reels).
+# Feed video: MP4 remux +faststart; MOV/WebM/MKV transcoded to MP4. Long runs: set HTTP_SERVER_TIMEOUT_MS=900000 if your plan allows.
 
 services:
   - type: web

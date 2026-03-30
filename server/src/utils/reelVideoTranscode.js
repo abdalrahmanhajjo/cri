@@ -6,7 +6,7 @@ const os = require('os');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 
-const REEL_TIMEOUT_MS = parseInt(process.env.REEL_TRANSCODE_TIMEOUT_MS || '300000', 10);
+const REEL_TIMEOUT_MS = parseInt(process.env.REEL_TRANSCODE_TIMEOUT_MS || '600000', 10);
 const FASTSTART_TIMEOUT_MS = parseInt(process.env.FEED_VIDEO_FASTSTART_TIMEOUT_MS || '120000', 10);
 
 /** Reject transcoded output if larger than input × this (phone masters are often HEAVY compressed — allow a looser ratio so we still emit web-safe H.264). */
