@@ -185,6 +185,58 @@ export default function AdminSettings() {
                       </label>
                     </div>
                   </div>
+                  <hr style={{ border: 0, borderTop: '1px solid #e5e7eb', margin: '1.25rem 0' }} />
+                  <h3 className="admin-card-title" style={{ fontSize: '1.05rem', marginBottom: '0.75rem' }}>Sponsored places</h3>
+                  <p className="admin-form-hint" style={{ marginTop: 0 }}>
+                    Toggle where sponsored places appear. Manage the curated list in Admin → Sponsored places.
+                  </p>
+                  <div className="admin-form-row">
+                    <div className="admin-form-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={form?.sponsoredPlacesEnabled?.home !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              sponsoredPlacesEnabled: { ...(f.sponsoredPlacesEnabled || {}), home: e.target.checked },
+                            }))
+                          }
+                        />
+                        Home page section
+                      </label>
+                    </div>
+                    <div className="admin-form-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={form?.sponsoredPlacesEnabled?.discover !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              sponsoredPlacesEnabled: { ...(f.sponsoredPlacesEnabled || {}), discover: e.target.checked },
+                            }))
+                          }
+                        />
+                        Discover directory priority
+                      </label>
+                    </div>
+                    <div className="admin-form-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={form?.sponsoredPlacesEnabled?.feed !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              sponsoredPlacesEnabled: { ...(f.sponsoredPlacesEnabled || {}), feed: e.target.checked },
+                            }))
+                          }
+                        />
+                        Community feed injection
+                      </label>
+                    </div>
+                  </div>
                   <div className="admin-form-group">
                     <label htmlFor="as-ga">Analytics ID (GA4)</label>
                     <input id="as-ga" value={form.analyticsId} onChange={(e) => setForm((f) => ({ ...f, analyticsId: e.target.value }))} placeholder="G-XXXXXXXXXX" />

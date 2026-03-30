@@ -3438,6 +3438,10 @@ a.ig-reel-handle--link:hover {
     margin-top: 10px;
   }
 
+  .ig-feed-stagger--sponsored {
+    margin: 8px 0 4px;
+  }
+
   /* Instagram-like reels: one reel per full screen with snap. */
   .ig-feed-stack--reels {
     gap: 0;

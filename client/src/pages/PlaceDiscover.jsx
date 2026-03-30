@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
 import GlobalSearchBar from '../components/GlobalSearchBar';
+import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
@@ -113,6 +114,7 @@ export default function PlaceDiscover() {
   const [tripModalLoading, setTripModalLoading] = useState(false);
   const [tripAddSaving, setTripAddSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [sponsoredDiscover, setSponsoredDiscover] = useState([]);
 
   const searchParamsRef = useRef(searchParams);
   searchParamsRef.current = searchParams;
@@ -165,6 +167,22 @@ export default function PlaceDiscover() {
   }, [langParam]);
 
   useEffect(() => {
+    let cancelled = false;
+    api
+      .sponsoredPlaces({ surface: 'discover', lang: langParam })
+      .then((r) => {
+        if (cancelled) return;
+        setSponsoredDiscover(Array.isArray(r.items) ? r.items : []);
+      })
+      .catch(() => {
+        if (!cancelled) setSponsoredDiscover([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [langParam]);
+
+  useEffect(() => {
     if (!tripPickPlace || !user) {
       setTripModalTrips([]);
       return;
@@ -195,6 +213,15 @@ export default function PlaceDiscover() {
     return m;
   }, [places]);
 
+  const sponsoredPlaceIdSet = useMemo(() => {
+    const s = new Set();
+    (sponsoredDiscover || []).forEach((it) => {
+      if (it?.placeId != null) s.add(String(it.placeId));
+      if (it?.place?.id != null) s.add(String(it.place.id));
+    });
+    return s;
+  }, [sponsoredDiscover]);
+
   const filteredPlaces = useMemo(() => {
     let base = places;
     if (categoryParam) {
@@ -206,8 +233,15 @@ export default function PlaceDiscover() {
       const narrow = filterPlacesByQuery(base, q);
       base = narrow.length > 0 ? narrow : base;
     }
-    return sortDiscoverPlaces(base, { query: qParam, sort: sortParam === 'rating' || sortParam === 'name' ? sortParam : 'recommended' });
-  }, [places, categoryParam, qParam, sortParam]);
+    const sorted = sortDiscoverPlaces(base, { query: qParam, sort: sortParam === 'rating' || sortParam === 'name' ? sortParam : 'recommended' });
+    if (sponsoredPlaceIdSet.size === 0) return sorted;
+    return sorted.slice().sort((a, b) => {
+      const sa = sponsoredPlaceIdSet.has(String(a?.id)) ? 1 : 0;
+      const sb = sponsoredPlaceIdSet.has(String(b?.id)) ? 1 : 0;
+      if (sa !== sb) return sb - sa;
+      return 0;
+    });
+  }, [places, categoryParam, qParam, sortParam, sponsoredPlaceIdSet]);
 
   const setParam = useCallback(
     (key, value) => {
@@ -436,6 +470,11 @@ export default function PlaceDiscover() {
           <p className="pd-empty">{t('home', 'noSpots')}</p>
         ) : (
           <section className={`pd-mosaic pd-mosaic--${viewMode}`} aria-labelledby="pd-results-heading">
+            {sponsoredDiscover.length > 0 && viewMode === 'list' ? (
+              <div className="pd-sponsored-inline">
+                <SponsoredPlaceCard item={sponsoredDiscover[0]} t={t} variant="inline" />
+              </div>
+            ) : null}
             {filteredPlaces.map((p) => (
               <DiscoverCard
                 key={p.id}

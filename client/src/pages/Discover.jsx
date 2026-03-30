@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
 import FeedPostCard from '../components/FeedPostCard';
 import OfferCard from '../components/OfferCard';
+import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { trackEvent } from '../utils/analytics';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
 import './Discover.css';
@@ -486,6 +487,7 @@ export default function Discover() {
   const [promotions, setPromotions] = useState([]);
   const [redeemedPromotionIds, setRedeemedPromotionIds] = useState([]);
   const [places, setPlaces] = useState([]);
+  const [sponsoredFeed, setSponsoredFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [placeScopeMeta, setPlaceScopeMeta] = useState(null);
@@ -795,6 +797,35 @@ export default function Discover() {
       cancelled = true;
     };
   }, [tab, placeScopeId, t]);
+
+  useEffect(() => {
+    if (tab !== 'feed' || placeScopeId) {
+      setSponsoredFeed([]);
+      return undefined;
+    }
+    const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
+    let cancelled = false;
+    api
+      .sponsoredPlaces({ surface: 'feed', lang: langParam })
+      .then((r) => {
+        if (cancelled) return;
+        setSponsoredFeed(Array.isArray(r.items) ? r.items : []);
+      })
+      .catch(() => {
+        if (!cancelled) setSponsoredFeed([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, placeScopeId, lang]);
+
+  const injectedFeedRows = useMemo(() => {
+    const base = orderedFeedPosts.map((p) => ({ kind: 'post', post: p }));
+    if (tab !== 'feed' || sponsoredFeed.length === 0 || base.length === 0) return base;
+    const rows = base.slice();
+    rows.splice(Math.min(2, rows.length), 0, { kind: 'sponsored', item: sponsoredFeed[0] });
+    return rows;
+  }, [tab, sponsoredFeed, orderedFeedPosts]);
 
   useEffect(() => {
     if (tab !== 'reel') return;
@@ -1124,24 +1155,39 @@ export default function Discover() {
         {!loading && !error && tab === 'feed' && orderedFeedPosts.length > 0 && (
           <>
             <div className="ig-feed-stack">
-              {orderedFeedPosts.map((p, i) => (
-                <div
-                  key={p.id}
-                  className="ig-feed-stagger"
-                  style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}
-                  data-feed-kind="feed"
-                  data-post-id={String(p.id)}
-                >
-                  <FeedPostCard
-                    post={p}
-                    user={user}
-                    onPatch={patchFeedPost}
-                    onRemove={removeFeedPost}
-                    t={t}
-                    discoverBasePath={discoverBasePath}
-                  />
-                </div>
-              ))}
+              {injectedFeedRows.map((row, i) => {
+                if (row.kind === 'sponsored') {
+                  return (
+                    <div
+                      key={`sponsored-${row.item?.id || row.item?.placeId || i}`}
+                      className="ig-feed-stagger ig-feed-stagger--sponsored"
+                      style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}
+                      data-feed-kind="sponsored"
+                    >
+                      <SponsoredPlaceCard item={row.item} t={t} variant="inline" />
+                    </div>
+                  );
+                }
+                const p = row.post;
+                return (
+                  <div
+                    key={p.id}
+                    className="ig-feed-stagger"
+                    style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}
+                    data-feed-kind="feed"
+                    data-post-id={String(p.id)}
+                  >
+                    <FeedPostCard
+                      post={p}
+                      user={user}
+                      onPatch={patchFeedPost}
+                      onRemove={removeFeedPost}
+                      t={t}
+                      discoverBasePath={discoverBasePath}
+                    />
+                  </div>
+                );
+              })}
             </div>
             {feedHasMore ? <div ref={feedSentinelRef} className="ig-feed-sentinel" aria-hidden="true" /> : null}
             {feedLoadingMore ? (

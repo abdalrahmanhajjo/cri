@@ -8,6 +8,7 @@ import { useToast } from '../context/ToastContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import Icon from '../components/Icon';
 import { CommunityFeedStrip } from '../components/CommunityFeed';
+import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { trackEvent } from '../utils/analytics';
 import { homeBentoDefaults, resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
 import {
@@ -726,6 +727,7 @@ export default function Explore() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [communityPosts, setCommunityPosts] = useState([]);
+  const [sponsoredHome, setSponsoredHome] = useState([]);
   const [loadNonce, setLoadNonce] = useState(0);
 
   useEffect(() => {
@@ -830,6 +832,23 @@ export default function Explore() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
+    let cancelled = false;
+    api
+      .sponsoredPlaces({ surface: 'home', lang: langParam })
+      .then((r) => {
+        if (cancelled) return;
+        setSponsoredHome(Array.isArray(r.items) ? r.items : []);
+      })
+      .catch(() => {
+        if (!cancelled) setSponsoredHome([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lang]);
 
   const heroTitle = settings.siteName?.trim() || t('home', 'heroTitle');
   const heroTagline = resolveHeroTagline(settings, t);
@@ -1120,6 +1139,22 @@ export default function Explore() {
       {/* Featured picks first; community feed directly below */}
       {topPicks.length > 0 && (
         <TopPicksCarousel places={topPicks} t={t} />
+      )}
+
+      {sponsoredHome.length > 0 && (
+        <section className="vd-section vd-sponsored" aria-label={t('discover', 'sponsoredSectionTitle')}>
+          <div className="vd-container">
+            <header className="vd-section-head">
+              <h2 className="vd-section-title">{t('discover', 'sponsoredSectionTitle')}</h2>
+              <p className="vd-section-sub">{t('home', 'bentoMosaicKicker')}</p>
+            </header>
+            <div className="vd-sponsored-grid">
+              {sponsoredHome.slice(0, 6).map((item) => (
+                <SponsoredPlaceCard key={item.id || item.placeId} item={item} t={t} variant="tile" />
+              ))}
+            </div>
+          </div>
+        </section>
       )}
 
       {communityPosts.length > 0 && (

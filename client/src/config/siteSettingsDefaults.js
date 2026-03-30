@@ -32,4 +32,9 @@ export const siteSettingsDefaults = {
   homeBentoAvatar1: '',
   homeBentoAvatar2: '',
   homeBentoAvatar3: '',
+  sponsoredPlacesEnabled: {
+    home: true,
+    discover: true,
+    feed: true,
+  },
 };

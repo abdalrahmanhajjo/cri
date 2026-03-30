@@ -544,6 +544,12 @@ export const api = {
       get: () => api.get('/api/admin/site-settings'),
       save: (settings) => api.put('/api/admin/site-settings', { settings }),
     },
+    sponsoredPlaces: {
+      list: () => api.get('/api/admin/sponsored-places'),
+      create: (body) => api.post('/api/admin/sponsored-places', body),
+      update: (id, body) => api.patch(`/api/admin/sponsored-places/${encodeURIComponent(id)}`, body),
+      delete: (id) => api.delete(`/api/admin/sponsored-places/${encodeURIComponent(id)}`),
+    },
     emailBroadcast: (body) => api.post('/api/admin/email-broadcast', body),
     content: {
       get: () => api.get('/api/admin/content'),
@@ -626,6 +632,16 @@ export const api = {
       update: (id, body) => api.patch(`/api/business/promotions/${encodeURIComponent(id)}`, body),
       delete: (id) => api.delete(`/api/business/promotions/${encodeURIComponent(id)}`),
     },
+  },
+  sponsoredPlaces: (params) => {
+    const qs = new URLSearchParams();
+    if (params && typeof params === 'object') {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+      });
+    }
+    const q = qs.toString();
+    return api.get(`/api/sponsored-places${q ? `?${q}` : ''}`);
   },
   /** Public community feed (approved + discoverable only). GET sends Bearer token when logged in for liked_by_me / saved_by_me. */
   communityFeed: (params) => {
