@@ -1753,7 +1753,7 @@
   color: var(--plan-muted);
 }
 
-.plan-page .plan-fav-empty .material-symbols-outlined {
+.plan-page .plan-fav-empty .icon--bootstrap {
   display: block;
   margin: 0 auto 16px;
   opacity: 0.5;

@@ -1,32 +1,25 @@
-import { useRef, useEffect, useMemo } from 'react';
-import Lottie from 'lottie-react';
 import { getIconDoc } from '../config/iconRegistry';
+import { getBootstrapIconSlug } from '../config/bootstrapIconMap';
 
-const variantModules = import.meta.glob('../assets/lottie-by-variant/*.json', {
-  eager: true,
-  import: 'default',
-});
-const overrideModules = import.meta.glob('../assets/flaticon-overrides/*.json', {
-  eager: true,
-  import: 'default',
-});
+// Subset only (see bootstrapIconMap): Vite inlines eager globs; *.svg would ship ~2k files.
+const rawSvgs = import.meta.glob(
+  '../../node_modules/bootstrap-icons/icons/{arrow-bar-up,arrow-left,arrow-right,arrow-up,arrows-fullscreen,at,balloon-fill,bank,bookmark,bookmark-fill,box-arrow-right,box-arrow-up-right,buildings,calendar-day,calendar-event-fill,calendar-month,camera-fill,car-front-fill,cash-coin,chat,chat-dots-fill,chat-left-text-fill,check-circle-fill,check-lg,chevron-down,chevron-left,chevron-right,chevron-up,circle,clipboard,clock,compass,compass-fill,crosshair,cup-hot-fill,dash-circle,dash-lg,diagram-3,envelope,envelope-check,exclamation-circle,exclamation-triangle-fill,eye,eye-slash,film,funnel,geo-alt,geo-alt-fill,globe2,google-play,grid-3x3-gap-fill,hand-index,heart,heart-fill,hourglass-split,images,journal-text,key-fill,lightning-charge,link-45deg,list-task,list-ul,lock-fill,map,moon-stars-fill,patch-check-fill,pencil-square,people-fill,person-circle,person-fill,person-plus-fill,person-walking,phone,phone-fill,pin-map-fill,play-circle-fill,plus-lg,printer,question-circle,reply,rss,search,send-fill,share,shield-check,shield-lock,shop,signpost-fill,sliders,star-fill,stars,tag-fill,three-dots,three-dots-vertical,ticket-perforated,trash,tree,universal-access-circle,volume-mute-fill,volume-up-fill,water,x-lg}.svg',
+  {
+    eager: true,
+    query: '?raw',
+    import: 'default',
+  },
+);
 
-function pickModule(map, slug, folder) {
-  const hit = Object.keys(map).find((p) => p.includes(`${folder}/${slug}.json`));
-  return hit ? map[hit] : null;
-}
-
-function usePrefersReducedMotion() {
-  return useMemo(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return false;
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }, []);
+function rawSvgForSlug(slug) {
+  const hit = Object.keys(rawSvgs).find((p) => p.endsWith(`/${slug}.svg`));
+  return hit ? rawSvgs[hit] : null;
 }
 
 /**
- * Animated Lottie icon. Default animations are small in-repo placeholders per family
- * (replace with Flaticon Lottie JSON in `src/assets/flaticon-overrides/{name}.json` when licensed).
- * Semantics: see `getIconDoc` in `config/iconRegistry.js`.
+ * Static SVG icon from [Bootstrap Icons](https://github.com/twbs/icons) (MIT).
+ * `name` stays the Material-style key used across the app; it is mapped internally.
+ * Accessibility notes: `config/iconRegistry.js` → `getIconDoc`.
  */
 export default function Icon({
   name,
@@ -36,47 +29,21 @@ export default function Icon({
   title,
   ...props
 }) {
-  const reduceMotion = usePrefersReducedMotion();
-  const lottieRef = useRef(null);
   const doc = getIconDoc(name);
-  const animationData =
-    pickModule(overrideModules, name, 'flaticon-overrides') ||
-    pickModule(variantModules, doc.variant, 'lottie-by-variant');
+  const slug = getBootstrapIconSlug(name);
+  let svg = rawSvgForSlug(slug);
+  if (!svg) svg = rawSvgForSlug('question-circle');
 
   const { style: propStyle, 'aria-hidden': ariaHiddenDash, ...restProps } = props;
   let hidden = ariaHidden;
   if (ariaHiddenDash === true || ariaHiddenDash === 'true') hidden = true;
   if (ariaHiddenDash === false || ariaHiddenDash === 'false') hidden = false;
 
-  useEffect(() => {
-    if (!reduceMotion || !lottieRef.current) return;
-    try {
-      lottieRef.current.goToAndStop(0, true);
-    } catch {
-      /* noop */
-    }
-  }, [reduceMotion, name, animationData]);
-
   const label = title ?? (hidden ? undefined : doc.description);
-
-  if (!animationData) {
-    return (
-      <span
-        className={`material-symbols-outlined icon ${className}`.trim()}
-        style={{ fontSize: size, ...(propStyle || {}) }}
-        aria-hidden={hidden ? true : undefined}
-        aria-label={label}
-        role={hidden ? undefined : 'img'}
-        {...restProps}
-      >
-        {name}
-      </span>
-    );
-  }
 
   return (
     <span
-      className={`icon icon--lottie ${className}`.trim()}
+      className={`icon icon--bootstrap ${className}`.trim()}
       style={{
         width: size,
         height: size,
@@ -84,7 +51,9 @@ export default function Icon({
         alignItems: 'center',
         justifyContent: 'center',
         verticalAlign: 'middle',
+        flexShrink: 0,
         lineHeight: 0,
+        color: 'inherit',
         ...(propStyle || {}),
       }}
       aria-hidden={hidden ? true : undefined}
@@ -92,15 +61,7 @@ export default function Icon({
       role={hidden ? undefined : 'img'}
       title={hidden ? undefined : doc.description}
       {...restProps}
-    >
-      <Lottie
-        animationData={animationData}
-        loop={!reduceMotion}
-        autoplay={!reduceMotion}
-        lottieRef={lottieRef}
-        style={{ width: size, height: size }}
-        aria-hidden={hidden}
-      />
-    </span>
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
   );
 }
