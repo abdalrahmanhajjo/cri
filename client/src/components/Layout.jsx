@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import Icon from './Icon';
 import BackToTop from './BackToTop';
@@ -15,6 +16,7 @@ const AI_BANNER_DISMISSED_KEY = 'tripoli_ai_banner_dismissed';
 export default function Layout() {
   const { user, logout } = useAuth();
   const { lang, setLanguage, t } = useLanguage();
+  const { showToast } = useToast();
   const { settings } = useSiteSettings();
   const navigate = useNavigate();
   const location = useLocation();
@@ -47,6 +49,7 @@ export default function Layout() {
   const handleLogout = () => {
     logout();
     setMenuOpen(false);
+    showToast(t('feedback', 'signedOut'), 'info');
     navigate('/');
   };
 
@@ -199,7 +202,12 @@ export default function Layout() {
                         <button
                           type="button"
                           className={`nav-lang-option ${lang === code ? 'nav-lang-option--active' : ''}`}
-                          onClick={() => { setLanguage(code); setLangOpen(false); closeMenu(); }}
+                          onClick={() => {
+                           setLanguage(code);
+                           setLangOpen(false);
+                           closeMenu();
+                           showToast(t('feedback', 'languageChanged'), 'success');
+                         }}
                         >
                           {code === 'en' ? 'English' : code === 'ar' ? 'العربية' : 'Français'}
                         </button>
@@ -322,7 +330,12 @@ export default function Layout() {
                       <button
                         type="button"
                         className={`nav-lang-option ${lang === code ? 'nav-lang-option--active' : ''}`}
-                        onClick={() => { setLanguage(code); setLangOpen(false); closeMenu(); }}
+                        onClick={() => {
+                          setLanguage(code);
+                          setLangOpen(false);
+                          closeMenu();
+                          showToast(t('feedback', 'languageChanged'), 'success');
+                        }}
                       >
                         {code === 'en' ? 'English' : code === 'ar' ? 'العربية' : 'Français'}
                       </button>

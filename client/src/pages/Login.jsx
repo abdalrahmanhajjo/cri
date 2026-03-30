@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import Icon from '../components/Icon';
 import './Auth.css';
 
@@ -17,6 +19,8 @@ export default function Login() {
   const [verifyEmailTarget, setVerifyEmailTarget] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { t } = useLanguage();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -34,6 +38,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email.trim(), password);
+      showToast(t('feedback', 'signedIn'), 'success');
       navigate(from, { replace: true });
     } catch (err) {
       const errCode = err?.data?.code;
@@ -47,7 +52,9 @@ export default function Login() {
       if (errCode === 'EMAIL_NOT_VERIFIED' && typeof err?.data?.verificationEmail === 'string') {
         setVerifyEmailTarget(err.data.verificationEmail);
       }
-      setError(err.message || 'Sign in failed. Please try again.');
+      const msg = err.message || t('feedback', 'loginFailed');
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }

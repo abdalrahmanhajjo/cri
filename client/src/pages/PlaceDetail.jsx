@@ -7,6 +7,7 @@ import { getPlaceImageUrl } from '../api/client';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
 import './Detail.css';
 
@@ -66,6 +67,7 @@ export default function PlaceDetail() {
   const location = useLocation();
   const { t, lang } = useLanguage();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [place, setPlace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -256,32 +258,50 @@ export default function PlaceDetail() {
     if (!place) return;
     const placeId = String(place.id);
     if (isFavourite) {
-      api.user.removeFavourite(placeId).catch(() => {});
-      setIsFavourite(false);
+      api.user
+        .removeFavourite(placeId)
+        .then(() => {
+          setIsFavourite(false);
+          showToast(t('feedback', 'favouriteRemoved'), 'success');
+        })
+        .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
     } else {
-      api.user.addFavourite(placeId).catch(() => {});
-      setIsFavourite(true);
+      api.user
+        .addFavourite(placeId)
+        .then(() => {
+          setIsFavourite(true);
+          showToast(t('feedback', 'favouriteAdded'), 'success');
+        })
+        .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
     }
-  }, [user, place, isFavourite, navigate]);
+  }, [user, place, isFavourite, navigate, showToast, t]);
 
   const handleShare = useCallback(() => {
     if (typeof navigator !== 'undefined' && navigator.share && place) {
-      navigator.share({
-        title: place.name,
-        text: place.description || place.name,
-        url: window.location.href,
-      }).catch(() => {});
+      navigator
+        .share({
+          title: place.name,
+          text: place.description || place.name,
+          url: window.location.href,
+        })
+        .then(() => showToast(t('feedback', 'tripShareOpened'), 'success'))
+        .catch(() => {});
     } else {
-      navigator.clipboard?.writeText(window.location.href).then(() => {
-        setCopyToast(true);
-        setTimeout(() => setCopyToast(false), 2000);
-      }).catch(() => {});
+      navigator.clipboard
+        ?.writeText(window.location.href)
+        .then(() => {
+          setCopyToast(true);
+          setTimeout(() => setCopyToast(false), 2000);
+          showToast(t('feedback', 'linkCopied'), 'success');
+        })
+        .catch(() => showToast(t('feedback', 'actionFailed'), 'error'));
     }
-  }, [place]);
+  }, [place, showToast, t]);
 
   const handlePrint = useCallback(() => {
+    showToast(t('feedback', 'printDialog'), 'info');
     window.print();
-  }, []);
+  }, [showToast, t]);
 
   const handleCheckIn = useCallback(() => {
     if (!place) return;
@@ -303,12 +323,17 @@ export default function PlaceDetail() {
           setCheckinMsg(
             r.alreadyCheckedInToday ? t('detail', 'checkInAlreadyToday') : t('detail', 'checkInSuccess')
           );
+          showToast(
+            r.alreadyCheckedInToday ? t('detail', 'checkInAlreadyToday') : t('feedback', 'checkInDone'),
+            r.alreadyCheckedInToday ? 'info' : 'success'
+          );
         })
         .catch((e) => {
           const code = e?.data?.code;
           if (code === 'LOCATION_REQUIRED') setCheckinMsg(t('detail', 'checkInNeedLocation'));
           else if (code === 'TOO_FAR') setCheckinMsg(t('detail', 'checkInTooFar'));
           else setCheckinMsg(e.message || t('detail', 'checkInFailed'));
+          showToast(t('feedback', 'actionFailed'), 'error');
         });
     };
 
@@ -336,7 +361,7 @@ export default function PlaceDetail() {
       },
       { enableHighAccuracy: true, timeout: 18000, maximumAge: 0 }
     );
-  }, [place, user, navigate, t]);
+  }, [place, user, navigate, t, showToast]);
 
   const submitInquiry = useCallback(
     (e) => {
@@ -371,11 +396,15 @@ export default function PlaceDetail() {
           setGuestPhone('');
           if (user?.email) setGuestEmail(user.email);
           else setGuestEmail('');
+          showToast(t('feedback', 'inquirySent'), 'success');
         })
-        .catch((err) => setInqStatus(err.message || 'Could not send'))
+        .catch((err) => {
+          setInqStatus(err.message || 'Could not send');
+          showToast(t('feedback', 'inquiryFailed'), 'error');
+        })
         .finally(() => setInqSending(false));
     },
-    [place, user, inqMessage, guestName, guestEmail, guestPhone, inquiryIntent]
+    [place, user, inqMessage, guestName, guestEmail, guestPhone, inquiryIntent, showToast, t]
   );
 
   const submitSiteReview = useCallback(
@@ -402,6 +431,7 @@ export default function PlaceDetail() {
         setPlace(p);
         setPlaceReviews(Array.isArray(revRes.reviews) ? revRes.reviews : []);
         setReviewMsg({ type: 'ok', text: t('detail', 'reviewThanks') });
+        showToast(t('feedback', 'reviewSaved'), 'success');
       } catch (err) {
         const code = err?.data?.code;
         const msg =
@@ -409,11 +439,12 @@ export default function PlaceDetail() {
             ? t('detail', 'reviewHiddenByModeration')
             : err?.message || t('detail', 'reviewSubmitFailed');
         setReviewMsg({ type: 'err', text: msg });
+        showToast(t('feedback', 'reviewFailed'), 'error');
       } finally {
         setReviewSubmitting(false);
       }
     },
-    [user, place, id, reviewBody, reviewRating, reviewTitle, t, lang]
+    [user, place, id, reviewBody, reviewRating, reviewTitle, t, lang, showToast]
   );
 
   const deleteMyReview = useCallback(async () => {
@@ -430,12 +461,14 @@ export default function PlaceDetail() {
       setPlace(p);
       setPlaceReviews(Array.isArray(revRes.reviews) ? revRes.reviews : []);
       setReviewMsg({ type: 'ok', text: t('detail', 'reviewDeleted') });
+      showToast(t('feedback', 'reviewDeleted'), 'success');
     } catch (err) {
       setReviewMsg({ type: 'err', text: err?.message || t('detail', 'reviewSubmitFailed') });
+      showToast(t('feedback', 'reviewFailed'), 'error');
     } finally {
       setReviewSubmitting(false);
     }
-  }, [user, place, id, myReview, t, lang]);
+  }, [user, place, id, myReview, t, lang, showToast]);
 
   const openLightbox = useCallback(
     (index) => {

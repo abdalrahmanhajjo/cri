@@ -2,6 +2,7 @@ import { useEffect, useState, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { ToastProvider } from './context/ToastContext';
 import api, { getToken, getStoredUser } from './api/client';
 import Layout from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
@@ -289,9 +290,11 @@ export default function App() {
     <BrowserRouter>
       <ScrollToTop />
       <LanguageProvider>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </ToastProvider>
       </LanguageProvider>
     </BrowserRouter>
   );

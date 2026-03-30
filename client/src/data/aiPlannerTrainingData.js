@@ -6,11 +6,15 @@ export const plannerQualityRules = `
 **Accuracy & JSON (mandatory):**
 - Never invent a placeId. Copy each "id" exactly from the "Available places" list — character-for-character.
 - Before emitting PLAN_JSON, count slots: they must match the trip (days × places per day) when that is set.
-- suggestedTime must be plausible (e.g. 9:00–18:00 for most sites); respect opening hours when you know them.
-- Spread variety: mix categories (heritage, food, souks, views) when the user did not ask for a single theme.
-- Multi-day: set dayIndex on every slot; balance stops across days; do not duplicate the same placeId on the same day unless the user asked.
+- suggestedTime must be plausible (e.g. 9:00–18:00 for most sites). When a place lists bestTime morning|afternoon|evening, bias suggestedTime into that band unless the user overrides.
+- **Routing:** Prefer clustering stops with the same "area" (old_city vs mina) within a half-day block to limit walking. Alternate intense stops (citadel, long visits) with lighter ones (cafes, short viewpoints).
+- **Meals:** For full-day plans, include at least one food-appropriate stop near midday (category/tags) unless the user asked for a non-food-only theme.
+- **Budget:** Match price/tags to the user's budget tier when possible; for "luxury" pick standout experiences without repeating the same category.
+- Spread variety: mix heritage, food, souks, waterfront when the user did not ask for one theme — avoid three similar stops in a row unless requested.
+- Multi-day: set dayIndex on every slot; balance across days; never repeat the same placeId in one trip unless the user explicitly wants a return visit.
 - If the user message is vague ("ok", "yes", "do it"), infer from trip context and interests — still only use listed placeIds.
 - Short user typos (knefe, souk, citdel) — map intent to Tripoli places from the list, do not refuse.
+- Optionally add one short factual Tripoli tip before PLAN_JSON (heat, prayer times, Friday) when helpful — keep it brief.
 `;
 
 const planningExamples = [

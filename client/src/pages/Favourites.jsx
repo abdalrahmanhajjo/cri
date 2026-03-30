@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import Icon from '../components/Icon';
 import { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
@@ -38,6 +39,7 @@ function PlaceCardWithRemove({ place, onRemove, removeLabel }) {
 
 export default function Favourites() {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -66,12 +68,19 @@ export default function Favourites() {
     loadFavourites();
   }, [loadFavourites]);
 
-  const handleRemove = useCallback((placeId) => {
-    const idStr = String(placeId);
-    api.user.removeFavourite(idStr).then(() => {
-      setPlaces((prev) => prev.filter((p) => String(p.id) !== idStr));
-    }).catch(() => {});
-  }, []);
+  const handleRemove = useCallback(
+    (placeId) => {
+      const idStr = String(placeId);
+      api.user
+        .removeFavourite(idStr)
+        .then(() => {
+          setPlaces((prev) => prev.filter((p) => String(p.id) !== idStr));
+          showToast(t('feedback', 'favouriteRemoved'), 'success');
+        })
+        .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
+    },
+    [showToast, t]
+  );
 
   if (loading) {
     return (
