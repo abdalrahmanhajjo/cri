@@ -285,6 +285,43 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.ai-planner__chat-loading {
+  align-self: stretch;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(15, 118, 110, 0.08);
+  border: 1px dashed rgba(15, 118, 110, 0.28);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary-dark, #0d5c56);
+  text-align: center;
+}
+
+.ai-planner__chat-empty {
+  align-self: stretch;
+  padding: 16px 14px;
+  border-radius: 14px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e7e5e4);
+  box-shadow: 0 2px 10px rgba(28, 25, 23, 0.04);
+}
+
+.ai-planner__chat-empty p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #57534e);
+  text-align: center;
+}
+
+.ai-planner__bubble-para {
+  margin: 0 0 0.65em;
+}
+
+.ai-planner__bubble-para:last-child {
+  margin-bottom: 0;
+}
+
 .ai-planner__overlap-actions {
   margin-top: 12px;
   padding-top: 12px;
@@ -1060,6 +1097,55 @@
   line-height: 1.45;
   resize: vertical;
   background: var(--color-surface, #fff);
+}
+
+.ai-planner-field__section-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-primary, #1c1917);
+}
+
+.ai-planner-field__help {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--color-text-secondary, #57534e);
+}
+
+.ai-planner-field--memory {
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border, #e7e5e4);
+}
+
+.ai-planner__memory-note {
+  width: 100%;
+  min-height: 88px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border, #e7e5e4);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  resize: vertical;
+  background: var(--color-surface, #fff);
+}
+
+.ai-planner-memory-clear {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #e7e5e4);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #57534e);
+  cursor: pointer;
+}
+
+.ai-planner-memory-clear:hover {
+  background: var(--color-surface-variant, #f5f5f4);
+  color: var(--color-text-primary, #1c1917);
 }
 
 .ai-planner__stop-name {

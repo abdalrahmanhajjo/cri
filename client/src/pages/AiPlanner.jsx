@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Icon from '../components/Icon';
 import {
@@ -18,6 +19,15 @@ import {
   findOverlappingTrips,
   findNextNonOverlappingDateRange,
 } from '../utils/tripPlannerHelpers';
+import {
+  loadPlannerMemory,
+  savePlannerMemory,
+  createEmptyPlannerMemory,
+  recordSuccessfulPlan,
+  buildUserFamiliarityBlock,
+  sanitizePersonalNote,
+  topMemoryCategoriesForRanker,
+} from '../utils/aiPlannerUserMemory';
 import './AiPlanner.css';
 
 function apiBase() {
@@ -63,9 +73,11 @@ function buildDraftPlanContextLine(slots, placeById, durationDays) {
 
 export default function AiPlanner() {
   const { t, lang } = useLanguage();
+  const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
+  const storageUserId = user?.id != null ? String(user.id) : 'anon';
   const messagesEndRef = useRef(null);
   const messagesScrollRef = useRef(null);
   const chipsBarRef = useRef(null);
@@ -104,6 +116,10 @@ export default function AiPlanner() {
   const [aiReplaceSheet, setAiReplaceSheet] = useState(null);
   const [aiReplaceNote, setAiReplaceNote] = useState('');
   const [activeChipEditor, setActiveChipEditor] = useState(null);
+
+  const [plannerMemory, setPlannerMemory] = useState(() => createEmptyPlannerMemory());
+  const [profilePlannerHints, setProfilePlannerHints] = useState({});
+  const saveNoteTimeoutRef = useRef(null);
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
@@ -197,6 +213,82 @@ export default function AiPlanner() {
       cancelled = true;
     };
   }, [langParam]);
+
+  useEffect(() => {
+    setPlannerMemory(loadPlannerMemory(storageUserId));
+  }, [storageUserId]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setProfilePlannerHints({});
+      return undefined;
+    }
+    let cancelled = false;
+    api.user
+      .profile()
+      .then((p) => {
+        if (cancelled) return;
+        setProfilePlannerHints({
+          city: p.city || '',
+          mood: p.mood || '',
+          pace: p.pace || '',
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setProfilePlannerHints({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(
+    () => () => {
+      if (saveNoteTimeoutRef.current) clearTimeout(saveNoteTimeoutRef.current);
+    },
+    []
+  );
+
+  const userFamiliarityBlock = useMemo(
+    () =>
+      buildUserFamiliarityBlock({
+        memory: plannerMemory,
+        profileHints: profilePlannerHints,
+      }),
+    [plannerMemory, profilePlannerHints]
+  );
+
+  const learnedCategoryHints = useMemo(
+    () => topMemoryCategoriesForRanker(plannerMemory, 5),
+    [plannerMemory]
+  );
+
+  const updatePlannerPersonalNote = useCallback(
+    (raw) => {
+      const personalNote = sanitizePersonalNote(raw);
+      setPlannerMemory((prev) => {
+        const next = { ...prev, personalNote };
+        if (saveNoteTimeoutRef.current) clearTimeout(saveNoteTimeoutRef.current);
+        saveNoteTimeoutRef.current = setTimeout(() => {
+          savePlannerMemory(storageUserId, next);
+          saveNoteTimeoutRef.current = null;
+        }, 450);
+        return next;
+      });
+    },
+    [storageUserId]
+  );
+
+  const clearPlannerLearnedMemory = useCallback(() => {
+    if (!window.confirm(t('aiPlanner', 'visitorMemoryClearConfirm'))) return;
+    if (saveNoteTimeoutRef.current) {
+      clearTimeout(saveNoteTimeoutRef.current);
+      saveNoteTimeoutRef.current = null;
+    }
+    const empty = createEmptyPlannerMemory();
+    setPlannerMemory(empty);
+    savePlannerMemory(storageUserId, empty);
+  }, [storageUserId, t]);
 
   useEffect(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -418,6 +510,8 @@ export default function AiPlanner() {
           previousSlots: lastSlots,
           previousPlaces: lastPlaces,
           singleReplaceSlotIndex: null,
+          userFamiliarityBlock,
+          learnedCategoryHints,
         });
 
         applyAiTripSettingsToState(tripSettings);
@@ -436,6 +530,14 @@ export default function AiPlanner() {
             places: resolvedPlaces,
           },
         ]);
+
+        if (slots?.length) {
+          setPlannerMemory((prev) => {
+            const next = recordSuccessfulPlan(prev, slots, placeById);
+            savePlannerMemory(storageUserId, next);
+            return next;
+          });
+        }
       } catch (e) {
         const msg =
           e instanceof AIPlannerApiError
@@ -465,6 +567,9 @@ export default function AiPlanner() {
       placeById,
       t,
       applyAiTripSettingsToState,
+      userFamiliarityBlock,
+      storageUserId,
+      learnedCategoryHints,
     ]
   );
 
@@ -515,6 +620,8 @@ export default function AiPlanner() {
         previousSlots: previousSlotsSnapshot,
         previousPlaces: previousSlotsSnapshot.map((s) => placeById[s.placeId]).filter(Boolean),
         singleReplaceSlotIndex: slotIndex,
+        userFamiliarityBlock,
+        learnedCategoryHints,
       });
 
       applyAiTripSettingsToState(tripSettings);
@@ -533,6 +640,14 @@ export default function AiPlanner() {
           places: resolvedPlaces,
         },
       ]);
+
+      if (slots?.length) {
+        setPlannerMemory((prev) => {
+          const next = recordSuccessfulPlan(prev, slots, placeById);
+          savePlannerMemory(storageUserId, next);
+          return next;
+        });
+      }
     } catch (e) {
       const errMsg =
         e instanceof AIPlannerApiError ? e.message : t('aiPlanner', 'errorGeneric');
@@ -558,6 +673,9 @@ export default function AiPlanner() {
     langParam,
     t,
     applyAiTripSettingsToState,
+    userFamiliarityBlock,
+    storageUserId,
+    learnedCategoryHints,
   ]);
 
   const pushDateOverlapAssistantMessage = useCallback(
@@ -895,6 +1013,7 @@ export default function AiPlanner() {
               key={m.label}
               type="button"
               className="ai-planner__mood"
+              title={m.prompt}
               disabled={sending || !aiConfigured || dataLoading}
               onClick={() => sendMessage(m.prompt)}
             >
@@ -1025,6 +1144,16 @@ export default function AiPlanner() {
 
       <div className="ai-planner__chat">
         <div ref={messagesScrollRef} className="ai-planner__messages">
+          {dataLoading && (
+            <div className="ai-planner__chat-loading" role="status" aria-live="polite">
+              {t('aiPlanner', 'chatLoadingPlaces')}
+            </div>
+          )}
+          {!dataLoading && messages.length === 0 && (
+            <div className="ai-planner__chat-empty">
+              <p>{t('aiPlanner', 'chatEmptyHint')}</p>
+            </div>
+          )}
           {messages.map((m, i) => (
             <div key={i}>
               <div
@@ -1032,7 +1161,13 @@ export default function AiPlanner() {
                   m.role === 'user' ? 'ai-planner__bubble--user' : 'ai-planner__bubble--assistant'
                 }${m.error ? ' ai-planner__bubble--error' : ''}`}
               >
-                {m.content}
+                {m.role === 'assistant' && !m.error && m.content
+                  ? m.content.split(/\n\n+/).map((para, pi) => (
+                      <p key={pi} className="ai-planner__bubble-para">
+                        {para}
+                      </p>
+                    ))
+                  : m.content}
                 {m.error && m.retryText && (
                   <div className="ai-planner__plan-actions" style={{ marginTop: 10 }}>
                     <button
@@ -1470,6 +1605,27 @@ export default function AiPlanner() {
                   );
                 })}
               </div>
+            </div>
+            <div className="ai-planner-field ai-planner-field--memory">
+              <h4 className="ai-planner-field__section-title">{t('aiPlanner', 'visitorMemoryTitle')}</h4>
+              <p className="ai-planner-field__help">{t('aiPlanner', 'visitorMemoryHelp')}</p>
+              <label htmlFor="ai-planner-visitor-note">{t('aiPlanner', 'visitorMemoryLabel')}</label>
+              <textarea
+                id="ai-planner-visitor-note"
+                className="ai-planner__memory-note"
+                rows={4}
+                value={plannerMemory.personalNote}
+                onChange={(e) => updatePlannerPersonalNote(e.target.value)}
+                maxLength={600}
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                className="ai-planner-memory-clear"
+                onClick={clearPlannerLearnedMemory}
+              >
+                {t('aiPlanner', 'visitorMemoryClear')}
+              </button>
             </div>
             <button type="button" className="ai-planner-sheet-close" onClick={() => setSettingsOpen(false)}>
               {t('placeDiscover', 'modalClose')}

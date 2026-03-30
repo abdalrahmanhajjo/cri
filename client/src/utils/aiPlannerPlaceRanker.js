@@ -102,13 +102,25 @@ export function rankPlacesForPlanner(places, options = {}) {
     interestNames = [],
     budget = 'moderate',
     maxForPrompt = 52,
+    learnedCategoryHints = [],
   } = options;
 
   const list = Array.isArray(places) ? [...places] : [];
   if (list.length === 0) return { ordered: [], hintLines: [] };
 
+  const learnedSet = new Set(
+    (Array.isArray(learnedCategoryHints) ? learnedCategoryHints : [])
+      .map((c) => norm(c))
+      .filter(Boolean)
+  );
+
   const kw = extractPlannerKeywords(userMessage, interestNames, budget);
-  const scored = list.map((p) => ({ p, s: scorePlace(p, kw) }));
+  const scored = list.map((p) => {
+    let s = scorePlace(p, kw);
+    const catn = norm(p.category);
+    if (learnedSet.size > 0 && catn && learnedSet.has(catn)) s += 3;
+    return { p, s };
+  });
   scored.sort((a, b) => b.s - a.s);
 
   const taken = new Set();
@@ -182,6 +194,11 @@ export function rankPlacesForPlanner(places, options = {}) {
   }
   if (interestNames?.length) {
     hintLines.push(`User selected themes: ${interestNames.join(', ')} — weight those heavily in choices and reasons.`);
+  }
+  if (learnedCategoryHints.length) {
+    hintLines.push(
+      `From earlier AI plans on this device they often saw these listing categories: ${learnedCategoryHints.slice(0, 6).join(', ')} — when it fits the request, lean on that taste but still add variety.`
+    );
   }
 
   return { ordered, hintLines };
