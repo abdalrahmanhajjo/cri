@@ -13,6 +13,8 @@ export default function Login() {
   const [errorKind, setErrorKind] = useState('error');
   /** After API says email not verified — show button to open code entry page */
   const [showVerifyCodeCta, setShowVerifyCodeCta] = useState(false);
+  /** When login used username, API returns real email for the verify link */
+  const [verifyEmailTarget, setVerifyEmailTarget] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -28,6 +30,7 @@ export default function Login() {
     setError('');
     setErrorKind('error');
     setShowVerifyCodeCta(false);
+    setVerifyEmailTarget('');
     setLoading(true);
     try {
       await login(email.trim(), password);
@@ -41,6 +44,9 @@ export default function Login() {
         setErrorKind('error');
       }
       setShowVerifyCodeCta(errCode === 'EMAIL_NOT_VERIFIED');
+      if (errCode === 'EMAIL_NOT_VERIFIED' && typeof err?.data?.verificationEmail === 'string') {
+        setVerifyEmailTarget(err.data.verificationEmail);
+      }
       setError(err.message || 'Sign in failed. Please try again.');
     } finally {
       setLoading(false);
@@ -73,27 +79,27 @@ export default function Login() {
 
             <div className="auth-field">
               <label htmlFor="login-email" className="auth-label">
-                Email address
+                Email or username
               </label>
               <div className="auth-input-wrap">
                 <Icon name="mail" className="auth-input-icon" size={22} />
                 <input
                   id="login-email"
-                  type="email"
+                  type="text"
                   className={`auth-input ${showFieldError ? 'auth-input--error' : ''}`}
-                  placeholder="you@example.com"
+                  placeholder="you@example.com or your_handle"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
                     setError('');
                     setErrorKind('error');
                     setShowVerifyCodeCta(false);
+                    setVerifyEmailTarget('');
                   }}
                   required
-                  autoComplete="email"
+                  autoComplete="username"
                   autoCapitalize="off"
                   autoCorrect="off"
-                  inputMode="email"
                   aria-invalid={showFieldError}
                   aria-describedby={error ? 'login-error' : undefined}
                   disabled={loading}
@@ -118,6 +124,7 @@ export default function Login() {
                     setError('');
                     setErrorKind('error');
                     setShowVerifyCodeCta(false);
+                    setVerifyEmailTarget('');
                   }}
                   required
                   autoComplete="current-password"
@@ -157,9 +164,10 @@ export default function Login() {
             <button
               type="button"
               className="btn-outline auth-submit auth-verify-code-btn"
-              onClick={() =>
-                navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`)
-              }
+              onClick={() => {
+                const verifyAddr = verifyEmailTarget || email.trim();
+                navigate(`/verify-email?email=${encodeURIComponent(verifyAddr)}`);
+              }}
             >
               Enter 6-digit verification code
             </button>

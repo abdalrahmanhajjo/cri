@@ -328,6 +328,8 @@ export const api = {
   siteSettings: () => api.get('/api/site-settings'),
 
   auth: {
+    checkUsername: (username) =>
+      api.get(`/api/auth/check-username?username=${encodeURIComponent(username || '')}`),
     login: (email, password) => api.post('/api/auth/login', { email, password }),
     register: (name, username, email, password) =>
       api.post('/api/auth/register', { name, username, email, password }),
@@ -542,6 +544,7 @@ export const api = {
       get: () => api.get('/api/admin/site-settings'),
       save: (settings) => api.put('/api/admin/site-settings', { settings }),
     },
+    emailBroadcast: (body) => api.post('/api/admin/email-broadcast', body),
     content: {
       get: () => api.get('/api/admin/content'),
       save: (overrides) => api.put('/api/admin/content', { overrides }),

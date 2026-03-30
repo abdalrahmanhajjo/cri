@@ -28,6 +28,8 @@ export default function Layout() {
     }
   });
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  /** One-time banner after email verification (set from VerifyEmail via sessionStorage). */
+  const [verifyWelcomeBanner, setVerifyWelcomeBanner] = useState(null);
   const langRef = useRef(null);
   const langDrawerRef = useRef(null);
   const isHome = location.pathname === '/';
@@ -73,6 +75,23 @@ export default function Layout() {
       document.body.style.overflow = prev;
     };
   }, [lockScroll]);
+
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const raw = sessionStorage.getItem('tripoli-welcome-after-verify');
+      if (!raw) return;
+      sessionStorage.removeItem('tripoli-welcome-after-verify');
+      const data = JSON.parse(raw);
+      if (!data || typeof data.at !== 'number' || Date.now() - data.at > 120000) return;
+      setVerifyWelcomeBanner({
+        name: (data.name && String(data.name).trim()) || user.name || 'there',
+        emailSent: data.welcomeEmailSent === true,
+      });
+    } catch {
+      /* ignore */
+    }
+  }, [user?.id]);
 
   return (
     <div className="layout">
@@ -362,6 +381,33 @@ export default function Layout() {
             />
           </div>
         </>
+      )}
+
+      {verifyWelcomeBanner && (
+        <div
+          className="site-settings-banner site-settings-banner--announcement"
+          role="status"
+          style={{
+            background: 'linear-gradient(135deg, #14523a 0%, #0d3d2e 100%)',
+            color: '#fff',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid rgba(255,255,255,0.12)',
+          }}
+        >
+          <p className="site-settings-banner-text" style={{ color: '#fff', textAlign: 'left', flex: 1 }}>
+            Welcome to {settings.siteName?.trim() || 'Visit Tripoli'}, {verifyWelcomeBanner.name}! Your account is verified
+            {verifyWelcomeBanner.emailSent ? ' — we also sent a short welcome message to your inbox.' : '.'}
+          </p>
+          <button
+            type="button"
+            className="ai-plan-banner-dismiss"
+            onClick={() => setVerifyWelcomeBanner(null)}
+            aria-label="Dismiss welcome message"
+            style={{ color: 'rgba(255,255,255,0.9)', flexShrink: 0 }}
+          >
+            <Icon name="close" size={18} />
+          </button>
+        </div>
       )}
 
       {settings.maintenanceMode && (
