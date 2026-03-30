@@ -10,6 +10,7 @@ export default function VerifyEmail() {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [noSmtpHint, setNoSmtpHint] = useState(false);
   const { applySession } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -17,6 +18,7 @@ export default function VerifyEmail() {
   useEffect(() => {
     const e = searchParams.get('email');
     if (e) setEmail(e.trim());
+    setNoSmtpHint(searchParams.get('nosmtp') === '1');
   }, [searchParams]);
 
   async function handleSubmit(e) {
@@ -53,10 +55,17 @@ export default function VerifyEmail() {
 
         <div className="auth-card card">
           <h2 className="auth-title">Verify email</h2>
+          {noSmtpHint ? (
+            <div className="auth-error auth-error--info" role="status" style={{ marginBottom: 16 }}>
+              Outgoing mail may not be configured on this server. Your 6-digit code was printed in the API server log —
+              enter it below. Or ask an administrator to set SMTP in the API{' '}
+              <code className="auth-code-inline">.env</code> so codes are delivered to your inbox.
+            </div>
+          ) : null}
           <p className="auth-verify-lead">
-            Use the same 6-digit code from your email or the Tripoli app. You can open this screen anytime from{' '}
-            <strong>Log in</strong> (button “Enter 6-digit verification code”) or by going to{' '}
-            <code className="auth-code-inline">/verify-email</code> on this website.
+            New accounts must verify this email before you can sign in and use the site. Use the 6-digit code from your
+            inbox (or the Tripoli app). You can return here anytime from <strong>Log in</strong> (“Enter 6-digit
+            verification code”) or <code className="auth-code-inline">/verify-email</code>.
           </p>
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
             {error && (

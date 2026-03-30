@@ -21,8 +21,6 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
-  /** After register when API did not send email (no SMTP) — show instructions before home */
-  const [smtpNotice, setSmtpNotice] = useState(false);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -93,32 +91,6 @@ export default function Register() {
         </div>
 
         <div className="auth-card card">
-          {smtpNotice ? (
-            <>
-              <h2 className="auth-title">Account created</h2>
-              <div className="auth-error auth-error--info" role="status">
-                We could not send a verification email. Ask your administrator to configure outgoing mail (SMTP) in
-                the API <code className="auth-code-inline">.env</code>, or check the server log for your 6-digit code.
-              </div>
-              <p className="auth-error-help" style={{ marginTop: 14 }}>
-                Already have a code?{' '}
-                <Link
-                  to={`/verify-email?email=${encodeURIComponent(email.trim())}`}
-                  className="auth-error-help-link"
-                >
-                  Verify your email
-                </Link>
-              </p>
-              <button
-                type="button"
-                className="btn-primary auth-submit"
-                onClick={() => navigate('/', { replace: true })}
-              >
-                Continue to Tripoli
-              </button>
-            </>
-          ) : (
-            <>
           <h2 className="auth-title">Sign up</h2>
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
             {error && (
@@ -320,8 +292,6 @@ export default function Register() {
           <p className="auth-footer">
             Already have an account? <Link to="/login">Log in</Link>
           </p>
-            </>
-          )}
         </div>
 
         <div className="auth-secure-note" role="status">

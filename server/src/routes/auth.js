@@ -86,9 +86,9 @@ router.post('/register', sanitizeAuthInput, async (req, res) => {
       console.error('[Register] Verification email failed:', e.message);
       return res.status(500).json({ error: 'Could not send verification email. Try again later.' });
     }
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    /** No JWT until email is verified — same rule as all authenticated API routes (see auth middleware). */
     res.status(201).json({
-      token,
+      requiresEmailVerification: true,
       verificationEmailDelivered,
       user: {
         id: user.id,

@@ -297,7 +297,13 @@ async function requestNoDedupe(path, options = {}, serverRetriesLeft = MAX_RETRI
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401 && token) clearAuthStorageAndNotify();
-    if (res.status === 403 && token && data.code === 'ACCOUNT_BLOCKED') clearAuthStorageAndNotify();
+    if (
+      res.status === 403 &&
+      token &&
+      (data.code === 'ACCOUNT_BLOCKED' || data.code === 'EMAIL_NOT_VERIFIED')
+    ) {
+      clearAuthStorageAndNotify();
+    }
     if (res.status >= 500 && serverRetriesLeft > 0) {
       await sleepAbortable(RETRY_DELAY_MS, options.signal);
       return requestNoDedupe(path, options, serverRetriesLeft - 1);
