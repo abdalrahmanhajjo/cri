@@ -18,7 +18,7 @@ import {
 } from '../utils/bentoHeroImage';
 import { cityHeroWebpSrcSet, CITY_HERO_SIZES } from '../constants/cityHero';
 import { resolveHeroTagline, resolveFooterTagline } from '../config/resolveSiteTagline';
-import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
+import { COMMUNITY_PATH, PLACES_DISCOVER_PATH, discoverSearchUrl } from '../utils/discoverPaths';
 import { PLAN_TRIP_AREA_NAV, PLAN_TRIP_AREA_I18N_KEYS, mapSearchUrl } from '../config/planTripAreas';
 import { applyHomeSeoFromSettings } from '../utils/siteSeo';
 import { getApiOrigin } from '../utils/apiOrigin';
@@ -522,7 +522,7 @@ function themeCategoryStats(bucket, categories) {
   return { categoryCount: resolved, listingCount: (bucket || []).length };
 }
 
-/** Map browse by theme — own section, placed above community on the home page. */
+/** Discover browse by theme — links go to `/discover` with `q` (not the map). */
 function BrowseMapByThemeSection({ t, lang, places = [], categories = [] }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const placesByWay = groupPlacesByWay(places, categories);
@@ -567,11 +567,11 @@ function BrowseMapByThemeSection({ t, lang, places = [], categories = [] }) {
               (n) => safeT('home', 'findYourWayThemeMore').split('{count}').join(String(n))
             );
             const rowTitle = titleFromCategories || safeT('home', way.titleKey);
-            const mapTo = way.discoverQ ? mapSearchUrl(way.discoverQ) : mapSearchUrl('');
+            const discoverTo = way.discoverQ ? discoverSearchUrl(way.discoverQ) : discoverSearchUrl('');
             return (
               <Link
                 key={way.wayKey}
-                to={mapTo}
+                to={discoverTo}
                 className={`vd-find-your-way-row ${stagger}`}
                 role="listitem"
               >
@@ -608,8 +608,8 @@ function BrowseMapByThemeSection({ t, lang, places = [], categories = [] }) {
         </div>
 
         <div className="vd-find-your-way-cta-wrap">
-          <Link to={mapSearchUrl('')} className="vd-find-your-way-cta">
-            {safeT('home', 'seeAllWaysMap')}
+          <Link to={discoverSearchUrl('')} className="vd-find-your-way-cta">
+            {safeT('home', 'seeAllWaysDiscover')}
             <Icon name="arrow_forward" size={20} />
           </Link>
         </div>
@@ -618,7 +618,7 @@ function BrowseMapByThemeSection({ t, lang, places = [], categories = [] }) {
   );
 }
 
-/** Areas, transport/stay/tips — below community + featured picks on the home page. */
+/** Areas, transport/stay/tips — below featured picks and community on the home page. */
 function FindYourWayPracticalSection({ t, showMap = true, showTips = true }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   return (
@@ -1114,16 +1114,16 @@ export default function Explore() {
         </div>
       </section>
 
-      {/* Map by theme — first; #experience hash targets this block */}
+      {/* Discover by theme — first; #experience hash targets this block */}
       <BrowseMapByThemeSection t={t} lang={lang} places={placesList} categories={categories} />
+
+      {/* Featured picks first; community feed directly below */}
+      {topPicks.length > 0 && (
+        <TopPicksCarousel places={topPicks} t={t} />
+      )}
 
       {communityPosts.length > 0 && (
         <CommunityFeedStrip posts={communityPosts} t={t} moreTo={COMMUNITY_PATH} layout="bento" />
-      )}
-
-      {/* Featured picks + areas / practical cards — after community */}
-      {topPicks.length > 0 && (
-        <TopPicksCarousel places={topPicks} t={t} />
       )}
 
       <FindYourWayPracticalSection
