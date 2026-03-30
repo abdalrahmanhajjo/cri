@@ -5,7 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
 import Icon from '../components/Icon';
 import HciSettingsPanel from '../components/HciSettingsPanel';
-import api from '../api/client';
+import api, { getImageUrl } from '../api/client';
 import {
   checkPasswordRequirements,
   PASSWORD_REQUIREMENTS,
@@ -182,6 +182,7 @@ export default function Profile() {
   const handle = (profile?.username && String(profile.username).trim()) || '';
   const initial = (displayName || displayEmail || '?').charAt(0).toUpperCase();
   const avatarUrl = profile?.avatarUrl || user?.avatarUrl;
+  const avatarSrc = avatarUrl ? getImageUrl(String(avatarUrl)) : '';
   const { full: memberFull, short: memberShort } = formatMemberSince(
     profile?.createdAt || user?.createdAt,
     locale
@@ -206,7 +207,7 @@ export default function Profile() {
         <div className="profile-hero-content">
           <div className="profile-avatar-wrap">
             <div className="profile-avatar profile-avatar--hero">
-              {avatarUrl ? <img src={avatarUrl} alt="" /> : initial}
+              {avatarSrc ? <img src={avatarSrc} alt="" /> : initial}
             </div>
             <label className={`profile-avatar-edit ${avatarUploading ? 'profile-avatar-edit--busy' : ''}`}>
               <input

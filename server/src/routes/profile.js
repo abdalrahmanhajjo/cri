@@ -76,14 +76,17 @@ router.get('/profile', async (req, res) => {
     const user = userResult.rows[0];
     const profileResult = await query('SELECT * FROM profiles WHERE user_id = $1', [userId]);
     const profile = profileResult.rows[0] || {};
-    const baseUrl = (req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http')) + '://' + (req.get('x-forwarded-host') || req.get('host') || 'localhost:' + (process.env.PORT || 3000));
-    const avatarUrl = user.avatar_url && !user.avatar_url.startsWith('http') ? baseUrl + user.avatar_url : (user.avatar_url || null);
+    const avatarPath = user.avatar_url || null;
+    // Return a relative URL for local uploads (works with Vite proxy in dev and with getImageUrl() on the client).
+    const avatarUrl =
+      typeof avatarPath === 'string' && avatarPath.startsWith('http') ? avatarPath : avatarPath;
     res.json({
       id: user.id,
       name: user.name || (profile.username && profile.username.replace(/^@/, '')) || '',
       username: profile.username || (user.name ? '@' + user.name.toLowerCase().replace(/\s/g, '') : ''),
       email: user.email,
       avatarUrl: avatarUrl || null,
+      avatarPath: avatarPath || null,
       city: profile.city || '',
       bio: profile.bio || '',
       mood: profile.mood || 'mixed',
@@ -187,14 +190,8 @@ router.post('/profile/avatar', avatarUpload.single('file'), async (req, res) => 
     const relativeUrl = `/uploads/avatars/${fileName}`;
     await query('UPDATE users SET avatar_url = $1 WHERE id = $2', [relativeUrl, userId]);
 
-    const baseUrl =
-      (req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http')) +
-      '://' +
-      (req.get('x-forwarded-host') ||
-        req.get('host') ||
-        'localhost:' + (process.env.PORT || 3000));
-    const avatarUrl = baseUrl + relativeUrl;
-    res.json({ avatarUrl, avatarPath: relativeUrl });
+    // Keep it relative; the web client resolves with getImageUrl() (and Vite proxies /uploads in dev).
+    res.json({ avatarUrl: relativeUrl, avatarPath: relativeUrl });
   } catch (err) {
     await fs.promises.unlink(multerPath).catch(() => {});
     if (err.code === 'HEIC_CONVERT_FAILED') return res.status(422).json({ error: err.message });
