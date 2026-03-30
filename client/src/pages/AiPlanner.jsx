@@ -107,6 +107,50 @@ function inferTripSettingsFromUserText(raw) {
   if (/\bmoderate\b/.test(lower) || /\bmid\b/.test(lower) || /\bmedium\b/.test(lower)) next.budget = 'moderate';
   if (/\bluxury\b/.test(lower) || /\bhigh\b/.test(lower) || /\bexpensive\b/.test(lower)) next.budget = 'luxury';
 
+  // Start date: allow "2026-04-02", "2 apr 2026", "apr 2 2026"
+  const iso = lower.match(/\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/);
+  if (iso) {
+    const y = Number(iso[1]);
+    const m = Number(iso[2]);
+    const d = Number(iso[3]);
+    if (y && m >= 1 && m <= 12 && d >= 1 && d <= 31) next.startDate = { y, m, d };
+  } else {
+    const months = {
+      jan: 1,
+      january: 1,
+      feb: 2,
+      february: 2,
+      mar: 3,
+      march: 3,
+      apr: 4,
+      april: 4,
+      may: 5,
+      jun: 6,
+      june: 6,
+      jul: 7,
+      july: 7,
+      aug: 8,
+      august: 8,
+      sep: 9,
+      sept: 9,
+      september: 9,
+      oct: 10,
+      october: 10,
+      nov: 11,
+      november: 11,
+      dec: 12,
+      december: 12,
+    };
+    const dmy = lower.match(/\b(\d{1,2})\s*(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\s*(20\d{2})\b/);
+    const mdy = lower.match(/\b(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\s*(\d{1,2})\s*(20\d{2})\b/);
+    const hit = dmy
+      ? { y: Number(dmy[3]), m: months[dmy[2]], d: Number(dmy[1]) }
+      : mdy
+        ? { y: Number(mdy[3]), m: months[mdy[1]], d: Number(mdy[2]) }
+        : null;
+    if (hit?.y && hit?.m && hit?.d) next.startDate = hit;
+  }
+
   return Object.keys(next).length ? next : null;
 }
 
@@ -568,6 +612,7 @@ export default function AiPlanner() {
       if (inferred?.durationDays != null) setDurationDays(inferred.durationDays);
       if (inferred?.placesPerDay != null) setPlacesPerDay(inferred.placesPerDay);
       if (inferred?.budget) setBudget(inferred.budget);
+      if (inferred?.startDate) setSelectedDate(new Date(inferred.startDate.y, inferred.startDate.m - 1, inferred.startDate.d));
 
       setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
       setInput('');
