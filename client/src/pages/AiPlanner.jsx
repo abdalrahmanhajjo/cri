@@ -842,6 +842,10 @@ export default function AiPlanner() {
   }, [showPlanDayDock, durationDays, lastPlanMessageIndex, messages.length]);
 
   const dockBottomOffset = keyboardInsetPx + composerHeight;
+  /** Day-dock row (tabs + save) sits above composer; keep FAB fully above that band. */
+  const AI_PLANNER_DAY_DOCK_STACK_PX = 88;
+  const navFabBottomPx =
+    dockBottomOffset + (showPlanDayDock ? AI_PLANNER_DAY_DOCK_STACK_PX : 0) + 14;
 
   useEffect(() => {
     const onScroll = () => setNavFabVisible(window.scrollY > 160);
@@ -1293,7 +1297,15 @@ export default function AiPlanner() {
             </div>
           ))}
           {sending && (
-            <div className="ai-planner__bubble ai-planner__bubble--assistant">{t('aiPlanner', 'thinking')}</div>
+            <div className="ai-planner__thinking" role="status" aria-live="polite" aria-busy="true">
+              <span className="ai-planner__thinking-icon" aria-hidden>
+                <Icon name="auto_awesome" size={22} />
+              </span>
+              <div className="ai-planner__thinking-copy">
+                <span className="ai-planner__thinking-head">{t('aiPlanner', 'thinkingHeadline')}</span>
+                <span className="ai-planner__thinking-sub">{t('aiPlanner', 'thinkingSub')}</span>
+              </div>
+            </div>
           )}
           <div ref={messagesEndRef} />
         </div>
@@ -1593,7 +1605,8 @@ export default function AiPlanner() {
       {navFabVisible && (
         <button
           type="button"
-          className={`ai-planner__nav-fab${showPlanDayDock ? ' ai-planner__nav-fab--with-dock' : ''}`}
+          className="ai-planner__nav-fab"
+          style={{ bottom: `${navFabBottomPx}px` }}
           onClick={scrollToSiteNav}
           aria-label={t('aiPlanner', 'scrollToSiteNavAria')}
           title={t('aiPlanner', 'scrollToSiteNav')}
