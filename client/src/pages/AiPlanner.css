@@ -275,34 +275,6 @@
   padding-bottom: calc(176px + env(safe-area-inset-bottom, 0px));
 }
 
-.ai-planner__chat-toolbar {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 0 8px;
-}
-
-.ai-planner__chat-top {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--color-border, #e7e5e4);
-  background: var(--color-surface, #fff);
-  color: var(--color-text-primary, #1c1917);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.ai-planner__chat-top:hover {
-  border-color: var(--color-primary, #0f766e);
-  color: var(--color-primary, #0f766e);
-  background: rgba(15, 118, 110, 0.06);
-}
-
 .ai-planner__messages {
   flex: 1;
   min-height: 0;

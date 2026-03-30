@@ -220,12 +220,6 @@ export default function AiPlanner() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, sending]);
 
-  const scrollChatToTop = useCallback(() => {
-    const el = messagesScrollRef.current;
-    if (!el) return;
-    el.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
-
   const applyAiTripSettingsToState = useCallback(
     (tripSettings) => {
       if (!tripSettings) return;
@@ -1030,19 +1024,6 @@ export default function AiPlanner() {
       </div>
 
       <div className="ai-planner__chat">
-        {messages.length > 1 && (
-          <div className="ai-planner__chat-toolbar">
-            <button
-              type="button"
-              className="ai-planner__chat-top"
-              onClick={scrollChatToTop}
-              aria-label={t('aiPlanner', 'jumpChatTopAria')}
-            >
-              <Icon name="vertical_align_top" size={20} aria-hidden />
-              <span>{t('aiPlanner', 'jumpChatTop')}</span>
-            </button>
-          </div>
-        )}
         <div ref={messagesScrollRef} className="ai-planner__messages">
           {messages.map((m, i) => (
             <div key={i}>
