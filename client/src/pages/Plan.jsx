@@ -481,7 +481,7 @@ export default function Plan() {
   const [editName, setEditName] = useState('');
   const [editStart, setEditStart] = useState('');
   const [editEnd, setEditEnd] = useState('');
-  const prevEditStateRef = useMemo(() => ({ current: null }), []);
+  const prevEditStateRef = useRef(null);
 
   useEffect(() => {
     if (!editingTrip) {
@@ -1416,6 +1416,11 @@ export default function Plan() {
               </div>
               </div>
               )}
+              {hasUnsavedChanges ? (
+                <p className="plan-unsaved-hint" role="status">
+                  {t('home', 'planUnsavedHint')}
+                </p>
+              ) : null}
               <div className="plan-builder-actions">
                 <button type="button" className="vd-btn vd-btn--primary" onClick={handleSaveTrip} disabled={saving}>
                   {saving ? t('home', 'loading') : t('home', 'saveTrip')}

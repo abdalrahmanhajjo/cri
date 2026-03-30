@@ -789,6 +789,16 @@
 }
 
 /* ----- Builder actions ----- */
+.plan-page .plan-unsaved-hint {
+  margin: 20px 0 0;
+  font-size: 0.9375rem;
+  color: var(--color-warning-foreground, #92400e);
+  background: color-mix(in srgb, var(--color-warning, #fbbf24) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning, #d97706) 35%, transparent);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
 .plan-page .plan-builder-actions {
   display: flex;
   flex-wrap: wrap;

@@ -28,6 +28,7 @@ import {
   sanitizePersonalNote,
   topMemoryCategoriesForRanker,
 } from '../utils/aiPlannerUserMemory';
+import { loadPlannerPrefs, savePlannerPrefs } from '../utils/aiPlannerPrefs';
 import './AiPlanner.css';
 
 function apiBase() {
@@ -102,6 +103,7 @@ export default function AiPlanner() {
     return d;
   });
   const [interestIds, setInterestIds] = useState(() => new Set());
+  const [plannerPrefsReady, setPlannerPrefsReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [messages, setMessages] = useState([]);
@@ -217,6 +219,48 @@ export default function AiPlanner() {
   useEffect(() => {
     setPlannerMemory(loadPlannerMemory(storageUserId));
   }, [storageUserId]);
+
+  useEffect(() => {
+    const p = loadPlannerPrefs(storageUserId);
+    if (p) {
+      if (p.durationDays != null) setDurationDays(p.durationDays);
+      if (p.placesPerDay != null) setPlacesPerDay(p.placesPerDay);
+      if (p.budget != null) setBudget(p.budget);
+      if (p.startDate) {
+        const parts = p.startDate.slice(0, 10).split('-').map(Number);
+        const [y, mo, da] = parts;
+        if (y && mo && da) setSelectedDate(new Date(y, mo - 1, da));
+      }
+      if (Array.isArray(p.interestIds) && p.interestIds.length > 0) {
+        setInterestIds(new Set(p.interestIds));
+      }
+    }
+    setPlannerPrefsReady(true);
+    return () => {
+      setPlannerPrefsReady(false);
+    };
+  }, [storageUserId]);
+
+  const interestIdsForPrefs = useMemo(() => [...interestIds].sort().join(','), [interestIds]);
+
+  useEffect(() => {
+    if (!plannerPrefsReady) return;
+    savePlannerPrefs(storageUserId, {
+      durationDays,
+      placesPerDay,
+      budget,
+      startDate: formatYMD(selectedDate),
+      interestIds: interestIdsForPrefs ? interestIdsForPrefs.split(',') : [],
+    });
+  }, [
+    plannerPrefsReady,
+    storageUserId,
+    durationDays,
+    placesPerDay,
+    budget,
+    selectedDate,
+    interestIdsForPrefs,
+  ]);
 
   useEffect(() => {
     if (!user?.id) {
