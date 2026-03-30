@@ -1338,6 +1338,37 @@
   width: 100%;
 }
 
+.ig-feed-stagger {
+  animation: ig-feed-stagger-in 0.42s var(--ig-ease) both;
+}
+
+@keyframes ig-feed-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sponsored slot: reads as a deliberate break, aligned with feed rhythm */
+.ig-feed-stagger--sponsored {
+  margin: 2px 0 6px;
+  padding: 4px 0 2px;
+}
+
+.ig-feed-stagger--sponsored .sp-card {
+  border-radius: 16px;
+  box-shadow: 0 10px 32px rgba(30, 86, 49, 0.09);
+  border-color: color-mix(in srgb, var(--ig-accent, #1e5631) 24%, var(--ig-border, #dbdbdb));
+}
+
+.ig-feed-stagger--sponsored .sp-card:hover {
+  box-shadow: 0 16px 40px rgba(30, 86, 49, 0.12);
+}
+
 .ig-feed-sentinel {
   height: 1px;
   width: 100%;
@@ -3439,7 +3470,8 @@ a.ig-reel-handle--link:hover {
   }
 
   .ig-feed-stagger--sponsored {
-    margin: 8px 0 4px;
+    margin: 10px 0 6px;
+    padding: 2px 0;
   }
 
   /* Instagram-like reels: one reel per full screen with snap. */

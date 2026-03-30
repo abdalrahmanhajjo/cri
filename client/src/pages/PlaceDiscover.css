@@ -691,6 +691,20 @@
   grid-template-columns: 1fr;
 }
 
+.pd-sponsored-block {
+  grid-column: 1 / -1;
+  margin-bottom: 6px;
+}
+
+.pd-sponsored-kicker {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--pd-teal) 88%, var(--color-text-primary));
+}
+
 .pd-sponsored-inline {
   grid-column: 1 / -1;
 }

@@ -19,6 +19,7 @@ export default function SponsoredPlaceCard({ item, t, variant = 'tile' }) {
   const badge = String(item?.badgeText || t?.('discover', 'sponsoredLabel') || 'Sponsored').trim();
   const img = resolveImageUrl(item);
   const href = item?.ctaUrl ? String(item.ctaUrl).trim() : '';
+  const imgAlt = title ? `${title} — ${badge}` : badge;
 
   return (
     <div className={`sp-card sp-card--${variant}`}>
@@ -26,7 +27,7 @@ export default function SponsoredPlaceCard({ item, t, variant = 'tile' }) {
       <div className="sp-card-main">
         <div className="sp-card-media">
           {img ? (
-            <DeliveryImg url={img} preset="discoverCard" alt="" />
+            <DeliveryImg url={img} preset={variant === 'tile' ? 'gridCard' : 'discoverCard'} alt={imgAlt} />
           ) : (
             <span className="sp-card-fallback" aria-hidden>
               <Icon name="place" size={26} />
@@ -39,12 +40,12 @@ export default function SponsoredPlaceCard({ item, t, variant = 'tile' }) {
           <div className="sp-card-actions">
             {placeId ? (
               <Link to={`/place/${encodeURIComponent(placeId)}`} className="sp-card-link">
-                {t?.('discover', 'sponsoredViewPlace') || 'View place'}
+                <span className="sp-card-link-text">{t?.('discover', 'sponsoredViewPlace') || 'View place'}</span>
               </Link>
             ) : null}
             {href ? (
               <a className="sp-card-link sp-card-link--cta" href={href} target="_blank" rel="noreferrer">
-                {t?.('discover', 'sponsoredLearnMore') || 'Learn more'}
+                <span className="sp-card-link-text">{t?.('discover', 'sponsoredLearnMore') || 'Learn more'}</span>
               </a>
             ) : null}
           </div>
