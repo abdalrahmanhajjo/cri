@@ -2,6 +2,23 @@
  * Few-shot and quality rules for the AI planner (ported from VisitTripoliApp lib/data/ai_planner_training_data.dart).
  */
 
+/** Compact facts so the model disambiguates Tripoli, Lebanon from Tripoli, Libya and orients routing. */
+export const tripoliLebanonContext = `
+**Tripoli, Lebanon (mandatory grounding):**
+- You serve **Tripoli in North Lebanon** on the Mediterranean — **not** Tripoli, Libya. If the user says "Tripoli" without a country, assume Lebanon.
+- Core areas: **Old City / Medina** (souks, khans, mosques, dense heritage) and **Al-Mina** (port, fish market, seafront). Prefer clustering visits by area to reduce walking.
+- Signature themes: **Mamluk architecture**, historic **citadel**, **Great Mosque** and other mosques, **soap khan**, **gold/spice souks**, **knefe & sweets** (e.g. Hallab, Rahal), **seafood** near the port.
+- Practical: hot summers — suggest mornings for heavy outdoor sites; respect **prayer times** when recommending mosques; **Friday** can affect mosque visit timing.
+`;
+
+/** Users may type in any UI-related language; replies stay in the locale set by the app. */
+export const multilingualInputRules = `
+**Languages (input vs output):**
+- Users may write in **English, Arabic (العربية), or French** — including short mixes. Parse intent in **any** of these; do not ask them to switch language.
+- Your **reply language** is fixed by the instructions above (English OR Arabic OR French per UI). Never refuse a question just because it was asked in another language than the reply language.
+- Common Arabic/French tourism words map to the same Tripoli intents as English (citadel, souk, mosque, museum, food, sea, knefe, etc.) — use the "Available places" list to fulfill them.
+`;
+
 export const plannerQualityRules = `
 **Accuracy & JSON (mandatory):**
 - Never invent a placeId. Copy each "id" exactly from the "Available places" list — character-for-character.
@@ -15,6 +32,15 @@ export const plannerQualityRules = `
 - If the user message is vague ("ok", "yes", "do it"), infer from trip context and interests — still only use listed placeIds.
 - Short user typos (knefe, souk, citdel) — map intent to Tripoli places from the list, do not refuse.
 - Optionally add one short factual Tripoli tip before PLAN_JSON (heat, prayer times, Friday) when helpful — keep it brief.
+- **Known visitor:** If the system prompt includes a "Known visitor" section, use it to personalize pacing, themes, and tone. Never invent preferences not listed there; do not read private notes aloud unless it helps the plan. Prefer subtle personalization over repeating their text verbatim.
+`;
+
+export const plannerReplyStyleRules = `
+**How to write (quality):**
+- Open with a short, warm line — then, if you output PLAN_JSON, add **one** compact paragraph (2–4 sentences) explaining the **flow** of the day (area clusters, morning vs afternoon, where to pause for food). Do not repeat every stop name before the JSON; the card UI already lists them.
+- Each slot **reason** must say **why this order makes sense**: link to the **previous** stop (walking distance, same quarter), **time of day** (morning citadel, midday food), or **user theme**. Avoid generic filler ("nice place").
+- If the user already chose **interests** or **trip settings** in the app, **prefer shipping a full PLAN_JSON** on the first useful turn instead of asking redundant questions — unless they are clearly only chatting or asked a factual question.
+- Keep the prose **scannable**: short sentences; no long bullet lists before PLAN_JSON unless the user asked for comparison or detail.
 `;
 
 const planningExamples = [
@@ -61,6 +87,60 @@ const chatExamples = [
   ['surprise me', 'Pick 4-5 diverse places. Mix food, history, souks.'],
 ];
 
+/** Arabic phrases → planning intent (user may use any script; match substrings). */
+const arabicIntentHints = [
+  ['قلعة', 'Citadel / fortress — match citadel and nearby heritage.'],
+  ['القلعة', 'Citadel — morning visit; pair with Old City.'],
+  ['سوق', 'Souks — khans, gold, spices, crafts.'],
+  ['خان', 'Historic khans (soap, tailors, etc.).'],
+  ['مسجد', 'Mosques — Great Mosque, Taynal, respect prayer times.'],
+  ['متحف', 'Museums and culture — pair with Old City routes.'],
+  ['كنافة', 'Sweets / knefe — Hallab, Rahal, dessert stops.'],
+  ['حلويات', 'Sweets shops and traditional dessert.'],
+  ['مأكولات', 'Food tour — restaurants, souks, fish.'],
+  ['سمك', 'Seafood — Al-Mina, port, fish market.'],
+  ['بحر', 'Seafront / port — Mina, views, seafood.'],
+  ['ميناء', 'Port area — Al-Mina cluster.'],
+  ['طرابلس', 'Tripoli Lebanon — confirm not Libya if confused; use directory places.'],
+  ['يوم', 'Day plan — respect placesPerDay and duration.'],
+  ['رحلة', 'Trip / itinerary — build PLAN_JSON from list.'],
+  ['أماكن', 'Places to visit — suggest from directory by interests.'],
+  ['زيارة', 'Visit planning — same as itinerary.'],
+  ['صباح', 'Morning bias — citadel and outdoor first.'],
+  ['ميزانية', 'Budget — honor low/moderate/luxury tier.'],
+  ['عائلة', 'Family-friendly — shorter walks, sweets, scenic stops.'],
+];
+
+/** French phrases → planning intent. */
+const frenchIntentHints = [
+  ['citadelle', 'Citadel — Raymond de Saint-Gilles; morning visit.'],
+  ['souk', 'Souks and khans — shopping and heritage walk.'],
+  ['mosquée', 'Mosques — prayer-aware timing.'],
+  ['musée', 'Museums — culture day mix.'],
+  ['knefe', 'Sweets — knefe / patisseries from directory.'],
+  ['poisson', 'Seafood — port / Mina.'],
+  ['mer', 'Seafront — Mina, views.'],
+  ['port', 'Port area — fish market cluster.'],
+  ['visite', 'Sightseeing — build from places list.'],
+  ['itinéraire', 'Itinerary — PLAN_JSON when enough context.'],
+  ['jours', 'Multi-day — set dayIndex on every slot.'],
+  ['famille', 'Family — softer pacing, kid-friendly stops.'],
+  ['bonjour', 'Greet and offer planning help.'],
+  ['aide', 'Explain planner capabilities in reply language.'],
+  ['liban', 'Lebanon Tripoli — not Libya.'],
+];
+
+function containsArabicScript(text) {
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(String(text || ''));
+}
+
+function looksLikeFrench(text) {
+  const s = String(text || '');
+  if (/[àâäéèêëïîôùûçœæ]/i.test(s)) return true;
+  const w = s.toLowerCase();
+  return /\b(bonjour|merci|où|visite|jour|jours|itinéraire|mosquée|souk|citadelle|liban|aide)\b/i.test(w);
+}
+
 function matches(lower, pattern) {
   const p = pattern.toLowerCase().replace(/\?/g, '').replace(/\./g, '');
   const c = lower.replace(/\?/g, '').replace(/\./g, '');
@@ -73,9 +153,38 @@ function hasPossibleTypo(lower) {
   return known.some((t) => lower.includes(t));
 }
 
-export function buildFewShotPrompt(userMessage, maxExamples = 12) {
+function pushMultilingualHints(rawText, examples, maxExamples) {
+  const text = String(rawText || '');
+  if (containsArabicScript(text)) {
+    for (const [phrase, behavior] of arabicIntentHints) {
+      if (examples.length >= maxExamples) break;
+      if (text.includes(phrase)) {
+        examples.push(`User (Arabic) contains "${phrase}" → ${behavior}`);
+      }
+    }
+  }
+  if (looksLikeFrench(text)) {
+    const lower = text.toLowerCase();
+    for (const [phrase, behavior] of frenchIntentHints) {
+      if (examples.length >= maxExamples) break;
+      if (lower.includes(phrase.toLowerCase())) {
+        examples.push(`User (French) contains "${phrase}" → ${behavior}`);
+      }
+    }
+  }
+}
+
+/**
+ * @param {string} userMessage
+ * @param {number} [maxExamples]
+ * @param {{ recentUserText?: string }} [options] — optional combined recent user turns for multilingual matching
+ */
+export function buildFewShotPrompt(userMessage, maxExamples = 12, options = {}) {
+  const combined = [options.recentUserText, userMessage].filter(Boolean).join('\n');
   const lower = userMessage.toLowerCase();
   const examples = [];
+
+  pushMultilingualHints(combined, examples, maxExamples);
 
   for (const [user, behavior] of planningExamples) {
     if (examples.length >= maxExamples) break;
@@ -118,5 +227,13 @@ export function buildFewShotPrompt(userMessage, maxExamples = 12) {
 export function getPlanningTrainingContext() {
   const lines = planningExamples.slice(0, 20).map(([u, b]) => `- "${u}" → ${b}`);
   const typos = typoExamples.map(([a, b]) => `- "${a}" → ${b}`).join('\n');
-  return `**Trained on these message patterns:**\n${lines.join('\n')}\n**Typo corrections:**\n${typos}`;
+  const arSample = arabicIntentHints
+    .slice(0, 8)
+    .map(([p, b]) => `- AR "${p}" → ${b}`)
+    .join('\n');
+  const frSample = frenchIntentHints
+    .slice(0, 8)
+    .map(([p, b]) => `- FR "${p}" → ${b}`)
+    .join('\n');
+  return `**Trained on these message patterns:**\n${lines.join('\n')}\n**Typo corrections:**\n${typos}\n**Arabic intent hints (sample):**\n${arSample}\n**French intent hints (sample):**\n${frSample}`;
 }

@@ -2,7 +2,14 @@
  * AI planner client — calls POST /api/ai/complete with the same prompts as VisitTripoliApp
  * (lib/services/ai_planner_service.dart chatForTripPlan).
  */
-import { buildFewShotPrompt, plannerQualityRules, getPlanningTrainingContext } from '../data/aiPlannerTrainingData';
+import {
+  buildFewShotPrompt,
+  plannerQualityRules,
+  plannerReplyStyleRules,
+  getPlanningTrainingContext,
+  tripoliLebanonContext,
+  multilingualInputRules,
+} from '../data/aiPlannerTrainingData';
 import { formatYMD } from '../utils/tripPlannerHelpers';
 import { loadSmartScheduleContext, sortAndAssignSmartSlotTimes } from '../utils/smartVisitTiming';
 import {
@@ -519,6 +526,7 @@ function buildPlacesPromptPayload(places, ctx) {
     budget,
     previousSlots,
     singleReplaceSlotIndex,
+    learnedCategoryHints,
   } = ctx;
   const placeById = Object.fromEntries((places || []).map((p) => [String(p.id), p]));
   const fullIdSet = new Set((places || []).map((p) => String(p.id)));
@@ -527,6 +535,7 @@ function buildPlacesPromptPayload(places, ctx) {
     interestNames: userInterests,
     budget,
     maxForPrompt: 56,
+    learnedCategoryHints: Array.isArray(learnedCategoryHints) ? learnedCategoryHints : [],
   };
 
   const isRefinement =
@@ -588,6 +597,8 @@ export async function chatForTripPlan(params) {
     responseLanguage = 'en',
     previousSlots = null,
     singleReplaceSlotIndex = null,
+    userFamiliarityBlock = '',
+    learnedCategoryHints = [],
   } = params;
 
   const { placeIdSet, placesContext, rankingHints } = buildPlacesPromptPayload(places, {
@@ -596,6 +607,7 @@ export async function chatForTripPlan(params) {
     budget,
     previousSlots,
     singleReplaceSlotIndex,
+    learnedCategoryHints,
   });
 
   const lang = ['en', 'ar', 'fr'].includes(responseLanguage) ? responseLanguage : 'en';
@@ -613,7 +625,13 @@ export async function chatForTripPlan(params) {
         ? 'Les noms des lieux et les catégories viennent de la base en français : utilisez exactement ces libellés dans le texte et dans chaque "reason".'
         : 'Place names and categories in the list are in English from the database—use those exact names in your text and in each slot\'s "reason" field.';
 
-  const fewShot = buildFewShotPrompt(userMessage, 12);
+  const recentUserText = conversationHistory
+    .filter((e) => e && e.role === 'user' && e.content)
+    .slice(-4)
+    .map((e) => String(e.content))
+    .join('\n');
+
+  const fewShot = buildFewShotPrompt(userMessage, 12, { recentUserText });
   const trainingBlock = getPlanningTrainingContext();
 
   const historyStr =
@@ -642,6 +660,7 @@ ${Array.from({ length: durationDays }, (_, d) => `- Exactly ${placesPerDay} obje
 When you have enough information (e.g. days, interests, or the user asks for a plan), you MAY propose an itinerary. To do that, end your reply with a single newline then exactly: PLAN_JSON:
 Then a JSON array of objects with placeId, suggestedTime, reason; add dayIndex (0,1,...) if multiple days. Use ONLY placeIds from the "Available places" list (copy ids exactly). Example: [{"placeId":"id1","suggestedTime":"9:00","reason":"...","dayIndex":0}]
 Each "reason" should be one short sentence: why this stop fits the day, how it connects to the previous stop or user request, or a timing note (use the place's bestTime when relevant).
+Within each dayIndex, use suggestedTime values in **chronological order** from first stop to last (earlier starts first); the app requires spacing between starts on the same day.
 If the user wants 2 or more days, you MUST set dayIndex on every slot: 0 = first day, 1 = second day, etc. Spread places evenly across days.${exactCountNote}
 If you are just chatting or asking for more details, do NOT include PLAN_JSON.
 
@@ -657,6 +676,15 @@ Include ONLY fields that actually change. budget must be one of: low, moderate, 
 
   const tripoliOnly = `
 You ONLY help with Tripoli, Lebanon. Answer only about Tripoli—trip planning, its places, food, culture, history, and visiting Tripoli. If the user asks about anything unrelated to Tripoli (other cities, general knowledge, etc.), politely say you can only help with Tripoli and ask how you can help with their Tripoli visit. Never discuss other destinations.`;
+
+  const familiarity =
+    typeof userFamiliarityBlock === 'string' && userFamiliarityBlock.trim().length > 0
+      ? `
+
+**Known visitor (this browser + optional account hints — treat as private, personalize subtly):**
+${userFamiliarityBlock.trim()}
+`
+      : '';
 
   let currentPlanBlock = '';
   if (previousSlots?.length) {
@@ -707,9 +735,14 @@ ${lines.join('\n')}${replaceOneStopNote}`;
 
 ${languageInstruction}
 ${dbLocaleNote}
+${multilingualInputRules}
+${tripoliLebanonContext}
 ${tripoliOnly}
+${familiarity}
 
 ${plannerQualityRules}
+
+${plannerReplyStyleRules}
 
 **Intent examples (match user wording loosely):**
 ${fewShot}
@@ -732,7 +765,7 @@ Trip context: ${durationDays} day(s)${
       : ''
   }, budget ${budget}${
     selectedDate
-      ? `, date ${selectedDate.getDate()}/${selectedDate.getMonth() + 1}/${selectedDate.getFullYear()}`
+      ? `, trip start date (ISO) ${formatYMD(selectedDate instanceof Date ? selectedDate : new Date(selectedDate))}`
       : ''
   }${
     userInterests.length
@@ -752,12 +785,12 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
 
   const plannerTemperature =
     singleReplaceSlotIndex != null
-      ? 0.32
+      ? 0.28
       : previousSlots?.length
-        ? 0.38
+        ? 0.35
         : placesPerDay != null && placesPerDay > 0
-          ? 0.34
-          : 0.52;
+          ? 0.3
+          : 0.48;
 
   try {
     const result = await callAICompleteReliable({

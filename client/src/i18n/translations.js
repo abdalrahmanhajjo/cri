@@ -259,7 +259,8 @@ export const translations = {
       greetingMorning: 'Good morning',
       greetingAfternoon: 'Good afternoon',
       greetingEvening: 'Good evening',
-      heroSub: 'Chat in your language, tap a mood, or describe your ideal day — I’ll suggest real places and times from our directory.',
+      heroSub:
+        'Pick a mood or describe your day, adjust the trip chips — I match real Tripoli listings and sensible times (you can edit every stop afterward).',
       moodCulture: 'Culture day',
       moodCulturePrompt: 'Plan one day focused on history, museums, and heritage in Tripoli.',
       moodFood: 'Food & sweets',
@@ -283,10 +284,13 @@ export const translations = {
       budgetLuxury: 'Comfort / luxury',
       interests: 'Interests',
       send: 'Send',
-      placeholder: 'Ask for a plan, change a stop, or say hello…',
+      placeholder: 'e.g. “Half day: souks then sweets” or “Swap my lunch stop for seafood”',
       thinking: 'Thinking…',
-      thinkingHeadline: 'Crafting your Tripoli plan…',
-      thinkingSub: 'We’re matching real listings from the directory — usually just a few seconds.',
+      thinkingHeadline: 'Building your itinerary…',
+      thinkingSub: 'Matching places, areas, and times — often under a minute.',
+      chatLoadingPlaces: 'Loading places for the planner…',
+      chatEmptyHint:
+        'Tap a mood above or type what you want. When a plan appears, edit times, change a stop, or save to your trips.',
       proposedPlan: 'Suggested itinerary',
       applyTrip: 'Save to my trips',
       applying: 'Saving…',
@@ -347,6 +351,13 @@ export const translations = {
       hciPrinciplesSummary: 'How this planner is built for you (human–computer interaction)',
       hciPrinciplesLead:
         'You are using human-centered design in practice: you speak, the assistant replies with clear plans, and you stay in control. Below are five ideas that shape this experience — especially feedback when something updates.',
+      visitorMemoryTitle: 'You & the AI',
+      visitorMemoryHelp:
+        'Optional notes stay on this device only. If you’re signed in, we also pass your profile mood and pace from your account. The assistant learns category patterns from itineraries it suggests here — not from other pages.',
+      visitorMemoryLabel: 'Notes for the assistant',
+      visitorMemoryClear: 'Clear learned trip patterns',
+      visitorMemoryClearConfirm:
+        'Clear learned patterns (categories, recent places, plan count)? Your notes above will be cleared too.',
     },
     placeDiscover: {
       eyebrow: 'Places',
@@ -1476,7 +1487,8 @@ export const translations = {
       greetingMorning: 'صباح الخير',
       greetingAfternoon: 'مساء الخير',
       greetingEvening: 'مساء الخير',
-      heroSub: 'تحدث بلغتك، اختر مزاجًا، أو صف يومك المثالي — سأقترح أماكن وأوقاتًا حقيقية من دليلنا.',
+      heroSub:
+        'اختر مزاجًا أو صف يومك وعدّل شرائط الرحلة — أطابق أماكن طرابلس الحقيقية وأوقاتًا منطقية (يمكنك تعديل كل محطة لاحقًا).',
       moodCulture: 'يوم ثقافة',
       moodCulturePrompt: 'خطط يومًا يركز على التاريخ والمتاحف والتراث في طرابلس.',
       moodFood: 'أكل وحلويات',
@@ -1500,10 +1512,13 @@ export const translations = {
       budgetLuxury: 'مريح / فاخر',
       interests: 'الاهتمامات',
       send: 'إرسال',
-      placeholder: 'اطلب خطة، غيّر محطة، أو رحّب…',
+      placeholder: 'مثلًا: «نصف يوم: أسواق ثم حلويات» أو «بدّل محطة الغداء بمأكولات بحرية»',
       thinking: 'جاري التفكير…',
-      thinkingHeadline: 'نجهّز خطتك لطرابلس…',
-      thinkingSub: 'نطابق أماكنًا حقيقية من الدليل — عادةً بضع ثوانٍ.',
+      thinkingHeadline: 'نجهّز برنامجك…',
+      thinkingSub: 'نطابق الأماكن والمناطق والأوقات — غالبًا خلال دقيقة.',
+      chatLoadingPlaces: 'جاري تحميل الأماكن للمخطط…',
+      chatEmptyHint:
+        'اضغط مزاجًا أعلاه أو اكتب ما تريد. عند ظهور الخطة يمكنك تعديل الأوقات أو تغيير محطة أو الحفظ في رحلاتك.',
       proposedPlan: 'برنامج مقترح',
       applyTrip: 'احفظ في رحلاتي',
       applying: 'جاري الحفظ…',
@@ -1562,6 +1577,13 @@ export const translations = {
       hciPrinciplesSummary: 'كيف صُمم هذا المساعد من أجلك (التفاعل الإنساني–الحاسوبي)',
       hciPrinciplesLead:
         'هنا تلمس التصميم المنسّق مع الإنسان: تتكلم، تردّ الأداة بخطط واضحة، وتبقى أنت المتحكم. فيما يلي خمسة مفاهيم تدعم التجربة — وخاصة التغذية الراجعة عند كل تحديث.',
+      visitorMemoryTitle: 'أنت والمساعد',
+      visitorMemoryHelp:
+        'الملاحظات تُخزَّن على هذا الجهاز فقط. عند تسجيل الدخول نمرّر أيضًا مزاجك ووتيرة التنقّل من ملفك. المساعد يستنتج أنماط الفئات من البرامج التي يقترحها هنا — لا من صفحات أخرى.',
+      visitorMemoryLabel: 'ملاحظات للمساعد',
+      visitorMemoryClear: 'مسح أنماط الرحلات المُتعلَّمة',
+      visitorMemoryClearConfirm:
+        'هل تريد مسح الأنماط المُتعلَّمة (الفئات، الأماكن الأخيرة، عدد الخطط)؟ ستُمسح الملاحظات أعلاه أيضًا.',
     },
     placeDiscover: {
       eyebrow: 'الأماكن',
@@ -2683,7 +2705,8 @@ export const translations = {
       greetingMorning: 'Bonjour',
       greetingAfternoon: 'Bon après-midi',
       greetingEvening: 'Bonsoir',
-      heroSub: 'Discutez dans votre langue, choisissez une ambiance ou décrivez votre journée idéale — je propose des lieux et horaires réels depuis notre annuaire.',
+      heroSub:
+        'Choisissez une ambiance ou décrivez votre journée, ajustez les pastilles — je propose des lieux réels et des horaires cohérents (modifiables ensuite).',
       moodCulture: 'Journée culture',
       moodCulturePrompt: 'Planifiez une journée axée histoire, musées et patrimoine à Tripoli.',
       moodFood: 'Gourmand',
@@ -2707,10 +2730,13 @@ export const translations = {
       budgetLuxury: 'Confort / luxe',
       interests: 'Centres d’intérêt',
       send: 'Envoyer',
-      placeholder: 'Demandez un itinéraire, modifiez une étape, ou dites bonjour…',
+      placeholder: 'ex. «Demi-journée : souks puis pâtisseries» ou «Remplacez le déjeuner par des fruits de mer»',
       thinking: 'Réflexion…',
-      thinkingHeadline: 'Nous préparons votre programme pour Tripoli…',
-      thinkingSub: 'Nous croisons avec les lieux réels de l’annuaire — en général quelques secondes.',
+      thinkingHeadline: 'Construction de votre itinéraire…',
+      thinkingSub: 'Lieux, quartiers et horaires — souvent en moins d’une minute.',
+      chatLoadingPlaces: 'Chargement des lieux pour le planificateur…',
+      chatEmptyHint:
+        'Choisissez une ambiance ci-dessus ou écrivez ce que vous voulez. Ensuite modifiez les horaires, changez une étape ou enregistrez le voyage.',
       proposedPlan: 'Itinéraire proposé',
       applyTrip: 'Enregistrer dans mes voyages',
       applying: 'Enregistrement…',
@@ -2770,6 +2796,13 @@ export const translations = {
       hciPrinciplesSummary: 'Comment ce planificateur est pensé pour vous (interaction humain–machine)',
       hciPrinciplesLead:
         'Ici vous vivez le design centré utilisateur : vous parlez, l’assistant répond avec des itinéraires clairs, et vous gardez la main. Voici cinq idées qui structurent l’expérience — surtout le retour (feedback) après chaque changement.',
+      visitorMemoryTitle: 'Vous et l’IA',
+      visitorMemoryHelp:
+        'Les notes restent sur cet appareil. Si vous êtes connecté, nous transmettons aussi l’humeur et le rythme de votre profil. L’assistant déduit des tendances à partir des itinéraires proposés ici — pas depuis le reste du site.',
+      visitorMemoryLabel: 'Notes pour l’assistant',
+      visitorMemoryClear: 'Effacer les habitudes apprises',
+      visitorMemoryClearConfirm:
+        'Effacer les habitudes (catégories, lieux récents, nombre de plans) ? Vos notes ci-dessus seront aussi supprimées.',
     },
     placeDiscover: {
       eyebrow: 'Lieux',
