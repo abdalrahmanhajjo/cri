@@ -125,27 +125,37 @@ router.post('/', upload.single('file'), async (req, res) => {
     throw e;
   }
 
-  const filename = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
-  const filePath = `${storagePrefix}/${filename}`;
-
   let pathToCleanupAfterSuccess = multerPath;
+  let transcoderCleanup = null;
   if (uploadDiskPath && storagePrefix === 'feed/videos') {
-    const prep = await prepareFeedVideoDiskPath(multerPath, safeExt);
+    const prep = await prepareFeedVideoDiskPath(multerPath, safeExt, req.file);
     uploadDiskPath = prep.diskPath;
     pathToCleanupAfterSuccess = prep.cleanupPath;
+    transcoderCleanup = prep.transcoderCleanup;
+    if (prep.safeExt) safeExt = prep.safeExt;
+    if (prep.contentType) contentType = prep.contentType;
   }
+
+  const filename = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
+  const filePath = `${storagePrefix}/${filename}`;
 
   const isProd = process.env.NODE_ENV === 'production';
   const supabase = getSupabase();
   if (!supabase && isProd) {
-    await fs.promises.unlink(pathToCleanupAfterSuccess).catch(() => {});
+    if (pathToCleanupAfterSuccess) await fs.promises.unlink(pathToCleanupAfterSuccess).catch(() => {});
+    if (transcoderCleanup) await transcoderCleanup().catch(() => {});
     return res.status(503).json({
       error: 'Uploads are not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on the server.',
     });
   }
 
   async function cleanupAfterStored() {
-    await fs.promises.unlink(pathToCleanupAfterSuccess).catch(() => {});
+    if (pathToCleanupAfterSuccess) {
+      await fs.promises.unlink(pathToCleanupAfterSuccess).catch(() => {});
+    }
+    if (transcoderCleanup) {
+      await transcoderCleanup().catch(() => {});
+    }
   }
 
   /** Supabase Node client is unreliable with fs ReadStream for large bodies; use a single buffer. */
@@ -156,7 +166,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     }
   } catch (readErr) {
     console.error('Upload read failed:', readErr);
-    await fs.promises.unlink(pathToCleanupAfterSuccess).catch(() => {});
+    await cleanupAfterStored();
     return res.status(500).json({ error: 'Could not read the uploaded file. Try a smaller video or another format.' });
   }
 
@@ -223,7 +233,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     res.json({ url: `${publicPrefix}/${filename}` });
   } catch (err) {
     console.error('Local upload error:', err);
-    await fs.promises.unlink(pathToCleanupAfterSuccess).catch(() => {});
+    await cleanupAfterStored();
     res.status(500).json({ error: err?.message || 'Upload failed' });
   }
 });

@@ -229,7 +229,7 @@ async function transcodeReelVideoFromPath(inputPath, originalname, mimetype, bod
     }
 
     let lowOutputPath = null;
-    if (process.env.REEL_ENABLE_LOW_RENDITION !== '0') {
+    if (process.env.REEL_ENABLE_LOW_RENDITION === '1') {
       const outLow = path.join(tmpDir, 'out-lb.mp4');
       try {
         await encodeLowRenditionFromHighMp4(outFile, outLow);
