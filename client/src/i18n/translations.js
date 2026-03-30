@@ -92,72 +92,130 @@ export const translations = {
       megaNeighbourhoodsDesc: 'Explore districts and areas of the city.',
     },
     aboutTripoli: {
-      title: 'The history of Tripoli, Lebanon',
+      title: 'Tripoli, Lebanon',
       intro:
-        'Tripoli is one of the Levant’s great historic cities — a place where Mediterranean routes, medieval power, and craft traditions shaped a dense old city that still works today. This page is a lightweight, readable history you can scroll without heavy loading.',
+        'Tripoli (Arabic Ṭarābulus) is the largest city in northern Lebanon and the country’s second-largest city after Beirut. It sits on the east Mediterranean roughly 81 km north of the capital, serves as seat of the North Governorate and Tripoli District, and forms one urban area with El Mina, the coastal port quarter.\n\nClassical authors linked the Greek name “Tripolis” (“triple city”) to three allied quarters associated with Tyre, Sidon, and Arwad. In Arabic usage the city is often called Ṭarābulus al-Shām to distinguish it from Tripoli in Libya.\n\nTripoli is nicknamed the “City of Knowledge and Scholars” (madīnat al-ʿilm wa-l-ʿulamāʾ). Its old city combines Crusader, Mamluk, and Ottoman layers; the offshore Palm Islands are a protected habitat for turtles, seals, and migratory birds.',
       cta_explore: 'Explore places',
       cta_community: 'See community',
-      lead_title: 'A city built from trade and stone',
       lead_text:
-        'Tripoli’s old city is best understood as a system: markets connect to khans, which connect to courtyards, which connect to major landmarks. Each era added layers — but the walk remains coherent.',
+        'Landmarks include the Citadel of Tripoli—associated with Raymond of Saint-Gilles and enlarged under later dynasties—the Ottoman-era clock tower in Al-Tell square, dense Mamluk mosques and madrasas, souks and khans, and celebrated public baths. Tripoli is widely known for Arabic sweets, olive-oil soap workshops, and metal crafts.',
       lead_img_alt:
-        'Citadel of Raymond de Saint-Gilles, historic fortress on a green hillside above Tripoli’s old city, Lebanon.',
-      jump_timeline: 'Jump to timeline',
-      jump_notes: 'Visitor notes',
-      metrics_1_value: 'Walkable core',
-      metrics_1_label: 'History is experienced on foot',
-      metrics_2_value: 'Medieval density',
-      metrics_2_label: 'Souks + khans + mosques',
-      metrics_3_value: 'Mamluk imprint',
-      metrics_3_label: 'Key shaping era for the old city',
-      metrics_4_value: 'Living city',
-      metrics_4_label: 'Not a museum — daily life continues',
-      highlights_layered_title: 'A city of layered eras',
-      highlights_layered_text:
-        'Tripoli’s identity was shaped by port routes, medieval states, Mamluk architecture, Ottoman commerce, and modern Lebanese life — all visible within a compact walk.',
-      highlights_arch_title: 'Architecture that tells stories',
-      highlights_arch_text:
-        'Courtyards, stone arches, khans, mosques, and hammams are not “ruins” — they’re living urban rooms that still guide movement and community rhythm.',
-      highlights_markets_title: 'Markets that never stopped',
-      highlights_markets_text:
-        'Souks remain functional and human-scale. The city’s merchant tradition continues through craft, food, and micro‑businesses passed down across generations.',
-      highlights_continuity_title: 'Culture with continuity',
-      highlights_continuity_text:
-        'Tripoli’s past is not behind glass: it’s heard in workshops, tasted in sweets, and seen in daily prayer, trade, and neighborhood hospitality.',
-      timeline_heading: 'Timeline: the eras that shaped Tripoli',
-      timeline_sub: 'This isn’t a textbook — it’s a scrollable story. Expand the eras you care about.',
-      timeline_1_range: 'Antiquity → Early Medieval',
-      timeline_1_title: 'Port routes and coastal city life',
-      timeline_1_body:
-        'Long before modern borders, Tripoli belonged to the rhythm of the Mediterranean: trade, movement, and coastal exchange. The city’s story begins with geography — a place where routes meet.',
-      timeline_2_range: 'Crusader period (12th century)',
-      timeline_2_title: 'Fortification, conflict, and changing power',
-      timeline_2_body:
-        'Like many Levantine cities, Tripoli’s medieval centuries included conflict, strategic fortification, and shifting rule — a chapter that left layers of memory around the old city.',
-      timeline_3_range: 'Mamluk era (13th–15th centuries)',
-      timeline_3_title: 'Urban golden age: khans, mosques, and stone craft',
-      timeline_3_body:
-        'This is the era that most visibly shaped the old city. The layout of markets, major religious architecture, and civic buildings formed a dense walkable core that still holds today.',
-      timeline_4_range: 'Ottoman era (16th–early 20th centuries)',
-      timeline_4_title: 'Commerce, neighborhoods, and everyday institutions',
-      timeline_4_body:
-        'Trade networks and local institutions matured. The city’s “daily-life” architecture — workshops, food culture, neighborhood spaces — deepened and became tradition.',
-      timeline_5_range: 'Modern Lebanon (20th century → today)',
-      timeline_5_title: 'Continuity through craft, food, and community',
-      timeline_5_body:
-        'Tripoli remains a working city, not a staged set. The best way to feel it is to walk, listen, and follow the markets — where the past is carried forward by people.',
-      notes_heading: 'How to feel the history (without a guide)',
+        'Citadel of Tripoli above the historic city and Mediterranean coast, Lebanon.',
+      toc_title: 'Contents',
+      toc_overview: 'Overview',
+      toc_names: 'Names',
+      toc_history: 'History',
+      toc_demographics: 'Demographics',
+      toc_geography: 'Geography',
+      toc_landmarks: 'Landmarks',
+      toc_education: 'Education',
+      toc_economy: 'Economy',
+      toc_sister: 'Twin towns',
+      toc_visit: 'Visitor notes',
+      infobox_title: 'City profile',
+      infobox_country_l: 'Country',
+      infobox_country_v: 'Lebanon',
+      infobox_gov_l: 'Governorate',
+      infobox_gov_v: 'North Governorate',
+      infobox_district_l: 'District',
+      infobox_district_v: 'Tripoli District',
+      infobox_pop_l: 'Population (city)',
+      infobox_pop_v: '~229,400',
+      infobox_area_l: 'Area',
+      infobox_area_v: '27.39 km²',
+      infobox_demo_l: 'Demonym',
+      infobox_demo_v: 'Tripolitan',
+      infobox_nick_l: 'Nickname',
+      infobox_nick_v: 'City of Knowledge and Scholars',
+      infobox_coord_l: 'Coordinates',
+      infobox_coord_v: '34°26′N 35°50′E',
+      infobox_web_l: 'Website',
+      wiki_read_more: 'Encyclopedia article (Wikipedia)',
+      sec_overview_h: 'Overview',
+      sec_names_h: 'Names',
+      sec_names_p:
+        'Ancient and medieval sources record several toponyms for the site. Phoenician-era “Athar” and Greek “Tripolis” stress its federated harbour quarters. Arabic Ṭarābulus and the qualifier al-Shām mark the city as the Levantine Tripoli, distinct from Ṭarābulus al-Gharb in North Africa.\n\nPoetic Arabic al-Fayḥāʾ recalls citrus blossom fragrance when orange groves ringed the city. Formal and popular forms coexist today: Modern Standard Arabic Ṭarābulus alongside Lebanese Ṭrāblus.',
+      sec_history_h: 'History',
+      sec_history_sub: 'Open a subsection for a concise summary of each major period.',
+      hist_ancient_sum: 'Ancient period',
+      hist_ancient_body:
+        'Settlement reaches deep into antiquity; much of the oldest harbour zone lies beneath modern El Mina. Tripoli served northern Phoenicia as a commercial and shipbuilding centre, gained autonomous spells under Hellenistic and Roman rule, and retained a three-quarter street plan linked to its federated origins. Earthquakes and tsunamis—such as the 551 event—periodically reshaped the coast.',
+      hist_early_sum: 'Umayyad, Abbasid and Fatimid periods',
+      hist_early_body:
+        'After the Islamic conquest in 635 CE Tripoli grew as a navy yard and emporium tied to Damascus, then flourished as a semi-independent principality under Ismaili rulers. Fatimid-era learning made the city a scholarly hub until the Crusader siege era.',
+      hist_crusader_sum: 'Crusader period',
+      hist_crusader_body:
+        'Frankish forces invested Tripoli from 1102; the capital of the County of Tripoli became a textile and sugar entrepôt with a diverse population. The citadel on “Pilgrims’ Mountain” anchored defence. In 1289 the Mamluk sultan al-Ashraf Khalil captured the city, ending crusader rule and prompting reconstruction inland.',
+      hist_mamluk_sum: 'Mamluk period',
+      hist_mamluk_body:
+        'Mamluk Tripoli was rebuilt as a provincial capital famed for stone architecture—about thirty-five major monuments survive, among them congregational mosques, madrasas, khans, and hammams arranged along winding lanes. Sugar, textiles, and soap fed long-distance trade; Barsbay Tower and upgraded citadel works mark the era.',
+      hist_ottoman_sum: 'Ottoman period',
+      hist_ottoman_body:
+        'From 1516 Tripoli headed an eyalet stretching along much of the Syrian coast; later it was folded into the Beirut vilayet. Ottoman governors restored the citadel (including an inscription of Süleyman I), sponsored mosques such as al-Muallaq, and expanded khans—notably Khan al-Saboun for the soap trade.',
+      hist_mandate_sum: 'French Mandate',
+      hist_mandate_body:
+        'After 1920 Greater Lebanon’s borders cut Tripoli from its Syrian hinterland. Sunni-majority Tripoli chafed at separation from Damascus; mass strikes in 1936 underscored pro-unity sentiment even as French policy shifted.',
+      hist_modern_sum: 'Independent Lebanon',
+      hist_modern_body:
+        'Beirut’s dominance in finance and port traffic, customs changes after 1948, civil-war destruction, and uneven reconstruction all shaped contemporary Tripoli. Institutions such as BIAT incubators and the Tripoli Special Economic Zone aim to diversify industry; the Niemeyer fairground—added to UNESCO’s World Heritage in Danger list in 2023—symbolises both ambition and interrupted urban projects.',
+      sec_demo_h: 'Demographics',
+      sec_demo_p:
+        'Tripoli is predominantly Sunni Muslim with smaller Alawite and Christian communities (including Maronites, Greek Orthodox, and Armenians) and historic Jewish memory. Dense neighbourhoods such as Bab al-Tabbaneh and Jabal Mohsen reflect complex social geography. Population figures fluctuate with migration and registration rules; the infobox uses a commonly cited city estimate.',
+      sec_geo_h: 'Geography',
+      sec_geo_climate_h: 'Climate',
+      sec_geo_climate_p:
+        'Tripoli has a hot-summer Mediterranean climate (Köppen Csa): mild, rainy winters and dry, hot summers moderated somewhat by the sea. Hail occurs in winter; snow is rare.',
+      sec_geo_islands_h: 'Offshore islands',
+      sec_geo_islands_p:
+        'The Palm Islands Nature Reserve—sometimes called Rabbit Island—covers about 20 hectares and shelters green turtles, monk seals, and bird migration routes; camping and fires are restricted. Nearby islets include Ramkin and the former shipyards of the Abdulwahab / Bakar group.',
+      sec_landmarks_h: 'Landmarks',
+      lm_citadel_h: 'Citadel of Tripoli',
+      lm_citadel_p:
+        'Known as Qalʿat Saint-Gilles after the crusader leader, the fortress crowns high ground east of the port. It was damaged in 1289, rebuilt by the Mamluks, then reworked by Ottomans—notably governors Mustafa Barbar and restoration works tied to Süleyman I.',
+      lm_clock_h: 'Clock Tower',
+      lm_clock_p:
+        'Al-Tell’s tower was erected in 1906 under Sultan Abdülhamid II; it belongs to the same imperial clock-tower programme seen from Jaffa to Thessaloniki and was renovated in 1992.',
+      lm_hammam_h: 'Hammams',
+      lm_hammam_p:
+        'Mamluk governors commissioned domed public baths; survivors include Hammam al-Jadid and Hammam al-Nouri (c. 1333) near the Great Mosque. Travellers such as Ibn Battuta praised the city’s bathing culture.',
+      lm_fair_h: 'Rachid Karami International Fair',
+      lm_fair_p:
+        'Oscar Niemeyer’s 1960s exposition complex south of the centre includes fifteen unfinished reinforced-concrete shells across 75 hectares; civil war halted work. UNESCO inscribed the site in 2023 on both the World Heritage List and the List of World Heritage in Danger.',
+      lm_rail_h: 'Tripoli Railway Station',
+      lm_rail_p:
+        'Tripoli was a northern terminus of Lebanon’s metre-gauge line to Beirut and the Bekaa; services collapsed during the civil war and the rusting station remains a symbol of lost connectivity.',
+      lm_churches_h: 'Churches',
+      lm_churches_p:
+        'Christian sanctuaries—including Maronite, Greek Orthodox, Melkite, Armenian, and Evangelical congregations—testify to centuries of pluralism alongside major Islamic foundations.',
+      lm_mosques_h: 'Mosques',
+      lm_mosques_p:
+        'The skyline clusters Mamluk-era mosques: Mansouri Great Mosque, Taynal (1336), al-Burtasi, al-Attar, al-Uwaysiyat, al-Tawbat, Muallaq, and many neighbourhood mosques built into recycled crusader or commercial fabric.',
+      sec_edu_h: 'Education',
+      sec_edu_p:
+        'Tripoli hosts branches of the Lebanese University, Beirut Arab University, City University, Jinan University, Azm University, and other specialised schools; University of Balamand and Notre Dame University lie just outside the metropolitan area.',
+      sec_econ_h: 'Economy',
+      sec_econ_p:
+        'Historic trades included silk, sugar, soap, and copperware; today poverty and unemployment remain high though craft exports, furniture, offshore services, and Tripoli port traffic keep sectors active. The Tripoli Special Economic Zone beside the harbour offers tax incentives for qualifying investors.',
+      sec_sister_h: 'International relations',
+      sec_sister_p:
+        'Municipal partnerships have been announced with cities such as Naples (Italy), Larnaca and Ayia Napa (Cyprus), Gaziantep (Turkey), Faro (Portugal), Toulouse (France), and Miami (United States); exact twinning statuses should be verified with current municipal sources.',
+      notes_heading: 'Visitor notes',
       notes_p1:
-        'Start at the Clock Tower, then follow the lanes until you hit a khan or courtyard. When you see a change in stone texture or a sudden shaded passage, slow down — that’s the city showing its age through craft.',
+        'Wear modest clothing at mosques; request consent before photographing residents. Narrow souk streets favour pedestrians—enter via obvious landmarks, carry water in summer, and respect prayer times.',
       notes_p2:
-        'A good “history walk” is simple: one landmark mosque, one khan, one market loop, and one sweets stop. The rhythm is the lesson.',
+        'Pair monumental visits (citadel, Great Mosque) with artisan quarters (soap khan, copper souk) and a sweets tasting to experience living heritage rather than façade-only tourism.',
       link_old_city: 'Old City guide',
       link_souks: 'Souks guide',
       link_sweets: 'Sweets guide',
-      facts_1: 'A major historic city on the eastern Mediterranean (North Lebanon)',
-      facts_2: 'A dense medieval core shaped strongly in the Mamluk era',
-      facts_3: 'Known for active souks, khans, hammams, and landmark mosques',
-      facts_4: 'Famous across Lebanon for traditional sweets and craft heritage',
+      facts_heading: 'Quick facts',
+      facts_1: 'Second-highest concentration of Mamluk monuments in the Levant after Cairo.',
+      facts_2: 'Forms a continuous conurbation with El Mina and hosts Lebanon’s northernmost major seaport.',
+      facts_3: 'Mansouri Great Mosque and Citadel headline a UNESCO-quality old city fabric.',
+      facts_4: 'Palm Islands UNESCO reserve protects turtles, seals, and migratory birds.',
+      facts_5: 'Rachid Karami International Fair is a modernist World Heritage property “in danger”.',
+      facts_6: 'Renown for halawiyat (Arabic sweets), olive-oil soap, and copper souk workshops.',
+      facts_7: 'Hot-summer Mediterranean climate with winter rainfall concentrated November–March.',
+      facts_8: 'Nickname “City of Knowledge and Scholars” reflects medieval libraries and schools.',
     },
     feedback: {
       languageChanged: 'Language updated.',
@@ -1253,72 +1311,129 @@ export const translations = {
       megaNeighbourhoodsDesc: 'استكشف أحياء ومناطق المدينة.',
     },
     aboutTripoli: {
-      title: 'تاريخ طرابلس، لبنان',
+      title: 'طرابلس، لبنان',
       intro:
-        'طرابلس واحدة من أبرز المدن التاريخية في المشرق — مدينة شكّلتها طرق البحر المتوسط، وقوى العصور الوسطى، وتقاليد الحِرَف، فنتج عنها قلبٌ قديم كثيف ما زال يعمل حتى اليوم. هذه صفحة تاريخ خفيفة وسهلة القراءة يمكنك تصفحها دون تحميل ثقيل.',
+        'طرابلس (طَرَابُلُس) أكبر مدن شمال لبنان والمدينة الثانية في الجمهورية من حيث الحجم بعد بيروت. تقع على الساحل الشرقي للمتوسط على بعد نحو 81 كم شمال العاصمة، وهي مركز محافظة الشمال وقضاء طرابلس، وتشكل مع الميناء إقليمًا مدينيًا متصلًا مع الميناء.\n\nيربط التراث اليوناني اسم «تريبوليس» (المدينة الثلاثية) بأحياء متحالفة مرتبطة بصور وصيدون وأرواد. في الاستخدام العربي يُقال «طرابلس الشام» تمييزًا لها عن «طرابلس الغرب» في ليبيا.\n\nتُلقّب «مدينة العلم والعلماء». المدينة القديمة تجمع طبقات صليبية ومملوكية وعثمانية، وجزر النخيل البحرية محمية طبيعية للسلاحف والثديات البحرية والطيور المهاجرة.',
       cta_explore: 'استكشف الأماكن',
       cta_community: 'شاهد المجتمع',
-      lead_title: 'مدينة بُنيت من التجارة والحجر',
       lead_text:
-        'أفضل طريقة لفهم المدينة القديمة في طرابلس هي كنظام مترابط: الأسواق تقود إلى الخانات، والخانات إلى الأفنية، والأفنية إلى المعالم. كل عصر أضاف طبقات — لكن المسار بقي منسجمًا.',
-      lead_img_alt:
-        'قلعة ريمون دو سان جيل، قلعة تاريخية على تلة خضراء فوق المدينة القديمة في طرابلس، لبنان.',
-      jump_timeline: 'اذهب إلى الخط الزمني',
-      jump_notes: 'ملاحظات للزائر',
-      metrics_1_value: 'قلب قابل للمشي',
-      metrics_1_label: 'التاريخ يُعاش على الأقدام',
-      metrics_2_value: 'كثافة مَدِينية',
-      metrics_2_label: 'أسواق + خانات + مساجد',
-      metrics_3_value: 'بصمة مملوكية',
-      metrics_3_label: 'عصرٌ شكّل المدينة القديمة',
-      metrics_4_value: 'مدينة حيّة',
-      metrics_4_label: 'ليست متحفًا — الحياة اليومية مستمرة',
-      highlights_layered_title: 'مدينة بطبقات من العصور',
-      highlights_layered_text:
-        'تكوّنت هوية طرابلس عبر طرق الموانئ، ودول العصور الوسطى، وعمارة المماليك، وتجارة العثمانيين، وحياة لبنان الحديثة — وكلها تظهر في مشيٍ قصير.',
-      highlights_arch_title: 'عمارة تحكي قصصًا',
-      highlights_arch_text:
-        'الأفنية والأقواس الحجرية والخانات والمساجد والحمّامات ليست “أطلالًا” — بل غرفٌ حضرية حيّة ما زالت تنظّم الحركة وإيقاع المجتمع.',
-      highlights_markets_title: 'أسواق لم تتوقف',
-      highlights_markets_text:
-        'الأسواق ما زالت تعمل وبمقياسٍ إنساني. تقاليد التجارة تستمر عبر الحِرَف والطعام ومشاريع صغيرة تتوارثها الأجيال.',
-      highlights_continuity_title: 'ثقافة متصلة',
-      highlights_continuity_text:
-        'ماضي طرابلس ليس خلف الزجاج: يُسمع في الورش، ويُذاق في الحلويات، ويُرى في الصلاة والتجارة وكرم الأحياء.',
-      timeline_heading: 'الخط الزمني: عصور شكّلت طرابلس',
-      timeline_sub: 'ليس كتابًا مدرسيًا — بل قصة قابلة للتمرير. افتح العصور التي تهمك.',
-      timeline_1_range: 'العصور القديمة → بدايات العصور الوسطى',
-      timeline_1_title: 'طرق الميناء وحياة المدينة الساحلية',
-      timeline_1_body:
-        'قبل الحدود الحديثة بوقت طويل، كانت طرابلس جزءًا من إيقاع البحر المتوسط: تجارة وحركة وتبادل ساحلي. تبدأ حكاية المدينة من الجغرافيا — مكان تلتقي فيه الطرق.',
-      timeline_2_range: 'الفترة الصليبية (القرن 12)',
-      timeline_2_title: 'تحصين وصراع وتبدّل سلطة',
-      timeline_2_body:
-        'مثل مدنٍ كثيرة في بلاد الشام، شهدت طرابلس صراعًا وتحصينات استراتيجية وتبدّلًا في الحكم — فصلٌ ترك طبقات من الذاكرة حول المدينة القديمة.',
-      timeline_3_range: 'العصر المملوكي (القرنان 13–15)',
-      timeline_3_title: 'عصر ذهبي حضري: خانات ومساجد وحِرفة حجر',
-      timeline_3_body:
-        'هذا هو العصر الذي شكّل المدينة القديمة بشكلٍ واضح. تخطيط الأسواق والعمارة الدينية الكبرى والمباني المدنية أنشأ قلبًا كثيفًا قابلًا للمشي ما زال قائمًا حتى اليوم.',
-      timeline_4_range: 'العصر العثماني (القرن 16–بدايات القرن 20)',
-      timeline_4_title: 'تجارة وأحياء ومؤسسات يومية',
-      timeline_4_body:
-        'نضجت شبكات التجارة والمؤسسات المحلية. وتعزّزت عمارة “الحياة اليومية” — الورش وثقافة الطعام ومساحات الأحياء — لتصبح تقليدًا.',
-      timeline_5_range: 'لبنان الحديث (القرن 20 → اليوم)',
-      timeline_5_title: 'استمرار عبر الحِرفة والطعام والمجتمع',
-      timeline_5_body:
-        'طرابلس مدينة تعمل بالفعل وليست مشهدًا مُعدًّا. أفضل طريقة للشعور بها هي المشي والإنصات واتباع الأسواق — حيث يحمل الناس الماضي إلى الحاضر.',
-      notes_heading: 'كيف تشعر بالتاريخ (دون دليل)',
+        'من أبرز المعالم قلعة طرابلس المرتبطة بريمون دو سان جيل ثم تطورها لاحقًا، وبرج الساعة العثماني في ساحة التل، وكثافة مساجد ومدارس مملوكية، وأسواق وخانات وحمامات عامة، وشهرة واسعة بحلويات العرب وزيت الزيتون والصابون والنحاس.',
+      lead_img_alt: 'قلعة طرابلس فوق المدينة التاريخية والبحر المتوسط، لبنان.',
+      toc_title: 'المحتويات',
+      toc_overview: 'نظرة عامة',
+      toc_names: 'الأسماء',
+      toc_history: 'التاريخ',
+      toc_demographics: 'الديموغرافيا',
+      toc_geography: 'الجغرافيا',
+      toc_landmarks: 'معالم',
+      toc_education: 'التعليم',
+      toc_economy: 'الاقتصاد',
+      toc_sister: 'مدن شقيقة',
+      toc_visit: 'ملاحظات الزائر',
+      infobox_title: 'ملف المدينة',
+      infobox_country_l: 'الدولة',
+      infobox_country_v: 'لبنان',
+      infobox_gov_l: 'المحافظة',
+      infobox_gov_v: 'محافظة الشمال',
+      infobox_district_l: 'القضاء',
+      infobox_district_v: 'قضاء طرابلس',
+      infobox_pop_l: 'السكان (المدينة)',
+      infobox_pop_v: 'نحو 229٬400',
+      infobox_area_l: 'المساحة',
+      infobox_area_v: '27٫39 كم²',
+      infobox_demo_l: 'النسبة الشعبية',
+      infobox_demo_v: 'طرابلسي / طرابلسية',
+      infobox_nick_l: 'اللقب',
+      infobox_nick_v: 'مدينة العلم والعلماء',
+      infobox_coord_l: 'الإحداثيات',
+      infobox_coord_v: '34°26′ شمالاً 35°50′ شرقاً',
+      infobox_web_l: 'الموقع',
+      wiki_read_more: 'مقالة موسوعية (ويكيبيديا)',
+      sec_overview_h: 'نظرة عامة',
+      sec_names_h: 'الأسماء والاشتقاق',
+      sec_names_p:
+        'وردت في المصادر القديمة أسماء مثل «أثار» في العصر الفينيقي و«تريبوليس» في اليونانية للدلالة على اتحاد أحياء مينائية. العربية «طَرَابُلُس» و«طَرَابُلُس الشام» تميز المدينة اللبنانية عن نظيرتها في المغرب العربي.\n\nلقب «الفيحاء» يستحضر عبق أزهار الحمضيات حين كانت البساتين تحيط بالمدينة.',
+      sec_history_h: 'التاريخ',
+      sec_history_sub: 'وسّع أي فترة لقراءة موجزة.',
+      hist_ancient_sum: 'العصور القديمة',
+      hist_ancient_body:
+        'تعود الاستيطان إلى أعماق التاريخ؛ جزء كبير من المرفأ القديم يقع تحت الميناء الحالي. كانت مركزًا تجاريًا وترسانة في عهد الفينيقيين والرومان، واحتفظ بتقسيم يذكر الأحياء الثلاثة. الزلازل والتسونامي، مثل زلزال 551، أعادت تشكيل الساحل أحيانًا.',
+      hist_early_sum: 'الأمويون والعباسيون والفاطميون',
+      hist_early_body:
+        'بعد الفتح الإسلامي 635م ازدهرت كمرفأ ومركز بناء سفن مرتبط بدمشق، ثم نمت تحت أمراء شبه مستقلين. العصر الفاطمي شهد ازدهارًا علميًا قبل ضغوط الحروب الصليبية.',
+      hist_crusader_sum: 'الحكم الصليبي',
+      hist_crusader_body:
+        'حاصر الصليبيون المدينة من 1102؛ أصبحت عاصمة كونتية طرابلس ومركز حرير وسكر. القلعة على جبل الحجاج ركن دفاعي. سقطت عام 1289 بيد السلطان الأشرف خليل المماليك فانهارت البنية الساحلية القديمة.',
+      hist_mamluk_sum: 'العصر المملوكي',
+      hist_mamluk_body:
+        'أعيد بناء طرابلس داخلية على بعد نحو 4كم من المرفأ القديم؛ بقي نحو 35 أثرًا بارزًا من مساجد ومدارس وخانات وحمامات. ازدهرت صناعة السكر والنسيج والصابون وتجارة أوروبا.',
+      hist_ottoman_sum: 'العصر العثماني',
+      hist_ottoman_body:
+        'من 1516 كانت مركز إيالة ثم أقليم بيروت؛ عُمّرت القلعة (منها نقش لسليمان القانوني) ومساجد مثل المعلق، وتوسّعت خانات الصابون كخان الصابون.',
+      hist_mandate_sum: 'الانتداب الفرنسي',
+      hist_mandate_body:
+        'حدود لبنان الكبير 1920 فصلت طرابلس عن سوريا؛ تصاعدت مطالب الوحدة مع دمشق وإضراب 1936 الشهير ضد السياسة الفرنسية.',
+      hist_modern_sum: 'لبنان المستقل',
+      hist_modern_body:
+        'سيطرة بيروت المالية والجمرك بعد 1948، الحرب الأهلية، وإعمار متفاوت أثّروا على المدينة. منطقة طرابلس الاقتصادية الخاصة ومؤسسات مثل BIAT تدعم الاستثمار؛ معرض رشيد كرامي الدولي (نيماير) أدرج على لائحة التراث العالمي المهدد بالخطر عام 2023.',
+      sec_demo_h: 'الديموغرافيا',
+      sec_demo_p:
+        'الغالبية السنية مع جاليات علوية ومسيحية (موارنة وأرثوذكس وأرمن وغيرهم). أحياء مثل باب التبانة وجبل محسن تعكس تنوعًا اجتماعيًا حسّاسًا. الأرقام تتغير مع الهجرة والتسجيل؛ الرقم في الملف تقدير شائع للمدينة.',
+      sec_geo_h: 'الجغرافيا',
+      sec_geo_climate_h: 'المناخ',
+      sec_geo_climate_p:
+        'مناخ متوسطي حار صيفًا (Csa): شتاء معتدل ممطر وصيف جاف حار يخفف البحر تأثيره؛ البرد نادر والثلوج نادرة جدًا.',
+      sec_geo_islands_h: 'الجزر البعيدة',
+      sec_geo_islands_p:
+        'محمية جزر النخيل — المعروفة بجزيرة الأرانب — نحو 20 هكتارًا؛ محمية سلاحف وطيور؛ يُمنع التخييم والحرائق. جزر مجاورة مثل رمكين ومجموعة عبدالوهاب/البوكار.',
+      sec_landmarks_h: 'معالم',
+      lm_citadel_h: 'قلعة طرابلس',
+      lm_citadel_p:
+        'قلعة سان جيل فوق المرتفع الشرقي للميناء؛ تضررت 1289 وأعاد المماليك والعثمانيون بناءها؛ بوابة ضخمة عثمانية ونقش لسليمان.',
+      lm_clock_h: 'برج الساعة',
+      lm_clock_p:
+        'في ساحة التل؛ أُنشئ 1906 في عهد السلطان عبدالحميد الثاني ضمن برنامج أبراج الساعة العثمانية؛ تجديد 1992.',
+      lm_hammam_h: 'الحمامات',
+      lm_hammam_p:
+        'منها الجديد والنوري (1333) قرب الجامع الكبير؛ وصفها ابن بطوطة بمدينة جُددت وأحياءها مائية.',
+      lm_fair_h: 'معرض رشيد كرامي الدولي',
+      lm_fair_p:
+        'مجمع أوسكار نيماير الستينيات؛ توقف مع الحرب؛ نحو 15 مبنى خرساني على 75 هكتارًا؛ تراث عالمي + قائمة الخطر منذ 2023.',
+      lm_rail_h: 'محطة سكك الحديد',
+      lm_rail_p:
+        'كانت طرفًا شماليًا لخط يتوصل ببيروت والبقاع؛ توقف مع الحرب والمحطة الصدئة رمز انقطاع النقل.',
+      lm_churches_h: 'الكنائس',
+      lm_churches_p:
+        'كنائس مارونية وروم أرثوذكس وملوكيين وأرمن وبروتستانت تشهد التعدد الديني بجانب الأوقاف الإسلامية.',
+      lm_mosques_h: 'المساجد',
+      lm_mosques_p:
+        'من أبرزها المنصوري الكبير، الطيّناني (1336)، البرتاسي، العطار، الأويسيات، التوبة، المعلق، ومئات الجوامع الصغيرة.',
+      sec_edu_h: 'التعليم',
+      sec_edu_p:
+        'فروع للجامعة اللبنانية، الجامعة العربية في بيروت، جامعة المدينة، جامعة الجنان، جامعة العزم، وغيرها؛ جامعة البلمند وجامعة Notre Dame خارج الحدود البلدية مباشرة.',
+      sec_econ_h: 'الاقتصاد',
+      sec_econ_p:
+        'تاريخيًا حرير وسكر وصابون ونحاس؛ اليوم فقر وبطالة مرتفعان لكن الصناعات الحرفية والأثاث والخدمات والميناء يبقون نشطين؛ المنطقة الاقتصادية الخاصة بجانب المرفأ تقدم حوافز ضريبية للمستثمرين المؤهلين.',
+      sec_sister_h: 'علاقات دولية',
+      sec_sister_p:
+        'أعلنت بلديات عن شراكات مع نابولي ولارنكا وأيا نابا وجازيانتيب وفارو وتولوز وميامي وغيرها؛ يُستحسن التحقق مع بلدية طرابلس للوضع الحالي.',
+      notes_heading: 'ملاحظات للزائر',
       notes_p1:
-        'ابدأ من برج الساعة، ثم اتبع الأزقة حتى تصل إلى خان أو فناء. عندما تلاحظ تغيّرًا في ملمس الحجر أو ممرًا مظللًا فجأة، تمهّل — هنا يظهر عمر المدينة عبر الحِرفة.',
+        'لباس محتشم في المساجد؛ اطلب الإذن قبل تصوير الناس؛ الأزقة الضيقة تفضل المشاة — استخدم معالمًا واضحة، واحمل ماءً في الصيف، واحترم أوقات الصلاة.',
       notes_p2:
-        '“مشية تاريخ” جيدة بسيطة: مسجدٌ بارز، وخانٌ واحد، ودورة في السوق، وتوقّف للحلويات. الإيقاع هو الدرس.',
+        'اجمع بين زيارات معالم (القلعة، الجامع الكبير) وحرفيين (خان الصابون، سوق النحاس) وتذوق حلوى لترى تراثًا حيًا لا واجهات فقط.',
       link_old_city: 'دليل المدينة القديمة',
       link_souks: 'دليل الأسواق',
       link_sweets: 'دليل الحلويات',
-      facts_1: 'مدينة تاريخية كبرى على شرق المتوسط (شمال لبنان)',
-      facts_2: 'قلبٌ من العصور الوسطى تشكّل بقوة في العصر المملوكي',
-      facts_3: 'معروفة بأسواق نشطة وخانات وحمّامات ومساجد بارزة',
-      facts_4: 'مشهورّة في لبنان بحلوياتها التقليدية وتراث الحِرَف',
+      facts_heading: 'معلومات سريعة',
+      facts_1: 'ثاني أكبر كثافة معمارية مملوكية في الشام بعد القاهرة.',
+      facts_2: 'تندمج عمرانيًا مع الميناء وتضم أقصى مرفأ بحري كبير شمال لبنان.',
+      facts_3: 'الجامع المنصوري والقلعة أيقونتان لنسيج المدينة القديمة.',
+      facts_4: 'محمية جزر النخيل UNESCO للسلاحف والفقمة والطيور.',
+      facts_5: 'معرض رشيد كرامي تراث عالمي حديث مسجل «في خطر».',
+      facts_6: 'شهرة بحلاويات العرب والصابون وزيت الزيتون وسوق النحاس.',
+      facts_7: 'مناخ متوسطي حار صيفًا مع شتاء ممطر.',
+      facts_8: 'لقب «مدينة العلم والعلماء» يعكس مكتبات ومدارس تاريخية.',
     },
     feedback: {
       languageChanged: 'تم تغيير اللغة.',
@@ -2403,72 +2518,130 @@ export const translations = {
       megaNeighbourhoodsDesc: 'Explorez les quartiers et zones de la ville.',
     },
     aboutTripoli: {
-      title: 'L’histoire de Tripoli, Liban',
+      title: 'Tripoli, Liban',
       intro:
-        'Tripoli est l’une des grandes villes historiques du Levant — un lieu où les routes méditerranéennes, les pouvoirs médiévaux et les traditions artisanales ont façonné une vieille ville dense, toujours bien vivante. Cette page propose une histoire légère et agréable à lire, sans chargement lourd.',
+        'Tripoli (arabe Ṭarābulus) est la plus grande ville du nord du Liban et la seconde aire urbaine du pays après Beyrouth. Située sur la Méditerranée orientale, à environ 81 km au nord de la capitale, elle est chef-lieu du mohafaza du Nord et du caza de Tripoli, et forme avec El Mina une conurbation portuaire continue.\n\nLe nom grec « Tripolis » évoque trois quartiers alliés liés à Tyr, Sidon et Arwad. En arabe on dit souvent Ṭarābulus al-Shām pour la distinguer de Tripoli en Libye (Ṭarābulus al-Gharb).\n\nElle est surnommée la « Ville du savoir et des savants ». La médina superpose des strates croisée, mamelouke et ottomane ; au large, l’archipel des îles du Palmier est une réserve pour tortues marines, phoques moines et oiseaux migrateurs.',
       cta_explore: 'Découvrir les lieux',
       cta_community: 'Voir la communauté',
-      lead_title: 'Une ville née du commerce et de la pierre',
       lead_text:
-        'La vieille ville de Tripoli se comprend comme un système : les souks mènent aux khans, les khans aux cours, les cours aux grands monuments. Chaque époque a ajouté des couches — mais la marche reste cohérente.',
+        'Parmi les repères : la citadelle associée à Raymond de Saint-Gilles puis remaniée, la tour horloge ottomane de la place Al-Tell, la densité de mosquées et madrasas mameloukes, souks et khans, hammams, et une réputation nationale pour pâtisseries arabes, savon à l’huile d’olive et cuivrerie.',
       lead_img_alt:
-        'Citadelle de Raymond de Saint-Gilles, forteresse historique sur une colline verdoyante au-dessus de la vieille ville de Tripoli, Liban.',
-      jump_timeline: 'Aller à la chronologie',
-      jump_notes: 'Notes de visite',
-      metrics_1_value: 'Cœur piéton',
-      metrics_1_label: 'L’histoire se vit à pied',
-      metrics_2_value: 'Densité médiévale',
-      metrics_2_label: 'Souks + khans + mosquées',
-      metrics_3_value: 'Empreinte mamelouke',
-      metrics_3_label: 'Époque clé de la vieille ville',
-      metrics_4_value: 'Ville vivante',
-      metrics_4_label: 'Pas un musée — la vie quotidienne continue',
-      highlights_layered_title: 'Une ville aux époques superposées',
-      highlights_layered_text:
-        'L’identité de Tripoli s’est construite entre routes portuaires, états médiévaux, architecture mamelouke, commerce ottoman et vie libanaise moderne — visibles en une seule promenade.',
-      highlights_arch_title: 'Une architecture qui raconte',
-      highlights_arch_text:
-        'Cours, arcs de pierre, khans, mosquées et hammams ne sont pas des “ruines” — ce sont des pièces urbaines vivantes qui structurent encore les parcours et le rythme social.',
-      highlights_markets_title: 'Des marchés jamais interrompus',
-      highlights_markets_text:
-        'Les souks restent fonctionnels et à taille humaine. La tradition marchande continue grâce à l’artisanat, la cuisine et de petites activités transmises de génération en génération.',
-      highlights_continuity_title: 'Une culture en continuité',
-      highlights_continuity_text:
-        'Le passé de Tripoli n’est pas derrière une vitrine : il se rencontre dans les ateliers, se goûte dans les douceurs et se voit dans la prière, le commerce et l’hospitalité des quartiers.',
-      timeline_heading: 'Chronologie : les époques qui ont façonné Tripoli',
-      timeline_sub: 'Ce n’est pas un manuel — c’est une histoire à faire défiler. Ouvrez les périodes qui vous intéressent.',
-      timeline_1_range: 'Antiquité → Haut Moyen Âge',
-      timeline_1_title: 'Routes portuaires et vie côtière',
-      timeline_1_body:
-        'Bien avant les frontières modernes, Tripoli suivait le rythme de la Méditerranée : commerce, mouvement et échanges côtiers. L’histoire commence par la géographie — un point de rencontre des routes.',
-      timeline_2_range: 'Période des Croisés (XIIe siècle)',
-      timeline_2_title: 'Fortifications, conflits et changements de pouvoir',
-      timeline_2_body:
-        'Comme beaucoup de villes du Levant, Tripoli a connu conflits, fortifications stratégiques et alternances de domination — une couche de mémoire autour de la vieille ville.',
-      timeline_3_range: 'Époque mamelouke (XIIIe–XVe siècles)',
-      timeline_3_title: 'Âge d’or urbain : khans, mosquées et pierre',
-      timeline_3_body:
-        'C’est l’époque la plus lisible dans la vieille ville. Le plan des souks, l’architecture religieuse majeure et les bâtiments civiques ont formé un noyau dense et walkable qui tient encore aujourd’hui.',
-      timeline_4_range: 'Époque ottomane (XVIe–début XXe siècle)',
-      timeline_4_title: 'Commerce, quartiers et institutions du quotidien',
-      timeline_4_body:
-        'Les réseaux commerciaux et les institutions locales se consolidèrent. L’architecture du quotidien — ateliers, culture culinaire, espaces de quartier — s’approfondit et devint tradition.',
-      timeline_5_range: 'Liban moderne (XXe siècle → aujourd’hui)',
-      timeline_5_title: 'Continuité par l’artisanat, la cuisine et la communauté',
-      timeline_5_body:
-        'Tripoli reste une ville qui travaille, pas un décor. Pour la sentir, marchez, écoutez, suivez les souks — là où le passé est porté par les gens.',
-      notes_heading: 'Comment ressentir l’histoire (sans guide)',
+        'Citadelle de Tripoli dominant la vieille ville et la Méditerranée, Liban.',
+      toc_title: 'Sommaire',
+      toc_overview: 'Vue d’ensemble',
+      toc_names: 'Noms',
+      toc_history: 'Histoire',
+      toc_demographics: 'Démographie',
+      toc_geography: 'Géographie',
+      toc_landmarks: 'Monuments',
+      toc_education: 'Éducation',
+      toc_economy: 'Économie',
+      toc_sister: 'Jumelages',
+      toc_visit: 'Conseils visiteurs',
+      infobox_title: 'Profil urbain',
+      infobox_country_l: 'Pays',
+      infobox_country_v: 'Liban',
+      infobox_gov_l: 'Mohafaza',
+      infobox_gov_v: 'Nord',
+      infobox_district_l: 'Caza',
+      infobox_district_v: 'Tripoli',
+      infobox_pop_l: 'Population (ville)',
+      infobox_pop_v: '~229 400',
+      infobox_area_l: 'Superficie',
+      infobox_area_v: '27,39 km²',
+      infobox_demo_l: 'Gentilé',
+      infobox_demo_v: 'Tripolitain / Tripolitaine',
+      infobox_nick_l: 'Surnom',
+      infobox_nick_v: 'Ville du savoir et des savants',
+      infobox_coord_l: 'Coordonnées',
+      infobox_coord_v: '34°26′N 35°50′E',
+      infobox_web_l: 'Site',
+      wiki_read_more: 'Article encyclopédique (Wikipédia)',
+      sec_overview_h: 'Vue d’ensemble',
+      sec_names_h: 'Noms et étymologie',
+      sec_names_p:
+        'Les sources antiques mentionnent « Athar » à l’époque phénicienne et Trípolis pour trois fédérations portuaires. Ṭarābulus et le qualificatif al-Shām marquent la Tripoli levantine par rapport à la Tripoli maghrébine.\n\nAl-Fayḥāʾ rappelle par métaphore le parfum des orangers lorsque les vergers entouraient encore la cité.',
+      sec_history_h: 'Histoire',
+      sec_history_sub: 'Ouvrez une période pour un résumé court.',
+      hist_ancient_sum: 'Antiquité',
+      hist_ancient_body:
+        'L’occupation est très ancienne ; une grande partie du port archaïque se trouve sous El Mina actuel. Tripoli fut place forte phénicienne, puis romaine, conservant une structure en trois quartiers. Séismes et tsunamis — dont celui de 551 — ont remodelé le littoral.',
+      hist_early_sum: 'Omeyyades, Abbassides et Fatimides',
+      hist_early_body:
+        'Après la conquête musulmane de 635, Tripoli devient arsenal et comptoir lié à Damas, puis centre semi-autonome sous des émirs ismaéliens. Sous les Fatimides elle rayonne intellectuellement avant les pressions croisées.',
+      hist_crusader_sum: 'Période des Croisés',
+      hist_crusader_body:
+        'Les Francs assiègent la ville dès 1102 ; elle devient capitale du comté de Tripoli, foyer de soie et de sucre. La citadelle du « mont des pèlerins » structure la défense. Elle tombe en 1289 aux mains du sultan mamelouk al-Achraf Khalil.',
+      hist_mamluk_sum: 'Période mamelouke',
+      hist_mamluk_body:
+        'Les Mamelouks rebâtissent Tripoli à l’intérieur des terres (~4 km de l’ancien rivage). Quelque trente-cinq grands monuments subsistent : mosquées, madrasas, khans et hammams. Exportations de sucre, textiles et savon vers l’Europe.',
+      hist_ottoman_sum: 'Période ottomane',
+      hist_ottoman_body:
+        'Dès 1516 Tripoli dirige un eyalet côtier, puis un sandjak de Beyrouth. Süleiman restaure la citadelle ; des mosquées comme al-Muallaq et des khans—notamment Khan al-Saboun pour le savon—étendent le tissu marchand.',
+      hist_mandate_sum: 'Mandat français',
+      hist_mandate_body:
+        'Les frontières du Grand Liban (1920) coupent Tripoli de son arrière-pays syrien ; la ville majoritairement sunnite revendique des liens avec Damas — la grève de 1936 illustre ce courant.',
+      hist_modern_sum: 'Liban indépendant',
+      hist_modern_body:
+        'L’ascension économique de Beyrouth, l’union douanière brisée après 1948, la guerre civile et une reconstruction inégale marquent la période récente. La Zone économique spéciale de Tripoli et des incubateurs comme le BIAT encouragent de nouveaux secteurs ; le parc des foires Rashid Karami (Niemeyer) figure au patrimoine mondial en péril depuis 2023.',
+      sec_demo_h: 'Démographie',
+      sec_demo_p:
+        'Majorité sunnite musulmane avec minorités alaouites et chrétiennes (maronites, grecs-orthodoxes, melkites, Arméniens, etc.). Des quartiers comme Bab al-Tabbaneh et Jabal Mohsen traduisent des fractures communautaires sensibles. Les chiffres dépendent des sources — l’encadré reprend une estimation courante.',
+      sec_geo_h: 'Géographie',
+      sec_geo_climate_h: 'Climat',
+      sec_geo_climate_p:
+        'Climat méditerranéen à été chaud (Csa) : hivers doux et pluvieux, étés secs et torrides atténués par la mer ; la neige est rare.',
+      sec_geo_islands_h: 'Îles du large',
+      sec_geo_islands_p:
+        'La réserve des Palm Islands (île des Lapins, ~20 ha) protège tortues vertes, phoques moines et oiseaux migrateurs — feu et camping interdits. Ramkin et l’archipel Abdulwahab / Bakar complètent le littoral.',
+      sec_landmarks_h: 'Monuments',
+      lm_citadel_h: 'Citadelle de Tripoli',
+      lm_citadel_p:
+        'Forteresse de Saint-Gilles surplombant le port ; incendiée en 1289 puis reconstruite sous les Mamelouks et les Ottomans — porte monumentale et inscription de Süleyman.',
+      lm_clock_h: 'Tour de l’horloge',
+      lm_clock_p:
+        'Édifiée en 1906 sous Abdülhamid II dans la série des tours horlogères impériales ; rénovée en 1992.',
+      lm_hammam_h: 'Hammams',
+      lm_hammam_p:
+        'Thermes mamelouks typiques : Hammam al-Jadid, Hammam al-Nouri (vers 1333) près de la Grande Mosquée ; Ibn Battouta vante la cité reconstruite et ses bains.',
+      lm_fair_h: 'Foire internationale Rashid Karami',
+      lm_fair_p:
+        'Ensemble brutaliste d’Oscar Niemeyer, commencé dans les années 1960 ; quinze bâtiments inachevés sur 75 ha. Inscrit au patrimoine mondial et sur la liste du patrimoine en péril en 2023.',
+      lm_rail_h: 'Gare de Tripoli',
+      lm_rail_p:
+        'Terminus nord du réseau à voie étroite vers Beyrouth et la Bekaa ; l’arrêt du trafic durant la guerre a laissé une gare mythifiée mais rouillée.',
+      lm_churches_h: 'Églises',
+      lm_churches_p:
+        'Sanctuaires maronites, grecs-orthodoxes, melkites, arméniens ou protestants témoignent du pluralisme religieux à côté des grandes fondations islamiques.',
+      lm_mosques_h: 'Mosquées',
+      lm_mosques_p:
+        'Mansouri, Taynal (1336), al-Burtasi, al-Attar, al-Uwaysiyat, al-Tawbat, Muallaq, et de nombreuses petites mosquées intégrées à l’ancien tissu marchand.',
+      sec_edu_h: 'Éducation',
+      sec_edu_p:
+        'Campus ou antennes de l’Université libanaise, Université arabe de Beyrouth, City University, Jinan University, Azm University, etc. ; Université de Balamand et Notre Dame University à proximité immédiate.',
+      sec_econ_h: 'Économie',
+      sec_econ_p:
+        'Héritages de la soie, du sucre, du savon et du cuivre ; aujourd’hui pauvreté et chômage élevés mais artisanat, mobilier, services et port demeurent actifs. La Zone économique spécifique offre des avantages fiscaux aux projets admissibles.',
+      sec_sister_h: 'Relations internationales',
+      sec_sister_p:
+        'Jumelages ou partenariats annoncés avec Naples, Larnaca et Ayia Napa, Gaziantep, Faro, Toulouse, Miami, etc. — vérifier auprès de la municipalité pour le statut à jour.',
+      notes_heading: 'Conseils aux visiteurs',
       notes_p1:
-        'Commencez à la Tour de l’Horloge, puis suivez les ruelles jusqu’à un khan ou une cour. Quand la texture de la pierre change ou qu’un passage devient soudain ombragé, ralentissez : la ville montre son âge par le geste artisanal.',
+        'Tenue modeste dans les lieux de prière ; demander l’autorisation avant portrait des habitants. Les souks se parcourent à pied — repères visibles, eau en été, respect des horaires de prière.',
       notes_p2:
-        'Une bonne “marche historique” est simple : une grande mosquée, un khan, une boucle de marché, puis une pause douceurs. Le rythme est la leçon.',
+        'Alternez grands monuments (citadelle, Grande Mosquée) et quartiers d’artisans (Khan al-Saboun, souk du cuivre) avec dégustation de pâtisseries pour saisir un patrimoine vivant.',
       link_old_city: 'Guide de la vieille ville',
       link_souks: 'Guide des souks',
       link_sweets: 'Guide des douceurs',
-      facts_1: 'Grande ville historique de la Méditerranée orientale (Nord Liban)',
-      facts_2: 'Noyau médiéval dense marqué par l’époque mamelouke',
-      facts_3: 'Souks actifs, khans, hammams et mosquées majeures',
-      facts_4: 'Réputée au Liban pour ses douceurs et son artisanat',
+      facts_heading: 'En bref',
+      facts_1: 'Deuxième concentration mamelouke au Proche‑Orient après le Caire.',
+      facts_2: 'Conurbation avec El Mina ; port majeur le plus au nord du Liban.',
+      facts_3: 'Grande Mosquée Mansouri et citadelle : emblèmes de la médina.',
+      facts_4: 'Réserve des Palm Islands (UNESCO) pour tortues, phoques et oiseaux.',
+      facts_5: 'Parc des foires Rashid Karami : patrimoine moderne « en danger ».',
+      facts_6: 'Réputation des pâtisseries arabes, savon à l’olive et souk du cuivre.',
+      facts_7: 'Climat méditerranéen : pluies hivernales, étés secs et chauds.',
+      facts_8: 'Surnom « Ville du savoir » lié à bibliothèques et madrasas historiques.',
     },
     feedback: {
       languageChanged: 'Langue mise à jour.',
