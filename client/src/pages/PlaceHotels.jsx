@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import api, { getPlaceImageUrl } from '../api/client';
+import { Link, useSearchParams, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import api, { getPlaceImageUrl, getImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,7 @@ import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import { getCategoriesForWay } from '../utils/findYourWayGrouping';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import './PlaceHotels.css';
 
 function formatTripRange(trip, locale) {
@@ -111,7 +112,9 @@ export default function PlaceHotels() {
   const [tripModalLoading, setTripModalLoading] = useState(false);
   const [tripAddSaving, setTripAddSaving] = useState(false);
   const [toast, setToast] = useState(null);
-  const [sponsoredDiscover, setSponsoredDiscover] = useState([]);
+  const [sponsoredItems, setSponsoredItems] = useState([]);
+  const { settings, loading: siteSettingsLoading } = useSiteSettings();
+  const hotelsGuide = settings.hotelsGuide;
 
   const searchParamsRef = useRef(searchParams);
   searchParamsRef.current = searchParams;
@@ -166,13 +169,13 @@ export default function PlaceHotels() {
   useEffect(() => {
     let cancelled = false;
     api
-      .sponsoredPlaces({ surface: 'discover', lang: langParam })
+      .sponsoredPlaces({ surface: 'hotels', lang: langParam })
       .then((r) => {
         if (cancelled) return;
-        setSponsoredDiscover(Array.isArray(r.items) ? r.items : []);
+        setSponsoredItems(Array.isArray(r.items) ? r.items : []);
       })
       .catch(() => {
-        if (!cancelled) setSponsoredDiscover([]);
+        if (!cancelled) setSponsoredItems([]);
       });
     return () => {
       cancelled = true;
@@ -204,28 +207,26 @@ export default function PlaceHotels() {
 
   const stayCategories = useMemo(() => getCategoriesForWay('stay', categories), [categories]);
   const stayCategoryIds = useMemo(() => new Set(stayCategories.map((c) => String(c.id))), [stayCategories]);
+  const hiddenPlaceIdSet = useMemo(
+    () => new Set((hotelsGuide.hiddenPlaceIds || []).map((id) => String(id))),
+    [hotelsGuide.hiddenPlaceIds]
+  );
   const stayPlacesAll = useMemo(
-    () => places.filter((p) => stayCategoryIds.has(String(p.categoryId ?? p.category_id))),
-    [places, stayCategoryIds]
+    () =>
+      places.filter(
+        (p) => stayCategoryIds.has(String(p.categoryId ?? p.category_id)) && !hiddenPlaceIdSet.has(String(p.id))
+      ),
+    [places, stayCategoryIds, hiddenPlaceIdSet]
   );
   const stayPlaceIdSet = useMemo(() => new Set(stayPlacesAll.map((p) => String(p.id))), [stayPlacesAll]);
 
   const sponsoredStay = useMemo(() => {
-    return sponsoredDiscover.filter((it) => {
+    return sponsoredItems.filter((it) => {
       const pid =
         it?.placeId != null ? String(it.placeId) : it?.place?.id != null ? String(it.place.id) : '';
       return pid && stayPlaceIdSet.has(pid);
     });
-  }, [sponsoredDiscover, stayPlaceIdSet]);
-
-  const sponsoredPlaceIdSet = useMemo(() => {
-    const s = new Set();
-    sponsoredStay.forEach((it) => {
-      if (it?.placeId != null) s.add(String(it.placeId));
-      if (it?.place?.id != null) s.add(String(it.place.id));
-    });
-    return s;
-  }, [sponsoredStay]);
+  }, [sponsoredItems, stayPlaceIdSet]);
 
   const filteredForTopPicks = useMemo(() => {
     let base = stayPlacesAll;
@@ -241,10 +242,28 @@ export default function PlaceHotels() {
     return base;
   }, [stayPlacesAll, fcatParam, qParam]);
 
-  const topPicks = useMemo(() => {
-    const sorted = [...filteredForTopPicks].sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
-    return sorted.slice(0, 8);
+  const filteredTopPicksById = useMemo(() => {
+    const m = new Map();
+    filteredForTopPicks.forEach((p) => m.set(String(p.id), p));
+    return m;
   }, [filteredForTopPicks]);
+
+  const topPicks = useMemo(() => {
+    const fromFeatured = [];
+    const used = new Set();
+    for (const id of (hotelsGuide.featuredPlaceIds || []).map(String)) {
+      const p = filteredTopPicksById.get(id);
+      if (p) {
+        fromFeatured.push(p);
+        used.add(String(p.id));
+      }
+    }
+    const rest = [...filteredForTopPicks]
+      .filter((p) => !used.has(String(p.id)))
+      .sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
+    const need = Math.max(0, 8 - fromFeatured.length);
+    return [...fromFeatured, ...rest.slice(0, need)];
+  }, [filteredForTopPicks, filteredTopPicksById, hotelsGuide.featuredPlaceIds]);
 
   const mainListPlaces = useMemo(() => {
     let base = stayPlacesAll;
@@ -259,14 +278,20 @@ export default function PlaceHotels() {
     }
     const sort = sortParam === 'rating' || sortParam === 'name' ? sortParam : 'recommended';
     const sorted = sortDiscoverPlaces(base, { query: qParam, sort });
-    if (sponsoredPlaceIdSet.size === 0) return sorted;
-    return sorted.slice().sort((a, b) => {
-      const sa = sponsoredPlaceIdSet.has(String(a?.id)) ? 1 : 0;
-      const sb = sponsoredPlaceIdSet.has(String(b?.id)) ? 1 : 0;
-      if (sa !== sb) return sb - sa;
-      return 0;
-    });
-  }, [stayPlacesAll, fcatParam, qParam, sortParam, sponsoredPlaceIdSet]);
+    const featuredIds = (hotelsGuide.featuredPlaceIds || []).map(String);
+    const featuredSet = new Set(featuredIds);
+    const orderedFeatured = [];
+    const seen = new Set();
+    for (const fid of featuredIds) {
+      const p = sorted.find((x) => String(x.id) === fid);
+      if (p && !seen.has(String(p.id))) {
+        orderedFeatured.push(p);
+        seen.add(String(p.id));
+      }
+    }
+    const rest = sorted.filter((p) => !featuredSet.has(String(p.id)));
+    return [...orderedFeatured, ...rest];
+  }, [stayPlacesAll, hotelsGuide.featuredPlaceIds, fcatParam, qParam, sortParam]);
 
   const placeMap = useMemo(() => {
     const m = {};
@@ -369,6 +394,45 @@ export default function PlaceHotels() {
     String(mainListPlaces.length)
   );
 
+  const langKey = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
+  const heroLoc = hotelsGuide.hero?.[langKey] || {};
+  const heroEyebrow = String(heroLoc.kicker || '').trim() || t('hotelGuide', 'eyebrow');
+  const heroTitle = String(heroLoc.title || '').trim() || t('hotelGuide', 'title');
+  const heroSubtitle = String(heroLoc.subtitle || '').trim() || t('hotelGuide', 'subtitle');
+  const secLoc = hotelsGuide.sectionLabels?.[langKey] || {};
+  const sponsoredKicker =
+    String(secLoc.sponsoredKicker || '').trim() || t('hotelGuide', 'sponsoredKicker');
+  const topPicksTitle =
+    String(secLoc.topPicksTitle || '').trim() || t('hotelGuide', 'topPicksTitle');
+  const mainCollectionTitleSr =
+    String(secLoc.mainCollectionTitle || '').trim() || t('hotelGuide', 'mainCollectionTitle');
+  const rawHeroImg = (hotelsGuide.heroImageUrl || '').trim();
+  const heroImageResolved = rawHeroImg ? getImageUrl(rawHeroImg) : '';
+
+  if (siteSettingsLoading) {
+    return (
+      <div className="hg-page" role="main">
+        <header className="hg-hero hg-hero--loading">
+          <div className="hg-hero__inner">
+            <div className="hg-skel hg-skel--title" />
+            <div className="hg-skel hg-skel--search" />
+          </div>
+        </header>
+        <div className="hg-container">
+          <div className="hg-skel-grid">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="hg-skel hg-skel--card" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (hotelsGuide.enabled === false) {
+    return <Navigate to={PLACES_DISCOVER_PATH} replace />;
+  }
+
   if (loading) {
     return (
       <div className="hg-page" role="main">
@@ -406,16 +470,28 @@ export default function PlaceHotels() {
 
   return (
     <div className="hg-page" role="main">
-      <header className="hg-hero" aria-labelledby="hg-hero-title">
+      <header
+        className={`hg-hero${heroImageResolved ? ' hg-hero--photo' : ''}`}
+        aria-labelledby="hg-hero-title"
+        style={
+          heroImageResolved
+            ? {
+                backgroundImage: `linear-gradient(145deg, rgba(11,18,36,0.92) 0%, rgba(21,30,53,0.9) 42%, rgba(36,49,82,0.92) 100%), url(${heroImageResolved})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }
+            : undefined
+        }
+      >
         <div className="hg-hero__mesh" aria-hidden />
         <div className="hg-hero__stripes" aria-hidden />
         <div className="hg-hero__inner">
           <div className="hg-hero__intro">
-            <p className="hg-hero__eyebrow">{t('hotelGuide', 'eyebrow')}</p>
+            <p className="hg-hero__eyebrow">{heroEyebrow}</p>
             <h1 id="hg-hero-title" className="hg-hero__title">
-              {t('hotelGuide', 'title')}
+              {heroTitle}
             </h1>
-            <p className="hg-hero__sub">{t('hotelGuide', 'subtitle')}</p>
+            <p className="hg-hero__sub">{heroSubtitle}</p>
           </div>
           <div className="hg-hero__actions">
             <Link to="/map" className="hg-hero__btn hg-hero__btn--gold">
@@ -440,9 +516,9 @@ export default function PlaceHotels() {
 
       <div className="hg-container hg-main">
         {sponsoredStay.length > 0 ? (
-          <section className="hg-sponsored" aria-label={t('hotelGuide', 'sponsoredKicker')}>
+          <section className="hg-sponsored" aria-label={sponsoredKicker}>
             <header className="hg-section-head">
-              <h2 className="hg-section-title">{t('hotelGuide', 'sponsoredKicker')}</h2>
+              <h2 className="hg-section-title">{sponsoredKicker}</h2>
             </header>
             <div className="hg-sponsored-track">
               {sponsoredStay.slice(0, 6).map((item) => (
@@ -458,7 +534,7 @@ export default function PlaceHotels() {
           <section className="hg-picks" aria-labelledby="hg-picks-title">
             <header className="hg-section-head">
               <h2 id="hg-picks-title" className="hg-section-title">
-                {t('hotelGuide', 'topPicksTitle')}
+                {topPicksTitle}
               </h2>
               <p className="hg-section-lead">{t('hotelGuide', 'topPicksSub')}</p>
             </header>
@@ -541,7 +617,7 @@ export default function PlaceHotels() {
         </section>
 
         <h2 id="hg-grid-label" className="hg-sr-only">
-          {t('hotelGuide', 'mainCollectionTitle')}
+          {mainCollectionTitleSr}
         </h2>
         {mainListPlaces.length === 0 ? (
           <p className="hg-empty">{t('home', 'noSpots')}</p>

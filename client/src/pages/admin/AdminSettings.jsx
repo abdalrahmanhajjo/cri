@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/client';
-import { siteSettingsDefaults } from '../../config/siteSettingsDefaults';
+import { mergeWithSiteSettingsDefaults } from '../../config/siteSettingsDefaults';
 import AdminTranslationsPanel from './AdminTranslationsPanel';
 import './Admin.css';
 
@@ -27,7 +27,7 @@ export default function AdminSettings() {
   const tabParam = searchParams.get('tab');
   const activeTab = TABS.some((t) => t.id === tabParam) ? tabParam : 'general';
 
-  const [form, setForm] = useState(() => ({ ...siteSettingsDefaults }));
+  const [form, setForm] = useState(() => mergeWithSiteSettingsDefaults({}));
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -69,9 +69,9 @@ export default function AdminSettings() {
       .get()
       .then((r) => {
         const server = r.settings && typeof r.settings === 'object' ? r.settings : {};
-        setForm({ ...siteSettingsDefaults, ...server });
+        setForm(mergeWithSiteSettingsDefaults(server));
       })
-      .catch(() => setForm({ ...siteSettingsDefaults }))
+      .catch(() => setForm(mergeWithSiteSettingsDefaults({})))
       .finally(() => setLoading(false));
   }, []);
 
@@ -82,7 +82,7 @@ export default function AdminSettings() {
     try {
       const r = await api.admin.siteSettings.save(form);
       const merged = r.settings && typeof r.settings === 'object' ? r.settings : form;
-      setForm({ ...siteSettingsDefaults, ...merged });
+      setForm(mergeWithSiteSettingsDefaults(merged));
       window.dispatchEvent(new Event('tripoli-site-settings-saved'));
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -239,6 +239,34 @@ export default function AdminSettings() {
                         />
                         <span className="admin-sponsor-toggle-card-title">Community feed</span>
                         <span className="admin-sponsor-toggle-card-desc">Sponsored card in the feed stack</span>
+                      </label>
+                      <label className="admin-sponsor-toggle-card">
+                        <input
+                          type="checkbox"
+                          checked={form?.sponsoredPlacesEnabled?.dining !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              sponsoredPlacesEnabled: { ...(f.sponsoredPlacesEnabled || {}), dining: e.target.checked },
+                            }))
+                          }
+                        />
+                        <span className="admin-sponsor-toggle-card-title">Dining guide</span>
+                        <span className="admin-sponsor-toggle-card-desc">Sponsored rail on /dining</span>
+                      </label>
+                      <label className="admin-sponsor-toggle-card">
+                        <input
+                          type="checkbox"
+                          checked={form?.sponsoredPlacesEnabled?.hotels !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              sponsoredPlacesEnabled: { ...(f.sponsoredPlacesEnabled || {}), hotels: e.target.checked },
+                            }))
+                          }
+                        />
+                        <span className="admin-sponsor-toggle-card-title">Hotels guide</span>
+                        <span className="admin-sponsor-toggle-card-desc">Sponsored rail on /hotels</span>
                       </label>
                     </div>
                   </div>

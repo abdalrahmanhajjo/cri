@@ -14,7 +14,8 @@ function clampInt(n, lo, hi, fallback) {
 
 function normalizeSurface(raw) {
   const s = String(raw || '').trim().toLowerCase();
-  if (s === 'home' || s === 'discover' || s === 'feed' || s === 'all') return s;
+  if (s === 'home' || s === 'discover' || s === 'feed' || s === 'dining' || s === 'hotels' || s === 'all')
+    return s;
   return 'all';
 }
 

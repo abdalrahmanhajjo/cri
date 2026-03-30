@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import api, { getPlaceImageUrl } from '../api/client';
+import { Link, useSearchParams, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import api, { getPlaceImageUrl, getImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,7 @@ import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import { getCategoriesForWay } from '../utils/findYourWayGrouping';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import './PlaceDining.css';
 
 function formatTripRange(trip, locale) {
@@ -111,7 +112,9 @@ export default function PlaceDining() {
   const [tripModalLoading, setTripModalLoading] = useState(false);
   const [tripAddSaving, setTripAddSaving] = useState(false);
   const [toast, setToast] = useState(null);
-  const [sponsoredDiscover, setSponsoredDiscover] = useState([]);
+  const [sponsoredItems, setSponsoredItems] = useState([]);
+  const { settings, loading: siteSettingsLoading } = useSiteSettings();
+  const diningGuide = settings.diningGuide;
 
   const searchParamsRef = useRef(searchParams);
   searchParamsRef.current = searchParams;
@@ -166,13 +169,13 @@ export default function PlaceDining() {
   useEffect(() => {
     let cancelled = false;
     api
-      .sponsoredPlaces({ surface: 'discover', lang: langParam })
+      .sponsoredPlaces({ surface: 'dining', lang: langParam })
       .then((r) => {
         if (cancelled) return;
-        setSponsoredDiscover(Array.isArray(r.items) ? r.items : []);
+        setSponsoredItems(Array.isArray(r.items) ? r.items : []);
       })
       .catch(() => {
-        if (!cancelled) setSponsoredDiscover([]);
+        if (!cancelled) setSponsoredItems([]);
       });
     return () => {
       cancelled = true;
@@ -205,29 +208,27 @@ export default function PlaceDining() {
   const foodCategories = useMemo(() => getCategoriesForWay('food', categories), [categories]);
 
   const foodCategoryIds = useMemo(() => new Set(foodCategories.map((c) => String(c.id))), [foodCategories]);
+  const hiddenPlaceIdSet = useMemo(
+    () => new Set((diningGuide.hiddenPlaceIds || []).map((id) => String(id))),
+    [diningGuide.hiddenPlaceIds]
+  );
   const diningPlacesAll = useMemo(
-    () => places.filter((p) => foodCategoryIds.has(String(p.categoryId ?? p.category_id))),
-    [places, foodCategoryIds]
+    () =>
+      places.filter(
+        (p) => foodCategoryIds.has(String(p.categoryId ?? p.category_id)) && !hiddenPlaceIdSet.has(String(p.id))
+      ),
+    [places, foodCategoryIds, hiddenPlaceIdSet]
   );
 
   const diningPlaceIdSet = useMemo(() => new Set(diningPlacesAll.map((p) => String(p.id))), [diningPlacesAll]);
 
   const sponsoredDining = useMemo(() => {
-    return sponsoredDiscover.filter((it) => {
+    return sponsoredItems.filter((it) => {
       const pid =
         it?.placeId != null ? String(it.placeId) : it?.place?.id != null ? String(it.place.id) : '';
       return pid && diningPlaceIdSet.has(pid);
     });
-  }, [sponsoredDiscover, diningPlaceIdSet]);
-
-  const sponsoredPlaceIdSet = useMemo(() => {
-    const s = new Set();
-    sponsoredDining.forEach((it) => {
-      if (it?.placeId != null) s.add(String(it.placeId));
-      if (it?.place?.id != null) s.add(String(it.place.id));
-    });
-    return s;
-  }, [sponsoredDining]);
+  }, [sponsoredItems, diningPlaceIdSet]);
 
   const filteredForTopPicks = useMemo(() => {
     let base = diningPlacesAll;
@@ -243,10 +244,28 @@ export default function PlaceDining() {
     return base;
   }, [diningPlacesAll, fcatParam, qParam]);
 
-  const topPicks = useMemo(() => {
-    const sorted = [...filteredForTopPicks].sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
-    return sorted.slice(0, 8);
+  const filteredTopPicksById = useMemo(() => {
+    const m = new Map();
+    filteredForTopPicks.forEach((p) => m.set(String(p.id), p));
+    return m;
   }, [filteredForTopPicks]);
+
+  const topPicks = useMemo(() => {
+    const fromFeatured = [];
+    const used = new Set();
+    for (const id of (diningGuide.featuredPlaceIds || []).map(String)) {
+      const p = filteredTopPicksById.get(id);
+      if (p) {
+        fromFeatured.push(p);
+        used.add(String(p.id));
+      }
+    }
+    const rest = [...filteredForTopPicks]
+      .filter((p) => !used.has(String(p.id)))
+      .sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
+    const need = Math.max(0, 8 - fromFeatured.length);
+    return [...fromFeatured, ...rest.slice(0, need)];
+  }, [filteredForTopPicks, filteredTopPicksById, diningGuide.featuredPlaceIds]);
 
   const mainListPlaces = useMemo(() => {
     let base = diningPlacesAll;
@@ -261,14 +280,20 @@ export default function PlaceDining() {
     }
     const sort = sortParam === 'rating' || sortParam === 'name' ? sortParam : 'recommended';
     const sorted = sortDiscoverPlaces(base, { query: qParam, sort });
-    if (sponsoredPlaceIdSet.size === 0) return sorted;
-    return sorted.slice().sort((a, b) => {
-      const sa = sponsoredPlaceIdSet.has(String(a?.id)) ? 1 : 0;
-      const sb = sponsoredPlaceIdSet.has(String(b?.id)) ? 1 : 0;
-      if (sa !== sb) return sb - sa;
-      return 0;
-    });
-  }, [diningPlacesAll, fcatParam, qParam, sortParam, sponsoredPlaceIdSet]);
+    const featuredIds = (diningGuide.featuredPlaceIds || []).map(String);
+    const featuredSet = new Set(featuredIds);
+    const orderedFeatured = [];
+    const seen = new Set();
+    for (const fid of featuredIds) {
+      const p = sorted.find((x) => String(x.id) === fid);
+      if (p && !seen.has(String(p.id))) {
+        orderedFeatured.push(p);
+        seen.add(String(p.id));
+      }
+    }
+    const rest = sorted.filter((p) => !featuredSet.has(String(p.id)));
+    return [...orderedFeatured, ...rest];
+  }, [diningPlacesAll, diningGuide.featuredPlaceIds, fcatParam, qParam, sortParam]);
 
   const placeMap = useMemo(() => {
     const m = {};
@@ -366,10 +391,49 @@ export default function PlaceDining() {
     toolbarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
+  const langKey = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
+  const heroLoc = diningGuide.hero?.[langKey] || {};
+  const heroEyebrow = String(heroLoc.kicker || '').trim() || t('diningGuide', 'eyebrow');
+  const heroTitle = String(heroLoc.title || '').trim() || t('diningGuide', 'title');
+  const heroSubtitle = String(heroLoc.subtitle || '').trim() || t('diningGuide', 'subtitle');
+  const secLoc = diningGuide.sectionLabels?.[langKey] || {};
+  const sponsoredKicker =
+    String(secLoc.sponsoredKicker || '').trim() || t('diningGuide', 'sponsoredKicker');
+  const topPicksTitle =
+    String(secLoc.topPicksTitle || '').trim() || t('diningGuide', 'topPicksTitle');
+  const mainCollectionTitleSr =
+    String(secLoc.mainCollectionTitle || '').trim() || t('diningGuide', 'mainCollectionTitle');
+  const rawHeroImg = (diningGuide.heroImageUrl || '').trim();
+  const heroImageResolved = rawHeroImg ? getImageUrl(rawHeroImg) : '';
+
   const countLabel = (t('placeDiscover', 'resultCount') || '{count} places').replace(
     '{count}',
     String(mainListPlaces.length)
   );
+
+  if (siteSettingsLoading) {
+    return (
+      <div className="dg-page" role="main">
+        <header className="dg-hero dg-hero--loading">
+          <div className="dg-hero__inner">
+            <div className="dg-skel dg-skel--title" />
+            <div className="dg-skel dg-skel--search" />
+          </div>
+        </header>
+        <div className="dg-container">
+          <div className="dg-skel-grid">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="dg-skel dg-skel--card" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (diningGuide.enabled === false) {
+    return <Navigate to={PLACES_DISCOVER_PATH} replace />;
+  }
 
   if (loading) {
     return (
@@ -408,16 +472,28 @@ export default function PlaceDining() {
 
   return (
     <div className="dg-page" role="main">
-      <header className="dg-hero" aria-labelledby="dg-hero-title">
+      <header
+        className={`dg-hero${heroImageResolved ? ' dg-hero--photo' : ''}`}
+        aria-labelledby="dg-hero-title"
+        style={
+          heroImageResolved
+            ? {
+                backgroundImage: `linear-gradient(165deg, rgba(74,18,18,0.92) 0%, rgba(45,10,10,0.88) 48%, rgba(124,45,18,0.9) 100%), url(${heroImageResolved})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }
+            : undefined
+        }
+      >
         <div className="dg-hero__glow" aria-hidden />
         <div className="dg-hero__grain" aria-hidden />
         <div className="dg-hero__inner">
           <div className="dg-hero__intro">
-            <p className="dg-hero__eyebrow">{t('diningGuide', 'eyebrow')}</p>
+            <p className="dg-hero__eyebrow">{heroEyebrow}</p>
             <h1 id="dg-hero-title" className="dg-hero__title">
-              {t('diningGuide', 'title')}
+              {heroTitle}
             </h1>
-            <p className="dg-hero__sub">{t('diningGuide', 'subtitle')}</p>
+            <p className="dg-hero__sub">{heroSubtitle}</p>
           </div>
           <div className="dg-hero__actions-top">
             <Link to="/map" className="dg-hero__link">
@@ -442,9 +518,9 @@ export default function PlaceDining() {
 
       <div className="dg-container dg-body">
         {sponsoredDining.length > 0 ? (
-          <section className="dg-sponsored" aria-label={t('diningGuide', 'sponsoredKicker')}>
+          <section className="dg-sponsored" aria-label={sponsoredKicker}>
             <div className="dg-section-head">
-              <h2 className="dg-section-title">{t('diningGuide', 'sponsoredKicker')}</h2>
+              <h2 className="dg-section-title">{sponsoredKicker}</h2>
             </div>
             <div className="dg-sponsored-rail">
               {sponsoredDining.slice(0, 6).map((item) => (
@@ -460,7 +536,7 @@ export default function PlaceDining() {
           <section className="dg-top-picks" aria-labelledby="dg-top-picks-title">
             <div className="dg-section-head">
               <h2 id="dg-top-picks-title" className="dg-section-title">
-                {t('diningGuide', 'topPicksTitle')}
+                {topPicksTitle}
               </h2>
               <p className="dg-section-sub">{t('diningGuide', 'topPicksSub')}</p>
             </div>
@@ -545,7 +621,7 @@ export default function PlaceDining() {
         </section>
 
         <h2 id="dg-collection-title" className="dg-sr-only">
-          {t('diningGuide', 'mainCollectionTitle')}
+          {mainCollectionTitleSr}
         </h2>
         {mainListPlaces.length === 0 ? (
           <p className="dg-empty">{t('home', 'noSpots')}</p>
