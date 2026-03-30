@@ -174,10 +174,11 @@ export function tripDaysPlaceIdsOnlyToPayload(daysWithPlaceIds, startDateStr) {
 
 export function toDateOnly(val) {
   if (!val) return '';
+  if (val instanceof Date && !Number.isNaN(val.getTime())) return formatYMD(val);
   const s = String(val).trim().slice(0, 10);
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   const d = new Date(val);
-  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+  return Number.isNaN(d.getTime()) ? '' : formatYMD(d);
 }
 
 export function parseDuration(str) {

@@ -4,7 +4,12 @@ import { useLanguage } from '../context/LanguageContext';
 import api, { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
 import Icon from '../components/Icon';
-import { WAYS_CONFIG, groupPlacesByWay, FIND_YOUR_WAY_WAY_KEYS } from '../utils/findYourWayGrouping';
+import {
+  WAYS_CONFIG,
+  groupPlacesByWay,
+  FIND_YOUR_WAY_WAY_KEYS,
+  formatFindYourWayThemeTitle,
+} from '../utils/findYourWayGrouping';
 import { COMMUNITY_PATH } from '../utils/discoverPaths';
 import './Explore.css';
 
@@ -112,11 +117,15 @@ export default function FindYourWay() {
           <ul className="vd-ways-jump-list">
             {WAYS_CONFIG.map((way) => {
               const count = (placesByWay.get(way.wayKey) || []).length;
+              const jumpTitle =
+                formatFindYourWayThemeTitle(way.wayKey, categories, lang, (n) =>
+                  safeT('home', 'findYourWayThemeMore').split('{count}').join(String(n))
+                ) || safeT('home', way.titleKey);
               return (
                 <li key={way.wayKey}>
                   <a href={`#${way.wayKey}`} className="vd-ways-jump-link">
                     <Icon name={way.icon} size={20} aria-hidden />
-                    <span>{safeT('home', way.titleKey)}</span>
+                    <span>{jumpTitle}</span>
                     {count > 0 && <span className="vd-ways-jump-count" aria-label={`${count} places`}>{count}</span>}
                   </a>
                 </li>
@@ -128,6 +137,10 @@ export default function FindYourWay() {
           {WAYS_CONFIG.map((way) => {
             const wayPlaces = placesByWay.get(way.wayKey) || [];
             const headingId = `way-heading-${way.wayKey}`;
+            const sectionTitle =
+              formatFindYourWayThemeTitle(way.wayKey, categories, lang, (n) =>
+                safeT('home', 'findYourWayThemeMore').split('{count}').join(String(n))
+              ) || safeT('home', way.titleKey);
             return (
               <section
                 key={way.wayKey}
@@ -140,7 +153,7 @@ export default function FindYourWay() {
                     <Icon name={way.icon} size={28} />
                   </span>
                   <h2 id={headingId} className="vd-ways-section-title">
-                    {safeT('home', way.titleKey)}
+                    {sectionTitle}
                     {wayPlaces.length > 0 && (
                       <span className="vd-ways-section-count"> ({wayPlaces.length})</span>
                     )}

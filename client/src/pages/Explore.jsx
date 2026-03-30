@@ -20,9 +20,21 @@ import { resolveHeroTagline, resolveFooterTagline } from '../config/resolveSiteT
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import { applyHomeSeoFromSettings } from '../utils/siteSeo';
 import { getApiOrigin } from '../utils/apiOrigin';
-import { WAYS_CONFIG, groupPlacesByWay, countDirectoryCategoriesForWay } from '../utils/findYourWayGrouping';
+import {
+  WAYS_CONFIG,
+  groupPlacesByWay,
+  countDirectoryCategoriesForWay,
+  formatFindYourWayThemeTitle,
+} from '../utils/findYourWayGrouping';
+import { computePlanTripAreaBuckets, countStayListings } from '../utils/planTripHomeStats';
 import { supabaseOptimizeForThumbnail } from '../utils/supabaseImage.js';
 import './Explore.css';
+
+const PLAN_TRIP_AREA_I18N_KEYS = {
+  old_city: { name: 'areaOldCity', desc: 'areaOldCityDesc' },
+  mina: { name: 'areaMina', desc: 'areaMinaDesc' },
+  tell: { name: 'areaTel', desc: 'areaTelDesc' },
+};
 
 const TRIPOLI_TIMEZONE = 'Asia/Beirut';
 
@@ -537,6 +549,13 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
                 : listingCount > 0
                   ? safeT('home', 'findYourWayThemeEntriesLabel')
                   : null;
+            const titleFromCategories = formatFindYourWayThemeTitle(
+              way.wayKey,
+              categories,
+              lang,
+              (n) => safeT('home', 'findYourWayThemeMore').split('{count}').join(String(n))
+            );
+            const rowTitle = titleFromCategories || safeT('home', way.titleKey);
             return (
               <Link
                 key={way.wayKey}
@@ -552,7 +571,7 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
                 </span>
                 <div className="vd-find-your-way-row-copy">
                   <span className="vd-find-your-way-row-theme">{safeT('home', 'findYourWayRowKicker')}</span>
-                  <h3 className="vd-find-your-way-row-title">{safeT('home', way.titleKey)}</h3>
+                  <h3 className="vd-find-your-way-row-title">{rowTitle}</h3>
                   <p className="vd-find-your-way-row-desc">{safeT('home', way.descKey)}</p>
                   <p className="vd-find-your-way-row-detail">{safeT('home', way.detailKey)}</p>
                 </div>
@@ -718,6 +737,12 @@ export default function Explore() {
     return m;
   }, [placesList]);
 
+  const planTripAreaBuckets = useMemo(() => computePlanTripAreaBuckets(placesList), [placesList]);
+  const planTripStayCount = useMemo(
+    () => countStayListings(placesList, categories),
+    [placesList, categories]
+  );
+
   const bentoAvatarLinkLabel = useCallback(
     (slot) => {
       if (slot.placeId) {
@@ -865,6 +890,8 @@ export default function Explore() {
               className="vd-bento-card vd-bento-hero-side vd-bento-web-hub"
             >
               <div className="vd-bento-web-hub-inner">
+                <span className="vd-bento-web-hub-ambient" aria-hidden="true" />
+                <span className="vd-bento-web-hub-gridlines" aria-hidden="true" />
                 <p className="vd-bento-web-hub-kicker">{t('home', 'useWebCta')}</p>
                 <div className="vd-bento-web-hub-header">
                   <div className="vd-bento-web-hub-icon" aria-hidden="true">
@@ -1003,33 +1030,65 @@ export default function Explore() {
           <div className="vd-plan-trip-grid">
             <div className="vd-plan-trip-block">
               <h3 className="vd-plan-trip-block-title">{t('home', 'areasTitle')}</h3>
-              <p className="vd-plan-trip-block-desc">{t('home', 'areasSub')}</p>
+              <p className="vd-plan-trip-block-desc">{t('home', 'planTripAreasIntro')}</p>
               <div className="vd-plan-trip-areas">
-                <div className="vd-plan-trip-area">
-                  <span className="vd-plan-trip-area-name">{t('home', 'areaOldCity')}</span>
-                  <span className="vd-plan-trip-area-desc">{t('home', 'areaOldCityDesc')}</span>
-                </div>
-                <div className="vd-plan-trip-area">
-                  <span className="vd-plan-trip-area-name">{t('home', 'areaMina')}</span>
-                  <span className="vd-plan-trip-area-desc">{t('home', 'areaMinaDesc')}</span>
-                </div>
-                <div className="vd-plan-trip-area">
-                  <span className="vd-plan-trip-area-name">{t('home', 'areaTel')}</span>
-                  <span className="vd-plan-trip-area-desc">{t('home', 'areaTelDesc')}</span>
-                </div>
+                {planTripAreaBuckets.map((bucket) => {
+                  const keys = PLAN_TRIP_AREA_I18N_KEYS[bucket.key];
+                  if (!keys) return null;
+                  const discoverTo = `${PLACES_DISCOVER_PATH}?q=${encodeURIComponent(bucket.discoverQ)}`;
+                  const countStr =
+                    bucket.count > 0 ? formatDirectoryCount(bucket.count, lang) : t('home', 'planTripAreaCountNone');
+                  const areaName = t('home', keys.name);
+                  const areaAria =
+                    bucket.count > 0
+                      ? t('home', 'planTripAreaLinkAria')
+                          .replace(/\{name\}/g, areaName)
+                          .replace(/\{count\}/g, formatDirectoryCount(bucket.count, lang))
+                      : t('home', 'planTripAreaLinkAriaEmpty').replace(/\{name\}/g, areaName);
+                  return (
+                    <Link
+                      key={bucket.key}
+                      to={discoverTo}
+                      className="vd-plan-trip-area vd-plan-trip-area--link"
+                      aria-label={areaAria}
+                    >
+                      <span className="vd-plan-trip-area-main">
+                        <span className="vd-plan-trip-area-name">{areaName}</span>
+                        <span className="vd-plan-trip-area-desc">{t('home', keys.desc)}</span>
+                      </span>
+                      <span className="vd-plan-trip-area-count" aria-hidden="true">
+                        {countStr}
+                      </span>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
             <div className="vd-plan-trip-block">
               <h3 className="vd-plan-trip-block-title">{t('home', 'gettingThereTitle')}</h3>
-              <p className="vd-plan-trip-block-desc">{t('home', 'gettingThereSub')}</p>
-              <Link to="/#plan" className="vd-plan-trip-cta vd-btn vd-btn--primary">
+              <p className="vd-plan-trip-block-desc vd-plan-trip-block-desc--stacked">
+                <span className="vd-plan-trip-data-line">
+                  {t('home', 'planTripStatsLine')
+                    .replace(/\{places\}/g, placeCountStr)
+                    .replace(/\{categories\}/g, categoryCountStr)}
+                </span>
+                <span className="vd-plan-trip-muted-line">{t('home', 'gettingThereSub')}</span>
+              </p>
+              <Link to="/plan" className="vd-plan-trip-cta vd-btn vd-btn--primary">
                 {t('home', 'gettingThereCta')}
                 <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
               </Link>
             </div>
             <div className="vd-plan-trip-block">
               <h3 className="vd-plan-trip-block-title">{t('home', 'stayTitle')}</h3>
-              <p className="vd-plan-trip-block-desc">{t('home', 'staySub')}</p>
+              <p className="vd-plan-trip-block-desc">
+                {planTripStayCount > 0
+                  ? t('home', 'planTripStayLive').replace(
+                      /\{stay\}/g,
+                      formatDirectoryCount(planTripStayCount, lang)
+                    )
+                  : t('home', 'staySub')}
+              </p>
               <Link to={showMap ? '/map' : '/plan'} className="vd-plan-trip-cta vd-btn vd-btn--primary">
                 {t('home', 'stayCta')}
                 <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
@@ -1038,8 +1097,31 @@ export default function Explore() {
             {user?.showTips !== false && (
               <div className="vd-plan-trip-block">
                 <h3 className="vd-plan-trip-block-title">{t('home', 'tipsTitle')}</h3>
-                <p className="vd-plan-trip-block-desc">{t('home', 'tipsSub')}</p>
-                <a href="#plan" className="vd-plan-trip-link vd-link-arrow">{t('home', 'tipsCta')} <Icon name="arrow_forward" size={18} /></a>
+                {communityPosts.length > 0 ? (
+                  <p className="vd-plan-trip-block-desc vd-plan-trip-block-desc--stacked">
+                    <span className="vd-plan-trip-data-line">
+                      {t('home', 'planTripTipsCommunityLine').replace(
+                        /\{posts\}/g,
+                        formatDirectoryCount(communityPosts.length, lang)
+                      )}
+                    </span>
+                    <span className="vd-plan-trip-muted-line">{t('home', 'tipsSub')}</span>
+                  </p>
+                ) : (
+                  <p className="vd-plan-trip-block-desc">{t('home', 'tipsSub')}</p>
+                )}
+                <div className="vd-plan-trip-inline-actions">
+                  {communityPosts.length > 0 && (
+                    <Link to={COMMUNITY_PATH} className="vd-plan-trip-inline-link">
+                      {t('home', 'planTripTipsCommunityCta')}
+                      <Icon name="arrow_forward" size={18} />
+                    </Link>
+                  )}
+                  <a href="#plan" className="vd-plan-trip-inline-link">
+                    {t('home', 'tipsCta')}
+                    <Icon name="arrow_forward" size={18} />
+                  </a>
+                </div>
               </div>
             )}
           </div>

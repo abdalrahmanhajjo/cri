@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import Icon from './Icon';
+import { formatYMD } from '../utils/tripPlannerHelpers';
 import './Calendar.css';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function toDateStr(d) {
-  return d.toISOString().slice(0, 10);
+  return formatYMD(d);
 }
 
 function parseLocalDate(str) {

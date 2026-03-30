@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { getPlaceImageUrl } from '../api/client';
@@ -85,24 +85,37 @@ function PlaceCardDiscover({ place, isFavourite, onToggleFavourite, tripDayCount
 
   return (
     <div className="plan-discover-card">
-      <Link to={`/place/${placeId}`} className="plan-discover-card-link">
-        <div className="plan-discover-card-media">
-          {imgUrl ? (
-            <DeliveryImg url={imgUrl} preset="planDiscover" alt="" />
-          ) : (
-            <span className="plan-discover-card-fallback">Place</span>
-          )}
-          <div className="plan-discover-card-overlay">
-            <h3 className="plan-discover-card-title">{name || 'Place'}</h3>
-            {location && <p className="plan-discover-card-meta">{location}</p>}
+      <div className="plan-discover-card-top">
+        <Link to={`/place/${placeId}`} className="plan-discover-card-link">
+          <div className="plan-discover-card-media">
+            {imgUrl ? (
+              <DeliveryImg url={imgUrl} preset="planDiscover" alt="" />
+            ) : (
+              <span className="plan-discover-card-fallback">Place</span>
+            )}
+            <div className="plan-discover-card-overlay">
+              <h3 className="plan-discover-card-title">{name || 'Place'}</h3>
+              {location && <p className="plan-discover-card-meta">{location}</p>}
+            </div>
+            {rating != null && !Number.isNaN(rating) && (
+              <span className="plan-discover-card-badge plan-discover-card-rating">
+                <Icon name="star" size={14} /> {rating.toFixed(1)}
+              </span>
+            )}
           </div>
-          {rating != null && !Number.isNaN(rating) && (
-            <span className="plan-discover-card-badge plan-discover-card-rating">
-              <Icon name="star" size={14} /> {rating.toFixed(1)}
+        </Link>
+        <div className="plan-discover-card-summary">
+          <Link to={`/place/${placeId}`} className="plan-discover-card-summary-title">
+            {name || 'Place'}
+          </Link>
+          {location ? <p className="plan-discover-card-summary-loc">{location}</p> : null}
+          {rating != null && !Number.isNaN(rating) ? (
+            <span className="plan-discover-card-summary-rating">
+              <Icon name="star" size={14} ariaHidden /> {rating.toFixed(1)}
             </span>
-          )}
+          ) : null}
         </div>
-      </Link>
+      </div>
       <div className="plan-discover-card-footer">
         {bestTime && <span className="plan-discover-card-tag">{bestTime}</span>}
         {duration && <span className="plan-discover-card-tag">{duration}</span>}
@@ -195,6 +208,8 @@ export default function Plan() {
   const [placeMap, setPlaceMap] = useState({});
   const [placeSearch, setPlaceSearch] = useState('');
   const [placeCategoryFilter, setPlaceCategoryFilter] = useState(null);
+  const [categoryFilterOpen, setCategoryFilterOpen] = useState(false);
+  const categoryFilterRef = useRef(null);
   const [favSearch, setFavSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [placeNames, setPlaceNames] = useState({});
@@ -413,6 +428,25 @@ export default function Plan() {
   }, [tripsLoading, trips, searchParams, setSearchParams]);
   useEffect(() => { loadFavourites(); }, [loadFavourites]);
   useEffect(() => { loadPlacesAndCategories(); }, [loadPlacesAndCategories]);
+
+  useEffect(() => {
+    if (!categoryFilterOpen) return;
+    const close = () => setCategoryFilterOpen(false);
+    const onDoc = (e) => {
+      if (categoryFilterRef.current && !categoryFilterRef.current.contains(e.target)) close();
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('touchstart', onDoc, { passive: true });
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('touchstart', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [categoryFilterOpen]);
 
   const toggleFavourite = useCallback((placeId) => {
     const id = String(placeId);
@@ -1112,53 +1146,78 @@ export default function Plan() {
               <div id="plan-discover-body" className="plan-builder-section-body" role="region" aria-labelledby="plan-discover-label">
               <p className="plan-section-sub">{t('home', 'planDiscoverSub')}</p>
               <div className="plan-discover-toolbar">
-                <div className="plan-search-wrap">
-                  <Icon name="search" size={20} className="plan-search-icon" />
-                  <input
-                    type="search"
-                    className="plan-search-input"
-                    placeholder={t('home', 'planSearchPlaces')}
-                    value={placeSearch}
-                    onChange={(e) => setPlaceSearch(e.target.value)}
-                    aria-label={t('home', 'planSearchPlaces')}
-                  />
-                </div>
-                <div className="plan-category-pills">
-                  <button
-                    type="button"
-                    className={`plan-category-pill ${!placeCategoryFilter ? 'plan-category-pill--active' : ''}`}
-                    onClick={() => {
-                      if (placeCategoryFilter != null) {
-                        showToast(t('home', 'planToastCategoryAll'), 'info');
-                      }
-                      setPlaceCategoryFilter(null);
-                    }}
-                  >
-                    {t('home', 'planFilterAllCategories')}
-                  </button>
-                  {categories.map((c) => (
+                <div className="plan-discover-toolbar-row">
+                  <div className="plan-search-wrap plan-search-wrap--grow">
+                    <Icon name="search" size={20} className="plan-search-icon" />
+                    <input
+                      type="search"
+                      className="plan-search-input"
+                      placeholder={t('home', 'planSearchPlaces')}
+                      value={placeSearch}
+                      onChange={(e) => setPlaceSearch(e.target.value)}
+                      aria-label={t('home', 'planSearchPlaces')}
+                    />
+                  </div>
+                  <div className="plan-category-filter" ref={categoryFilterRef}>
                     <button
-                      key={c.id}
                       type="button"
-                      className={`plan-category-pill ${placeCategoryFilter === c.id ? 'plan-category-pill--active' : ''}`}
-                      onClick={() => {
-                        const next = placeCategoryFilter === c.id ? null : c.id;
-                        setPlaceCategoryFilter(next);
-                        if (next == null) {
-                          showToast(t('home', 'planToastCategoryAll'), 'info');
-                        } else {
-                          showToast(
-                            formatPlanToast(t('home', 'planToastCategoryFilter'), {
-                              label: c.name != null ? String(c.name) : String(c.id),
-                            }),
-                            'info'
-                          );
-                        }
-                      }}
+                      className={`plan-category-filter-trigger ${placeCategoryFilter != null ? 'plan-category-filter-trigger--active' : ''} ${categoryFilterOpen ? 'plan-category-filter-trigger--open' : ''}`}
+                      aria-expanded={categoryFilterOpen}
+                      aria-haspopup="listbox"
+                      aria-label={t('home', 'planCategoryFilterBtnAria')}
+                      onClick={() => setCategoryFilterOpen((o) => !o)}
                     >
-                      {c.name || c.id}
+                      <Icon name="filter_list" size={22} ariaHidden />
                     </button>
-                  ))}
+                    {categoryFilterOpen ? (
+                      <div className="plan-category-filter-panel" role="listbox" aria-label={t('home', 'planCategoryFilterHeading')}>
+                        <p className="plan-category-filter-panel-title">{t('home', 'planCategoryFilterHeading')}</p>
+                        <div className="plan-category-pills plan-category-pills--panel">
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={placeCategoryFilter == null}
+                            className={`plan-category-pill ${!placeCategoryFilter ? 'plan-category-pill--active' : ''}`}
+                            onClick={() => {
+                              if (placeCategoryFilter != null) {
+                                showToast(t('home', 'planToastCategoryAll'), 'info');
+                              }
+                              setPlaceCategoryFilter(null);
+                              setCategoryFilterOpen(false);
+                            }}
+                          >
+                            {t('home', 'planFilterAllCategories')}
+                          </button>
+                          {categories.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              role="option"
+                              aria-selected={placeCategoryFilter === c.id}
+                              className={`plan-category-pill ${placeCategoryFilter === c.id ? 'plan-category-pill--active' : ''}`}
+                              onClick={() => {
+                                const next = placeCategoryFilter === c.id ? null : c.id;
+                                setPlaceCategoryFilter(next);
+                                setCategoryFilterOpen(false);
+                                if (next == null) {
+                                  showToast(t('home', 'planToastCategoryAll'), 'info');
+                                } else {
+                                  showToast(
+                                    formatPlanToast(t('home', 'planToastCategoryFilter'), {
+                                      label: c.name != null ? String(c.name) : String(c.id),
+                                    }),
+                                    'info'
+                                  );
+                                }
+                              }}
+                            >
+                              {c.name || c.id}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
               <div className="plan-discover-by-category">

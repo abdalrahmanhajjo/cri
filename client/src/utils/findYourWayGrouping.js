@@ -27,6 +27,39 @@ export function getCategoryWayKey(category) {
   return matchCategoryToWay(category.name, category.tags);
 }
 
+/** Directory categories that map to this theme bucket (same language as API `categories.list`). */
+export function getCategoriesForWay(wayKey, categories) {
+  return (categories || []).filter((c) => getCategoryWayKey(c) === wayKey);
+}
+
+/**
+ * Title for a theme row: localized category names from the database, sorted A–Z.
+ * When more than `maxShown` names, shows the first ones plus a short remainder (via formatMore).
+ * Returns null if no categories match — caller then uses legacy i18n title.
+ */
+export function formatFindYourWayThemeTitle(wayKey, categories, locale = 'en', formatMore, maxShown = 3) {
+  const list = getCategoriesForWay(wayKey, categories);
+  if (list.length === 0) return null;
+  const loc = locale === 'ar' ? 'ar' : locale === 'fr' ? 'fr' : 'en';
+  let collator;
+  try {
+    collator = new Intl.Collator(loc, { sensitivity: 'base' });
+  } catch {
+    collator = new Intl.Collator('en', { sensitivity: 'base' });
+  }
+  const sorted = [...list].sort((a, b) => collator.compare(String(a.name || ''), String(b.name || '')));
+  const names = sorted.map((c) => String(c.name || '').trim()).filter(Boolean);
+  if (names.length === 0) return null;
+  if (names.length <= maxShown) return names.join(' · ');
+  const head = names.slice(0, maxShown).join(' · ');
+  const extra = names.length - maxShown;
+  const more =
+    typeof formatMore === 'function'
+      ? formatMore(extra)
+      : `+${extra}`;
+  return `${head} · ${more}`;
+}
+
 /** Count of taxonomy categories assigned to a theme (for “N categories in theme” on the home deck). */
 export function countDirectoryCategoriesForWay(wayKey, categories) {
   let n = 0;
