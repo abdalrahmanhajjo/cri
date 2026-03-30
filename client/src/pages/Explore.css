@@ -4738,6 +4738,25 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   width: 64px;
 }
 
+.vd-sponsored .vd-sponsored-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+@media (max-width: 980px) {
+  .vd-sponsored .vd-sponsored-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .vd-sponsored .vd-sponsored-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .vd-section-subtitle {
   font-size: clamp(15px, 1.8vw, 17px);
   color: var(--color-text-secondary);

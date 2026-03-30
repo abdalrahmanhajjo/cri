@@ -691,6 +691,10 @@
   grid-template-columns: 1fr;
 }
 
+.pd-sponsored-inline {
+  grid-column: 1 / -1;
+}
+
 .pd-card {
   display: flex;
   flex-direction: column;
