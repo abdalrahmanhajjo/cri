@@ -4,10 +4,14 @@ const fs = require('fs');
 const { faststartFeedVideoIfApplicable, transcodeReelVideoFromPath } = require('./reelVideoTranscode');
 
 /**
- * All feed video extensions we accept — normalize to one output: H.264/AAC MP4 (web-safe, small, fast encode).
- * Passthrough is only used when ffmpeg is missing or transcode is disabled / fails.
+ * Extensions we accept for feed uploads.
+ * Full H.264 transcode is heavy and can hit reverse-proxy timeouts (e.g. ~100s) on large files.
+ * • .mp4 / .m4v → stream-copy + faststart only (fast, avoids timeouts; use H.264 from the device when possible).
+ * • .mov / .webm / .mkv / .3gp / .3g2 → full transcode to web MP4 (HEVC/VP9/QuickTime fix for Chrome).
+ * Set FEED_VIDEO_ALWAYS_TRANSCODE=1 to force full transcode on .mp4/.m4v as well (slower).
  */
 const FEED_VIDEO_EXTENSIONS = new Set(['.mp4', '.m4v', '.mov', '.webm', '.mkv', '.3gp', '.3g2']);
+const NEEDS_FULL_TRANSCODE = new Set(['.mov', '.webm', '.mkv', '.3gp', '.3g2']);
 
 async function faststartOrOriginal(multerPath, safeExt) {
   let fastPath = null;
@@ -36,13 +40,20 @@ async function faststartOrOriginal(multerPath, safeExt) {
 }
 
 /**
- * After multer saves a feed video: transcode to a single fast, compact H.264 MP4 when possible.
+ * After multer saves a feed video: full transcode when required, else faststart-only for MP4-class uploads.
  * @returns {Promise<{ diskPath: string, cleanupPath: string | null, transcoderCleanup: (() => Promise<void>) | null, safeExt: string | null, contentType: string | null }>}
  */
 async function prepareFeedVideoDiskPath(multerPath, safeExt, file) {
   const ext = (safeExt || '').toLowerCase();
 
   if (process.env.DISABLE_REEL_TRANSCODE === '1' || !FEED_VIDEO_EXTENSIONS.has(ext)) {
+    return faststartOrOriginal(multerPath, safeExt);
+  }
+
+  const forceFull =
+    process.env.FEED_VIDEO_ALWAYS_TRANSCODE === '1' || NEEDS_FULL_TRANSCODE.has(ext);
+
+  if (!forceFull) {
     return faststartOrOriginal(multerPath, safeExt);
   }
 
