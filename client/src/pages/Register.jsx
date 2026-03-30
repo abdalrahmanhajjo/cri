@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../api/client';
 import Icon from '../components/Icon';
 import {
   checkPasswordRequirements,
@@ -22,6 +23,10 @@ export default function Register() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  /** idle | checking | available | taken — username handle availability vs DB */
+  const [usernameAvailability, setUsernameAvailability] = useState('idle');
+  const usernameInputRef = useRef(null);
+  const usernameCheckGenRef = useRef(0);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -33,10 +38,50 @@ export default function Register() {
     () => checkUsernameRequirements(username),
     [username]
   );
+  const usernameFormatOk =
+    usernameReqs.minLength &&
+    usernameReqs.maxLength &&
+    usernameReqs.format &&
+    usernameReqs.notReserved;
+
+  useEffect(() => {
+    if (!usernameFormatOk) {
+      setUsernameAvailability('idle');
+      return;
+    }
+
+    usernameCheckGenRef.current += 1;
+    const gen = usernameCheckGenRef.current;
+    setUsernameAvailability('checking');
+    const t = setTimeout(async () => {
+      try {
+        const r = await api.auth.checkUsername(username.trim());
+        if (gen !== usernameCheckGenRef.current) return;
+        if (!r.validFormat) {
+          setUsernameAvailability('invalid');
+          return;
+        }
+        setUsernameAvailability(r.available ? 'available' : 'taken');
+        if (!r.available && usernameInputRef.current) {
+          usernameInputRef.current.focus();
+          usernameInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } catch {
+        if (gen === usernameCheckGenRef.current) setUsernameAvailability('error');
+      }
+    }, 450);
+
+    return () => {
+      clearTimeout(t);
+      usernameCheckGenRef.current += 1;
+    };
+  }, [username, usernameFormatOk]);
+
   const passwordsMatch =
     password.length > 0 && confirmPassword.length > 0 && password === confirmPassword;
   const confirmMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
+  const usernameReady = usernameFormatOk && usernameAvailability === 'available';
   const canSubmit =
     name.trim() &&
     username.trim() &&
@@ -44,10 +89,7 @@ export default function Register() {
     password &&
     confirmPassword &&
     passwordsMatch &&
-    usernameReqs.minLength &&
-    usernameReqs.maxLength &&
-    usernameReqs.format &&
-    usernameReqs.notReserved &&
+    usernameReady &&
     requirements.minLength &&
     requirements.uppercase &&
     requirements.lowercase &&
@@ -67,17 +109,24 @@ export default function Register() {
         email.trim(),
         password
       );
-      if (result?.verificationEmailDelivered === false) {
-        setSmtpNotice(true);
-        return;
-      }
-      navigate('/', { replace: true });
+      const q = new URLSearchParams();
+      q.set('email', email.trim());
+      if (result?.verificationEmailDelivered === false) q.set('nosmtp', '1');
+      navigate(`/verify-email?${q.toString()}`, { replace: true });
     } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
+      const msg = err.message || 'Registration failed. Please try again.';
+      setError(msg);
+      if (/username.*taken|already taken/i.test(msg) && usernameInputRef.current) {
+        setUsernameAvailability('taken');
+        usernameInputRef.current.focus();
+      }
     } finally {
       setLoading(false);
     }
   }
+
+  const usernameTaken = usernameFormatOk && usernameAvailability === 'taken';
+  const usernameChecking = usernameFormatOk && usernameAvailability === 'checking';
 
   return (
     <div className="auth-page">
@@ -128,19 +177,21 @@ export default function Register() {
               <div className="auth-input-wrap">
                 <Icon name="alternate_email" className="auth-input-icon" size={22} />
                 <input
+                  ref={usernameInputRef}
                   id="register-username"
                   type="text"
-                  className={`auth-input ${error ? 'auth-input--error' : ''}`}
+                  className={`auth-input ${usernameTaken || error ? 'auth-input--error' : ''}`}
                   placeholder="your_handle"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    setError('');
+                  }}
                   autoComplete="username"
                   autoCapitalize="off"
                   spellCheck={false}
-                  aria-invalid={!!error}
-                  aria-describedby={
-                    error ? 'register-username-requirements register-error' : 'register-username-requirements'
-                  }
+                  aria-invalid={usernameTaken || !!error}
+                  aria-describedby="register-username-requirements register-username-status register-error"
                   disabled={loading}
                 />
               </div>
@@ -160,6 +211,32 @@ export default function Register() {
                   </p>
                 ))}
               </div>
+              <p id="register-username-status" className="auth-requirement" role="status" style={{ marginTop: 8 }}>
+                {usernameChecking && (
+                  <>
+                    <Icon name="hourglass_empty" className="auth-requirement-icon" size={16} />
+                    Checking availability…
+                  </>
+                )}
+                {usernameFormatOk && usernameAvailability === 'available' && (
+                  <>
+                    <Icon name="check_circle" className="auth-requirement-icon" size={16} style={{ color: 'var(--color-success)' }} />
+                    This username is available
+                  </>
+                )}
+                {usernameTaken && (
+                  <>
+                    <Icon name="error" className="auth-requirement-icon" size={16} style={{ color: 'var(--color-error)' }} />
+                    This username is already taken — pick another handle before continuing.
+                  </>
+                )}
+                {usernameFormatOk && usernameAvailability === 'error' && (
+                  <>
+                    <Icon name="error" className="auth-requirement-icon" size={16} style={{ color: 'var(--color-error)' }} />
+                    Could not check this username. Check your connection and try changing the field slightly.
+                  </>
+                )}
+              </p>
             </div>
 
             <div className="auth-field">

@@ -34,6 +34,19 @@ export default function VerifyEmail() {
     try {
       const res = await api.auth.verifyEmail(trimmed, digits);
       applySession(res);
+      const welcomeName = res?.user?.name || trimmed.split('@')[0] || '';
+      try {
+        sessionStorage.setItem(
+          'tripoli-welcome-after-verify',
+          JSON.stringify({
+            name: welcomeName,
+            welcomeEmailSent: res?.welcomeEmailDelivered === true,
+            at: Date.now(),
+          })
+        );
+      } catch {
+        /* ignore quota / private mode */
+      }
       navigate('/', { replace: true });
     } catch (err) {
       setError(err.message || 'Verification failed. Try again.');

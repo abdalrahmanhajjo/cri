@@ -12,6 +12,7 @@ import AdminFeed from './AdminFeed';
 import AdminInterests from './AdminInterests';
 import AdminPlaceOwners from './AdminPlaceOwners';
 import AdminOffers from './AdminOffers';
+import AdminEmailBroadcast from './AdminEmailBroadcast';
 
 export default function AdminApp() {
   return (
@@ -23,6 +24,7 @@ export default function AdminApp() {
         <Route path="experiences" element={<AdminExperiences />} />
         <Route path="events" element={<AdminEvents />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="email-broadcast" element={<AdminEmailBroadcast />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="user-trips" element={<AdminUserTrips />} />
         <Route path="feed" element={<AdminFeed />} />
