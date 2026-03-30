@@ -471,8 +471,11 @@ export default function PlaceDiscover() {
         ) : (
           <section className={`pd-mosaic pd-mosaic--${viewMode}`} aria-labelledby="pd-results-heading">
             {sponsoredDiscover.length > 0 && viewMode === 'list' ? (
-              <div className="pd-sponsored-inline">
-                <SponsoredPlaceCard item={sponsoredDiscover[0]} t={t} variant="inline" />
+              <div className="pd-sponsored-block">
+                <p className="pd-sponsored-kicker">{t('discover', 'sponsoredDiscoverKicker')}</p>
+                <div className="pd-sponsored-inline">
+                  <SponsoredPlaceCard item={sponsoredDiscover[0]} t={t} variant="inline" />
+                </div>
               </div>
             ) : null}
             {filteredPlaces.map((p) => (

@@ -1144,9 +1144,9 @@ export default function Explore() {
       {sponsoredHome.length > 0 && (
         <section className="vd-section vd-sponsored" aria-label={t('discover', 'sponsoredSectionTitle')}>
           <div className="vd-container">
-            <header className="vd-section-head">
+            <header className="vd-section-head vd-sponsored-head">
               <h2 className="vd-section-title">{t('discover', 'sponsoredSectionTitle')}</h2>
-              <p className="vd-section-sub">{t('home', 'bentoMosaicKicker')}</p>
+              <p className="vd-section-subtitle vd-sponsored-sub">{t('discover', 'sponsoredSectionSub')}</p>
             </header>
             <div className="vd-sponsored-grid">
               {sponsoredHome.slice(0, 6).map((item) => (

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { siteSettingsDefaults } from '../../config/siteSettingsDefaults';
 import AdminTranslationsPanel from './AdminTranslationsPanel';
@@ -186,13 +186,19 @@ export default function AdminSettings() {
                     </div>
                   </div>
                   <hr style={{ border: 0, borderTop: '1px solid #e5e7eb', margin: '1.25rem 0' }} />
-                  <h3 className="admin-card-title" style={{ fontSize: '1.05rem', marginBottom: '0.75rem' }}>Sponsored places</h3>
-                  <p className="admin-form-hint" style={{ marginTop: 0 }}>
-                    Toggle where sponsored places appear. Manage the curated list in Admin → Sponsored places.
-                  </p>
-                  <div className="admin-form-row">
-                    <div className="admin-form-group">
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <div className="admin-sponsor-settings">
+                    <div className="admin-sponsor-settings-head">
+                      <h3 className="admin-sponsor-settings-title">Sponsored places</h3>
+                      <Link className="admin-sponsor-settings-link" to="../sponsored-places">
+                        Manage placements →
+                      </Link>
+                    </div>
+                    <p className="admin-form-hint admin-sponsor-settings-lede">
+                      Turn each public surface on or off globally. Rows still respect their own schedule, enabled flag, and surface
+                      targeting in the placements table.
+                    </p>
+                    <div className="admin-sponsor-toggle-grid">
+                      <label className="admin-sponsor-toggle-card">
                         <input
                           type="checkbox"
                           checked={form?.sponsoredPlacesEnabled?.home !== false}
@@ -203,11 +209,10 @@ export default function AdminSettings() {
                             }))
                           }
                         />
-                        Home page section
+                        <span className="admin-sponsor-toggle-card-title">Home</span>
+                        <span className="admin-sponsor-toggle-card-desc">Grid section on the landing page</span>
                       </label>
-                    </div>
-                    <div className="admin-form-group">
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <label className="admin-sponsor-toggle-card">
                         <input
                           type="checkbox"
                           checked={form?.sponsoredPlacesEnabled?.discover !== false}
@@ -218,11 +223,10 @@ export default function AdminSettings() {
                             }))
                           }
                         />
-                        Discover directory priority
+                        <span className="admin-sponsor-toggle-card-title">Discover</span>
+                        <span className="admin-sponsor-toggle-card-desc">Partner strip + list priority</span>
                       </label>
-                    </div>
-                    <div className="admin-form-group">
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <label className="admin-sponsor-toggle-card">
                         <input
                           type="checkbox"
                           checked={form?.sponsoredPlacesEnabled?.feed !== false}
@@ -233,7 +237,8 @@ export default function AdminSettings() {
                             }))
                           }
                         />
-                        Community feed injection
+                        <span className="admin-sponsor-toggle-card-title">Community feed</span>
+                        <span className="admin-sponsor-toggle-card-desc">Sponsored card in the feed stack</span>
                       </label>
                     </div>
                   </div>
