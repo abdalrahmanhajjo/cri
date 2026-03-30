@@ -550,6 +550,14 @@ export const api = {
       update: (id, body) => api.patch(`/api/admin/sponsored-places/${encodeURIComponent(id)}`, body),
       delete: (id) => api.delete(`/api/admin/sponsored-places/${encodeURIComponent(id)}`),
     },
+    sponsorshipPurchases: {
+      list: (params) => {
+        const qs = new URLSearchParams();
+        if (params?.limit) qs.set('limit', String(params.limit));
+        const q = qs.toString();
+        return api.get(`/api/admin/sponsorship-purchases${q ? `?${q}` : ''}`);
+      },
+    },
     emailBroadcast: (body) => api.post('/api/admin/email-broadcast', body),
     content: {
       get: () => api.get('/api/admin/content'),
@@ -631,6 +639,12 @@ export const api = {
       create: (body) => api.post('/api/business/promotions', body),
       update: (id, body) => api.patch(`/api/business/promotions/${encodeURIComponent(id)}`, body),
       delete: (id) => api.delete(`/api/business/promotions/${encodeURIComponent(id)}`),
+    },
+    sponsorship: {
+      config: () => api.get('/api/business/sponsorship/config'),
+      createCheckoutSession: (body) => api.post('/api/business/sponsorship/checkout-session', body),
+      sessionStatus: (sessionId) =>
+        api.get(`/api/business/sponsorship/session-status?session_id=${encodeURIComponent(sessionId)}`),
     },
   },
   sponsoredPlaces: (params) => {

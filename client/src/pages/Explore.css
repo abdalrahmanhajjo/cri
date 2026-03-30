@@ -4659,6 +4659,22 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   font-size: 14px;
 }
 
+.vd-find-your-way-stay-map-link {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #44403c);
+  text-decoration: none;
+}
+
+.vd-find-your-way-stay-map-link:hover {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
 .vd-plan-trip-link {
   margin-top: 8px;
   display: inline-flex;

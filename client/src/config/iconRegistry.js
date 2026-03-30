@@ -229,6 +229,11 @@ export const ICON_DOCS = {
     description: 'Activities hub outdoor / hiking category tile.',
     flaticonAnimated: 'Hiker or mountain trail animation from Flaticon (hiking).',
   },
+  hotel: {
+    variant: 'place',
+    description: 'Stay and accommodation theme on home “Find your way” and the hotels guide.',
+    flaticonAnimated: 'Door or key motion from Flaticon (hotel / check-in).',
+  },
   hourglass_empty: {
     variant: 'time',
     description: 'Username check in progress on the registration form.',

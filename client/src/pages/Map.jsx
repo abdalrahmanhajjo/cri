@@ -248,7 +248,6 @@ export default function MapPage() {
   const [googlePlaceData, setGooglePlaceData] = useState({});
   const [fetchingPlaces, setFetchingPlaces] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [mapTypeId, setMapTypeId] = useState('roadmap');
   const [listOpen, setListOpen] = useState(false);
   const [selectedPlaceId, setSelectedPlaceId] = useState(null);
   const [userLocation, setUserLocation] = useState(null);

@@ -19,7 +19,13 @@ import {
 } from '../utils/bentoHeroImage';
 import { cityHeroWebpSrcSet, CITY_HERO_SIZES } from '../constants/cityHero';
 import { resolveHeroTagline, resolveFooterTagline } from '../config/resolveSiteTagline';
-import { COMMUNITY_PATH, PLACES_DISCOVER_PATH, discoverSearchUrl } from '../utils/discoverPaths';
+import {
+  COMMUNITY_PATH,
+  PLACES_DISCOVER_PATH,
+  DINING_PATH,
+  HOTELS_PATH,
+  discoverSearchUrl,
+} from '../utils/discoverPaths';
 import { PLAN_TRIP_AREA_NAV, PLAN_TRIP_AREA_I18N_KEYS, mapSearchUrl } from '../config/planTripAreas';
 import { applyHomeSeoFromSettings } from '../utils/siteSeo';
 import { getApiOrigin } from '../utils/apiOrigin';
@@ -568,7 +574,14 @@ function BrowseMapByThemeSection({ t, lang, places = [], categories = [] }) {
               (n) => safeT('home', 'findYourWayThemeMore').split('{count}').join(String(n))
             );
             const rowTitle = titleFromCategories || safeT('home', way.titleKey);
-            const discoverTo = way.discoverQ ? discoverSearchUrl(way.discoverQ) : discoverSearchUrl('');
+            const discoverTo =
+              way.wayKey === 'food'
+                ? DINING_PATH
+                : way.wayKey === 'stay'
+                  ? HOTELS_PATH
+                  : way.discoverQ
+                    ? discoverSearchUrl(way.discoverQ)
+                    : discoverSearchUrl('');
             return (
               <Link
                 key={way.wayKey}
@@ -682,10 +695,16 @@ function FindYourWayPracticalSection({ t, showMap = true, showTips = true }) {
             <div className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card">
               <h3 className="vd-plan-trip-block-title">{safeT('home', 'stayTitle')}</h3>
               <p className="vd-plan-trip-block-desc">{safeT('home', 'staySub')}</p>
-              <Link to={showMap ? '/map' : '/plan'} className="vd-plan-trip-cta vd-btn vd-btn--primary">
-                {safeT('home', 'stayCta')}
+              <Link to={HOTELS_PATH} className="vd-plan-trip-cta vd-btn vd-btn--primary">
+                {safeT('home', 'stayBrowseHotels')}
                 <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
               </Link>
+              {showMap ? (
+                <Link to="/map" className="vd-find-your-way-stay-map-link">
+                  {safeT('home', 'stayCta')}
+                  <Icon name="arrow_forward" size={16} aria-hidden />
+                </Link>
+              ) : null}
             </div>
             {showTips ? (
               <div

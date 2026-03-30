@@ -242,6 +242,70 @@ export default function AdminSettings() {
                       </label>
                     </div>
                   </div>
+                  <hr style={{ border: 0, borderTop: '1px solid #e5e7eb', margin: '1.25rem 0' }} />
+                  <h3 className="admin-card-title" style={{ fontSize: '1.05rem', marginBottom: '0.75rem' }}>
+                    Paid sponsorship (business portal)
+                  </h3>
+                  <p className="admin-form-hint" style={{ marginTop: 0 }}>
+                    Place owners can buy a time-limited “all surfaces” slot from Business → Sponsorship when this is on and{' '}
+                    <code>STRIPE_SECRET_KEY</code> / <code>STRIPE_WEBHOOK_SECRET</code> are set on the API. Optional{' '}
+                    <code>STRIPE_PRICE_ID</code> overrides the amount below. See <code>server/docs/SPONSORSHIP.md</code>.
+                  </p>
+                  <div className="admin-form-group">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={form.sponsorshipEnabled === true}
+                        onChange={(e) => setForm((f) => ({ ...f, sponsorshipEnabled: e.target.checked }))}
+                      />
+                      Enable self-serve sponsorship checkout
+                    </label>
+                  </div>
+                  <div className="admin-form-row admin-form-row--3">
+                    <div className="admin-form-group">
+                      <label htmlFor="as-sponsorship-days">Duration (days)</label>
+                      <input
+                        id="as-sponsorship-days"
+                        type="number"
+                        min={1}
+                        max={365}
+                        value={form.sponsorshipDurationDays ?? 30}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            sponsorshipDurationDays: Math.min(365, Math.max(1, parseInt(e.target.value, 10) || 30)),
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="admin-form-group">
+                      <label htmlFor="as-sponsorship-cents">Price (cents)</label>
+                      <input
+                        id="as-sponsorship-cents"
+                        type="number"
+                        min={50}
+                        value={form.sponsorshipAmountCents ?? 4999}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            sponsorshipAmountCents: Math.max(50, parseInt(e.target.value, 10) || 4999),
+                          }))
+                        }
+                      />
+                      <span className="admin-form-hint">Ignored when STRIPE_PRICE_ID is set on the server.</span>
+                    </div>
+                    <div className="admin-form-group">
+                      <label htmlFor="as-sponsorship-currency">Currency code</label>
+                      <input
+                        id="as-sponsorship-currency"
+                        value={form.sponsorshipCurrency || 'usd'}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, sponsorshipCurrency: e.target.value.trim().toLowerCase().slice(0, 12) }))
+                        }
+                        placeholder="usd"
+                      />
+                    </div>
+                  </div>
                   <div className="admin-form-group">
                     <label htmlFor="as-ga">Analytics ID (GA4)</label>
                     <input id="as-ga" value={form.analyticsId} onChange={(e) => setForm((f) => ({ ...f, analyticsId: e.target.value }))} placeholder="G-XXXXXXXXXX" />

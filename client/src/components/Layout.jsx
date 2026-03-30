@@ -7,7 +7,7 @@ import { useSiteSettings } from '../context/SiteSettingsContext';
 import Icon from './Icon';
 import BackToTop from './BackToTop';
 import GlobalSearchBar from './GlobalSearchBar';
-import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
+import { COMMUNITY_PATH, PLACES_DISCOVER_PATH, DINING_PATH, HOTELS_PATH } from '../utils/discoverPaths';
 import './Layout.css';
 
 const langLabels = { en: 'EN', ar: 'العربية', fr: 'FR' };
@@ -43,6 +43,8 @@ export default function Layout() {
   const isMapPage = location.pathname === '/map';
   const isPlaceDiscoverPage =
     location.pathname === PLACES_DISCOVER_PATH || location.pathname.startsWith(`${PLACES_DISCOVER_PATH}/`);
+  const isDiningPage = location.pathname === DINING_PATH;
+  const isHotelsPage = location.pathname === HOTELS_PATH;
   const isAboutTripoliPage = location.pathname === '/about-tripoli';
   const isAiPlannerPage = location.pathname === '/plan/ai';
 
@@ -148,10 +150,24 @@ export default function Layout() {
               <Link to="/" className={`nav-link nav-link--home ${isHome ? 'nav-link--active' : ''}`} onClick={closeMenu}>{t('nav', 'home')}</Link>
               <Link
                 to={PLACES_DISCOVER_PATH}
-                className={`nav-link ${isPlaceDiscoverPage ? 'nav-link--active' : ''}`}
+                className={`nav-link ${isPlaceDiscoverPage && !isDiningPage && !isHotelsPage ? 'nav-link--active' : ''}`}
                 onClick={closeMenu}
               >
                 {t('nav', 'discoverPlaces')}
+              </Link>
+              <Link
+                to={DINING_PATH}
+                className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
+                onClick={closeMenu}
+              >
+                {t('nav', 'diningNav')}
+              </Link>
+              <Link
+                to={HOTELS_PATH}
+                className={`nav-link ${isHotelsPage ? 'nav-link--active' : ''}`}
+                onClick={closeMenu}
+              >
+                {t('nav', 'hotelsNav')}
               </Link>
               <Link to="/map" className={`nav-link ${isMapPage ? 'nav-link--active' : ''}`} onClick={closeMenu}>
                 {t('nav', 'viewMapNav')}
@@ -277,10 +293,24 @@ export default function Layout() {
             <Link to="/" className={`nav-link nav-link--home ${isHome ? 'nav-link--active' : ''}`} onClick={closeMenu}>{t('nav', 'home')}</Link>
             <Link
               to={PLACES_DISCOVER_PATH}
-              className={`nav-link ${isPlaceDiscoverPage ? 'nav-link--active' : ''}`}
+              className={`nav-link ${isPlaceDiscoverPage && !isDiningPage && !isHotelsPage ? 'nav-link--active' : ''}`}
               onClick={closeMenu}
             >
               {t('nav', 'discoverPlaces')}
+            </Link>
+            <Link
+              to={DINING_PATH}
+              className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
+              onClick={closeMenu}
+            >
+              {t('nav', 'diningNav')}
+            </Link>
+            <Link
+              to={HOTELS_PATH}
+              className={`nav-link ${isHotelsPage ? 'nav-link--active' : ''}`}
+              onClick={closeMenu}
+            >
+              {t('nav', 'hotelsNav')}
             </Link>
             <Link to="/map" className={`nav-link ${isMapPage ? 'nav-link--active' : ''}`} onClick={closeMenu}>
               {t('nav', 'viewMapNav')}

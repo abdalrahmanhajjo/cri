@@ -47,6 +47,7 @@ function SectionTitle({ children, icon }) {
 
 export default function AdminSponsoredPlaces() {
   const [items, setItems] = useState([]);
+  const [purchaseLog, setPurchaseLog] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const [savedOk, setSavedOk] = useState(false);
@@ -84,6 +85,13 @@ export default function AdminSponsoredPlaces() {
     []
   );
 
+  const loadPurchases = () => {
+    api.admin.sponsorshipPurchases
+      .list({ limit: 35 })
+      .then((r) => setPurchaseLog(Array.isArray(r.items) ? r.items : []))
+      .catch(() => setPurchaseLog([]));
+  };
+
   const load = () => {
     setLoading(true);
     setErr(null);
@@ -91,7 +99,10 @@ export default function AdminSponsoredPlaces() {
       .list()
       .then((r) => setItems(Array.isArray(r.items) ? r.items : []))
       .catch((e) => setErr(e?.message || 'Failed to load'))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        loadPurchases();
+      });
   };
 
   useEffect(() => {
@@ -409,7 +420,8 @@ export default function AdminSponsoredPlaces() {
         <div className="admin-card-header">
           <h2 className="admin-card-title">Current placements</h2>
           <span className="admin-form-hint" style={{ margin: '0.35rem 0 0' }}>
-            Edits apply on blur / change. Delete removes the row permanently.
+            Edits apply on blur / change. Delete removes the row permanently. Rows from Stripe show <strong>Paid</strong> in Source; paid
+            rows use a high default rank (e.g. 500) until you change it.
           </span>
         </div>
         <div className="admin-card-body">
@@ -429,6 +441,8 @@ export default function AdminSponsoredPlaces() {
                     <th scope="col">Rank</th>
                     <th scope="col">Place</th>
                     <th scope="col">Surface</th>
+                    <th scope="col">Source</th>
+                    <th scope="col">Billing</th>
                     <th scope="col">Enabled</th>
                     <th scope="col">Schedule</th>
                     <th scope="col">Overrides</th>
@@ -475,6 +489,37 @@ export default function AdminSponsoredPlaces() {
                             onChange={(surface) => patch(it.id, { surface })}
                             ariaLabel={`Surface for ${title}`}
                           />
+                        </td>
+                        <td>
+                          <span className={it.source === 'paid' ? 'asp-source asp-source--paid' : 'asp-source'}>
+                            {it.source === 'paid' ? 'Paid' : 'Admin'}
+                          </span>
+                        </td>
+                        <td style={{ maxWidth: 200 }}>
+                          {it.source === 'paid' && it.purchaseId ? (
+                            <div className="asp-billing-cell">
+                              {it.purchaseStatus ? (
+                                <span className="asp-billing-status">{String(it.purchaseStatus)}</span>
+                              ) : null}
+                              {it.stripeCheckoutSessionId ? (
+                                <code className="asp-billing-code" title={it.stripeCheckoutSessionId}>
+                                  {it.stripeCheckoutSessionId}
+                                </code>
+                              ) : null}
+                              {it.stripePaymentIntentId ? (
+                                <code className="asp-billing-code" title={it.stripePaymentIntentId}>
+                                  pi …{String(it.stripePaymentIntentId).slice(-8)}
+                                </code>
+                              ) : null}
+                              {it.purchaseAmountCents != null ? (
+                                <span className="asp-billing-amt">
+                                  {(it.purchaseAmountCents / 100).toFixed(2)} {String(it.purchaseCurrency || 'usd').toUpperCase()}
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <span className="asp-billing-empty">—</span>
+                          )}
                         </td>
                         <td>
                           <label className="asp-status">
@@ -525,6 +570,50 @@ export default function AdminSponsoredPlaces() {
                   })}
                 </tbody>
               </table>
+            </div>
+          ) : null}
+
+          {purchaseLog.length > 0 ? (
+            <div style={{ marginTop: '1.5rem' }}>
+              <h3 className="admin-card-title" style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>
+                Recent self-serve purchases
+              </h3>
+              <div className="asp-table-wrap admin-table-wrap">
+                <table className="admin-table asp-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">When</th>
+                      <th scope="col">Place</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Amount</th>
+                      <th scope="col">Stripe session</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {purchaseLog.map((p) => (
+                      <tr key={p.id}>
+                        <td style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                          {p.createdAt ? new Date(p.createdAt).toISOString().slice(0, 16) : '—'}
+                        </td>
+                        <td>
+                          <strong>{p.placeName || p.placeId}</strong>
+                        </td>
+                        <td>{p.status}</td>
+                        <td>
+                          {p.amountCents != null ? `${(p.amountCents / 100).toFixed(2)} ${String(p.currency || 'usd').toUpperCase()}` : '—'}
+                        </td>
+                        <td>
+                          {p.stripeCheckoutSessionId ? (
+                            <code className="asp-billing-code">{p.stripeCheckoutSessionId}</code>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : null}
         </div>
