@@ -68,27 +68,42 @@ function parseDimEnv(name, fallback) {
  * - force_divisible_by=2 + yuv420p: avoids black frames in browsers on odd dimensions.
  * - Do NOT force bt709/tv metadata: phone HDR / full-range clips often go black or crushed when tagged wrong.
  * - Lanczos scale in-filter only (omit global sws_flags — fewer edge cases across ffmpeg builds).
- * @param {'default' | 'low'} tier — `low` = smaller frame + stronger compression for slow networks (re-encoded from main MP4).
+ * @param {'default' | 'low' | 'upload'} tier — `low` = smaller frame + stronger compression (re-encoded from main MP4). `upload` = fast path for API uploads (smaller canvas + ultrafast) to finish before reverse-proxy timeouts (~100s on some hosts).
  */
 function buildFfmpegArgs(inFile, outFile, withAudio, tier = 'default') {
   const isLow = tier === 'low';
-  const maxW = parseDimEnv(isLow ? 'REEL_LOW_MAX_WIDTH' : 'REEL_MAX_WIDTH', isLow ? 540 : 1080);
-  const maxH = parseDimEnv(isLow ? 'REEL_LOW_MAX_HEIGHT' : 'REEL_MAX_HEIGHT', isLow ? 960 : 1920);
+  const isUpload = tier === 'upload';
+  const maxW = isUpload
+    ? parseDimEnv('REEL_UPLOAD_MAX_WIDTH', 720)
+    : parseDimEnv(isLow ? 'REEL_LOW_MAX_WIDTH' : 'REEL_MAX_WIDTH', isLow ? 540 : 1080);
+  const maxH = isUpload
+    ? parseDimEnv('REEL_UPLOAD_MAX_HEIGHT', 1280)
+    : parseDimEnv(isLow ? 'REEL_LOW_MAX_HEIGHT' : 'REEL_MAX_HEIGHT', isLow ? 960 : 1920);
   const scale = `scale=w='min(${maxW},iw)':h='min(${maxH},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:flags=lanczos`;
   const vf = `${scale},setsar=1,format=yuv420p`;
-  const crf = (isLow ? process.env.REEL_LOW_TRANSCODE_CRF : process.env.REEL_TRANSCODE_CRF) || (isLow ? '26' : '23');
-  const preset =
-    (isLow ? process.env.REEL_LOW_TRANSCODE_PRESET : process.env.REEL_TRANSCODE_PRESET) ||
-    (isLow ? 'fast' : 'veryfast');
-  const audioK =
-    (isLow ? process.env.REEL_LOW_AUDIO_BITRATE : process.env.REEL_AUDIO_BITRATE) || (isLow ? '64k' : '96k');
-  const tune = (process.env.REEL_X264_TUNE || '').trim();
-  const profile =
-    (isLow ? process.env.REEL_LOW_X264_PROFILE : process.env.REEL_X264_PROFILE) || (isLow ? 'main' : 'high');
-  const level =
-    (isLow ? process.env.REEL_LOW_X264_LEVEL : process.env.REEL_X264_LEVEL) || (isLow ? '4.0' : '4.2');
-  const maxrate = ((isLow ? process.env.REEL_LOW_X264_MAXRATE : process.env.REEL_X264_MAXRATE) || '').trim();
-  const bufsize = ((isLow ? process.env.REEL_LOW_X264_BUFSIZE : process.env.REEL_X264_BUFSIZE) || '').trim();
+  const crf = isUpload
+    ? String((process.env.REEL_UPLOAD_TRANSCODE_CRF || '27').trim() || '27')
+    : (isLow ? process.env.REEL_LOW_TRANSCODE_CRF : process.env.REEL_TRANSCODE_CRF) || (isLow ? '26' : '23');
+  const preset = isUpload
+    ? String((process.env.REEL_UPLOAD_TRANSCODE_PRESET || 'ultrafast').trim() || 'ultrafast')
+    : (isLow ? process.env.REEL_LOW_TRANSCODE_PRESET : process.env.REEL_TRANSCODE_PRESET) ||
+      (isLow ? 'fast' : 'veryfast');
+  const audioK = isUpload
+    ? String((process.env.REEL_UPLOAD_AUDIO_BITRATE || '96k').trim() || '96k')
+    : (isLow ? process.env.REEL_LOW_AUDIO_BITRATE : process.env.REEL_AUDIO_BITRATE) || (isLow ? '64k' : '96k');
+  const tune = isUpload ? (process.env.REEL_UPLOAD_X264_TUNE || process.env.REEL_X264_TUNE || '').trim() : (process.env.REEL_X264_TUNE || '').trim();
+  const profile = isUpload
+    ? String((process.env.REEL_UPLOAD_X264_PROFILE || 'main').trim() || 'main')
+    : (isLow ? process.env.REEL_LOW_X264_PROFILE : process.env.REEL_X264_PROFILE) || (isLow ? 'main' : 'high');
+  const level = isUpload
+    ? String((process.env.REEL_UPLOAD_X264_LEVEL || '4.0').trim() || '4.0')
+    : (isLow ? process.env.REEL_LOW_X264_LEVEL : process.env.REEL_X264_LEVEL) || (isLow ? '4.0' : '4.2');
+  const maxrate = isUpload
+      ? (process.env.REEL_UPLOAD_X264_MAXRATE || '').trim()
+      : ((isLow ? process.env.REEL_LOW_X264_MAXRATE : process.env.REEL_X264_MAXRATE) || '').trim();
+  const bufsize = isUpload
+    ? (process.env.REEL_UPLOAD_X264_BUFSIZE || '').trim()
+    : ((isLow ? process.env.REEL_LOW_X264_BUFSIZE : process.env.REEL_X264_BUFSIZE) || '').trim();
 
   const args = [
     '-hide_banner',
@@ -100,9 +115,9 @@ function buildFfmpegArgs(inFile, outFile, withAudio, tier = 'default') {
     '-c:v',
     'libx264',
     '-profile:v',
-    String(profile).trim() || (isLow ? 'main' : 'high'),
+    String(profile).trim() || (isUpload ? 'main' : isLow ? 'main' : 'high'),
     '-level',
-    String(level).trim() || (isLow ? '4.0' : '4.2'),
+    String(level).trim() || (isUpload ? '4.0' : isLow ? '4.0' : '4.2'),
     '-pix_fmt',
     'yuv420p',
     '-preset',
@@ -124,7 +139,7 @@ function buildFfmpegArgs(inFile, outFile, withAudio, tier = 'default') {
 
 /**
  * Run shared web-reel encode (upload + batch). Throws on failure.
- * @param {'default' | 'low'} [tier]
+ * @param {'default' | 'low' | 'upload'} [tier]
  */
 async function runFfmpegWebReelEncode(inputPath, outputPath, tier = 'default') {
   const ffmpegPath = resolveFfmpegPath();
@@ -152,11 +167,12 @@ async function encodeLowRenditionFromHighMp4(highPath, lowPath) {
  * Encode an on-disk video to optimized MP4. Returns size stats; caller decides whether to use output.
  * @param {string} inputPath
  * @param {string} outputPath
- * @param {{ maxOutputVsInput?: number }} [opts] maxOutputVsInput default REEL_TRANSCODE_MAX_OUTPUT_RATIO / OUTPUT_VS_INPUT_MAX
+ * @param {{ maxOutputVsInput?: number, tier?: 'default' | 'low' | 'upload' }} [opts] maxOutputVsInput default REEL_TRANSCODE_MAX_OUTPUT_RATIO / OUTPUT_VS_INPUT_MAX
  * @returns {Promise<{ ok: boolean, bytesIn: number, bytesOut: number, reason?: string }>}
  */
 async function encodeFileToWebReelMp4(inputPath, outputPath, opts = {}) {
   const maxRatio = opts.maxOutputVsInput ?? OUTPUT_VS_INPUT_MAX;
+  const tier = opts.tier || 'default';
   let bytesIn = 0;
   try {
     bytesIn = (await fs.promises.stat(inputPath)).size;
@@ -165,7 +181,7 @@ async function encodeFileToWebReelMp4(inputPath, outputPath, opts = {}) {
   }
   try {
     await fs.promises.unlink(outputPath).catch(() => {});
-    await runFfmpegWebReelEncode(inputPath, outputPath);
+    await runFfmpegWebReelEncode(inputPath, outputPath, tier);
   } catch (e) {
     return { ok: false, bytesIn, bytesOut: 0, reason: e.message || 'ffmpeg failed' };
   }
@@ -222,7 +238,12 @@ async function transcodeReelVideoFromPath(inputPath, originalname, mimetype, bod
   };
 
   try {
-    const result = await encodeFileToWebReelMp4(inputPath, outFile, { maxOutputVsInput: OUTPUT_VS_INPUT_MAX });
+    const uploadUsesFullQuality =
+      process.env.REEL_UPLOAD_TRANSCODE_TIER === 'default' || process.env.REEL_USE_FULL_QUALITY_TRANSCODE_ON_UPLOAD === '1';
+    const result = await encodeFileToWebReelMp4(inputPath, outFile, {
+      maxOutputVsInput: OUTPUT_VS_INPUT_MAX,
+      tier: uploadUsesFullQuality ? 'default' : 'upload',
+    });
     if (!result.ok) {
       console.warn('[reelTranscode]', result.reason || 'encode rejected');
       await cleanup();
