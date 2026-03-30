@@ -7,6 +7,8 @@ const navItems = [
   { to: '/admin', end: true, icon: 'dashboard', label: 'Dashboard' },
   { to: '/admin/places', end: false, icon: 'place', label: 'Places' },
   { to: '/admin/categories', end: false, icon: 'category', label: 'Categories' },
+  { to: '/admin/dining', end: false, icon: 'restaurant', label: 'Dining guide' },
+  { to: '/admin/hotels', end: false, icon: 'hotel', label: 'Hotels guide' },
   { to: '/admin/interests', end: false, icon: 'interest', label: 'Interests' },
   { to: '/admin/experiences', end: false, icon: 'tour', label: 'Experiences' },
   { to: '/admin/events', end: false, icon: 'event', label: 'Events' },
@@ -37,6 +39,12 @@ function Icon({ name }) {
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
+        </svg>
+      );
+    case 'hotel':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 21h18M6 21V10l6-4 6 4v11M9 21v-4h6v4M10 7v0M14 7v0M10 11h4" />
         </svg>
       );
     case 'category':
@@ -124,6 +132,12 @@ function Icon({ name }) {
           <polyline points="22,6 12,13 2,6" />
         </svg>
       );
+    case 'restaurant':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 2v7c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2V2M7 2v20M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2Z" />
+        </svg>
+      );
     default:
       return <span>•</span>;
   }
@@ -188,7 +202,18 @@ function AdminLayoutInner() {
             </NavLink>
             <NavLink
               to="/admin/places"
-              className={['/admin/places', '/admin/categories', '/admin/interests', '/admin/experiences'].includes(location.pathname) ? 'active' : ''}
+              className={
+                [
+                  '/admin/places',
+                  '/admin/categories',
+                  '/admin/dining',
+                  '/admin/hotels',
+                  '/admin/interests',
+                  '/admin/experiences',
+                ].includes(location.pathname)
+                  ? 'active'
+                  : ''
+              }
             >
               Catalogue
             </NavLink>

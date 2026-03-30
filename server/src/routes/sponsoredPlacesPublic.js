@@ -6,7 +6,7 @@ const ROW_ID = 'default';
 
 function normalizeSurface(raw) {
   const s = String(raw || '').trim().toLowerCase();
-  if (s === 'home' || s === 'discover' || s === 'feed') return s;
+  if (s === 'home' || s === 'discover' || s === 'feed' || s === 'dining' || s === 'hotels') return s;
   return 'home';
 }
 
@@ -56,7 +56,7 @@ function rowToSponsored(r) {
   };
 }
 
-/** GET /api/sponsored-places?surface=home|discover|feed */
+/** GET /api/sponsored-places?surface=home|discover|feed|dining|hotels */
 router.get('/', async (req, res) => {
   const surface = normalizeSurface(req.query.surface);
   try {

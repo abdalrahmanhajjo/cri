@@ -34,6 +34,7 @@
   overflow: hidden;
   padding: clamp(28px, 5vw, 56px) 0 clamp(32px, 6vw, 48px);
   background: linear-gradient(165deg, var(--dg-wine) 0%, #2d0a0a 48%, var(--dg-copper-deep) 100%);
+  background-repeat: no-repeat;
   color: #fff5eb;
 }
 

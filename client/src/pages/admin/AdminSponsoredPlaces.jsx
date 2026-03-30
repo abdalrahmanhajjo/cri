@@ -32,6 +32,8 @@ function SurfacePill({ value, onChange, id, ariaLabel }) {
       <option value="home">Home</option>
       <option value="discover">Discover</option>
       <option value="feed">Feed</option>
+      <option value="dining">Dining</option>
+      <option value="hotels">Hotels</option>
     </select>
   );
 }
