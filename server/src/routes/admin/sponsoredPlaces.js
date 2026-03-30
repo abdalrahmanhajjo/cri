@@ -53,10 +53,13 @@ router.get('/', async (req, res) => {
     const { rows } = await query(
       `SELECT sp.id, sp.place_id, sp.surface, sp.rank, sp.enabled, sp.starts_at, sp.ends_at,
               sp.badge_text, sp.title_override, sp.subtitle_override, sp.image_override_url, sp.cta_url,
-              sp.created_at, sp.updated_at,
+              sp.created_at, sp.updated_at, sp.source, sp.purchase_id, sp.purchased_by_user_id,
+              pur.stripe_checkout_session_id, pur.stripe_payment_intent_id, pur.status AS purchase_status,
+              pur.amount_cents AS purchase_amount_cents, pur.currency AS purchase_currency,
               p.name AS place_name, p.category AS place_category, p.location AS place_location, p.images AS place_images
        FROM sponsored_places sp
        INNER JOIN places p ON p.id = sp.place_id
+       LEFT JOIN sponsorship_purchases pur ON pur.id = sp.purchase_id
        ORDER BY sp.rank ASC, sp.created_at DESC`
     );
     const items = rows.map((r) => ({
@@ -74,6 +77,14 @@ router.get('/', async (req, res) => {
       ctaUrl: r.cta_url || null,
       createdAt: r.created_at || null,
       updatedAt: r.updated_at || null,
+      source: r.source || 'admin',
+      purchaseId: r.purchase_id ? String(r.purchase_id) : null,
+      purchasedByUserId: r.purchased_by_user_id ? String(r.purchased_by_user_id) : null,
+      stripeCheckoutSessionId: r.stripe_checkout_session_id || null,
+      stripePaymentIntentId: r.stripe_payment_intent_id || null,
+      purchaseStatus: r.purchase_status || null,
+      purchaseAmountCents: r.purchase_amount_cents != null ? Number(r.purchase_amount_cents) : null,
+      purchaseCurrency: r.purchase_currency || null,
       place: {
         id: String(r.place_id),
         name: r.place_name || '',
@@ -99,8 +110,9 @@ router.post('/', async (req, res) => {
     if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
     const { rows } = await query(
       `INSERT INTO sponsored_places
-         (place_id, surface, rank, enabled, starts_at, ends_at, badge_text, title_override, subtitle_override, image_override_url, cta_url, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5::timestamptz, $6::timestamptz, $7, $8, $9, $10, $11, NOW(), NOW())
+         (place_id, surface, rank, enabled, starts_at, ends_at, badge_text, title_override, subtitle_override, image_override_url, cta_url,
+          source, purchase_id, purchased_by_user_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5::timestamptz, $6::timestamptz, $7, $8, $9, $10, $11, 'admin', NULL, NULL, NOW(), NOW())
        ON CONFLICT (place_id, surface) DO UPDATE SET
          rank = EXCLUDED.rank,
          enabled = EXCLUDED.enabled,

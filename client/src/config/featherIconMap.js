@@ -49,6 +49,7 @@ export const MATERIAL_TO_FEATHER = {
   fit_screen: 'maximize-2',
   grid_view: 'grid',
   hiking: 'trending-up',
+  hotel: 'home',
   hourglass_empty: 'watch',
   key: 'key',
   keyboard_arrow_down: 'chevron-down',

@@ -40,11 +40,22 @@ export function createEmptyPlannerMemory() {
   };
 }
 
+function isStrippedControlChar(code) {
+  if (code === 0x7f) return true;
+  if (code <= 0x08) return true;
+  if (code === 0x0b || code === 0x0c) return true;
+  if (code >= 0x0e && code <= 0x1f) return true;
+  return false;
+}
+
 export function sanitizePersonalNote(raw) {
-  return String(raw || '')
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
-    .trim()
-    .slice(0, MAX_PERSONAL_NOTE);
+  const s = String(raw || '');
+  let out = '';
+  for (let i = 0; i < s.length; i += 1) {
+    const c = s.charCodeAt(i);
+    if (!isStrippedControlChar(c)) out += s[i];
+  }
+  return out.trim().slice(0, MAX_PERSONAL_NOTE);
 }
 
 function migrateRaw(o) {

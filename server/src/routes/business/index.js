@@ -5,6 +5,13 @@ const { query } = require('../../db');
 
 const router = express.Router();
 
+router.use(
+  '/sponsorship',
+  authMiddleware,
+  businessPortalMiddleware,
+  require('./sponsorship')
+);
+
 router.get('/me', authMiddleware, businessPortalMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;

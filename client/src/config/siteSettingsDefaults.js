@@ -37,4 +37,9 @@ export const siteSettingsDefaults = {
     discover: true,
     feed: true,
   },
+  /** Self-serve paid sponsorship (Stripe). Requires server env + migration 029. */
+  sponsorshipEnabled: false,
+  sponsorshipDurationDays: 30,
+  sponsorshipAmountCents: 4999,
+  sponsorshipCurrency: 'usd',
 };

@@ -36,6 +36,7 @@ const adminPlaceOwnersRoutes = require('./routes/admin/placeOwners');
 const adminSiteSettingsRoutes = require('./routes/admin/siteSettings');
 const adminPlacePromotionsRoutes = require('./routes/admin/placePromotions');
 const adminSponsoredPlacesRoutes = require('./routes/admin/sponsoredPlaces');
+const adminSponsorshipPurchasesRoutes = require('./routes/admin/sponsorshipPurchases');
 const adminCouponsMgmtRoutes = require('./routes/admin/couponsMgmt');
 const adminEmailBroadcastRoutes = require('./routes/admin/emailBroadcast');
 const siteSettingsPublicRoutes = require('./routes/siteSettingsPublic');
@@ -133,6 +134,11 @@ app.use(
 );
 
 app.use(compression());
+
+/** Stripe webhooks require raw body for signature verification (must run before express.json). */
+const stripeWebhookRouter = require('./routes/stripeWebhook');
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookRouter);
+
 app.use(express.json({ limit: JSON_BODY_LIMIT, strict: true }));
 app.use(sanitizeBody);
 
@@ -265,6 +271,7 @@ app.use('/api/admin/place-owners', adminPlaceOwnersRoutes);
 app.use('/api/admin/site-settings', adminSiteSettingsRoutes);
 app.use('/api/admin/place-promotions', adminPlacePromotionsRoutes);
 app.use('/api/admin/sponsored-places', adminSponsoredPlacesRoutes);
+app.use('/api/admin/sponsorship-purchases', adminSponsorshipPurchasesRoutes);
 app.use('/api/admin/coupons', adminCouponsMgmtRoutes);
 app.use('/api/admin/email-broadcast', adminEmailBroadcastRoutes);
 app.use('/api/business', businessRoutes);
