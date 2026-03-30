@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
@@ -237,6 +237,7 @@ export default function MapPage() {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -308,11 +309,11 @@ export default function MapPage() {
     const state = location.state;
     const tripIds = state?.tripPlaceIds;
     const days = state?.tripDays;
+    const qParam = (searchParams.get('q') || '').trim();
     setLiveNavigation(false);
     setLiveNavError(null);
     setLiveNavRequestingPermission(false);
     setAddingTripStop(false);
-    setSearchQuery('');
     setGooglePlaceData({});
     setTripPlaceIds(null);
     setTripDays(null);
@@ -320,6 +321,7 @@ export default function MapPage() {
     setTripDayLabel(state?.tripDayLabel || null);
     setSelectedDayIndex(0);
     if (Array.isArray(tripIds) && tripIds.length > 0) {
+      setSearchQuery('');
       setLoading(true);
       setTripFilterName(state.tripName || 'Trip');
       setTripPlaceIds(tripIds);
@@ -333,6 +335,7 @@ export default function MapPage() {
         .catch(() => setPlaces([]))
         .finally(() => setLoading(false));
     } else {
+      setSearchQuery(qParam);
       setLoading(true);
       setTripFilterName(null);
       setTripDayLabel(null);
@@ -342,7 +345,7 @@ export default function MapPage() {
         .catch(() => setPlaces([]))
         .finally(() => setLoading(false));
     }
-  }, [langParam, location.state]);
+  }, [langParam, location.state, searchParams]);
 
   useEffect(() => {
     if (!addingTripStop || catalogFetched) return undefined;
@@ -499,24 +502,36 @@ export default function MapPage() {
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
+  /** Browse mode: markers match the search bar (same algorithm as Discover); empty match → show all. */
+  const mapBrowseMarkers = useMemo(() => {
+    if (tripFilterName && currentDayPlaceIds.length > 0) return mapDisplayPlaces;
+    const qq = deferredSearchQuery.trim();
+    if (!qq) return mapDisplayPlaces;
+    const narrow = filterPlacesByQuery(mapDisplayPlaces, qq);
+    return narrow.length > 0 ? narrow : mapDisplayPlaces;
+  }, [tripFilterName, currentDayPlaceIds.length, mapDisplayPlaces, deferredSearchQuery]);
+
   const catalogPickerPlaces = useMemo(() => {
     if (!addingTripStop) return [];
     return filterPlacesByQuery(catalogPlaces, deferredSearchQuery);
   }, [addingTripStop, catalogPlaces, deferredSearchQuery]);
 
   const markersForMapList = useMemo(() => {
-    if (!addingTripStop) return mapDisplayPlaces;
+    if (!addingTripStop) return mapBrowseMarkers;
     const tripOrdered = mapDisplayPlaces;
     const idSet = new Set(tripOrdered.map((p) => String(p.id)));
     const extras = catalogPickerPlaces.filter((p) => !idSet.has(String(p.id)));
     return [...tripOrdered, ...extras];
-  }, [addingTripStop, mapDisplayPlaces, catalogPickerPlaces]);
+  }, [addingTripStop, mapBrowseMarkers, mapDisplayPlaces, catalogPickerPlaces]);
 
-  const drawerPlaces = useMemo(
-    () =>
-      filterPlacesByQuery(addingTripStop ? catalogPlaces : mapDisplayPlaces, deferredSearchQuery),
-    [addingTripStop, catalogPlaces, mapDisplayPlaces, deferredSearchQuery]
-  );
+  const drawerPlaces = useMemo(() => {
+    const base = addingTripStop ? catalogPlaces : mapDisplayPlaces;
+    const narrow = filterPlacesByQuery(base, deferredSearchQuery);
+    if (addingTripStop) return narrow;
+    const qq = deferredSearchQuery.trim();
+    if (!qq) return base;
+    return narrow.length > 0 ? narrow : base;
+  }, [addingTripStop, catalogPlaces, mapDisplayPlaces, deferredSearchQuery]);
 
   const selectedPlace = useMemo(
     () =>

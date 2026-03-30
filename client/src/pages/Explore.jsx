@@ -19,7 +19,7 @@ import {
 import { cityHeroWebpSrcSet, CITY_HERO_SIZES } from '../constants/cityHero';
 import { resolveHeroTagline, resolveFooterTagline } from '../config/resolveSiteTagline';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
-import { PLAN_TRIP_AREA_NAV, PLAN_TRIP_AREA_I18N_KEYS } from '../config/planTripAreas';
+import { PLAN_TRIP_AREA_NAV, PLAN_TRIP_AREA_I18N_KEYS, mapSearchUrl } from '../config/planTripAreas';
 import { applyHomeSeoFromSettings } from '../utils/siteSeo';
 import { getApiOrigin } from '../utils/apiOrigin';
 import {
@@ -550,12 +550,12 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
                 {PLAN_TRIP_AREA_NAV.map((nav) => {
                   const keys = PLAN_TRIP_AREA_I18N_KEYS[nav.key];
                   if (!keys) return null;
-                  const discoverTo = `${PLACES_DISCOVER_PATH}?q=${encodeURIComponent(nav.discoverQ)}`;
+                  const mapTo = mapSearchUrl(nav.discoverQ);
                   const areaName = safeT('home', keys.name);
                   return (
                     <Link
                       key={nav.key}
-                      to={discoverTo}
+                      to={mapTo}
                       className="vd-plan-trip-area vd-plan-trip-area--link"
                       aria-label={safeT('home', 'planTripAreaExploreAria').replace(/\{name\}/g, areaName)}
                     >
@@ -641,13 +641,11 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
               (n) => safeT('home', 'findYourWayThemeMore').split('{count}').join(String(n))
             );
             const rowTitle = titleFromCategories || safeT('home', way.titleKey);
-            const discoverTo = way.discoverQ
-              ? `${PLACES_DISCOVER_PATH}?q=${encodeURIComponent(way.discoverQ)}`
-              : PLACES_DISCOVER_PATH;
+            const mapTo = way.discoverQ ? mapSearchUrl(way.discoverQ) : mapSearchUrl('');
             return (
               <Link
                 key={way.wayKey}
-                to={discoverTo}
+                to={mapTo}
                 className={`vd-find-your-way-row ${stagger}`}
                 role="listitem"
               >
@@ -684,8 +682,8 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
         </div>
 
         <div className="vd-find-your-way-cta-wrap">
-          <Link to={PLACES_DISCOVER_PATH} className="vd-find-your-way-cta">
-            {safeT('home', 'seeAllWays')}
+          <Link to={mapSearchUrl('')} className="vd-find-your-way-cta">
+            {safeT('home', 'seeAllWaysMap')}
             <Icon name="arrow_forward" size={20} />
           </Link>
         </div>
@@ -1097,6 +1095,10 @@ export default function Explore() {
         <TopPicksCarousel places={topPicks} t={t} />
       )}
 
+      {communityPosts.length > 0 && (
+        <CommunityFeedStrip posts={communityPosts} t={t} moreTo={COMMUNITY_PATH} layout="bento" />
+      )}
+
       <ExperienceTripoliSection
         t={t}
         lang={lang}
@@ -1105,10 +1107,6 @@ export default function Explore() {
         showMap={showMap}
         showTips={user?.showTips !== false}
       />
-
-      {communityPosts.length > 0 && (
-        <CommunityFeedStrip posts={communityPosts} t={t} moreTo={COMMUNITY_PATH} layout="bento" />
-      )}
 
       {user?.showTips === false && (
         <section id="plan-trip" className="vd-section vd-plan-trip-one vd-plan-trip-one--tips">

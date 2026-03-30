@@ -404,6 +404,82 @@
   color: #991b1b;
 }
 
+.ai-planner__thinking {
+  align-self: flex-start;
+  max-width: min(100%, 520px);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+  border: 1px solid rgba(15, 118, 110, 0.22);
+  background: linear-gradient(
+    135deg,
+    rgba(15, 118, 110, 0.07) 0%,
+    var(--color-surface, #fff) 48%
+  );
+  color: var(--color-text-primary, #1c1917);
+  box-shadow: 0 2px 14px rgba(15, 118, 110, 0.06);
+}
+
+[dir='rtl'] .ai-planner__thinking {
+  align-self: flex-end;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 4px;
+}
+
+.ai-planner__thinking-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--color-primary, #0f766e);
+  animation: ai-planner-thinking-pulse 1.6s ease-in-out infinite;
+}
+
+.ai-planner__thinking-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ai-planner__thinking-head {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.ai-planner__thinking-sub {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-secondary, #57534e);
+}
+
+@keyframes ai-planner-thinking-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-planner__thinking-icon {
+    animation: none;
+  }
+}
+
 .ai-planner__plan {
   margin-top: 10px;
   padding: 12px;
@@ -1100,7 +1176,7 @@
 .ai-planner__nav-fab {
   position: fixed;
   inset-inline-end: 12px;
-  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  /* `bottom` set in JS from composer + optional day-dock stack height */
   z-index: 162;
   width: 44px;
   height: 44px;
@@ -1128,18 +1204,9 @@
   outline-offset: 2px;
 }
 
-.ai-planner__nav-fab--with-dock {
-  bottom: calc(158px + env(safe-area-inset-bottom, 0px));
-}
-
 @media (min-width: 720px) {
   .ai-planner__nav-fab {
     inset-inline-end: 20px;
-    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-  }
-
-  .ai-planner__nav-fab--with-dock {
-    bottom: calc(150px + env(safe-area-inset-bottom, 0px));
   }
 }
 
