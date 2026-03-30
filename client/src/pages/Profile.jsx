@@ -62,6 +62,7 @@ export default function Profile() {
   const [showNew, setShowNew] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const locale = lang === 'ar' ? 'ar-LB' : lang === 'fr' ? 'fr-LB' : 'en-GB';
 
@@ -111,6 +112,26 @@ export default function Profile() {
       showToast(t('feedback', 'profileSaveFailed'), 'error');
     } finally {
       setSavingProfile(false);
+    }
+  }
+
+  async function handleAvatarPick(file) {
+    if (!file || avatarUploading) return;
+    setAvatarUploading(true);
+    try {
+      const res = await api.user.uploadAvatar(file);
+      const newUrl = res?.avatarUrl ? String(res.avatarUrl) : null;
+      if (newUrl) {
+        setProfile((p) => ({ ...p, avatarUrl: newUrl }));
+        await refreshUser().catch(() => {});
+        showToast(t('feedback', 'avatarUpdated'), 'success');
+      } else {
+        showToast(t('feedback', 'avatarUpdateFailed'), 'error');
+      }
+    } catch (e) {
+      showToast(e?.message || t('feedback', 'avatarUpdateFailed'), 'error');
+    } finally {
+      setAvatarUploading(false);
     }
   }
 
@@ -183,8 +204,29 @@ export default function Profile() {
       <header className="profile-hero">
         <div className="profile-hero-visual" aria-hidden />
         <div className="profile-hero-content">
-          <div className="profile-avatar profile-avatar--hero">
-            {avatarUrl ? <img src={avatarUrl} alt="" /> : initial}
+          <div className="profile-avatar-wrap">
+            <div className="profile-avatar profile-avatar--hero">
+              {avatarUrl ? <img src={avatarUrl} alt="" /> : initial}
+            </div>
+            <label className={`profile-avatar-edit ${avatarUploading ? 'profile-avatar-edit--busy' : ''}`}>
+              <input
+                type="file"
+                accept="image/*,.heic,.heif"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  void handleAvatarPick(f);
+                }}
+                disabled={avatarUploading}
+              />
+              <span className="profile-avatar-edit-icon" aria-hidden>
+                <Icon name="photo_camera" size={18} ariaHidden />
+              </span>
+              <span className="profile-avatar-edit-text">
+                {avatarUploading ? t('profilePage', 'photoUploading') : t('profilePage', 'photoChange')}
+              </span>
+            </label>
+            <p className="profile-avatar-hint">{t('profilePage', 'photoHint')}</p>
           </div>
           <div className="profile-hero-text">
             <p className="profile-kicker">{t('profilePage', 'verifiedVisitor')}</p>

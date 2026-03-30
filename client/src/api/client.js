@@ -681,6 +681,30 @@ export const api = {
   user: {
     profile: () => api.get('/api/user/profile'),
     updateProfile: (data) => api.patch('/api/user/profile', data),
+    uploadAvatar: (file) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const url = `${getBaseUrl()}/api/user/profile/avatar`;
+      const headers = {};
+      const token = getToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+      return fetchWithNetworkRetry(url, { method: 'POST', body: formData, headers, credentials: 'include' }).then(async (r) => {
+        let json = null;
+        try {
+          json = await r.json();
+        } catch {
+          json = null;
+        }
+        if (!r.ok) {
+          const msg = json?.error || json?.detail || `Upload failed (${r.status})`;
+          const e = new Error(msg);
+          e.status = r.status;
+          e.data = json;
+          throw e;
+        }
+        return json;
+      });
+    },
     changePassword: (currentPassword, newPassword) => api.post('/api/user/change-password', { currentPassword, newPassword }),
     /** Venue inquiries sent while signed in (place messages / proposals). */
     inquiries: () => api.get('/api/user/inquiries'),

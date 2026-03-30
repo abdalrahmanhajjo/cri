@@ -190,6 +190,8 @@ export const translations = {
       actionFailed: 'Something went wrong. Try again.',
       resetCodeSent: 'If this email is registered, you’ll receive a reset code shortly.',
       resetPasswordDone: 'Your password was updated. You can sign in now.',
+      avatarUpdated: 'Profile photo updated.',
+      avatarUpdateFailed: 'Could not update your profile photo.',
     },
     errors: {
       networkError: 'Unable to reach the server. Check your connection and try again.',
@@ -1125,6 +1127,10 @@ export const translations = {
       signOutAria: 'Sign out of your account',
       trustNote:
         'Your data is encrypted in transit. We never sell personal information. Passwords are stored with industry-standard hashing.',
+      photoLabel: 'Profile photo',
+      photoHint: 'JPG, PNG, WebP, GIF, or HEIC. Square works best.',
+      photoChange: 'Change photo',
+      photoUploading: 'Uploading…',
     },
   },
   ar: {
@@ -1308,6 +1314,8 @@ export const translations = {
       actionFailed: 'حدث خطأ. حاول مرة أخرى.',
       resetCodeSent: 'إذا كان البريد مسجّلًا، ستصلك رسالة برمز الاستعادة قريبًا.',
       resetPasswordDone: 'تم تحديث كلمة المرور. يمكنك تسجيل الدخول الآن.',
+      avatarUpdated: 'تم تحديث صورة الملف الشخصي.',
+      avatarUpdateFailed: 'تعذّر تحديث صورة الملف الشخصي.',
     },
     errors: {
       networkError: 'تعذّر الاتصال بالخادم. تحقّق من اتصالك وحاول مرة أخرى.',
@@ -2232,6 +2240,10 @@ export const translations = {
       signOutAria: 'تسجيل الخروج من الحساب',
       trustNote:
         'البيانات مشفّرة أثناء النقل. لا نبيع المعلومات الشخصية. كلمات المرور مُخزّنة بتجزئة آمنة.',
+      photoLabel: 'صورة الملف',
+      photoHint: 'JPG أو PNG أو WebP أو GIF أو HEIC. المربع أفضل.',
+      photoChange: 'تغيير الصورة',
+      photoUploading: 'جارٍ الرفع…',
     },
   },
   fr: {
@@ -2415,6 +2427,8 @@ export const translations = {
       actionFailed: 'Une erreur s’est produite. Réessayez.',
       resetCodeSent: 'Si ce compte existe, vous recevrez un code par e-mail.',
       resetPasswordDone: 'Mot de passe mis à jour. Vous pouvez vous connecter.',
+      avatarUpdated: 'Photo de profil mise à jour.',
+      avatarUpdateFailed: 'Impossible de mettre à jour la photo de profil.',
     },
     errors: {
       networkError: 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.',
@@ -3359,6 +3373,10 @@ export const translations = {
       signOutAria: 'Se déconnecter du compte',
       trustNote:
         'Données chiffrées en transit. Nous ne revendons pas vos informations. Mots de passe stockés avec hachage sécurisé.',
+      photoLabel: 'Photo de profil',
+      photoHint: 'JPG, PNG, WebP, GIF ou HEIC. Le format carré est idéal.',
+      photoChange: 'Changer la photo',
+      photoUploading: 'Téléversement…',
     },
   },
 };
