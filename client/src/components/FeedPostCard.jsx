@@ -6,7 +6,12 @@ import { isCommunityFeedVideo } from './CommunityFeed';
 import { useLanguage } from '../context/LanguageContext';
 import { formatFeedTime } from '../utils/feedTime';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../utils/feedPostImages';
-import { isLikelyImageFile, isLikelyVideoFile, ACCEPT_IMAGES_WITH_HEIC } from '../utils/imageUploadAccept';
+import {
+  isLikelyImageFile,
+  isLikelyVideoFile,
+  ACCEPT_IMAGES_WITH_HEIC,
+  ACCEPT_FEED_REEL_VIDEOS,
+} from '../utils/imageUploadAccept';
 import { COMMUNITY_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
 import { isLikelyDirectStreamableVideo } from '../utils/feedVideoPlayback';
 
@@ -717,7 +722,7 @@ export default function FeedPostCard({
       return;
     }
     if (!isLikelyVideoFile(file)) {
-      setFeedActionMsg('Choose a video file (MP4, WebM, MOV).');
+      setFeedActionMsg('Choose a video file (MP4, WebM, MOV, M4V, MKV, or 3GP).');
       return;
     }
     setOwnerEditUploading('video');
@@ -1772,7 +1777,7 @@ export default function FeedPostCard({
                 <input
                   id={`owner-edit-video-${post.id}`}
                   type="file"
-                  accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                  accept={ACCEPT_FEED_REEL_VIDEOS}
                   style={{ display: 'none' }}
                   disabled={ownerSaving || ownerEditUploading !== null}
                   onChange={(e) => {
@@ -1781,7 +1786,7 @@ export default function FeedPostCard({
                   }}
                 />
                 <label htmlFor={`owner-edit-video-${post.id}`}>
-                  {ownerEditUploading === 'video' ? 'Uploading video…' : 'Drop video here or click to upload'}
+                  {ownerEditUploading === 'video' ? 'Uploading…' : 'Drop video or click to replace'}
                 </label>
               </div>
               <button
@@ -1791,7 +1796,7 @@ export default function FeedPostCard({
                 onClick={() => setOwnerEditShowAdvanced((x) => !x)}
                 disabled={ownerSaving}
               >
-                {ownerEditShowAdvanced ? 'Hide' : 'Show'} advanced URL fields
+                {ownerEditShowAdvanced ? 'Hide' : 'Show'} paste URLs (advanced)
               </button>
               {ownerEditShowAdvanced && (
                 <div className="ig-feed-owner-edit-advanced">

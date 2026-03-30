@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
-import { isLikelyImageFile, isLikelyVideoFile, ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
+import {
+  isLikelyImageFile,
+  isLikelyVideoFile,
+  ACCEPT_IMAGES_WITH_HEIC,
+  ACCEPT_FEED_REEL_VIDEOS,
+} from '../../utils/imageUploadAccept';
 import './Admin.css';
 
 function contentKind(t) {
@@ -210,8 +215,8 @@ export default function AdminFeed() {
       setError('Choose an image file (JPEG, PNG, GIF, WebP, or HEIC — HEIC is saved as JPEG).');
       return;
     }
-    if (kind === 'video' && !/^video\//i.test(file.type)) {
-      setError('Choose a video file (MP4, WebM, or MOV).');
+    if (kind === 'video' && !isLikelyVideoFile(file)) {
+      setError('Choose a video file (MP4, WebM, MOV, M4V, MKV, or 3GP).');
       return;
     }
     if (kind === 'image') {
@@ -265,7 +270,7 @@ export default function AdminFeed() {
       return;
     }
     if (!isLikelyVideoFile(file)) {
-      setError('Choose a video file.');
+      setError('Choose a video file (MP4, WebM, MOV, M4V, MKV, or 3GP).');
       return;
     }
     setEditUploading(kind);
@@ -611,7 +616,7 @@ export default function AdminFeed() {
                       <input
                         id="admin-feed-composer-video"
                         type="file"
-                        accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                        accept={ACCEPT_FEED_REEL_VIDEOS}
                         style={{ display: 'none' }}
                         disabled={composerUploading !== null}
                         onChange={(e) => {
@@ -625,7 +630,7 @@ export default function AdminFeed() {
                       >
                         {composerUploading === 'video'
                           ? 'Uploading video…'
-                          : 'Drop video here or click — MP4, WebM, MOV (about 80MB max, same admin upload as images)'}
+                          : 'Drop video here or click — MP4, WebM, MOV, M4V, MKV, 3GP (host max applies; same pipeline as business uploads)'}
                       </label>
                     </div>
                     {resolvedMediaUrl(composerVideo) ? (
@@ -1147,7 +1152,7 @@ export default function AdminFeed() {
                     <input
                       id="admin-feed-edit-video"
                       type="file"
-                      accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                      accept={ACCEPT_FEED_REEL_VIDEOS}
                       style={{ display: 'none' }}
                       disabled={editUploading !== null}
                       onChange={(e) => {
