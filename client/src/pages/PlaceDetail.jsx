@@ -8,7 +8,8 @@ import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { discoverPlaceFeedPath } from '../utils/discoverPaths';
+import { discoverPlaceFeedPath, DINING_PATH, discoverSearchUrl } from '../utils/discoverPaths';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import { getCategoriesForWay } from '../utils/findYourWayGrouping';
 import './Detail.css';
 
@@ -47,6 +48,11 @@ function placeHasGpsForCheckin(place) {
   return !!(c && Number.isFinite(c.lat) && Number.isFinite(c.lng));
 }
 
+function digitsForWaMe(raw) {
+  const d = String(raw || '').replace(/\D/g, '');
+  return d.length >= 8 ? d : '';
+}
+
 function InfoRow({ icon, label, value }) {
   if (value == null || value === '') return null;
   return (
@@ -69,6 +75,7 @@ export default function PlaceDetail() {
   const { t, lang } = useLanguage();
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { settings } = useSiteSettings();
   const [place, setPlace] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -573,6 +580,26 @@ export default function PlaceDetail() {
 
   const hours = place.hours;
   const hoursStr = typeof hours === 'string' ? hours : Array.isArray(hours) ? hours.join(' · ') : hours;
+  const dining = place.diningProfile && typeof place.diningProfile === 'object' ? place.diningProfile : {};
+  const svc = dining.service && typeof dining.service === 'object' ? dining.service : {};
+  const hasServicePill = svc.dineIn || svc.takeaway || svc.delivery || svc.outdoorSeating || svc.reservations;
+  const cuisineList = Array.isArray(dining.cuisineTypes) ? dining.cuisineTypes.filter(Boolean) : [];
+  const menuSections = Array.isArray(dining.menuSections) ? dining.menuSections : [];
+  const hasMenuBody =
+    (typeof dining.menuIntro === 'string' && dining.menuIntro.trim()) ||
+    menuSections.some((s) => s && (String(s.title || '').trim() || (Array.isArray(s.items) && s.items.some((it) => it && String(it.name || '').trim()))));
+  const waDigits = digitsForWaMe(dining.whatsapp);
+  const phoneTrim = typeof dining.phone === 'string' ? dining.phone.trim() : '';
+  const showQuick =
+    isDiningPlace &&
+    (dining.menuUrl ||
+      dining.menuPdfUrl ||
+      dining.reservationsUrl ||
+      phoneTrim ||
+      waDigits);
+
+  const diningGuideEnabled = settings?.diningGuide?.enabled !== false;
+  const diningBreadcrumbTo = diningGuideEnabled ? DINING_PATH : discoverSearchUrl('restaurant');
 
   return (
     <div className={`place-detail ${isDiningPlace ? 'place-detail--dining' : ''}`}>
@@ -580,7 +607,13 @@ export default function PlaceDetail() {
         <nav className="place-detail-breadcrumb" aria-label="Breadcrumb">
           <ol className="place-detail-breadcrumb-list">
             <li><Link to="/">{t('nav', 'home')}</Link></li>
-            <li><Link to="/">{t('detail', 'discoverTripoli')}</Link></li>
+            {isDiningPlace ? (
+              <li>
+                <Link to={diningBreadcrumbTo}>{t('nav', 'diningNav')}</Link>
+              </li>
+            ) : (
+              <li><Link to="/">{t('detail', 'discoverTripoli')}</Link></li>
+            )}
             <li aria-current="page">{place.name}</li>
           </ol>
         </nav>
@@ -648,7 +681,9 @@ export default function PlaceDetail() {
                 </button>
               </>
             )}
-            <div className="place-detail-hero-badge">{t('detail', 'officialInfo')}</div>
+            <div className={`place-detail-hero-badge ${isDiningPlace ? 'place-detail-hero-badge--dining' : ''}`}>
+              {isDiningPlace ? t('detail', 'restaurantBadge') : t('detail', 'officialInfo')}
+            </div>
             <div className="place-detail-hero-bottom">
               {hasMultiGallery && (
                 <div className="place-detail-hero-thumbs" role="tablist" aria-label={t('detail', 'photoGalleryLabel')}>
@@ -714,6 +749,46 @@ export default function PlaceDetail() {
             </button>
           </div>
 
+          {showQuick ? (
+            <div className="restaurant-detail-quick" aria-label={t('detail', 'restaurantQuickLabel')}>
+              {dining.menuUrl ? (
+                <a className="restaurant-detail-quick__btn" href={dining.menuUrl} target="_blank" rel="noopener noreferrer">
+                  <Icon name="restaurant_menu" size={20} />
+                  {t('detail', 'viewMenuOnline')}
+                </a>
+              ) : null}
+              {dining.menuPdfUrl ? (
+                <a className="restaurant-detail-quick__btn" href={dining.menuPdfUrl} target="_blank" rel="noopener noreferrer">
+                  <Icon name="picture_as_pdf" size={20} />
+                  {t('detail', 'menuPdf')}
+                </a>
+              ) : null}
+              {dining.reservationsUrl ? (
+                <a className="restaurant-detail-quick__btn restaurant-detail-quick__btn--accent" href={dining.reservationsUrl} target="_blank" rel="noopener noreferrer">
+                  <Icon name="event_available" size={20} />
+                  {t('detail', 'reserveTable')}
+                </a>
+              ) : null}
+              {phoneTrim ? (
+                <a className="restaurant-detail-quick__btn" href={`tel:${phoneTrim.replace(/\s/g, '')}`}>
+                  <Icon name="call" size={20} />
+                  {t('detail', 'callVenue')}
+                </a>
+              ) : null}
+              {waDigits ? (
+                <a
+                  className="restaurant-detail-quick__btn restaurant-detail-quick__btn--wa"
+                  href={`https://wa.me/${waDigits}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Icon name="chat" size={20} />
+                  WhatsApp
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+
           {isDiningPlace ? (
             <section className="restaurant-detail-essentials" aria-label="Restaurant essentials">
               <div className="restaurant-detail-tiles">
@@ -734,6 +809,33 @@ export default function PlaceDetail() {
                   <span className="restaurant-detail-tile-v">{place.location || '—'}</span>
                 </div>
               </div>
+              {hasServicePill ? (
+                <div className="restaurant-detail-service">
+                  <span className="restaurant-detail-service__label">{t('detail', 'serviceOptions')}</span>
+                  <ul className="restaurant-detail-service__list">
+                    {svc.dineIn ? <li>{t('detail', 'svcDineIn')}</li> : null}
+                    {svc.takeaway ? <li>{t('detail', 'svcTakeaway')}</li> : null}
+                    {svc.delivery ? <li>{t('detail', 'svcDelivery')}</li> : null}
+                    {svc.outdoorSeating ? <li>{t('detail', 'svcOutdoor')}</li> : null}
+                    {svc.reservations ? <li>{t('detail', 'svcReservations')}</li> : null}
+                  </ul>
+                </div>
+              ) : null}
+              {cuisineList.length > 0 ? (
+                <div className="restaurant-detail-cuisine">
+                  <span className="restaurant-detail-cuisine__label">{t('detail', 'cuisineFocus')}</span>
+                  <div className="restaurant-detail-cuisine__pills">
+                    {cuisineList.map((c, i) => (
+                      <span key={`${c}-${i}`} className="restaurant-detail-cuisine__pill">
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {typeof dining.dietaryNotes === 'string' && dining.dietaryNotes.trim() ? (
+                <p className="restaurant-detail-dietary">{dining.dietaryNotes.trim()}</p>
+              ) : null}
               {place.tags && (Array.isArray(place.tags) ? place.tags.length > 0 : place.tags) ? (
                 <div className="restaurant-detail-tags">
                   {(Array.isArray(place.tags) ? place.tags : [place.tags]).slice(0, 10).map((tag, i) => (
@@ -755,9 +857,56 @@ export default function PlaceDetail() {
             </div>
           )}
 
+          {isDiningPlace && hasMenuBody ? (
+            <section className="restaurant-detail-menu" aria-labelledby="restaurant-menu-heading">
+              <div className="restaurant-detail-menu__head">
+                <h2 id="restaurant-menu-heading" className="restaurant-detail-menu__title">
+                  {t('detail', 'menuHeading')}
+                </h2>
+                <p className="restaurant-detail-menu__sub">{t('detail', 'menuSub')}</p>
+              </div>
+              {typeof dining.menuIntro === 'string' && dining.menuIntro.trim() ? (
+                <div className="restaurant-detail-menu__intro">{dining.menuIntro.trim()}</div>
+              ) : null}
+            <div className="restaurant-detail-menu__body">
+                {menuSections.map((sec, si) => {
+                  const title = sec && String(sec.title || '').trim();
+                  const items = Array.isArray(sec?.items) ? sec.items : [];
+                  const rows = items.filter((it) => it && String(it.name || '').trim());
+                  if (!title && rows.length === 0) return null;
+                  return (
+                    <div key={`menu-sec-${si}`} className="restaurant-detail-menu-group">
+                      {title ? <h3 className="restaurant-detail-menu-group__title">{title}</h3> : null}
+                      {rows.length > 0 ? (
+                        <ul className="restaurant-detail-menu-list">
+                          {rows.map((it, ii) => (
+                            <li key={`${si}-${ii}`} className="restaurant-detail-menu-item">
+                              <div className="restaurant-detail-menu-item__main">
+                                <span className="restaurant-detail-menu-item__name">{String(it.name || '').trim()}</span>
+                                {it.price ? <span className="restaurant-detail-menu-item__price">{String(it.price).trim()}</span> : null}
+                              </div>
+                              {it.description && String(it.description).trim() ? (
+                                <p className="restaurant-detail-menu-item__desc">{String(it.description).trim()}</p>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
           {place.description && (
-            <section className="place-detail-section" aria-labelledby="place-description-heading">
-              <h2 id="place-description-heading" className="place-detail-section-title">{t('detail', 'description')}</h2>
+            <section
+              className={`place-detail-section ${isDiningPlace ? 'place-detail-section--restaurant-about' : ''}`}
+              aria-labelledby="place-description-heading"
+            >
+              <h2 id="place-description-heading" className="place-detail-section-title">
+                {isDiningPlace ? t('detail', 'restaurantAbout') : t('detail', 'description')}
+              </h2>
               <div className="place-detail-description">
                 {place.description.split(/\n\n+/).map((para, i) => (
                   <p key={i}>{para}</p>

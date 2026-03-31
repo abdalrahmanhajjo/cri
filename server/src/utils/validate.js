@@ -62,6 +62,21 @@ function safeUrl(url) {
  * @param {Record<string, unknown>} query - req.query
  * @returns {{ usePagination: boolean, limit: number|null, offset: number, invalid?: string }}
  */
+/**
+ * Comma-separated category ids to exclude from GET /api/places (e.g. discover page).
+ * @param {unknown} raw - req.query.excludeCategoryIds
+ * @returns {string[]}
+ */
+function parseExcludeCategoryIds(raw) {
+  if (raw == null || raw === '') return [];
+  const s = typeof raw === 'string' ? raw : String(raw);
+  const ids = s
+    .split(',')
+    .map((x) => x.trim())
+    .filter((id) => /^[a-zA-Z0-9_]{1,60}$/.test(id));
+  return [...new Set(ids)].slice(0, 30);
+}
+
 function parsePlacesListPagination(query) {
   const q = query && typeof query === 'object' ? query : {};
   const rawLimit = q.limit;
@@ -81,4 +96,11 @@ function parsePlacesListPagination(query) {
   return { usePagination: true, limit: clampedLimit, offset };
 }
 
-module.exports = { parsePositiveInt, parsePlaceId, parseTripId, safeUrl, parsePlacesListPagination };
+module.exports = {
+  parsePositiveInt,
+  parsePlaceId,
+  parseTripId,
+  safeUrl,
+  parsePlacesListPagination,
+  parseExcludeCategoryIds,
+};

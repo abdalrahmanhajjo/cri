@@ -2,7 +2,7 @@ const express = require('express');
 const { haversineMeters } = require('../utils/geo');
 const { query } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
-const { parsePositiveInt, parsePlacesListPagination } = require('../utils/validate');
+const { parsePositiveInt, parsePlacesListPagination, parseExcludeCategoryIds } = require('../utils/validate');
 const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth');
 const { sendDbAwareError } = require('../utils/dbHttpError');
 const {
@@ -15,6 +15,7 @@ const { visitorFollowupsFromDb } = require('../utils/inquiryFollowups');
 const { isMessagingBlocked } = require('../utils/messagingBlocks');
 const { normalizeDbText } = require('../utils/normalizeDbText');
 const { cachePublicList } = require('../middleware/publicCache');
+const { normalizeDiningProfile } = require('../utils/diningProfile');
 
 const MAX_VISITOR_FOLLOWUPS_PER_INQUIRY = 50;
 
@@ -131,7 +132,13 @@ function normalizeTags(tags) {
   return tags;
 }
 
-function rowToPlace(row, baseUrl) {
+/**
+ * @param {object} row
+ * @param {string} baseUrl
+ * @param {{ forDetail?: boolean }} [opts]
+ */
+function rowToPlace(row, baseUrl, opts = {}) {
+  const forDetail = opts.forDetail === true;
   let images = safeParseJson(row.images, []);
   images = resolveImageUrls(images, baseUrl);
   const appN = row.app_review_count != null ? Number(row.app_review_count) : 0;
@@ -165,6 +172,13 @@ function rowToPlace(row, baseUrl) {
   };
   if (row.latitude != null && row.longitude != null) result.coordinates = { lat: row.latitude, lng: row.longitude };
   if (images.length === 1) result.image = images[0];
+
+  if (forDetail || row.dining_profile !== undefined) {
+    const norm = normalizeDiningProfile(row.dining_profile);
+    const { _isEmpty, ...diningProfile } = norm;
+    if (forDetail || !_isEmpty) result.diningProfile = diningProfile;
+  }
+
   return result;
 }
 
@@ -183,6 +197,13 @@ router.get('/', cachePublicList(60, 300), async (req, res) => {
     if (pag.invalid) {
       return res.status(400).json({ error: pag.invalid });
     }
+    const excludeCategoryIds = parseExcludeCategoryIds(req.query.excludeCategoryIds);
+    const excludeSql =
+      excludeCategoryIds.length > 0
+        ? ` AND p.category_id NOT IN (${excludeCategoryIds.map((_, i) => `$${i + 2}`).join(', ')})`
+        : '';
+    const listParamsBase = excludeCategoryIds.length > 0 ? [lang, ...excludeCategoryIds] : [lang];
+
     const { statsJoinSql } = await getPlaceReviewMeta();
     const listSql = `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
               pr_stats.app_avg_rating, pr_stats.app_review_count,
@@ -193,17 +214,34 @@ router.get('/', cachePublicList(60, 300), async (req, res) => {
        FROM places p
        LEFT JOIN place_translations pt ON pt.place_id = p.id AND pt.lang = $1
        ${statsJoinSql}
+       WHERE 1=1${excludeSql}
        ORDER BY p.name`;
 
     if (!pag.usePagination) {
-      const result = await query(`${listSql}`, [lang]);
+      const result = await query(`${listSql}`, listParamsBase);
       const places = result.rows.map((r) => rowToPlace(r, baseUrl));
       return res.json({ popular: places, locations: places });
     }
 
+    const countSql =
+      excludeCategoryIds.length > 0
+        ? `SELECT COUNT(*)::int AS c FROM places p WHERE 1=1${excludeSql}`
+        : 'SELECT COUNT(*)::int AS c FROM places';
+    const countParams = excludeCategoryIds.length > 0 ? excludeCategoryIds : [];
+
+    const listPagParams =
+      excludeCategoryIds.length > 0
+        ? [lang, ...excludeCategoryIds, pag.limit, pag.offset]
+        : [lang, pag.limit, pag.offset];
+
+    const listPagSql =
+      excludeCategoryIds.length > 0
+        ? `${listSql} LIMIT $${excludeCategoryIds.length + 2} OFFSET $${excludeCategoryIds.length + 3}`
+        : `${listSql} LIMIT $2 OFFSET $3`;
+
     const [{ rows: countRows }, result] = await Promise.all([
-      query('SELECT COUNT(*)::int AS c FROM places', []),
-      query(`${listSql} LIMIT $2 OFFSET $3`, [lang, pag.limit, pag.offset]),
+      query(countSql, countParams),
+      query(listPagSql, listPagParams),
     ]);
     const total = countRows[0]?.c != null ? Number(countRows[0].c) : 0;
     const places = result.rows.map((r) => rowToPlace(r, baseUrl));
@@ -858,6 +896,7 @@ router.get('/:id', async (req, res) => {
     let result = bySlug
       ? await query(
           `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
+                  p.dining_profile,
                   pr_stats.app_avg_rating, pr_stats.app_review_count,
                   COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,
                   COALESCE(pt.location, p.location) AS location, COALESCE(pt.category, p.category) AS category,
@@ -874,6 +913,7 @@ router.get('/:id', async (req, res) => {
         )
       : await query(
           `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
+                  p.dining_profile,
                   pr_stats.app_avg_rating, pr_stats.app_review_count,
                   COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,
                   COALESCE(pt.location, p.location) AS location, COALESCE(pt.category, p.category) AS category,
@@ -888,6 +928,7 @@ router.get('/:id', async (req, res) => {
     if (result.rows.length === 0 && !bySlug) {
       result = await query(
         `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
+                p.dining_profile,
                 pr_stats.app_avg_rating, pr_stats.app_review_count,
                 COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,
                 COALESCE(pt.location, p.location) AS location, COALESCE(pt.category, p.category) AS category,
@@ -901,7 +942,7 @@ router.get('/:id', async (req, res) => {
       );
     }
     if (result.rows.length === 0) return res.status(404).json({ error: 'Place not found' });
-    res.json(rowToPlace(result.rows[0], baseUrl));
+    res.json(rowToPlace(result.rows[0], baseUrl, { forDetail: true }));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch place' });

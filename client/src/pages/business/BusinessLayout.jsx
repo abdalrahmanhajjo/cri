@@ -2,12 +2,16 @@ import { useEffect, useState, useCallback } from 'react';
 import { Outlet, NavLink, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
+import { mergeBusinessPortal } from '../../config/siteSettingsDefaults';
 import api from '../../api/client';
 import './Business.css';
 
-export function BusinessNavSections({ places, onNavClick }) {
+export function BusinessNavSections({ places, onNavClick, portal }) {
   const afterNav = onNavClick || undefined;
   const { t } = useLanguage();
+  const p = mergeBusinessPortal(portal);
+  const sec = p.sections || {};
   return (
     <>
       <div className="business-nav-label">Menu</div>
@@ -25,28 +29,32 @@ export function BusinessNavSections({ places, onNavClick }) {
         </svg>
         Dashboard
       </NavLink>
-      <NavLink
-        to="/business/sponsorship"
-        onClick={afterNav}
-        className={({ isActive }) => `business-nav-link${isActive ? ' active' : ''}`}
-      >
-        <svg className="business-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-        </svg>
-        {t('business', 'sponsorshipNav')}
-      </NavLink>
-      <NavLink
-        to="/business/places"
-        end
-        onClick={afterNav}
-        className={({ isActive }) => `business-nav-link${isActive ? ' active' : ''}`}
-      >
-        <svg className="business-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16" />
-          <circle cx="5" cy="19" r="1" />
-        </svg>
-        Feed
-      </NavLink>
+      {sec.sponsorship !== false ? (
+        <NavLink
+          to="/business/sponsorship"
+          onClick={afterNav}
+          className={({ isActive }) => `business-nav-link${isActive ? ' active' : ''}`}
+        >
+          <svg className="business-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+          {t('business', 'sponsorshipNav')}
+        </NavLink>
+      ) : null}
+      {sec.feed !== false ? (
+        <NavLink
+          to="/business/places"
+          end
+          onClick={afterNav}
+          className={({ isActive }) => `business-nav-link${isActive ? ' active' : ''}`}
+        >
+          <svg className="business-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16" />
+            <circle cx="5" cy="19" r="1" />
+          </svg>
+          Feed
+        </NavLink>
+      ) : null}
 
       {places.length > 0 && (
         <div className="business-nav-places">
@@ -75,6 +83,8 @@ export function BusinessNavSections({ places, onNavClick }) {
 export default function BusinessLayout() {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { settings } = useSiteSettings();
+  const businessPortal = mergeBusinessPortal(settings?.businessPortal);
   const [me, setMe] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -182,7 +192,7 @@ export default function BusinessLayout() {
             </span>
             <span className="business-brand-text">
               <span className="business-brand-title">Visit Tripoli</span>
-              <span className="business-brand-sub">Business console</span>
+              <span className="business-brand-sub">Venue hub</span>
             </span>
           </Link>
         </div>
@@ -211,7 +221,7 @@ export default function BusinessLayout() {
       <div className="business-body">
         <aside className="business-sidebar" aria-label="Business navigation">
           <div className="business-sidebar-inner">
-            <BusinessNavSections places={places} />
+            <BusinessNavSections places={places} portal={businessPortal} />
           </div>
         </aside>
 
@@ -244,7 +254,7 @@ export default function BusinessLayout() {
                 </button>
               </div>
               <div className="business-mobile-drawer-body">
-                <BusinessNavSections places={places} onNavClick={() => setMobileNavOpen(false)} />
+                <BusinessNavSections places={places} portal={businessPortal} onNavClick={() => setMobileNavOpen(false)} />
               </div>
             </div>
           </>
@@ -256,7 +266,7 @@ export default function BusinessLayout() {
               {loadErr}
             </div>
           )}
-          <Outlet context={{ me, loadErr, refreshMe }} />
+          <Outlet context={{ me, loadErr, refreshMe, businessPortal }} />
         </main>
       </div>
     </div>

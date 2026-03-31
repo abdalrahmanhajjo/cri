@@ -444,6 +444,125 @@
   margin: 0;
 }
 
+.business-dashboard-lead a {
+  color: var(--biz-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.business-dashboard-lead a:hover {
+  text-decoration: underline;
+}
+
+/* Distinct partner dashboard (not admin-table aesthetic) */
+.business-dashboard--venue-hub .business-dashboard-hero--venue {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin-bottom: 2.25rem;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--biz-radius);
+  border: 1px solid var(--biz-line);
+  background: var(--biz-surface);
+  box-shadow: var(--biz-shadow);
+}
+
+.business-dashboard-hero-inner {
+  padding: 1.75rem 1.75rem 1.85rem;
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 720px) {
+  .business-dashboard--venue-hub .business-dashboard-hero--venue {
+    grid-template-columns: 6px 1fr;
+  }
+  .business-dashboard-hero-accent {
+    background: linear-gradient(180deg, #c9a227 0%, var(--biz-accent) 55%, #0a3d3b 100%);
+  }
+}
+
+.business-dashboard-hero-accent {
+  display: none;
+}
+
+@media (min-width: 720px) {
+  .business-dashboard-hero-accent {
+    display: block;
+  }
+}
+
+.business-dashboard--venue-hub .business-dashboard-hero--venue .business-dashboard-kicker {
+  color: var(--biz-accent);
+  letter-spacing: 0.12em;
+}
+
+.business-shell--portal-off {
+  min-height: 100vh;
+}
+
+.business-main--centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 72px);
+  padding: 2rem 1.25rem 3rem;
+}
+
+.business-panel--notice {
+  max-width: 32rem;
+  text-align: left;
+}
+
+.business-panel--notice .business-panel-title {
+  font-family: var(--biz-display);
+  font-size: 1.35rem;
+  text-transform: none;
+  letter-spacing: -0.02em;
+  color: var(--biz-ink);
+}
+
+/* Primary photo drop zone */
+.business-dropzone--primary {
+  border-width: 2px;
+  border-style: dashed;
+  padding: 2rem 1.5rem;
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.business-dropzone-label {
+  cursor: pointer;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+}
+
+.business-dropzone-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--biz-ink);
+}
+
+.business-dropzone-sub {
+  font-size: 0.85rem;
+  color: var(--biz-muted);
+  font-weight: 500;
+}
+
+.business-panel--media .business-upload-zone--drag,
+.business-panel--media .business-dropzone--primary:hover {
+  border-color: var(--biz-accent);
+  background: rgba(12, 92, 89, 0.08);
+}
+
 .business-kpi-row {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
