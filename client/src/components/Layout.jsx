@@ -8,7 +8,6 @@ import Icon from './Icon';
 import BackToTop from './BackToTop';
 import GlobalSearchBar from './GlobalSearchBar';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH, DINING_PATH, HOTELS_PATH } from '../utils/discoverPaths';
-import { canSeeGuidesSponsorAndFeatured } from '../utils/guidePreviewGate';
 import './Layout.css';
 
 const langLabels = { en: 'EN', ar: 'العربية', fr: 'FR' };
@@ -158,7 +157,7 @@ export default function Layout() {
               >
                 {t('nav', 'discoverPlaces')}
               </Link>
-              {diningEnabled && guidesNavVisible ? (
+              {diningEnabled ? (
                 <Link
                   to={DINING_PATH}
                   className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
@@ -167,7 +166,7 @@ export default function Layout() {
                   {t('nav', 'diningNav')}
                 </Link>
               ) : null}
-              {hotelsEnabled && guidesNavVisible ? (
+              {hotelsEnabled ? (
                 <Link
                   to={HOTELS_PATH}
                   className={`nav-link ${isHotelsPage ? 'nav-link--active' : ''}`}
@@ -305,7 +304,7 @@ export default function Layout() {
             >
               {t('nav', 'discoverPlaces')}
             </Link>
-            {diningEnabled && guidesNavVisible ? (
+            {diningEnabled ? (
               <Link
                 to={DINING_PATH}
                 className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
@@ -314,7 +313,7 @@ export default function Layout() {
                 {t('nav', 'diningNav')}
               </Link>
             ) : null}
-            {hotelsEnabled && guidesNavVisible ? (
+            {hotelsEnabled ? (
               <Link
                 to={HOTELS_PATH}
                 className={`nav-link ${isHotelsPage ? 'nav-link--active' : ''}`}

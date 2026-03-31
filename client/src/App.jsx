@@ -8,7 +8,6 @@ import Layout from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 import Explore from './pages/Explore';
 import BusinessGateLoader from './pages/business/BusinessGateLoader';
-import { isGuidesSponsorFeaturedPublicReleased, canSeeGuidesSponsorAndFeatured } from './utils/guidePreviewGate';
 
 const MapPage = lazy(() => import('./pages/Map'));
 const AdminApp = lazy(() => import('./pages/admin/AdminApp'));
@@ -55,19 +54,6 @@ function ProtectedRoute({ children }) {
   const location = useLocation();
   if (loading) return <BusinessGateLoader message="Loading…" />;
   if (!user) return <Navigate to="/login" state={{ from: location.pathname + location.search + (location.hash || '') }} replace />;
-  return children;
-}
-
-/** /dining and /hotels — same session rules as admin console until public env release. */
-function AdminGuidePreviewRoute({ children }) {
-  const { user, loading } = useAuth();
-  if (isGuidesSponsorFeaturedPublicReleased()) return children;
-  const hasCachedAdminSession =
-    typeof window !== 'undefined' && Boolean(getToken() && getStoredUser()?.isAdmin === true);
-  if (loading && !hasCachedAdminSession) {
-    return <BusinessGateLoader message="Loading…" />;
-  }
-  if (!canSeeGuidesSponsorAndFeatured(user)) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -185,23 +171,11 @@ function AppRoutes() {
         />
         <Route
           path="dining"
-          element={
-            <AdminGuidePreviewRoute>
-              <LazyBoundary message="Loading…">
-                <PlaceDining />
-              </LazyBoundary>
-            </AdminGuidePreviewRoute>
-          }
+          element={<LazyBoundary message="Loading…"><PlaceDining /></LazyBoundary>}
         />
         <Route
           path="hotels"
-          element={
-            <AdminGuidePreviewRoute>
-              <LazyBoundary message="Loading…">
-                <PlaceHotels />
-              </LazyBoundary>
-            </AdminGuidePreviewRoute>
-          }
+          element={<LazyBoundary message="Loading…"><PlaceHotels /></LazyBoundary>}
         />
         <Route
           path="map"
