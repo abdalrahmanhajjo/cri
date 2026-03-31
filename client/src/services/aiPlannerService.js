@@ -160,45 +160,6 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-/** Models sometimes wrap PLAN_JSON arrays in markdown fences; strip so JSON.parse succeeds. */
-function stripMarkdownFencesAroundJson(s) {
-  let t = String(s || '').trim();
-  t = t.replace(/^```(?:json)?\s*\n?/i, '');
-  t = t.replace(/\n?```\s*$/i, '');
-  return t.trim();
-}
-
-function extractBalancedJsonArray(payload) {
-  const arrStart = payload.indexOf('[');
-  if (arrStart < 0) return null;
-  let depth = 0;
-  let end = -1;
-  for (let i = arrStart; i < payload.length; i += 1) {
-    const c = payload[i];
-    if (c === '[') depth += 1;
-    else if (c === ']') {
-      depth -= 1;
-      if (depth === 0) {
-        end = i;
-        break;
-      }
-    }
-  }
-  if (end < 0) return null;
-  const slice = payload.slice(arrStart, end + 1);
-  try {
-    const list = JSON.parse(slice);
-    return Array.isArray(list) ? list : null;
-  } catch {
-    try {
-      const list = JSON.parse(stripMarkdownFencesAroundJson(slice));
-      return Array.isArray(list) ? list : null;
-    } catch {
-      return null;
-    }
-  }
-}
-
 /**
  * Retries transient failures (network, 502/503/504) so mobile flaky links still get a response.
  */
@@ -229,14 +190,28 @@ function parsePlanJson(rawText, placeIdSet) {
   if (planIdx < 0) return { text: rawText.trim(), slots: null };
 
   const beforePlan = rawText.slice(0, planIdx).trim();
-  const afterLabel = stripMarkdownFencesAroundJson(
-    rawText.slice(planIdx).replace(/^\s*PLAN_JSON\s*:/i, '').trim()
-  );
-  const list = extractBalancedJsonArray(afterLabel);
-  if (list == null) return { text: beforePlan || rawText.trim(), slots: null };
+  const afterLabel = rawText.slice(planIdx).replace(/^\s*PLAN_JSON\s*:/i, '').trim();
+  const arrStart = afterLabel.indexOf('[');
+  if (arrStart < 0) return { text: beforePlan || rawText.trim(), slots: null };
+
+  let depth = 0;
+  let end = -1;
+  for (let i = arrStart; i < afterLabel.length; i += 1) {
+    const c = afterLabel[i];
+    if (c === '[') depth += 1;
+    else if (c === ']') {
+      depth -= 1;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end < 0) return { text: beforePlan || rawText.trim(), slots: null };
 
   let slots = null;
   try {
+    const list = JSON.parse(afterLabel.slice(arrStart, end + 1));
     if (!Array.isArray(list)) return { text: beforePlan, slots: null };
     slots = [];
     for (const item of list) {
@@ -340,10 +315,29 @@ function extractPlanJsonArray(rawText) {
   const planLabel = /PLAN_JSON\s*:/i;
   const planIdx = rawText.search(planLabel);
   if (planIdx < 0) return null;
-  const afterLabel = stripMarkdownFencesAroundJson(
-    rawText.slice(planIdx).replace(/^\s*PLAN_JSON\s*:/i, '').trim()
-  );
-  return extractBalancedJsonArray(afterLabel);
+  const afterLabel = rawText.slice(planIdx).replace(/^\s*PLAN_JSON\s*:/i, '').trim();
+  const arrStart = afterLabel.indexOf('[');
+  if (arrStart < 0) return null;
+  let depth = 0;
+  let end = -1;
+  for (let i = arrStart; i < afterLabel.length; i += 1) {
+    const c = afterLabel[i];
+    if (c === '[') depth += 1;
+    else if (c === ']') {
+      depth -= 1;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end < 0) return null;
+  try {
+    const list = JSON.parse(afterLabel.slice(arrStart, end + 1));
+    return Array.isArray(list) ? list : null;
+  } catch {
+    return null;
+  }
 }
 
 function freezeSlotFromPrevious(s) {
