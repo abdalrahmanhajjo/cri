@@ -158,29 +158,21 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
     const placeSql = placeParamIdx ? ` AND fp.place_id = $${placeParamIdx}` : '';
 
     const { rows } = await query(
-      `SELECT fp.id, fp.user_id, fp.author_name,
-              COALESCE(fp.place_id, po1.place_id) AS place_id,
-              fp.caption, fp.image_url, fp.image_urls, fp.video_url,
+      `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.image_urls, fp.video_url,
               fp.type, fp.created_at, fp.author_role,
               (SELECT COUNT(*)::int FROM feed_likes fl WHERE fl.post_id = fp.id) AS likes_count,
               (SELECT COUNT(*)::int FROM feed_comments fc WHERE fc.post_id = fp.id) AS comments_count,
-              (CASE
+              (SELECT CASE
                  WHEN p.images IS NOT NULL AND jsonb_typeof(p.images) = 'array' AND jsonb_array_length(p.images) > 0
                  THEN p.images #>> '{0}'
                  ELSE NULL
-               END) AS place_image_url,
-              COALESCE(p.name, '') AS place_name
+               END
+               FROM places p WHERE p.id = fp.place_id LIMIT 1) AS place_image_url,
+              (SELECT p.name FROM places p WHERE p.id = fp.place_id LIMIT 1) AS place_name
               ${socialSql}
               ${manageSql}
               ${userSql}
        FROM feed_posts fp
-       LEFT JOIN LATERAL (
-         SELECT po.place_id
-         FROM place_owners po
-         WHERE fp.place_id IS NULL AND po.user_id = fp.user_id
-         LIMIT 1
-       ) po1 ON true
-       LEFT JOIN places p ON p.id = COALESCE(fp.place_id, po1.place_id)
        WHERE fp.moderation_status = 'approved' AND fp.discoverable = true${formatSql}${placeSql}
        ${orderSql}
        LIMIT $1 OFFSET $2`,
@@ -198,19 +190,10 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
         }
         const legWhere = legPlaceIdx ? ` WHERE fp.place_id = $${legPlaceIdx}` : '';
         const { rows } = await query(
-          `SELECT fp.id, fp.user_id, fp.author_name,
-                  COALESCE(fp.place_id, po1.place_id) AS place_id,
-                  fp.caption, fp.image_url, fp.video_url,
+          `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.video_url,
                   fp.type, fp.created_at, fp.author_role,
-                  COALESCE(p.name, '') AS place_name
-           FROM feed_posts fp
-           LEFT JOIN LATERAL (
-             SELECT po.place_id
-             FROM place_owners po
-             WHERE fp.place_id IS NULL AND po.user_id = fp.user_id
-             LIMIT 1
-           ) po1 ON true
-           LEFT JOIN places p ON p.id = COALESCE(fp.place_id, po1.place_id)${legWhere}
+                  (SELECT p.name FROM places p WHERE p.id = fp.place_id LIMIT 1) AS place_name
+           FROM feed_posts fp${legWhere}
            ORDER BY fp.created_at DESC
            LIMIT $1 OFFSET $2`,
           legParams
@@ -251,29 +234,21 @@ router.get('/post/:postId', optionalAuthMiddleware, async (req, res) => {
     const socialSql = `, COALESCE(fp.hide_likes, false) AS hide_likes,
               COALESCE(fp.comments_disabled, false) AS comments_disabled`;
     const { rows } = await query(
-      `SELECT fp.id, fp.user_id, fp.author_name,
-              COALESCE(fp.place_id, po1.place_id) AS place_id,
-              fp.caption, fp.image_url, fp.image_urls, fp.video_url,
+      `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.image_urls, fp.video_url,
               fp.type, fp.created_at, fp.author_role,
               (SELECT COUNT(*)::int FROM feed_likes fl WHERE fl.post_id = fp.id) AS likes_count,
               (SELECT COUNT(*)::int FROM feed_comments fc WHERE fc.post_id = fp.id) AS comments_count,
-              (CASE
+              (SELECT CASE
                  WHEN p.images IS NOT NULL AND jsonb_typeof(p.images) = 'array' AND jsonb_array_length(p.images) > 0
                  THEN p.images #>> '{0}'
                  ELSE NULL
-               END) AS place_image_url,
-              COALESCE(p.name, '') AS place_name
+               END
+               FROM places p WHERE p.id = fp.place_id LIMIT 1) AS place_image_url,
+              (SELECT p.name FROM places p WHERE p.id = fp.place_id LIMIT 1) AS place_name
               ${socialSql}
               ${manageSql}
               ${userSql}
        FROM feed_posts fp
-       LEFT JOIN LATERAL (
-         SELECT po.place_id
-         FROM place_owners po
-         WHERE fp.place_id IS NULL AND po.user_id = fp.user_id
-         LIMIT 1
-       ) po1 ON true
-       LEFT JOIN places p ON p.id = COALESCE(fp.place_id, po1.place_id)
        WHERE fp.id = $1 AND fp.moderation_status = 'approved' AND fp.discoverable = true
        LIMIT 1`,
       params
