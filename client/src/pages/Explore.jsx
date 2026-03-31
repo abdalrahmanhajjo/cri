@@ -26,7 +26,6 @@ import {
   HOTELS_PATH,
   discoverSearchUrl,
 } from '../utils/discoverPaths';
-import { canSeeGuidesSponsorAndFeatured } from '../utils/guidePreviewGate';
 import { PLAN_TRIP_AREA_NAV, PLAN_TRIP_AREA_I18N_KEYS, mapSearchUrl } from '../config/planTripAreas';
 import { applyHomeSeoFromSettings } from '../utils/siteSeo';
 import { getApiOrigin } from '../utils/apiOrigin';
@@ -531,7 +530,7 @@ function themeCategoryStats(bucket, categories) {
 }
 
 /** Discover browse by theme — links go to `/discover` with `q` (not the map). */
-function BrowseMapByThemeSection({ t, lang, places = [], categories = [], guidesPathsUnlocked }) {
+function BrowseMapByThemeSection({ t, lang, places = [], categories = [] }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const placesByWay = groupPlacesByWay(places, categories);
   const { settings } = useSiteSettings();
@@ -580,11 +579,11 @@ function BrowseMapByThemeSection({ t, lang, places = [], categories = [], guides
             const hotelsEnabled = settings?.hotelsGuide?.enabled !== false;
             const discoverTo =
               way.wayKey === 'food'
-                ? diningEnabled && guidesPathsUnlocked
+                ? diningEnabled
                   ? DINING_PATH
                   : discoverSearchUrl(way.discoverQ || 'restaurant')
                 : way.wayKey === 'stay'
-                  ? hotelsEnabled && guidesPathsUnlocked
+                  ? hotelsEnabled
                     ? HOTELS_PATH
                     : discoverSearchUrl(way.discoverQ || 'hotel')
                   : way.discoverQ
@@ -641,11 +640,11 @@ function BrowseMapByThemeSection({ t, lang, places = [], categories = [], guides
 }
 
 /** Areas, transport/stay/tips — below featured picks and community on the home page. */
-function FindYourWayPracticalSection({ t, showMap = true, showTips = true, guidesPathsUnlocked }) {
+function FindYourWayPracticalSection({ t, showMap = true, showTips = true }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const { settings } = useSiteSettings();
   const hotelsEnabled = settings?.hotelsGuide?.enabled !== false;
-  const stayBrowseTo = hotelsEnabled && guidesPathsUnlocked ? HOTELS_PATH : discoverSearchUrl('hotel');
+  const stayBrowseTo = hotelsEnabled ? HOTELS_PATH : discoverSearchUrl('hotel');
   return (
     <section
       className="vd-section vd-experience-tripoli vd-find-your-way vd-find-your-way--practical"
@@ -864,10 +863,6 @@ export default function Explore() {
   }, []);
 
   useEffect(() => {
-    if (!canSeeGuidesSponsorAndFeatured(user)) {
-      setSponsoredHome([]);
-      return;
-    }
     const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
     let cancelled = false;
     api
@@ -882,7 +877,7 @@ export default function Explore() {
     return () => {
       cancelled = true;
     };
-  }, [lang, user?.isAdmin, user?.id]);
+  }, [lang]);
 
   const heroTitle = settings.siteName?.trim() || t('home', 'heroTitle');
   const heroTagline = resolveHeroTagline(settings, t);
@@ -1168,20 +1163,14 @@ export default function Explore() {
       </section>
 
       {/* Discover by theme — first; #experience hash targets this block */}
-      <BrowseMapByThemeSection
-        t={t}
-        lang={lang}
-        places={placesList}
-        categories={categories}
-        guidesPathsUnlocked={canSeeGuidesSponsorAndFeatured(user)}
-      />
+      <BrowseMapByThemeSection t={t} lang={lang} places={placesList} categories={categories} />
 
       {/* Featured picks first; community feed directly below */}
-      {canSeeGuidesSponsorAndFeatured(user) && topPicks.length > 0 && (
+      {topPicks.length > 0 && (
         <TopPicksCarousel places={topPicks} t={t} />
       )}
 
-      {canSeeGuidesSponsorAndFeatured(user) && sponsoredHome.length > 0 && (
+      {sponsoredHome.length > 0 && (
         <section className="vd-section vd-sponsored" aria-label={t('discover', 'sponsoredSectionTitle')}>
           <div className="vd-container">
             <header className="vd-section-head vd-sponsored-head">
@@ -1205,7 +1194,6 @@ export default function Explore() {
         t={t}
         showMap={showMap}
         showTips={user?.showTips !== false}
-        guidesPathsUnlocked={canSeeGuidesSponsorAndFeatured(user)}
       />
 
       {user?.showTips === false && (
