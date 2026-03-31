@@ -3,8 +3,6 @@ import { Link } from 'react-router-dom';
 import { api, getImageUrl, fixImageUrlExtension, getImageUrlAlternate } from '../../api/client';
 import { ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
 import MapPicker from '../../components/MapPicker';
-import { getCategoriesForWay } from '../../utils/findYourWayGrouping';
-import { emptyDiningForm, diningFormFromProfile, buildDiningProfilePayload } from '../../utils/diningProfileForm';
 import './Admin.css';
 
 function AdminImageWithFallback({ url }) {
@@ -71,13 +69,6 @@ function PlaceFormModal({ place, onClose, onSaved }) {
   const [modReviews, setModReviews] = useState([]);
   const [modReviewsLoading, setModReviewsLoading] = useState(false);
   const [modReviewsErr, setModReviewsErr] = useState(null);
-  const [diningForm, setDiningForm] = useState(emptyDiningForm);
-
-  const foodCategoryIds = useMemo(() => {
-    const foodCats = getCategoriesForWay('food', categories);
-    return new Set(foodCats.map((c) => String(c.id)));
-  }, [categories]);
-  const isFoodCategory = foodCategoryIds.has(String(form.categoryId || '').trim());
 
   const refreshModReviews = useCallback(async () => {
     if (!place?.id) return;
@@ -145,7 +136,6 @@ function PlaceFormModal({ place, onClose, onSaved }) {
       // Hydrate full place details (images/tags) because the admin list endpoint returns summary fields.
       didHydrateImagesRef.current = false;
       userTouchedImagesRef.current = false;
-      setDiningForm(diningFormFromProfile(place.diningProfile));
     } else {
       setCategoryCustom(false);
       setForm({
@@ -156,7 +146,6 @@ function PlaceFormModal({ place, onClose, onSaved }) {
 
       didHydrateImagesRef.current = false;
       userTouchedImagesRef.current = false;
-      setDiningForm(emptyDiningForm());
     }
   }, [place]);
 
@@ -203,8 +192,6 @@ function PlaceFormModal({ place, onClose, onSaved }) {
               ? p.tags.join(', ')
               : (p?.tags ?? ''),
         }));
-
-        setDiningForm(diningFormFromProfile(p?.diningProfile));
 
         if (categories.length > 0) {
           const hydratedCatId = p?.categoryId ?? p?.category_id ?? '';
@@ -256,7 +243,6 @@ function PlaceFormModal({ place, onClose, onSaved }) {
         reviewCount: form.reviewCount ? parseInt(form.reviewCount, 10) : null,
         images,
         tags,
-        diningProfile: isFoodCategory ? buildDiningProfilePayload(diningForm) : {},
       };
       if (place) {
         await api.admin.places.update(place.id, payload);
@@ -535,277 +521,6 @@ function PlaceFormModal({ place, onClose, onSaved }) {
                 )}
               </div>
             )}
-
-            {isFoodCategory ? (
-              <div className="admin-form-section">
-                <div className="admin-form-section-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                    <path d="M8 7h8M8 11h6" />
-                  </svg>
-                  Restaurant profile & menu
-                </div>
-                <p className="admin-form-hint">
-                  For food-way listings only: menu on the place page, links, contact, and how you serve guests.
-                </p>
-                <div className="admin-form-group">
-                  <label>Menu intro</label>
-                  <textarea
-                    rows={3}
-                    value={diningForm.menuIntro}
-                    onChange={(e) => setDiningForm((d) => ({ ...d, menuIntro: e.target.value }))}
-                    placeholder="Short line above the menu…"
-                  />
-                </div>
-                <div className="admin-form-row">
-                  <div className="admin-form-group">
-                    <label>Menu URL (web)</label>
-                    <input
-                      value={diningForm.menuUrl}
-                      onChange={(e) => setDiningForm((d) => ({ ...d, menuUrl: e.target.value }))}
-                      placeholder="https://…"
-                    />
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Menu PDF URL</label>
-                    <input
-                      value={diningForm.menuPdfUrl}
-                      onChange={(e) => setDiningForm((d) => ({ ...d, menuPdfUrl: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <div className="admin-form-row">
-                  <div className="admin-form-group">
-                    <label>Reservations URL</label>
-                    <input
-                      value={diningForm.reservationsUrl}
-                      onChange={(e) => setDiningForm((d) => ({ ...d, reservationsUrl: e.target.value }))}
-                    />
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Phone</label>
-                    <input
-                      value={diningForm.phone}
-                      onChange={(e) => setDiningForm((d) => ({ ...d, phone: e.target.value }))}
-                      placeholder="+961…"
-                    />
-                  </div>
-                </div>
-                <div className="admin-form-group">
-                  <label>WhatsApp</label>
-                  <input
-                    value={diningForm.whatsapp}
-                    onChange={(e) => setDiningForm((d) => ({ ...d, whatsapp: e.target.value }))}
-                  />
-                </div>
-                <div className="admin-form-group">
-                  <label>Cuisine types (comma-separated)</label>
-                  <input
-                    value={diningForm.cuisineTypesStr}
-                    onChange={(e) => setDiningForm((d) => ({ ...d, cuisineTypesStr: e.target.value }))}
-                  />
-                </div>
-                <div className="admin-form-group">
-                  <label>Dietary / allergen note</label>
-                  <input
-                    value={diningForm.dietaryNotes}
-                    onChange={(e) => setDiningForm((d) => ({ ...d, dietaryNotes: e.target.value }))}
-                  />
-                </div>
-                <div className="admin-form-group">
-                  <span className="admin-form-hint" style={{ display: 'block', marginBottom: 8 }}>
-                    Service options
-                  </span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 16px' }}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={diningForm.svcDineIn}
-                        onChange={(e) => setDiningForm((d) => ({ ...d, svcDineIn: e.target.checked }))}
-                      />{' '}
-                      Dine-in
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={diningForm.svcTakeaway}
-                        onChange={(e) => setDiningForm((d) => ({ ...d, svcTakeaway: e.target.checked }))}
-                      />{' '}
-                      Takeaway
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={diningForm.svcDelivery}
-                        onChange={(e) => setDiningForm((d) => ({ ...d, svcDelivery: e.target.checked }))}
-                      />{' '}
-                      Delivery
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={diningForm.svcOutdoor}
-                        onChange={(e) => setDiningForm((d) => ({ ...d, svcOutdoor: e.target.checked }))}
-                      />{' '}
-                      Outdoor
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={diningForm.svcReservations}
-                        onChange={(e) => setDiningForm((d) => ({ ...d, svcReservations: e.target.checked }))}
-                      />{' '}
-                      Reservations
-                    </label>
-                  </div>
-                </div>
-                <div className="admin-form-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                    <span className="admin-form-hint" style={{ margin: 0 }}>Menu sections</span>
-                    <button
-                      type="button"
-                      className="admin-btn admin-btn--secondary admin-btn--sm"
-                      onClick={() =>
-                        setDiningForm((d) => ({
-                          ...d,
-                          menuSections: [
-                            ...d.menuSections,
-                            { title: '', items: [{ name: '', description: '', price: '' }] },
-                          ],
-                        }))
-                      }
-                    >
-                      Add section
-                    </button>
-                  </div>
-                  {diningForm.menuSections.length === 0 ? (
-                    <p className="admin-form-hint">Optional — add “Starters”, “Mains”, etc.</p>
-                  ) : (
-                    <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0 }}>
-                      {diningForm.menuSections.map((sec, si) => (
-                        <li
-                          key={`dsec-${si}`}
-                          style={{ border: '1px solid rgba(15,23,42,0.12)', borderRadius: 12, padding: 12, marginBottom: 12 }}
-                        >
-                          <div className="admin-form-row" style={{ alignItems: 'flex-end' }}>
-                            <div className="admin-form-group" style={{ flex: 1 }}>
-                              <label>Section</label>
-                              <input
-                                value={sec.title}
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  setDiningForm((d) => {
-                                    const next = [...d.menuSections];
-                                    next[si] = { ...next[si], title: v };
-                                    return { ...d, menuSections: next };
-                                  });
-                                }}
-                              />
-                            </div>
-                            <button
-                              type="button"
-                              className="admin-btn admin-btn--secondary admin-btn--sm"
-                              onClick={() =>
-                                setDiningForm((d) => ({
-                                  ...d,
-                                  menuSections: d.menuSections.filter((_, i) => i !== si),
-                                }))
-                              }
-                            >
-                              Remove
-                            </button>
-                          </div>
-                          {(sec.items || []).map((it, ii) => (
-                            <div key={`dit-${si}-${ii}`} className="admin-form-group" style={{ marginTop: 10 }}>
-                              <div className="admin-form-row">
-                                <div className="admin-form-group" style={{ flex: 1 }}>
-                                  <label>Dish name</label>
-                                  <input
-                                    value={it.name}
-                                    onChange={(e) => {
-                                      const v = e.target.value;
-                                      setDiningForm((d) => {
-                                        const next = [...d.menuSections];
-                                        const items = [...(next[si].items || [])];
-                                        items[ii] = { ...items[ii], name: v };
-                                        next[si] = { ...next[si], items };
-                                        return { ...d, menuSections: next };
-                                      });
-                                    }}
-                                  />
-                                </div>
-                                <div className="admin-form-group">
-                                  <label>Price</label>
-                                  <input
-                                    value={it.price}
-                                    onChange={(e) => {
-                                      const v = e.target.value;
-                                      setDiningForm((d) => {
-                                        const next = [...d.menuSections];
-                                        const items = [...(next[si].items || [])];
-                                        items[ii] = { ...items[ii], price: v };
-                                        next[si] = { ...next[si], items };
-                                        return { ...d, menuSections: next };
-                                      });
-                                    }}
-                                  />
-                                </div>
-                                <button
-                                  type="button"
-                                  className="admin-btn admin-btn--secondary admin-btn--sm"
-                                  style={{ alignSelf: 'flex-end' }}
-                                  onClick={() =>
-                                    setDiningForm((d) => {
-                                      const next = [...d.menuSections];
-                                      let items = (next[si].items || []).filter((_, j) => j !== ii);
-                                      if (items.length === 0) items = [{ name: '', description: '', price: '' }];
-                                      next[si] = { ...next[si], items };
-                                      return { ...d, menuSections: next };
-                                    })
-                                  }
-                                >
-                                  −
-                                </button>
-                              </div>
-                              <label style={{ fontSize: 12 }}>Description (optional)</label>
-                              <input
-                                value={it.description}
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  setDiningForm((d) => {
-                                    const next = [...d.menuSections];
-                                    const items = [...(next[si].items || [])];
-                                    items[ii] = { ...items[ii], description: v };
-                                    next[si] = { ...next[si], items };
-                                    return { ...d, menuSections: next };
-                                  });
-                                }}
-                              />
-                            </div>
-                          ))}
-                          <button
-                            type="button"
-                            className="admin-btn admin-btn--secondary admin-btn--sm"
-                            style={{ marginTop: 8 }}
-                            onClick={() =>
-                              setDiningForm((d) => {
-                                const next = [...d.menuSections];
-                                const items = [...(next[si].items || []), { name: '', description: '', price: '' }];
-                                next[si] = { ...next[si], items };
-                                return { ...d, menuSections: next };
-                              })
-                            }
-                          >
-                            Add dish
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            ) : null}
 
             <div className="admin-form-section">
               <div className="admin-form-section-title">

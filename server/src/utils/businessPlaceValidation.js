@@ -2,8 +2,6 @@
  * Server-side validation for business owner place updates (defense in depth with JWT + place_owners).
  */
 
-const { validateDiningProfileBody } = require('./diningProfile');
-
 const LIMITS = {
   name: 255,
   description: 60000,
@@ -157,12 +155,6 @@ function validateBusinessPlacePut(body) {
     const tg = sanitizeTagsInput(body.tags);
     if (!tg.ok) return { ok: false, error: tg.error };
     out.tags = tg.value;
-  }
-
-  if (body.diningProfile !== undefined) {
-    const dv = validateDiningProfileBody(body.diningProfile);
-    if (!dv.ok) return { ok: false, error: dv.error };
-    out.diningProfile = dv.value;
   }
 
   return { ok: true, body: out };

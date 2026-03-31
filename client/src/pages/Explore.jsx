@@ -642,9 +642,6 @@ function BrowseMapByThemeSection({ t, lang, places = [], categories = [] }) {
 /** Areas, transport/stay/tips — below featured picks and community on the home page. */
 function FindYourWayPracticalSection({ t, showMap = true, showTips = true }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
-  const { settings } = useSiteSettings();
-  const hotelsEnabled = settings?.hotelsGuide?.enabled !== false;
-  const stayBrowseTo = hotelsEnabled ? HOTELS_PATH : discoverSearchUrl('hotel');
   return (
     <section
       className="vd-section vd-experience-tripoli vd-find-your-way vd-find-your-way--practical"
@@ -705,7 +702,7 @@ function FindYourWayPracticalSection({ t, showMap = true, showTips = true }) {
             <div className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card">
               <h3 className="vd-plan-trip-block-title">{safeT('home', 'stayTitle')}</h3>
               <p className="vd-plan-trip-block-desc">{safeT('home', 'staySub')}</p>
-              <Link to={stayBrowseTo} className="vd-plan-trip-cta vd-btn vd-btn--primary">
+              <Link to={HOTELS_PATH} className="vd-plan-trip-cta vd-btn vd-btn--primary">
                 {safeT('home', 'stayBrowseHotels')}
                 <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
               </Link>

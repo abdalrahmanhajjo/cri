@@ -1,27 +1,14 @@
 import { useEffect } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { getPlaceImageUrl } from '../../api/client';
-import { mergeBusinessPortal } from '../../config/siteSettingsDefaults';
 import './Business.css';
 
 const BASE_TITLE = 'Business — Visit Tripoli';
-
-const DEFAULT_KICKER = 'Venue hub';
-const DEFAULT_TITLE = 'Your places on Visit Tripoli';
-const DEFAULT_LEAD = (
-  <>
-    A calm workspace for partners: refresh photos and copy, tune listing details, and preview the public page. Site-wide
-    configuration and moderation stay in the admin console — this area is only for your venues.
-  </>
-);
 
 export default function BusinessDashboard() {
   const ctx = useOutletContext();
   const data = ctx?.me;
   const loadErr = ctx?.loadErr;
-  const portal = mergeBusinessPortal(ctx?.businessPortal);
-  const copy = portal.copy || {};
-  const feedOn = portal.sections?.feed !== false;
 
   useEffect(() => {
     document.title = `Dashboard · ${BASE_TITLE}`;
@@ -34,35 +21,16 @@ export default function BusinessDashboard() {
   const isBusinessOwner = data?.isBusinessOwner === true;
   const n = places.length;
 
-  const kicker = copy.dashboardKicker || DEFAULT_KICKER;
-  const title = copy.dashboardTitle || DEFAULT_TITLE;
-  const leadFromSettings = copy.dashboardLead?.trim();
-
   return (
-    <div className="business-dashboard business-dashboard--venue-hub">
-      <header className="business-dashboard-hero business-dashboard-hero--venue">
-        <div className="business-dashboard-hero-accent" aria-hidden="true" />
-        <div className="business-dashboard-hero-inner">
-          <p className="business-dashboard-kicker">{kicker}</p>
-          <h1 className="business-dashboard-title">{title}</h1>
-          <p className="business-dashboard-lead">
-            {leadFromSettings ? (
-              leadFromSettings
-            ) : (
-              <>
-                {DEFAULT_LEAD}{' '}
-                {feedOn ? (
-                  <>
-                    When enabled for your account, use <Link to="/business/places">Feed</Link> to publish posts for your
-                    venues.
-                  </>
-                ) : (
-                  'Community feed posting is turned off in site settings for now.'
-                )}
-              </>
-            )}
-          </p>
-        </div>
+    <div className="business-dashboard">
+      <header className="business-dashboard-hero">
+        <p className="business-dashboard-kicker">Partner portal</p>
+        <h1 className="business-dashboard-title">Manage your listings</h1>
+        <p className="business-dashboard-lead">
+          Update how your place appears on Visit Tripoli: copy, photos, map pin, hours, and language-specific text.
+          Use <Link to="/business/places">Feed</Link> to publish community posts for your venues. User and platform
+          administration stay in the separate admin console.
+        </p>
       </header>
 
       {loadErr && !data && <div className="business-banner-error">{loadErr}</div>}
