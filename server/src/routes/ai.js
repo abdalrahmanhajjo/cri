@@ -20,8 +20,7 @@ function n8nWebhookUrl() {
   return (process.env.N8N_WEBHOOK_URL || '').trim();
 }
 function groqModel() {
-  // Llama 3.3 70B follows structured JSON / itinerary instructions more reliably than 8B instant.
-  return process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  return process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 }
 
 function useGroqDirect() {

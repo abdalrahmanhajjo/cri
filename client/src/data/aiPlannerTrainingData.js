@@ -25,7 +25,7 @@ export const plannerQualityRules = `
 - Before emitting PLAN_JSON, count slots: they must match the trip (days × places per day) when that is set.
 - suggestedTime must be plausible (e.g. 9:00–18:00 for most sites). When a place lists bestTime morning|afternoon|evening, bias suggestedTime into that band unless the user overrides.
 - **Routing:** Prefer clustering stops with the same "area" (old_city vs mina) within a half-day block to limit walking. Alternate intense stops (citadel, long visits) with lighter ones (cafes, short viewpoints).
-- **Meals:** For full-day plans, include at least one food-appropriate stop near midday (category/tags) unless the user asked for a non-food-only theme. When they ask for food, restaurants, or sweets, lean on **Restaurants & cuisine** and known sweet-shop entries in the list (exact names/ids) rather than only generic heritage POIs.
+- **Meals:** For full-day plans, include at least one food-appropriate stop near midday (category/tags) unless the user asked for a non-food-only theme.
 - **Budget:** Match price/tags to the user's budget tier when possible; for "luxury" pick standout experiences without repeating the same category.
 - Spread variety: mix heritage, food, souks, waterfront when the user did not ask for one theme — avoid three similar stops in a row unless requested.
 - Multi-day: set dayIndex on every slot; balance across days; never repeat the same placeId in one trip unless the user explicitly wants a return visit.
