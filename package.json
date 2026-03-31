@@ -7,7 +7,7 @@
     "build:client": "npm run build --prefix client",
     "start:server": "npm run start --prefix server",
     "quality": "npm run build --prefix client",
-    "test": "npm run test --prefix server",
+    "test": "npm run test --prefix server --",
     "db:migrate": "npm run db:migrate --prefix server"
   },
   "devDependencies": {
