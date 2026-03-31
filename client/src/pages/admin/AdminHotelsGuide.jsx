@@ -268,6 +268,32 @@ export default function AdminHotelsGuide() {
               />
               Hotels guide page enabled (when off, /hotels redirects visitors to Discover)
             </label>
+            <div style={{ height: '0.85rem' }} />
+            <p className="admin-form-hint" style={{ marginTop: 0 }}>
+              Page sections (these only affect /hotels; sponsored placements also depend on Settings → Sponsored places).
+            </p>
+            <div className="admin-form-row">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={hotels.sections?.sponsored !== false}
+                  onChange={(e) =>
+                    setHotels((d) => ({ ...d, sections: { ...(d.sections || {}), sponsored: e.target.checked } }))
+                  }
+                />
+                Show sponsored rail section
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={hotels.sections?.topPicks !== false}
+                  onChange={(e) =>
+                    setHotels((d) => ({ ...d, sections: { ...(d.sections || {}), topPicks: e.target.checked } }))
+                  }
+                />
+                Show “Top picks” rail section
+              </label>
+            </div>
           </div>
         </div>
 
