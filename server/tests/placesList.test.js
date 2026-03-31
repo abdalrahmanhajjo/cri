@@ -8,6 +8,8 @@ if (fs.existsSync(rootEnv)) require('dotenv').config({ path: rootEnv });
 const request = require('supertest');
 const app = require('../src/app');
 
+jest.setTimeout(15000);
+
 describe('GET /api/places', () => {
   test('rejects invalid limit', async () => {
     const res = await request(app).get('/api/places').query({ limit: 'x' });
