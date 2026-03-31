@@ -118,15 +118,6 @@ export const WAYS_CONFIG = [
     discoverQ: 'Al-Mina',
     keywords: ['beach', 'sea', 'coast', 'corniche', 'nature', 'mina', 'water', 'port', 'marina', 'outdoors'],
   },
-  {
-    wayKey: 'family',
-    titleKey: 'wayFamily',
-    descKey: 'wayFamilyDesc',
-    detailKey: 'wayFamilyDetail',
-    icon: 'family_restroom',
-    discoverQ: 'park',
-    keywords: ['family', 'park', 'kids', 'children', 'relax', 'garden', 'playground'],
-  },
 ];
 
 export const FIND_YOUR_WAY_WAY_KEYS = WAYS_CONFIG.map((w) => w.wayKey);
