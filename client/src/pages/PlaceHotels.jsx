@@ -515,7 +515,7 @@ export default function PlaceHotels() {
       </header>
 
       <div className="hg-container hg-main">
-        {sponsoredStay.length > 0 ? (
+        {hotelsGuide.sections?.sponsored !== false && sponsoredStay.length > 0 ? (
           <section className="hg-sponsored" aria-label={sponsoredKicker}>
             <header className="hg-section-head">
               <h2 className="hg-section-title">{sponsoredKicker}</h2>
@@ -530,7 +530,7 @@ export default function PlaceHotels() {
           </section>
         ) : null}
 
-        {topPicks.length > 0 ? (
+        {hotelsGuide.sections?.topPicks !== false && topPicks.length > 0 ? (
           <section className="hg-picks" aria-labelledby="hg-picks-title">
             <header className="hg-section-head">
               <h2 id="hg-picks-title" className="hg-section-title">

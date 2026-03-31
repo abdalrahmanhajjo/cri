@@ -26,6 +26,7 @@ export function mergeDiningGuide(raw) {
   if (!raw || typeof raw !== 'object') {
     return {
       enabled: true,
+      sections: { sponsored: true, topPicks: true },
       heroImageUrl: '',
       hero: baseHero,
       featuredPlaceIds: [],
@@ -65,6 +66,10 @@ export function mergeDiningGuide(raw) {
     : [];
   return {
     enabled: raw.enabled !== false,
+    sections: {
+      sponsored: raw.sections?.sponsored !== false,
+      topPicks: raw.sections?.topPicks !== false,
+    },
     heroImageUrl: typeof raw.heroImageUrl === 'string' ? raw.heroImageUrl.trim() : '',
     hero,
     featuredPlaceIds: featured,
