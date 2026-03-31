@@ -180,8 +180,46 @@ export default function AdminSettings() {
                   <div className="admin-form-row">
                     <div className="admin-form-group">
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={form.showMap} onChange={(e) => setForm((f) => ({ ...f, showMap: e.target.checked }))} />
+                        <input
+                          type="checkbox"
+                          checked={form.showMap}
+                          onChange={(e) => setForm((f) => ({ ...f, showMap: e.target.checked }))}
+                        />
                         Show map entry points (nav, home, footer)
+                      </label>
+                    </div>
+                  </div>
+                  <div className="admin-form-row">
+                    <div className="admin-form-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={form?.diningGuide?.enabled !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              diningGuide: { ...(f.diningGuide || {}), enabled: e.target.checked },
+                            }))
+                          }
+                        />
+                        Public dining guide page (/dining)
+                      </label>
+                    </div>
+                  </div>
+                  <div className="admin-form-row">
+                    <div className="admin-form-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={form?.hotelsGuide?.enabled !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              hotelsGuide: { ...(f.hotelsGuide || {}), enabled: e.target.checked },
+                            }))
+                          }
+                        />
+                        Public hotels guide page (/hotels)
                       </label>
                     </div>
                   </div>

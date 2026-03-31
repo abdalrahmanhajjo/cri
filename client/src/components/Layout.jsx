@@ -47,6 +47,8 @@ export default function Layout() {
   const isHotelsPage = location.pathname === HOTELS_PATH;
   const isAboutTripoliPage = location.pathname === '/about-tripoli';
   const isAiPlannerPage = location.pathname === '/plan/ai';
+  const diningGuideEnabled = settings?.diningGuide?.enabled !== false;
+  const hotelsGuideEnabled = settings?.hotelsGuide?.enabled !== false;
 
   const handleLogout = () => {
     logout();
@@ -155,20 +157,24 @@ export default function Layout() {
               >
                 {t('nav', 'discoverPlaces')}
               </Link>
-              <Link
-                to={DINING_PATH}
-                className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
-                onClick={closeMenu}
-              >
-                {t('nav', 'diningNav')}
-              </Link>
-              <Link
-                to={HOTELS_PATH}
-                className={`nav-link ${isHotelsPage ? 'nav-link--active' : ''}`}
-                onClick={closeMenu}
-              >
-                {t('nav', 'hotelsNav')}
-              </Link>
+              {diningGuideEnabled && (
+                <Link
+                  to={DINING_PATH}
+                  className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
+                  onClick={closeMenu}
+                >
+                  {t('nav', 'diningNav')}
+                </Link>
+              )}
+              {hotelsGuideEnabled && (
+                <Link
+                  to={HOTELS_PATH}
+                  className={`nav-link ${isHotelsPage ? 'nav-link--active' : ''}`}
+                  onClick={closeMenu}
+                >
+                  {t('nav', 'hotelsNav')}
+                </Link>
+              )}
               <Link to="/map" className={`nav-link ${isMapPage ? 'nav-link--active' : ''}`} onClick={closeMenu}>
                 {t('nav', 'viewMapNav')}
               </Link>
@@ -298,20 +304,24 @@ export default function Layout() {
             >
               {t('nav', 'discoverPlaces')}
             </Link>
-            <Link
-              to={DINING_PATH}
-              className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
-              onClick={closeMenu}
-            >
-              {t('nav', 'diningNav')}
-            </Link>
-            <Link
-              to={HOTELS_PATH}
-              className={`nav-link ${isHotelsPage ? 'nav-link--active' : ''}`}
-              onClick={closeMenu}
-            >
-              {t('nav', 'hotelsNav')}
-            </Link>
+            {diningGuideEnabled && (
+              <Link
+                to={DINING_PATH}
+                className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
+                onClick={closeMenu}
+              >
+                {t('nav', 'diningNav')}
+              </Link>
+            )}
+            {hotelsGuideEnabled && (
+              <Link
+                to={HOTELS_PATH}
+                className={`nav-link ${isHotelsPage ? 'nav-link--active' : ''}`}
+                onClick={closeMenu}
+              >
+                {t('nav', 'hotelsNav')}
+              </Link>
+            )}
             <Link to="/map" className={`nav-link ${isMapPage ? 'nav-link--active' : ''}`} onClick={closeMenu}>
               {t('nav', 'viewMapNav')}
             </Link>

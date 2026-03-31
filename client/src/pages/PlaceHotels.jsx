@@ -124,6 +124,8 @@ export default function PlaceHotels() {
     window.setTimeout(() => setToast(null), 3200);
   }, []);
 
+  const sponsoredHotelsEnabled = settings?.sponsoredPlacesEnabled?.hotels !== false;
+
   useEffect(() => {
     setQDraft(qParam);
   }, [qParam]);
@@ -168,6 +170,10 @@ export default function PlaceHotels() {
 
   useEffect(() => {
     let cancelled = false;
+    if (!sponsoredHotelsEnabled) {
+      setSponsoredItems([]);
+      return undefined;
+    }
     api
       .sponsoredPlaces({ surface: 'hotels', lang: langParam })
       .then((r) => {
@@ -180,7 +186,7 @@ export default function PlaceHotels() {
     return () => {
       cancelled = true;
     };
-  }, [langParam]);
+  }, [langParam, sponsoredHotelsEnabled]);
 
   useEffect(() => {
     if (!tripPickPlace || !user) {
