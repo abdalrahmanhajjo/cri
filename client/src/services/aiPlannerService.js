@@ -680,13 +680,24 @@ ${Array.from({ length: durationDays }, (_, d) => `- Exactly ${placesPerDay} obje
 - Count objects per dayIndex before sending; if any day has more than ${placesPerDay}, fix it before outputting.`
       : '';
 
+  const wantsPlanNow = (() => {
+    const msg = String(userMessage || '').toLowerCase();
+    if (!msg.trim()) return false;
+    // Explicit itinerary intent: plan/itinerary/surprise-me style.
+    if (/(plan|itinerary|schedule|surprise|make (me )?a plan|trip plan|program)/i.test(msg)) return true;
+    if (/(برنامج|خطة|خطه|جدول|مخطط|فاجئني|فاجئني)/i.test(msg)) return true;
+    if (/(itin(é|e)raire|programme|planifie|surprends)/i.test(msg)) return true;
+    return false;
+  })();
+
   const planInstruction = `
-When you have enough information (e.g. days, interests, or the user asks for a plan), you MAY propose an itinerary. To do that, end your reply with a single newline then exactly: PLAN_JSON:
+When you have enough information (e.g. days, interests, or the user asks for a plan), you propose an itinerary. To do that, end your reply with a single newline then exactly: PLAN_JSON:
 Then a JSON array of objects with placeId, suggestedTime, reason; add dayIndex (0,1,...) if multiple days. Use ONLY placeIds from the "Available places" list (copy ids exactly). Example: [{"placeId":"id1","suggestedTime":"9:00","reason":"...","dayIndex":0}]
 Each "reason" should be one short sentence: why this stop fits the day, how it connects to the previous stop or user request, or a timing note (use the place's bestTime when relevant).
 Within each dayIndex, use suggestedTime values in **chronological order** from first stop to last (earlier starts first); the app requires spacing between starts on the same day.
 If the user wants 2 or more days, you MUST set dayIndex on every slot: 0 = first day, 1 = second day, etc. Spread places evenly across days.${exactCountNote}
 If you are just chatting or asking for more details, do NOT include PLAN_JSON.
+${wantsPlanNow ? '\nThe user explicitly asked for an itinerary now (or tapped a mood card). You MUST include PLAN_JSON in THIS reply (do not answer with prose only).' : ''}
 
 When the user asks to change trip settings (start date, trip length / number of days, stops per day, budget, or themes/interests), you MUST reflect that in the UI by adding at the very END of your reply (after PLAN_JSON if any):
 TRIP_SETTINGS_JSON:
