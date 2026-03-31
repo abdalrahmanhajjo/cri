@@ -517,7 +517,7 @@ export default function PlaceDining() {
       </header>
 
       <div className="dg-container dg-body">
-        {diningGuide.sections?.sponsored !== false && sponsoredDining.length > 0 ? (
+        {sponsoredDining.length > 0 ? (
           <section className="dg-sponsored" aria-label={sponsoredKicker}>
             <div className="dg-section-head">
               <h2 className="dg-section-title">{sponsoredKicker}</h2>
@@ -532,7 +532,7 @@ export default function PlaceDining() {
           </section>
         ) : null}
 
-        {diningGuide.sections?.topPicks !== false && topPicks.length > 0 ? (
+        {topPicks.length > 0 ? (
           <section className="dg-top-picks" aria-labelledby="dg-top-picks-title">
             <div className="dg-section-head">
               <h2 id="dg-top-picks-title" className="dg-section-title">
