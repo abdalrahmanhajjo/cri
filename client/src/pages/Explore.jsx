@@ -533,7 +533,6 @@ function themeCategoryStats(bucket, categories) {
 function BrowseMapByThemeSection({ t, lang, places = [], categories = [] }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const placesByWay = groupPlacesByWay(places, categories);
-  const { settings } = useSiteSettings();
   const stepClass = ['vd-find-your-way-row--a', 'vd-find-your-way-row--b', 'vd-find-your-way-row--c', 'vd-find-your-way-row--d'];
   return (
     <section
@@ -575,17 +574,11 @@ function BrowseMapByThemeSection({ t, lang, places = [], categories = [] }) {
               (n) => safeT('home', 'findYourWayThemeMore').split('{count}').join(String(n))
             );
             const rowTitle = titleFromCategories || safeT('home', way.titleKey);
-            const diningEnabled = settings?.diningGuide?.enabled !== false;
-            const hotelsEnabled = settings?.hotelsGuide?.enabled !== false;
             const discoverTo =
               way.wayKey === 'food'
-                ? diningEnabled
-                  ? DINING_PATH
-                  : discoverSearchUrl(way.discoverQ || 'restaurant')
+                ? DINING_PATH
                 : way.wayKey === 'stay'
-                  ? hotelsEnabled
-                    ? HOTELS_PATH
-                    : discoverSearchUrl(way.discoverQ || 'hotel')
+                  ? HOTELS_PATH
                   : way.discoverQ
                     ? discoverSearchUrl(way.discoverQ)
                     : discoverSearchUrl('');
