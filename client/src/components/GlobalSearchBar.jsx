@@ -21,8 +21,6 @@ export default function GlobalSearchBar({
   onQueryChange,
   /** If set, choosing a suggestion focuses this flow instead of navigating to `/place/:id`. */
   onSelectPlace,
-  /** Merged into `api.places.list` (e.g. `excludeCategoryIds` on discover). */
-  placesListParams,
 }) {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
@@ -49,7 +47,7 @@ export default function GlobalSearchBar({
     let cancelled = false;
     setLoading(true);
     api.places
-      .list({ lang: langParam, ...(placesListParams && typeof placesListParams === 'object' ? placesListParams : {}) })
+      .list({ lang: langParam })
       .then((r) => {
         if (!cancelled) {
           const list = r.popular || r.locations || [];
@@ -65,7 +63,7 @@ export default function GlobalSearchBar({
     return () => {
       cancelled = true;
     };
-  }, [langParam, placesListParams]);
+  }, [langParam]);
 
   useEffect(() => {
     const onDoc = (e) => {
