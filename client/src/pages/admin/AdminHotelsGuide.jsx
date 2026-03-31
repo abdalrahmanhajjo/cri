@@ -101,6 +101,21 @@ export default function AdminHotelsGuide() {
     }
     const tid = window.setTimeout(() => {
       setFeatSearching(true);
+      const qq = q.toLowerCase();
+      const localMatches = (places || [])
+        .filter((p) => {
+          const id = String(p?.id || '');
+          const name = String(p?.name || '').toLowerCase();
+          const loc = String(p?.location || '').toLowerCase();
+          return id.toLowerCase().includes(qq) || name.includes(qq) || loc.includes(qq);
+        })
+        .slice(0, 25)
+        .map((p) => ({ id: p.id, name: p.name, location: p.location }));
+      if (localMatches.length > 0) {
+        setFeatResults(localMatches);
+        setFeatSearching(false);
+        return;
+      }
       api.admin.places
         .list({ q, limit: 25 })
         .then((r) => setFeatResults(Array.isArray(r?.places) ? r.places : []))
@@ -108,7 +123,7 @@ export default function AdminHotelsGuide() {
         .finally(() => setFeatSearching(false));
     }, 280);
     return () => window.clearTimeout(tid);
-  }, [featQ]);
+  }, [featQ, places]);
 
   useEffect(() => {
     const q = hidQ.trim();
@@ -118,6 +133,21 @@ export default function AdminHotelsGuide() {
     }
     const tid = window.setTimeout(() => {
       setHidSearching(true);
+      const qq = q.toLowerCase();
+      const localMatches = (places || [])
+        .filter((p) => {
+          const id = String(p?.id || '');
+          const name = String(p?.name || '').toLowerCase();
+          const loc = String(p?.location || '').toLowerCase();
+          return id.toLowerCase().includes(qq) || name.includes(qq) || loc.includes(qq);
+        })
+        .slice(0, 25)
+        .map((p) => ({ id: p.id, name: p.name, location: p.location }));
+      if (localMatches.length > 0) {
+        setHidResults(localMatches);
+        setHidSearching(false);
+        return;
+      }
       api.admin.places
         .list({ q, limit: 25 })
         .then((r) => setHidResults(Array.isArray(r?.places) ? r.places : []))
@@ -125,7 +155,7 @@ export default function AdminHotelsGuide() {
         .finally(() => setHidSearching(false));
     }, 280);
     return () => window.clearTimeout(tid);
-  }, [hidQ]);
+  }, [hidQ, places]);
 
   const patchHero = useCallback((loc, field, value) => {
     setHotels((d) => ({
@@ -459,7 +489,15 @@ export default function AdminHotelsGuide() {
                   {featResults.map((p) => (
                     <li key={p.id}>
                       <button type="button" className="adg-search-pick" onClick={() => addFeatured(p)}>
-                        <span className="adg-search-pick-name">{p.name}</span>
+                        <span className="adg-search-pick-name">
+                          {p.name}
+                          {(() => {
+                            const fullPlace = placeById.get(String(p.id));
+                            if (!fullPlace) return null;
+                            const ok = stayCategoryIds.has(String(fullPlace.categoryId ?? fullPlace.category_id));
+                            return ok ? null : <span className="adg-inline-warn">Not in stay theme</span>;
+                          })()}
+                        </span>
                         <span className="adg-search-pick-sub">{p.location || p.id}</span>
                       </button>
                     </li>
@@ -503,7 +541,15 @@ export default function AdminHotelsGuide() {
                   {hidResults.map((p) => (
                     <li key={p.id}>
                       <button type="button" className="adg-search-pick" onClick={() => addHidden(p)}>
-                        <span className="adg-search-pick-name">{p.name}</span>
+                        <span className="adg-search-pick-name">
+                          {p.name}
+                          {(() => {
+                            const fullPlace = placeById.get(String(p.id));
+                            if (!fullPlace) return null;
+                            const ok = stayCategoryIds.has(String(fullPlace.categoryId ?? fullPlace.category_id));
+                            return ok ? null : <span className="adg-inline-warn">Not in stay theme</span>;
+                          })()}
+                        </span>
                         <span className="adg-search-pick-sub">{p.location || p.id}</span>
                       </button>
                     </li>
