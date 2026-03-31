@@ -4,8 +4,6 @@
   --dg-copper: #b45309;
   --dg-copper-deep: #7c2d12;
   --dg-wine: #4a1212;
-  --dg-brand: #1e5631;
-  --dg-brand-ink: #14532d;
   --dg-cream: #fff7ed;
   --dg-sand: #ffedd5;
   --dg-ink: #1c1917;
@@ -125,11 +123,6 @@
   text-decoration: none;
   transform: translateY(-1px);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
-}
-
-.dg-hero__link:focus-visible {
-  outline: 2px solid rgba(232, 212, 139, 0.9);
-  outline-offset: 3px;
 }
 
 .dg-hero__link--ghost {
