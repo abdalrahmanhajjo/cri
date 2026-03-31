@@ -1,6 +1,112 @@
 -- Dining-first restaurants: tag as restaurants_cuisine (hidden from /discover via excludeCategoryIds).
 -- Full EN / AR / FR copy in place_translations + canonical English on places.
 
+-- Ensure the flagship dining places exist before adding translations.
+-- (FK: place_translations.place_id -> places.id)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+INSERT INTO places (
+  id,
+  name,
+  description,
+  location,
+  latitude,
+  longitude,
+  search_name,
+  images,
+  category,
+  category_id,
+  duration,
+  price,
+  best_time,
+  rating,
+  review_count,
+  hours,
+  tags,
+  checkin_token
+) VALUES
+(
+  'hallab_sweets',
+  'Abdul Rahman Al Hallab & Sons',
+  'Tripoli''s best-known patisserie since 1881 — baklava, knafeh, maamoul and oriental sweets in a landmark Ottoman-era setting.',
+  'Azmi Street, city centre, Tripoli',
+  34.4339,
+  35.8380,
+  NULL,
+  '[]'::jsonb,
+  'Restaurants & cuisine',
+  'restaurants_cuisine',
+  '30 mins',
+  '',
+  'All Day',
+  NULL,
+  NULL,
+  NULL,
+  '["sweets","knefe","baklava","patisserie"]'::jsonb,
+  encode(digest('hallab_sweets', 'sha256'), 'hex')
+),
+(
+  'Akra',
+  'Akra',
+  'A long-standing family favourite for a classic Lebanese breakfast before a day in the city.',
+  'Al Koura Square, Mohammad El Husseini Street, Tripoli',
+  34.4339,
+  35.8380,
+  NULL,
+  '[]'::jsonb,
+  'Restaurants & cuisine',
+  'restaurants_cuisine',
+  '30–60 mins',
+  '',
+  'Mornings',
+  NULL,
+  NULL,
+  NULL,
+  '["breakfast","mana2ish","coffee"]'::jsonb,
+  encode(digest('Akra', 'sha256'), 'hex')
+),
+(
+  'Baytna',
+  'Baytna',
+  'Lebanese and Mediterranean cooking in a warm, relaxed setting — popular with locals and visitors.',
+  'Dam W Farz, Tripoli',
+  34.4339,
+  35.8380,
+  NULL,
+  '[]'::jsonb,
+  'Restaurants & cuisine',
+  'restaurants_cuisine',
+  '',
+  '',
+  '',
+  NULL,
+  NULL,
+  NULL,
+  '["lebanese","mediterranean","dinner"]'::jsonb,
+  encode(digest('Baytna', 'sha256'), 'hex')
+),
+(
+  'Rawand',
+  'Rawand',
+  'Boutique-style restaurant for dinner and cocktails — soft lighting, calm service and an intimate atmosphere.',
+  'Achier El Daya, Tripoli, North Governorate',
+  34.4339,
+  35.8380,
+  NULL,
+  '[]'::jsonb,
+  'Restaurants & cuisine',
+  'restaurants_cuisine',
+  '',
+  '',
+  '',
+  NULL,
+  NULL,
+  NULL,
+  '["cocktails","dinner","date night"]'::jsonb,
+  encode(digest('Rawand', 'sha256'), 'hex')
+)
+ON CONFLICT (id) DO NOTHING;
+
 UPDATE places SET
   category_id = 'restaurants_cuisine',
   category = 'Restaurants & cuisine',
