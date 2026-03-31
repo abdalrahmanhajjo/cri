@@ -12,6 +12,7 @@ import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
 import { COMMUNITY_PATH } from '../utils/discoverPaths';
 import { discoverPlacesListParams } from '../utils/discoverPlaceListParams';
+import { canSeeGuidesSponsorAndFeatured } from '../utils/guidePreviewGate';
 import './PlaceDiscover.css';
 
 function formatTripRange(trip, locale) {
@@ -169,6 +170,10 @@ export default function PlaceDiscover() {
   }, [langParam, discoverListParams]);
 
   useEffect(() => {
+    if (!canSeeGuidesSponsorAndFeatured(user)) {
+      setSponsoredDiscover([]);
+      return;
+    }
     let cancelled = false;
     api
       .sponsoredPlaces({ surface: 'discover', lang: langParam })
@@ -182,7 +187,7 @@ export default function PlaceDiscover() {
     return () => {
       cancelled = true;
     };
-  }, [langParam]);
+  }, [langParam, user?.isAdmin, user?.id]);
 
   useEffect(() => {
     if (!tripPickPlace || !user) {
@@ -473,7 +478,7 @@ export default function PlaceDiscover() {
           <p className="pd-empty">{t('home', 'noSpots')}</p>
         ) : (
           <section className={`pd-mosaic pd-mosaic--${viewMode}`} aria-labelledby="pd-results-heading">
-            {sponsoredDiscover.length > 0 && viewMode === 'list' ? (
+            {canSeeGuidesSponsorAndFeatured(user) && sponsoredDiscover.length > 0 && viewMode === 'list' ? (
               <div className="pd-sponsored-block">
                 <p className="pd-sponsored-kicker">{t('discover', 'sponsoredDiscoverKicker')}</p>
                 <div className="pd-sponsored-inline">
