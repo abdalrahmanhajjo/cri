@@ -6,6 +6,7 @@ const { adminMiddleware } = require('../../middleware/admin');
 const { normalizeDbText } = require('../../utils/normalizeDbText');
 const { validateAdminPlaceUpsert } = require('../../utils/validateAdminPlace');
 const { invalidateSitemapCache } = require('../../seo/seoRoutes');
+const { validateDiningProfileBody, diningProfileForDb } = require('../../utils/diningProfile');
 
 const router = express.Router();
 
@@ -70,15 +71,25 @@ router.post('/', async (req, res) => {
     const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
     const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
 
+    let diningProfileJson = '{}';
+    if (body.diningProfile !== undefined) {
+      const dv = validateDiningProfileBody(body.diningProfile);
+      if (!dv.ok) return res.status(400).json({ error: dv.error });
+      diningProfileJson = JSON.stringify(
+        dv.value == null ? {} : diningProfileForDb(dv.value)
+      );
+    }
+
     await query(
-      `INSERT INTO places (id, name, description, location, latitude, longitude, search_name, images, category, category_id, duration, price, best_time, rating, review_count, hours, tags)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, $13, $14, $15, $16::jsonb, $17::jsonb)
+      `INSERT INTO places (id, name, description, location, latitude, longitude, search_name, images, category, category_id, duration, price, best_time, rating, review_count, hours, tags, dining_profile)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, $13, $14, $15, $16::jsonb, $17::jsonb, $18::jsonb)
        ON CONFLICT (id) DO UPDATE SET
          name = EXCLUDED.name, description = EXCLUDED.description, location = EXCLUDED.location,
          latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude, search_name = EXCLUDED.search_name,
          images = EXCLUDED.images, category = EXCLUDED.category, category_id = EXCLUDED.category_id,
          duration = EXCLUDED.duration, price = EXCLUDED.price, best_time = EXCLUDED.best_time,
-         rating = EXCLUDED.rating, review_count = EXCLUDED.review_count, hours = EXCLUDED.hours, tags = EXCLUDED.tags`,
+         rating = EXCLUDED.rating, review_count = EXCLUDED.review_count, hours = EXCLUDED.hours, tags = EXCLUDED.tags,
+         dining_profile = EXCLUDED.dining_profile`,
       [
         v.id,
         v.name,
@@ -97,6 +108,7 @@ router.post('/', async (req, res) => {
         v.reviewCount,
         body.hours ? JSON.stringify(body.hours) : null,
         tagsJson,
+        diningProfileJson,
       ]
     );
     res.status(201).json({ id: v.id, message: 'Place saved' });
@@ -180,13 +192,23 @@ router.put('/:id', async (req, res) => {
     const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
     const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
 
+    let diningProfileParam = null;
+    if (body.diningProfile !== undefined) {
+      const dv = validateDiningProfileBody(body.diningProfile);
+      if (!dv.ok) return res.status(400).json({ error: dv.error });
+      diningProfileParam = JSON.stringify(
+        dv.value == null ? {} : diningProfileForDb(dv.value)
+      );
+    }
+
     const result = await query(
       `UPDATE places SET
          name = COALESCE($2, name), description = COALESCE($3, description), location = COALESCE($4, location),
          latitude = COALESCE($5, latitude), longitude = COALESCE($6, longitude), search_name = COALESCE($7, search_name),
          images = COALESCE($8::jsonb, images), category = COALESCE($9, category), category_id = COALESCE($10, category_id),
          duration = COALESCE($11, duration), price = COALESCE($12, price), best_time = COALESCE($13, best_time),
-         rating = COALESCE($14, rating), review_count = COALESCE($15, review_count), hours = COALESCE($16::jsonb, hours), tags = COALESCE($17::jsonb, tags)
+         rating = COALESCE($14, rating), review_count = COALESCE($15, review_count), hours = COALESCE($16::jsonb, hours), tags = COALESCE($17::jsonb, tags),
+         dining_profile = COALESCE($18::jsonb, dining_profile)
        WHERE id = $1`,
       [
         id,
@@ -206,6 +228,7 @@ router.put('/:id', async (req, res) => {
         body.reviewCount !== undefined || body.review_count !== undefined ? (body.reviewCount ?? body.review_count) : null,
         body.hours !== undefined ? JSON.stringify(body.hours) : null,
         body.tags !== undefined ? tagsJson : null,
+        diningProfileParam,
       ]
     );
     if (result.rowCount === 0) return res.status(404).json({ error: 'Place not found' });

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import api from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
+import { mergeBusinessPortal } from '../../config/siteSettingsDefaults';
 import './BusinessSponsorship.css';
 
 function formatMoney(cents, currency, lang) {
@@ -19,6 +20,7 @@ export default function BusinessSponsorship() {
   const ctx = useOutletContext();
   const data = ctx?.me;
   const refreshMe = ctx?.refreshMe;
+  const portal = mergeBusinessPortal(ctx?.businessPortal);
   const [cfg, setCfg] = useState(null);
   const [cfgErr, setCfgErr] = useState(null);
   const [placeId, setPlaceId] = useState('');
@@ -99,6 +101,22 @@ export default function BusinessSponsorship() {
     cfg?.paymentsReady &&
     placeId &&
     !cfgErr;
+
+  if (portal.sections?.sponsorship === false) {
+    return (
+      <div className="biz-sponsored">
+        <div className="biz-sponsored-card" style={{ maxWidth: 520 }}>
+          <p className="biz-sponsored-muted" style={{ fontSize: '1rem', color: 'inherit', marginBottom: '1rem' }}>
+            Sponsored placement self-checkout is turned off in site settings. Your administrator can still feature venues
+            from the main admin console.
+          </p>
+          <Link to="/business" className="biz-sponsored-link">
+            {t('business', 'backToDashboard')}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="biz-sponsored">

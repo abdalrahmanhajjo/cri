@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
+import { mergeBusinessPortal } from '../../config/siteSettingsDefaults';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
 import {
   isLikelyImageFile,
@@ -41,6 +42,7 @@ export default function BusinessPlaceFeed() {
   const ctx = useOutletContext();
   const me = ctx?.me;
   const refreshMe = ctx?.refreshMe;
+  const portal = mergeBusinessPortal(ctx?.businessPortal);
   const places = useMemo(() => (Array.isArray(me?.places) ? me.places : []), [me?.places]);
 
   const [posts, setPosts] = useState([]);
@@ -447,6 +449,25 @@ export default function BusinessPlaceFeed() {
       setDeleting(null);
     }
   };
+
+  if (portal.sections?.feed === false) {
+    return (
+      <div className="business-dashboard">
+        <div className="business-panel business-panel--notice">
+          <h2 className="business-panel-title" style={{ marginBottom: '0.75rem' }}>
+            Feed unavailable
+          </h2>
+          <p className="business-hint" style={{ fontSize: '1rem', lineHeight: 1.55, color: 'var(--biz-muted)' }}>
+            Community feed and related tools are disabled in site settings. Contact your Visit Tripoli administrator if you
+            expected to post here.
+          </p>
+          <Link to="/business" className="business-btn business-btn--primary" style={{ marginTop: '1rem' }}>
+            Back to dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="business-dashboard">

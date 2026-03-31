@@ -83,11 +83,55 @@ export function mergeHotelsGuide(raw) {
   return mergeDiningGuide(raw);
 }
 
+const businessPortalDefaults = {
+  enabled: true,
+  /** Feature flags for /business (partner self-service). */
+  sections: {
+    feed: true,
+    sponsorship: true,
+    listingReviews: true,
+    listingTranslations: true,
+    listingMapPicker: true,
+    /** When false, photos tab is upload / paste only (no raw URL list). */
+    listingAdvancedImageUrls: false,
+    listingDiningExtras: true,
+  },
+  /** Optional dashboard copy (empty = built-in defaults in the business app). */
+  copy: {
+    dashboardKicker: '',
+    dashboardTitle: '',
+    dashboardLead: '',
+  },
+};
+
+/** Normalize `businessPortal` from API (partner console toggles + dashboard copy). */
+export function mergeBusinessPortal(raw) {
+  if (!raw || typeof raw !== 'object') {
+    return JSON.parse(JSON.stringify(businessPortalDefaults));
+  }
+  const srcSec = raw.sections && typeof raw.sections === 'object' ? raw.sections : {};
+  const srcCopy = raw.copy && typeof raw.copy === 'object' ? raw.copy : {};
+  return {
+    enabled: raw.enabled !== false,
+    sections: {
+      ...businessPortalDefaults.sections,
+      ...srcSec,
+      listingAdvancedImageUrls: srcSec.listingAdvancedImageUrls === true,
+    },
+    copy: {
+      dashboardKicker: typeof srcCopy.dashboardKicker === 'string' ? srcCopy.dashboardKicker.trim() : '',
+      dashboardTitle: typeof srcCopy.dashboardTitle === 'string' ? srcCopy.dashboardTitle.trim() : '',
+      dashboardLead: typeof srcCopy.dashboardLead === 'string' ? srcCopy.dashboardLead.trim() : '',
+    },
+  };
+}
+
 /** Deep-merge nested keys that need defaults when loading from PostgreSQL. */
 export function mergeWithSiteSettingsDefaults(serverSettings) {
   const s = serverSettings && typeof serverSettings === 'object' ? serverSettings : {};
   const diningGuide = mergeDiningGuide(s.diningGuide);
   const hotelsGuide = mergeHotelsGuide(s.hotelsGuide);
+  const businessPortal = mergeBusinessPortal(s.businessPortal);
   const sponsoredPlacesEnabled = {
     ...siteSettingsDefaultsBase.sponsoredPlacesEnabled,
     ...(typeof s.sponsoredPlacesEnabled === 'object' && s.sponsoredPlacesEnabled !== null
@@ -99,6 +143,7 @@ export function mergeWithSiteSettingsDefaults(serverSettings) {
     ...s,
     diningGuide,
     hotelsGuide,
+    businessPortal,
     sponsoredPlacesEnabled,
   };
 }
@@ -149,6 +194,8 @@ const siteSettingsDefaultsBase = {
   sponsorshipDurationDays: 30,
   sponsorshipAmountCents: 4999,
   sponsorshipCurrency: 'usd',
+  /** Partner portal at /business — toggles + optional dashboard copy */
+  businessPortal: mergeBusinessPortal({}),
 };
 
 export const siteSettingsDefaults = siteSettingsDefaultsBase;

@@ -54,6 +54,11 @@ export const ICON_DOCS = {
     description: 'On the home hub, nudges the visitor to scroll up or return toward top content.',
     flaticonAnimated: 'Animated up-arrow from Flaticon (scroll to top / move up).',
   },
+  arts_crafts: {
+    variant: 'discover',
+    description: 'Arts, handicrafts and artisan workshops in the find-your-way crafts theme row.',
+    flaticonAnimated: 'Pen-tool or workshop-style mark from Flaticon (arts & crafts).',
+  },
   auto_awesome: {
     variant: 'ai',
     description: 'Signals AI-assisted features: trip planner moods, sparkles on a stop, or AI plan CTA.',

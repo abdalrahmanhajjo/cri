@@ -1,8 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension, getImageUrlAlternate } from '../../api/client';
-import { ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
+import { ACCEPT_IMAGES_WITH_HEIC, isLikelyImageFile } from '../../utils/imageUploadAccept';
+import { mergeBusinessPortal } from '../../config/siteSettingsDefaults';
 import MapPicker from '../../components/MapPicker';
+import { getCategoriesForWay } from '../../utils/findYourWayGrouping';
+import { emptyDiningForm, diningFormFromProfile, buildDiningProfilePayload } from '../../utils/diningProfileForm';
 import './Business.css';
 
 const DURATION_OPTIONS = ['', '15 mins', '30 mins', '45 mins', '1 hour', '1-2 hours', '2-3 hours', 'Half day', 'Full day'];
@@ -13,15 +16,6 @@ const TRANS_LANGS = [
   { code: 'en', label: 'English' },
   { code: 'ar', label: 'العربية' },
   { code: 'fr', label: 'Français' },
-];
-
-const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'location', label: 'Location' },
-  { id: 'media', label: 'Photos' },
-  { id: 'details', label: 'Details & hours' },
-  { id: 'reviews', label: 'Reviews' },
-  { id: 'languages', label: 'Languages' },
 ];
 
 const DOC_TITLE_BUSINESS = 'Business — Visit Tripoli';
@@ -123,8 +117,11 @@ export default function BusinessPlaceEdit() {
   const placeId = rawId ? decodeURIComponent(rawId) : '';
   const outlet = useOutletContext();
   const refreshMe = outlet?.refreshMe;
+  const businessPortal = mergeBusinessPortal(outlet?.businessPortal);
+  const portalSec = businessPortal.sections || {};
 
   const [tab, setTab] = useState('overview');
+  const [mediaDragActive, setMediaDragActive] = useState(false);
   const [place, setPlace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -145,6 +142,7 @@ export default function BusinessPlaceEdit() {
   const [bizReviews, setBizReviews] = useState([]);
   const [bizReviewsLoading, setBizReviewsLoading] = useState(false);
   const [bizReviewsErr, setBizReviewsErr] = useState(null);
+  const [diningForm, setDiningForm] = useState(emptyDiningForm);
 
   const refreshBizReviews = useCallback(async () => {
     if (!placeId) return;
@@ -209,6 +207,7 @@ export default function BusinessPlaceEdit() {
         tags: Array.isArray(p.tags) ? p.tags.join(', ') : '',
         hoursStr,
       });
+      setDiningForm(diningFormFromProfile(p.diningProfile));
       dirtyRef.current = false;
       setDirty(false);
     });
@@ -253,6 +252,34 @@ export default function BusinessPlaceEdit() {
     const catId = form.categoryId || '';
     setCategoryCustom(!catId || !categories.some((c) => c.id === catId));
   }, [form, categories]);
+
+  const foodCategoryIds = useMemo(() => {
+    const foodCats = getCategoriesForWay('food', categories);
+    return new Set(foodCats.map((c) => String(c.id)));
+  }, [categories]);
+  const isFoodPlace = foodCategoryIds.has(String(form?.categoryId || '').trim());
+  const showDiningExtras = isFoodPlace && portalSec.listingDiningExtras !== false;
+
+  const tabDefs = useMemo(() => {
+    const all = [
+      { id: 'overview', label: 'Overview' },
+      { id: 'location', label: 'Location' },
+      { id: 'media', label: 'Photos' },
+      { id: 'details', label: 'Details & hours' },
+      { id: 'reviews', label: 'Reviews' },
+      { id: 'languages', label: 'Languages' },
+    ];
+    return all.filter((row) => {
+      if (row.id === 'reviews') return portalSec.listingReviews !== false;
+      if (row.id === 'languages') return portalSec.listingTranslations !== false;
+      return true;
+    });
+  }, [portalSec.listingReviews, portalSec.listingTranslations]);
+
+  useEffect(() => {
+    if (tabDefs.some((t) => t.id === tab)) return;
+    setTab(tabDefs[0]?.id || 'overview');
+  }, [tab, tabDefs]);
 
   useEffect(() => {
     if (tab !== 'reviews' || !placeId) return;
@@ -311,27 +338,56 @@ export default function BusinessPlaceEdit() {
     setMapPickerOpen(false);
   };
 
-  const handleImageUpload = async (files) => {
-    if (!files?.length || !placeId) return;
-    setError(null);
-    setUploading(true);
-    try {
-      const results = await Promise.all(
-        Array.from(files).map((file) =>
-          api.business.upload(file, placeId).catch((e) => {
-            throw new Error(`${file.name}: ${e?.message || 'Upload failed'}`);
-          })
-        )
-      );
-      const newUrls = [...imageUrls, ...results].filter(Boolean);
-      markDirty();
-      setForm((f) => (f ? { ...f, images: newUrls.join('\n') } : f));
-    } catch (e) {
-      setError(e?.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
-  };
+  const handleImageUpload = useCallback(
+    async (files) => {
+      const list = Array.from(files || []).filter(isLikelyImageFile);
+      if (!list.length || !placeId) {
+        if (files?.length && !list.length) {
+          setError('Use image files (JPEG, PNG, GIF, WebP, or HEIC).');
+        }
+        return;
+      }
+      setError(null);
+      setUploading(true);
+      try {
+        const results = await Promise.all(
+          list.map((file) =>
+            api.business.upload(file, placeId).catch((e) => {
+              throw new Error(`${file.name}: ${e?.message || 'Upload failed'}`);
+            })
+          )
+        );
+        markDirty();
+        setForm((f) => {
+          if (!f) return f;
+          const existing = f.images?.trim()
+            ? f.images.split(/\n/).map((s) => s.trim()).filter(Boolean)
+            : [];
+          const newUrls = [...existing, ...results].filter(Boolean);
+          return { ...f, images: newUrls.join('\n') };
+        });
+      } catch (e) {
+        setError(e?.message || 'Upload failed');
+      } finally {
+        setUploading(false);
+      }
+    },
+    [placeId, markDirty]
+  );
+
+  useEffect(() => {
+    if (tab !== 'media') return;
+    const onPaste = (e) => {
+      const fileList = e.clipboardData?.files;
+      if (!fileList?.length) return;
+      const pasted = Array.from(fileList).filter(isLikelyImageFile);
+      if (!pasted.length) return;
+      e.preventDefault();
+      void handleImageUpload(pasted);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [tab, handleImageUpload]);
 
   const removeImage = (index) => {
     markDirty();
@@ -390,6 +446,7 @@ export default function BusinessPlaceEdit() {
         images,
         tags,
         hours: hoursPayload,
+        diningProfile: showDiningExtras ? buildDiningProfilePayload(diningForm) : {},
       });
       dirtyRef.current = false;
       setDirty(false);
@@ -500,7 +557,7 @@ export default function BusinessPlaceEdit() {
 
       <form onSubmit={handleSubmit}>
         <div className="business-tabs" role="tablist" aria-label="Listing sections">
-          {TABS.map((t) => (
+          {tabDefs.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -585,30 +642,37 @@ export default function BusinessPlaceEdit() {
                 <input id="biz-lng" className="business-input" type="number" step="any" value={form.longitude} onChange={setField('longitude')} />
               </div>
             </div>
-            <button type="button" className="business-btn business-btn--ghost" onClick={() => setMapPickerOpen(true)}>
-              Pick on map
-            </button>
+            {portalSec.listingMapPicker !== false ? (
+              <button type="button" className="business-btn business-btn--ghost" onClick={() => setMapPickerOpen(true)}>
+                Pick on map
+              </button>
+            ) : (
+              <p className="business-hint" style={{ marginTop: '0.5rem' }}>
+                Map pin editing is managed by your administrator. You can still adjust coordinates manually above if allowed.
+              </p>
+            )}
           </div>
         )}
 
         {tab === 'media' && (
-          <div className="business-panel">
+          <div className="business-panel business-panel--media">
             <h2 className="business-panel-title">Photos</h2>
             <p className="business-hint" style={{ marginBottom: '1rem' }}>
-              First image is the cover. JPEG, PNG, GIF, or WebP — max 5 MB per file. Images are scanned server-side.
+              Drag files in, click to choose, or paste from clipboard (Ctrl+V). First photo is the cover. JPEG, PNG, GIF, WebP,
+              or HEIC — max 5 MB per file. Images are scanned server-side.
             </p>
             <div
-              className="business-upload-zone"
+              className={`business-upload-zone business-dropzone--primary${mediaDragActive ? ' business-upload-zone--drag' : ''}`}
               onDragOver={(e) => {
                 e.preventDefault();
-                e.currentTarget.classList.add('business-upload-zone--drag');
+                setMediaDragActive(true);
               }}
               onDragLeave={(e) => {
-                e.currentTarget.classList.remove('business-upload-zone--drag');
+                if (!e.currentTarget.contains(e.relatedTarget)) setMediaDragActive(false);
               }}
               onDrop={(e) => {
                 e.preventDefault();
-                e.currentTarget.classList.remove('business-upload-zone--drag');
+                setMediaDragActive(false);
                 handleImageUpload(e.dataTransfer?.files);
               }}
             >
@@ -623,8 +687,9 @@ export default function BusinessPlaceEdit() {
                   e.target.value = '';
                 }}
               />
-              <label htmlFor="biz-place-upload" style={{ cursor: uploading ? 'wait' : 'pointer' }}>
-                {uploading ? 'Uploading…' : 'Drop images here or click to upload'}
+              <label htmlFor="biz-place-upload" className="business-dropzone-label">
+                <span className="business-dropzone-title">{uploading ? 'Uploading…' : 'Drop photos here'}</span>
+                <span className="business-dropzone-sub">or click to browse — paste works on this tab too</span>
               </label>
             </div>
             {imageUrls.length > 0 && (
@@ -648,10 +713,13 @@ export default function BusinessPlaceEdit() {
                 ))}
               </div>
             )}
-            <div className="business-field" style={{ marginTop: '1rem' }}>
-              <label htmlFor="biz-urls">Image URLs (one per line)</label>
-              <textarea id="biz-urls" className="business-textarea" rows={3} value={form.images} onChange={setField('images')} />
-            </div>
+            {portalSec.listingAdvancedImageUrls ? (
+              <div className="business-field" style={{ marginTop: '1rem' }}>
+                <label htmlFor="biz-urls">Image URLs (one per line, advanced)</label>
+                <textarea id="biz-urls" className="business-textarea" rows={3} value={form.images} onChange={setField('images')} />
+                <p className="business-hint">Prefer uploads above; use this only for hosted assets your admin approved.</p>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -718,6 +786,134 @@ export default function BusinessPlaceEdit() {
               />
               <p className="business-hint">Optional structured hours for apps that read this field. Leave empty if unsure.</p>
             </div>
+
+            {showDiningExtras ? (
+              <div className="business-field" style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(15,23,42,0.1)' }}>
+                <h3 className="business-panel-title" style={{ fontSize: '1.05rem', marginBottom: '0.75rem' }}>
+                  Menu &amp; restaurant links
+                </h3>
+                <p className="business-hint" style={{ marginBottom: '1rem' }}>
+                  Appears on your public restaurant page: menu text, PDF / web links, phone, WhatsApp, reservations.
+                </p>
+                <div className="business-field">
+                  <label>Menu intro</label>
+                  <textarea
+                    className="business-textarea"
+                    rows={2}
+                    value={diningForm.menuIntro}
+                    onChange={(e) => {
+                      markDirty();
+                      setDiningForm((d) => ({ ...d, menuIntro: e.target.value }));
+                    }}
+                  />
+                </div>
+                <div className="business-field-row">
+                  <div className="business-field">
+                    <label>Menu URL</label>
+                    <input
+                      className="business-input"
+                      value={diningForm.menuUrl}
+                      onChange={(e) => {
+                        markDirty();
+                        setDiningForm((d) => ({ ...d, menuUrl: e.target.value }));
+                      }}
+                    />
+                  </div>
+                  <div className="business-field">
+                    <label>Menu PDF URL</label>
+                    <input
+                      className="business-input"
+                      value={diningForm.menuPdfUrl}
+                      onChange={(e) => {
+                        markDirty();
+                        setDiningForm((d) => ({ ...d, menuPdfUrl: e.target.value }));
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="business-field-row">
+                  <div className="business-field">
+                    <label>Reservations URL</label>
+                    <input
+                      className="business-input"
+                      value={diningForm.reservationsUrl}
+                      onChange={(e) => {
+                        markDirty();
+                        setDiningForm((d) => ({ ...d, reservationsUrl: e.target.value }));
+                      }}
+                    />
+                  </div>
+                  <div className="business-field">
+                    <label>Phone</label>
+                    <input
+                      className="business-input"
+                      value={diningForm.phone}
+                      onChange={(e) => {
+                        markDirty();
+                        setDiningForm((d) => ({ ...d, phone: e.target.value }));
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="business-field">
+                  <label>WhatsApp</label>
+                  <input
+                    className="business-input"
+                    value={diningForm.whatsapp}
+                    onChange={(e) => {
+                      markDirty();
+                      setDiningForm((d) => ({ ...d, whatsapp: e.target.value }));
+                    }}
+                  />
+                </div>
+                <div className="business-field">
+                  <label>Cuisine (comma-separated)</label>
+                  <input
+                    className="business-input"
+                    value={diningForm.cuisineTypesStr}
+                    onChange={(e) => {
+                      markDirty();
+                      setDiningForm((d) => ({ ...d, cuisineTypesStr: e.target.value }));
+                    }}
+                  />
+                </div>
+                <div className="business-field">
+                  <label>Dietary note</label>
+                  <input
+                    className="business-input"
+                    value={diningForm.dietaryNotes}
+                    onChange={(e) => {
+                      markDirty();
+                      setDiningForm((d) => ({ ...d, dietaryNotes: e.target.value }));
+                    }}
+                  />
+                </div>
+                <div className="business-field" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 14px' }}>
+                  {[
+                    ['svcDineIn', 'Dine-in'],
+                    ['svcTakeaway', 'Takeaway'],
+                    ['svcDelivery', 'Delivery'],
+                    ['svcOutdoor', 'Outdoor'],
+                    ['svcReservations', 'Reservations'],
+                  ].map(([key, label]) => (
+                    <label key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <input
+                        type="checkbox"
+                        checked={!!diningForm[key]}
+                        onChange={(e) => {
+                          markDirty();
+                          setDiningForm((d) => ({ ...d, [key]: e.target.checked }));
+                        }}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                <p className="business-hint">
+                  For full menu sections and dishes (starters, mains…), use the admin Places screen or ask your Visit Tripoli contact.
+                </p>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -864,9 +1060,9 @@ export default function BusinessPlaceEdit() {
         </div>
       </form>
 
-      {mapPickerOpen && (
+      {mapPickerOpen && portalSec.listingMapPicker !== false ? (
         <MapPicker lat={form.latitude} lng={form.longitude} onSelect={handleMapSelect} onClose={() => setMapPickerOpen(false)} />
-      )}
+      ) : null}
 
       {toast && (
         <div className={`business-toast business-toast--${toast.type}`} role="status" aria-live="polite">

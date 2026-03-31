@@ -304,20 +304,24 @@ export default function Layout() {
             >
               {t('nav', 'discoverPlaces')}
             </Link>
-            <Link
-              to={DINING_PATH}
-              className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
-              onClick={closeMenu}
-            >
-              {t('nav', 'diningNav')}
-            </Link>
-            <Link
-              to={HOTELS_PATH}
-              className={`nav-link ${isHotelsPage ? 'nav-link--active' : ''}`}
-              onClick={closeMenu}
-            >
-              {t('nav', 'hotelsNav')}
-            </Link>
+            {diningEnabled ? (
+              <Link
+                to={DINING_PATH}
+                className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
+                onClick={closeMenu}
+              >
+                {t('nav', 'diningNav')}
+              </Link>
+            ) : null}
+            {hotelsEnabled ? (
+              <Link
+                to={HOTELS_PATH}
+                className={`nav-link ${isHotelsPage ? 'nav-link--active' : ''}`}
+                onClick={closeMenu}
+              >
+                {t('nav', 'hotelsNav')}
+              </Link>
+            ) : null}
             <Link to="/map" className={`nav-link ${isMapPage ? 'nav-link--active' : ''}`} onClick={closeMenu}>
               {t('nav', 'viewMapNav')}
             </Link>

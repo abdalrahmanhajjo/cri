@@ -11,6 +11,7 @@ import { filterPlacesByQuery } from '../utils/searchFilter';
 import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
 import { COMMUNITY_PATH } from '../utils/discoverPaths';
+import { discoverPlacesListParams } from '../utils/discoverPlaceListParams';
 import './PlaceDiscover.css';
 
 function formatTripRange(trip, locale) {
@@ -98,6 +99,7 @@ export default function PlaceDiscover() {
   const toolbarRef = useRef(null);
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const locale = lang === 'ar' ? 'ar-LB' : lang === 'fr' ? 'fr-LB' : 'en-GB';
+  const discoverListParams = useMemo(() => discoverPlacesListParams(langParam), [langParam]);
 
   const categoryParam = searchParams.get('category') || '';
   const sortParam = searchParams.get('sort') || 'recommended';
@@ -146,7 +148,7 @@ export default function PlaceDiscover() {
     setLoading(true);
     setError(null);
     Promise.all([
-      api.places.list({ lang: langParam }).then((r) => r.popular || r.locations || []),
+      api.places.list(discoverListParams).then((r) => r.popular || r.locations || []),
       api.categories.list({ lang: langParam }).then((r) => r.categories || []),
     ])
       .then(([p, c]) => {
@@ -164,7 +166,7 @@ export default function PlaceDiscover() {
     return () => {
       cancelled = true;
     };
-  }, [langParam]);
+  }, [langParam, discoverListParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -386,6 +388,7 @@ export default function PlaceDiscover() {
               idPrefix="place-discover"
               queryValue={qDraft}
               onQueryChange={setQDraft}
+              placesListParams={discoverListParams}
             />
           </div>
           <div className="pd-hero-actions" aria-label={t('placeDiscover', 'quickActionsLabel')}>
