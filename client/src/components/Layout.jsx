@@ -48,6 +48,7 @@ export default function Layout() {
   const isHotelsPage = location.pathname === HOTELS_PATH;
   const diningEnabled = settings?.diningGuide?.enabled !== false;
   const hotelsEnabled = settings?.hotelsGuide?.enabled !== false;
+  const guidesNavVisible = canSeeGuidesSponsorAndFeatured(user);
   const isAboutTripoliPage = location.pathname === '/about-tripoli';
   const isAiPlannerPage = location.pathname === '/plan/ai';
 
