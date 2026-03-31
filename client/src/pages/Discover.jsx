@@ -10,6 +10,7 @@ import OfferCard from '../components/OfferCard';
 import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { trackEvent } from '../utils/analytics';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import './Discover.css';
 
 const TABS = [
@@ -491,6 +492,7 @@ export default function Discover() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [placeScopeMeta, setPlaceScopeMeta] = useState(null);
+  const { settings } = useSiteSettings();
 
   useEffect(() => {
     if (!placeScopeId) {
@@ -798,8 +800,10 @@ export default function Discover() {
     };
   }, [tab, placeScopeId, t]);
 
+  const sponsoredFeedEnabled = settings?.sponsoredPlacesEnabled?.feed !== false;
+
   useEffect(() => {
-    if (tab !== 'feed' || placeScopeId) {
+    if (tab !== 'feed' || placeScopeId || !sponsoredFeedEnabled) {
       setSponsoredFeed([]);
       return undefined;
     }
@@ -817,7 +821,7 @@ export default function Discover() {
     return () => {
       cancelled = true;
     };
-  }, [tab, placeScopeId, lang]);
+  }, [tab, placeScopeId, lang, sponsoredFeedEnabled]);
 
   const injectedFeedRows = useMemo(() => {
     const base = orderedFeedPosts.map((p) => ({ kind: 'post', post: p }));

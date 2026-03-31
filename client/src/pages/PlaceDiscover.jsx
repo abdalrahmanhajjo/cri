@@ -11,6 +11,7 @@ import { filterPlacesByQuery } from '../utils/searchFilter';
 import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
 import { COMMUNITY_PATH } from '../utils/discoverPaths';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import './PlaceDiscover.css';
 
 function formatTripRange(trip, locale) {
@@ -115,6 +116,7 @@ export default function PlaceDiscover() {
   const [tripAddSaving, setTripAddSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [sponsoredDiscover, setSponsoredDiscover] = useState([]);
+  const { settings } = useSiteSettings();
 
   const searchParamsRef = useRef(searchParams);
   searchParamsRef.current = searchParams;
@@ -123,6 +125,8 @@ export default function PlaceDiscover() {
     setToast({ message, kind });
     window.setTimeout(() => setToast(null), 3200);
   }, []);
+
+  const sponsoredDiscoverEnabled = settings?.sponsoredPlacesEnabled?.discover !== false;
 
   useEffect(() => {
     setQDraft(qParam);
@@ -168,6 +172,10 @@ export default function PlaceDiscover() {
 
   useEffect(() => {
     let cancelled = false;
+    if (!sponsoredDiscoverEnabled) {
+      setSponsoredDiscover([]);
+      return undefined;
+    }
     api
       .sponsoredPlaces({ surface: 'discover', lang: langParam })
       .then((r) => {
@@ -180,7 +188,7 @@ export default function PlaceDiscover() {
     return () => {
       cancelled = true;
     };
-  }, [langParam]);
+  }, [langParam, sponsoredDiscoverEnabled]);
 
   useEffect(() => {
     if (!tripPickPlace || !user) {

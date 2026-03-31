@@ -530,7 +530,14 @@ function themeCategoryStats(bucket, categories) {
 }
 
 /** Discover browse by theme — links go to `/discover` with `q` (not the map). */
-function BrowseMapByThemeSection({ t, lang, places = [], categories = [] }) {
+function BrowseMapByThemeSection({
+  t,
+  lang,
+  places = [],
+  categories = [],
+  diningGuideEnabled = true,
+  hotelsGuideEnabled = true,
+}) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const placesByWay = groupPlacesByWay(places, categories);
   const stepClass = ['vd-find-your-way-row--a', 'vd-find-your-way-row--b', 'vd-find-your-way-row--c', 'vd-find-your-way-row--d'];
@@ -576,9 +583,13 @@ function BrowseMapByThemeSection({ t, lang, places = [], categories = [] }) {
             const rowTitle = titleFromCategories || safeT('home', way.titleKey);
             const discoverTo =
               way.wayKey === 'food'
-                ? DINING_PATH
+                ? diningGuideEnabled
+                  ? DINING_PATH
+                  : discoverSearchUrl('restaurant')
                 : way.wayKey === 'stay'
-                  ? HOTELS_PATH
+                  ? hotelsGuideEnabled
+                    ? HOTELS_PATH
+                    : discoverSearchUrl('hotel')
                   : way.discoverQ
                     ? discoverSearchUrl(way.discoverQ)
                     : discoverSearchUrl('');
@@ -749,6 +760,10 @@ export default function Explore() {
   const [sponsoredHome, setSponsoredHome] = useState([]);
   const [loadNonce, setLoadNonce] = useState(0);
 
+  const diningGuideEnabled = settings?.diningGuide?.enabled !== false;
+  const hotelsGuideEnabled = settings?.hotelsGuide?.enabled !== false;
+  const sponsoredHomeEnabled = settings?.sponsoredPlacesEnabled?.home !== false;
+
   useEffect(() => {
     const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
     let cancelled = false;
@@ -855,6 +870,10 @@ export default function Explore() {
   useEffect(() => {
     const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
     let cancelled = false;
+    if (!sponsoredHomeEnabled) {
+      setSponsoredHome([]);
+      return undefined;
+    }
     api
       .sponsoredPlaces({ surface: 'home', lang: langParam })
       .then((r) => {
@@ -867,7 +886,7 @@ export default function Explore() {
     return () => {
       cancelled = true;
     };
-  }, [lang]);
+  }, [lang, sponsoredHomeEnabled]);
 
   const heroTitle = settings.siteName?.trim() || t('home', 'heroTitle');
   const heroTagline = resolveHeroTagline(settings, t);
@@ -1153,14 +1172,21 @@ export default function Explore() {
       </section>
 
       {/* Discover by theme — first; #experience hash targets this block */}
-      <BrowseMapByThemeSection t={t} lang={lang} places={placesList} categories={categories} />
+      <BrowseMapByThemeSection
+        t={t}
+        lang={lang}
+        places={placesList}
+        categories={categories}
+        diningGuideEnabled={diningGuideEnabled}
+        hotelsGuideEnabled={hotelsGuideEnabled}
+      />
 
       {/* Featured picks first; community feed directly below */}
       {topPicks.length > 0 && (
         <TopPicksCarousel places={topPicks} t={t} />
       )}
 
-      {sponsoredHome.length > 0 && (
+      {sponsoredHomeEnabled && sponsoredHome.length > 0 && (
         <section className="vd-section vd-sponsored" aria-label={t('discover', 'sponsoredSectionTitle')}>
           <div className="vd-container">
             <header className="vd-section-head vd-sponsored-head">

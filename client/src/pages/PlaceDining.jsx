@@ -124,6 +124,8 @@ export default function PlaceDining() {
     window.setTimeout(() => setToast(null), 3200);
   }, []);
 
+  const sponsoredDiningEnabled = settings?.sponsoredPlacesEnabled?.dining !== false;
+
   useEffect(() => {
     setQDraft(qParam);
   }, [qParam]);
@@ -168,6 +170,10 @@ export default function PlaceDining() {
 
   useEffect(() => {
     let cancelled = false;
+    if (!sponsoredDiningEnabled) {
+      setSponsoredItems([]);
+      return undefined;
+    }
     api
       .sponsoredPlaces({ surface: 'dining', lang: langParam })
       .then((r) => {
@@ -180,7 +186,7 @@ export default function PlaceDining() {
     return () => {
       cancelled = true;
     };
-  }, [langParam]);
+  }, [langParam, sponsoredDiningEnabled]);
 
   useEffect(() => {
     if (!tripPickPlace || !user) {
