@@ -9,6 +9,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { discoverPlaceFeedPath, DINING_PATH, discoverSearchUrl } from '../utils/discoverPaths';
+import { canSeeGuidesSponsorAndFeatured } from '../utils/guidePreviewGate';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { getCategoriesForWay } from '../utils/findYourWayGrouping';
 import './Detail.css';
@@ -599,7 +600,10 @@ export default function PlaceDetail() {
       waDigits);
 
   const diningGuideEnabled = settings?.diningGuide?.enabled !== false;
-  const diningBreadcrumbTo = diningGuideEnabled ? DINING_PATH : discoverSearchUrl('restaurant');
+  const diningBreadcrumbTo =
+    diningGuideEnabled && canSeeGuidesSponsorAndFeatured(user)
+      ? DINING_PATH
+      : discoverSearchUrl('restaurant');
 
   return (
     <div className={`place-detail ${isDiningPlace ? 'place-detail--dining' : ''}`}>
