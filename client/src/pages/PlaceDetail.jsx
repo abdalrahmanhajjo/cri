@@ -9,6 +9,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
+import { getCategoriesForWay } from '../utils/findYourWayGrouping';
 import './Detail.css';
 
 /** Resolved, unique image URLs for gallery (primary `image` + `images[]`). */
@@ -69,6 +70,7 @@ export default function PlaceDetail() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [place, setPlace] = useState(null);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isFavourite, setIsFavourite] = useState(false);
@@ -141,6 +143,22 @@ export default function PlaceDetail() {
 
   useEffect(() => {
     let cancelled = false;
+    api.categories
+      .list({ lang })
+      .then((r) => {
+        if (cancelled) return;
+        setCategories(Array.isArray(r?.categories) ? r.categories : []);
+      })
+      .catch(() => {
+        if (!cancelled) setCategories([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lang]);
+
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     setError(null);
     api.places
@@ -160,6 +178,15 @@ export default function PlaceDetail() {
   }, [id, lang]);
 
   const galleryUrls = useMemo(() => collectPlaceImageUrls(place), [place]);
+  const foodCategoryIds = useMemo(() => {
+    const foodCats = getCategoriesForWay('food', categories);
+    return new Set(foodCats.map((c) => String(c.id)));
+  }, [categories]);
+  const isDiningPlace = useMemo(() => {
+    const cid = place?.categoryId ?? place?.category_id;
+    if (cid == null) return false;
+    return foodCategoryIds.has(String(cid));
+  }, [place?.categoryId, place?.category_id, foodCategoryIds]);
 
   useEffect(() => {
     setGalleryIndex(0);
@@ -548,7 +575,7 @@ export default function PlaceDetail() {
   const hoursStr = typeof hours === 'string' ? hours : Array.isArray(hours) ? hours.join(' · ') : hours;
 
   return (
-    <div className="place-detail">
+    <div className={`place-detail ${isDiningPlace ? 'place-detail--dining' : ''}`}>
       <div className="place-detail-container">
         <nav className="place-detail-breadcrumb" aria-label="Breadcrumb">
           <ol className="place-detail-breadcrumb-list">
@@ -687,14 +714,46 @@ export default function PlaceDetail() {
             </button>
           </div>
 
-          <div className="place-detail-info">
-            <InfoRow icon="schedule" label={t('detail', 'openingHours')} value={hoursStr} />
-            <InfoRow icon="location_on" label={t('detail', 'location')} value={place.location} />
-            <InfoRow icon="category" label={t('detail', 'category')} value={place.category} />
-            <InfoRow icon="wb_sunny" label={t('detail', 'bestTimeToVisit')} value={place.bestTime} />
-            <InfoRow icon="schedule" label={t('detail', 'duration')} value={place.duration} />
-            <InfoRow icon="payments" label={t('detail', 'priceRange')} value={place.price} />
-          </div>
+          {isDiningPlace ? (
+            <section className="restaurant-detail-essentials" aria-label="Restaurant essentials">
+              <div className="restaurant-detail-tiles">
+                <div className="restaurant-detail-tile">
+                  <span className="restaurant-detail-tile-k">{t('detail', 'openingHours')}</span>
+                  <span className="restaurant-detail-tile-v">{hoursStr || '—'}</span>
+                </div>
+                <div className="restaurant-detail-tile">
+                  <span className="restaurant-detail-tile-k">{t('detail', 'priceRange')}</span>
+                  <span className="restaurant-detail-tile-v">{place.price || '—'}</span>
+                </div>
+                <div className="restaurant-detail-tile">
+                  <span className="restaurant-detail-tile-k">{t('detail', 'bestTimeToVisit')}</span>
+                  <span className="restaurant-detail-tile-v">{place.bestTime || '—'}</span>
+                </div>
+                <div className="restaurant-detail-tile">
+                  <span className="restaurant-detail-tile-k">{t('detail', 'location')}</span>
+                  <span className="restaurant-detail-tile-v">{place.location || '—'}</span>
+                </div>
+              </div>
+              {place.tags && (Array.isArray(place.tags) ? place.tags.length > 0 : place.tags) ? (
+                <div className="restaurant-detail-tags">
+                  {(Array.isArray(place.tags) ? place.tags : [place.tags]).slice(0, 10).map((tag, i) => (
+                    <span key={i} className="restaurant-detail-tag">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+          ) : (
+            <div className="place-detail-info">
+              <InfoRow icon="schedule" label={t('detail', 'openingHours')} value={hoursStr} />
+              <InfoRow icon="location_on" label={t('detail', 'location')} value={place.location} />
+              <InfoRow icon="category" label={t('detail', 'category')} value={place.category} />
+              <InfoRow icon="wb_sunny" label={t('detail', 'bestTimeToVisit')} value={place.bestTime} />
+              <InfoRow icon="schedule" label={t('detail', 'duration')} value={place.duration} />
+              <InfoRow icon="payments" label={t('detail', 'priceRange')} value={place.price} />
+            </div>
+          )}
 
           {place.description && (
             <section className="place-detail-section" aria-labelledby="place-description-heading">
@@ -707,7 +766,7 @@ export default function PlaceDetail() {
             </section>
           )}
 
-          {place.tags && (Array.isArray(place.tags) ? place.tags.length > 0 : place.tags) && (
+          {!isDiningPlace && place.tags && (Array.isArray(place.tags) ? place.tags.length > 0 : place.tags) && (
             <section className="place-detail-section place-detail-tags">
               <div className="place-detail-tags-list">
                 {(Array.isArray(place.tags) ? place.tags : [place.tags]).map((tag, i) => (
