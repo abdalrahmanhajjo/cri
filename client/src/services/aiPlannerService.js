@@ -224,16 +224,32 @@ export async function callAICompleteReliable(body) {
 }
 
 function parsePlanJson(rawText, placeIdSet) {
+  if (rawText == null || typeof rawText !== 'string') {
+    return { text: '', slots: null };
+  }
+
   const planLabel = /PLAN_JSON\s*:/i;
   const planIdx = rawText.search(planLabel);
-  if (planIdx < 0) return { text: rawText.trim(), slots: null };
 
-  const beforePlan = rawText.slice(0, planIdx).trim();
-  const afterLabel = stripMarkdownFencesAroundJson(
-    rawText.slice(planIdx).replace(/^\s*PLAN_JSON\s*:/i, '').trim()
-  );
-  const list = extractBalancedJsonArray(afterLabel);
-  if (list == null) return { text: beforePlan || rawText.trim(), slots: null };
+  let beforePlan = '';
+  let list = null;
+
+  if (planIdx >= 0) {
+    beforePlan = rawText.slice(0, planIdx).trim();
+    const afterLabel = stripMarkdownFencesAroundJson(
+      rawText.slice(planIdx).replace(/^\s*PLAN_JSON\s*:/i, '').trim()
+    );
+    list = extractBalancedJsonArray(afterLabel);
+    if (list == null) {
+      return { text: beforePlan || rawText.trim(), slots: null };
+    }
+  } else {
+    // Fallback: some replies may emit only a JSON array without the PLAN_JSON label.
+    const payload = stripMarkdownFencesAroundJson(rawText.trim());
+    list = extractBalancedJsonArray(payload);
+    if (list == null) return { text: rawText.trim(), slots: null };
+    beforePlan = ''; // whole message is effectively the plan
+  }
 
   let slots = null;
   try {
