@@ -59,7 +59,6 @@ export default function AdminSponsoredPlaces() {
   const [pickerResults, setPickerResults] = useState([]);
   const [pickerLoading, setPickerLoading] = useState(false);
   const [pickedLabel, setPickedLabel] = useState('');
-  const [placesIndex, setPlacesIndex] = useState([]);
 
   const [draft, setDraft] = useState(() => ({
     placeId: '',
@@ -87,16 +86,6 @@ export default function AdminSponsoredPlaces() {
     },
     []
   );
-
-  useEffect(() => {
-    api.places
-      .list({ lang: 'en' })
-      .then((r) => {
-        const raw = r?.popular || r?.locations || [];
-        setPlacesIndex(Array.isArray(raw) ? raw : []);
-      })
-      .catch(() => setPlacesIndex([]));
-  }, []);
 
   const loadPurchases = () => {
     api.admin.sponsorshipPurchases
@@ -136,23 +125,6 @@ export default function AdminSponsoredPlaces() {
     }
     let cancelled = false;
     setPickerLoading(true);
-    const qq = q.toLowerCase();
-    const localMatches = (placesIndex || [])
-      .filter((p) => {
-        const id = String(p?.id || '').toLowerCase();
-        const name = String(p?.name || '').toLowerCase();
-        const loc = String(p?.location || '').toLowerCase();
-        return id.includes(qq) || name.includes(qq) || loc.includes(qq);
-      })
-      .slice(0, 20)
-      .map((p) => ({ id: p.id, name: p.name, location: p.location }));
-    if (localMatches.length > 0) {
-      setPickerResults(localMatches);
-      setPickerLoading(false);
-      return () => {
-        cancelled = true;
-      };
-    }
     api.admin.places
       .list({ q, limit: 20 })
       .then((r) => {
@@ -168,7 +140,7 @@ export default function AdminSponsoredPlaces() {
     return () => {
       cancelled = true;
     };
-  }, [pickerQ, placesIndex]);
+  }, [pickerQ]);
 
   const createOrUpsert = async () => {
     setErr(null);
