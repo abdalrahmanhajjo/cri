@@ -54,10 +54,50 @@ export function extractPlannerKeywords(userMessage, interestNames, budget) {
   for (const w of blob.split(/[^a-zA-Z0-9\u0600-\u06FF]+/).filter((x) => x.length > 2)) {
     tokens.add(w);
   }
-  for (const phrase of ['museum', 'mosque', 'church', 'citadel', 'souk', 'sweet', 'dessert', 'coffee', 'seafood', 'fish', 'family', 'history', 'shopping', 'craft', 'soap', 'beach', 'view']) {
+  for (const phrase of [
+    'museum',
+    'mosque',
+    'church',
+    'citadel',
+    'souk',
+    'sweet',
+    'dessert',
+    'knefe',
+    'knafah',
+    'coffee',
+    'seafood',
+    'fish',
+    'family',
+    'history',
+    'shopping',
+    'craft',
+    'soap',
+    'beach',
+    'view',
+    'restaurant',
+    'dining',
+    'breakfast',
+    'lunch',
+    'dinner',
+    'brunch',
+    'cuisine',
+    'akra',
+    'baytna',
+    'rawand',
+    'hallab',
+  ]) {
+    if (blob.includes(phrase)) tokens.add(phrase);
+  }
+  for (const phrase of ['مطعم', 'مأكولات', 'طعام', 'حلويات', 'فطور', 'غداء', 'عشاء', 'كنافة']) {
     if (blob.includes(phrase)) tokens.add(phrase);
   }
   return { blob, tokens, budget };
+}
+
+function foodIntent(blob) {
+  return /\b(food|eat|dining|restaurant|cuisine|lunch|breakfast|dinner|brunch|sweet|dessert|knefe|knafah|konafa|coffee|hungry|meal|فطور|غداء|عشاء|مطعم|أكل|طعام|حلويات|كنافة)\b/i.test(
+    blob
+  );
 }
 
 function scorePlace(place, { blob, tokens, budget }) {
@@ -68,15 +108,43 @@ function scorePlace(place, { blob, tokens, budget }) {
   const desc = norm(place?.description?.slice?.(0, 200));
   const hay = `${name} ${cat} ${loc} ${desc}`;
   const tagStr = tagsTokens(place).join(' ');
+  const idNorm = norm(place?.id);
 
   for (const tok of tokens) {
     if (tok.length < 3) continue;
     if (hay.includes(tok) || tagStr.includes(tok)) score += 3;
   }
   if (blob.length > 4) {
-    for (const phrase of ['museum', 'mosque', 'citadel', 'souk', 'sweet', 'hallab', 'rahall', 'khan', 'mina', 'fish']) {
+    for (const phrase of [
+      'museum',
+      'mosque',
+      'citadel',
+      'souk',
+      'sweet',
+      'hallab',
+      'rahall',
+      'khan',
+      'mina',
+      'fish',
+      'akra',
+      'baytna',
+      'rawand',
+      'restaurant',
+      'lunch',
+      'dinner',
+      'cuisine',
+      'knefe',
+      'knafah',
+    ]) {
       if (blob.includes(phrase) && hay.includes(phrase)) score += 2;
     }
+  }
+
+  if (foodIntent(blob)) {
+    if (/(restaurant|cuisine|food|sweet|sweets|dining|مطعم|مأكولات|حلو|coffee|cafe)/.test(cat))
+      score += 4;
+    if (/(hallab|akra|baytna|rawand|rahall|knefe)/.test(name) || /(hallab|akra|baytna|rawand|rahall)/.test(idNorm))
+      score += 5;
   }
 
   const tier = priceTier(place);
@@ -198,6 +266,11 @@ export function rankPlacesForPlanner(places, options = {}) {
   if (learnedCategoryHints.length) {
     hintLines.push(
       `From earlier AI plans on this device they often saw these listing categories: ${learnedCategoryHints.slice(0, 6).join(', ')} — when it fits the request, lean on that taste but still add variety.`
+    );
+  }
+  if (foodIntent(kw.blob)) {
+    hintLines.push(
+      'User asked for food/dining/sweets: prioritize Restaurants & cuisine and sweet-shop listings from the catalog when routing (e.g. flagship sweets and sit-down meals), mixed with heritage if they want a full day.'
     );
   }
 
