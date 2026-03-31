@@ -212,39 +212,16 @@ export default function AiPlanner() {
     return t('aiPlanner', 'greetingEvening');
   }, [t]);
 
-  const moodCards = useMemo(() => {
-    const tripSpec =
-      durationDays === 1
-        ? `a one-day itinerary (${placesPerDay} stops)`
-        : `a ${durationDays}-day itinerary (${placesPerDay} stops per day)`;
-    return [
-      {
-        icon: 'museum',
-        label: t('aiPlanner', 'moodCulture'),
-        prompt: `Plan ${tripSpec} in Tripoli focused on culture and museums. Output the plan as PLAN_JSON.`,
-      },
-      {
-        icon: 'restaurant',
-        label: t('aiPlanner', 'moodFood'),
-        prompt: `Plan ${tripSpec} in Tripoli focused on food, restaurants, and sweets. Output the plan as PLAN_JSON.`,
-      },
-      {
-        icon: 'mosque',
-        label: t('aiPlanner', 'moodFaith'),
-        prompt: `Plan ${tripSpec} in Tripoli focused on history and faith sites. Output the plan as PLAN_JSON.`,
-      },
-      {
-        icon: 'storefront',
-        label: t('aiPlanner', 'moodSouk'),
-        prompt: `Plan ${tripSpec} in Tripoli focused on souks and crafts. Output the plan as PLAN_JSON.`,
-      },
-      {
-        icon: 'auto_awesome',
-        label: t('aiPlanner', 'moodSurprise'),
-        prompt: `Surprise me with a balanced ${tripSpec} in Tripoli. Output the plan as PLAN_JSON.`,
-      },
-    ];
-  }, [t, durationDays, placesPerDay]);
+  const moodCards = useMemo(
+    () => [
+      { icon: 'museum', label: t('aiPlanner', 'moodCulture'), prompt: t('aiPlanner', 'moodCulturePrompt') },
+      { icon: 'restaurant', label: t('aiPlanner', 'moodFood'), prompt: t('aiPlanner', 'moodFoodPrompt') },
+      { icon: 'mosque', label: t('aiPlanner', 'moodFaith'), prompt: t('aiPlanner', 'moodFaithPrompt') },
+      { icon: 'storefront', label: t('aiPlanner', 'moodSouk'), prompt: t('aiPlanner', 'moodSoukPrompt') },
+      { icon: 'auto_awesome', label: t('aiPlanner', 'moodSurprise'), prompt: t('aiPlanner', 'moodSurprisePrompt') },
+    ],
+    [t]
+  );
 
   const placeById = useMemo(() => {
     const m = {};
