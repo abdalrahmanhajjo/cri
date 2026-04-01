@@ -138,7 +138,7 @@ export function CommunityFeedCard({ post, t }) {
           {fullCap.length > 160 ? '…' : ''}
         </p>
         <div className="vd-community-feed-meta">
-          {post.author_name && <span className="vd-community-feed-author">{post.author_name}</span>}
+          {placeName && <span className="vd-community-feed-author">{placeName}</span>}
           {(Number(post.likes_count) > 0 || Number(post.comments_count) > 0) && (
             <span className="vd-community-feed-stats" aria-label="Engagement">
               {Number(post.likes_count) > 0 && (
