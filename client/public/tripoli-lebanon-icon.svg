@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <rect width="64" height="64" rx="12" fill="#0D5C55"/>
+  <!-- Cedar tree icon (Lebanon) - layered triangles + trunk -->
+  <path d="M32 10 L48 38 L32 34 L16 38 Z" fill="#fff" opacity="0.95"/>
+  <path d="M32 22 L44 46 L32 42 L20 46 Z" fill="#fff" opacity="0.98"/>
+  <path d="M32 34 L40 54 L32 52 L24 54 Z" fill="#fff"/>
+  <path d="M30 52 L34 52 L34 58 L30 58 Z" fill="#fff"/>
+</svg>
