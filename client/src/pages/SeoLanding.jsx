@@ -1,8 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import './SeoLanding.css';
+
+function AboutSplitParagraphs({ text, firstClassName = 'seo-landing__p', className = 'seo-landing__p' }) {
+  const parts = String(text || '')
+    .split(/\n\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return null;
+  return parts.map((para, i) => (
+    <p key={i} className={i === 0 ? firstClassName : className}>
+      {para}
+    </p>
+  ));
+}
 
 function placeSlug(place) {
   return String(place?.searchName || place?.search_name || place?.id || '')
@@ -10,7 +24,7 @@ function placeSlug(place) {
     .toLowerCase();
 }
 
-function Page({ title, intro, sections, links, dbTitle = 'Featured places from database' }) {
+function Page({ title, intro, sections, dbTitle = 'Featured places from database' }) {
   const { t, lang } = useLanguage();
   const [places, setPlaces] = useState([]);
   const [loadingPlaces, setLoadingPlaces] = useState(true);
@@ -46,23 +60,14 @@ function Page({ title, intro, sections, links, dbTitle = 'Featured places from d
   }, [langParam]);
 
   const dbPlaces = useMemo(() => {
-    const bySlug = new Map(
-      (places || [])
-        .map((p) => [placeSlug(p), p])
-        .filter(([slug]) => Boolean(slug))
-    );
-    const fromLinks = (links || [])
-      .map((l) => {
-        const slug = String(l.to || '')
-          .replace(/^\/place\//, '')
-          .trim()
-          .toLowerCase();
-        return bySlug.get(slug) || null;
-      })
-      .filter(Boolean);
-    if (fromLinks.length > 0) return fromLinks.slice(0, 8);
-    return (places || []).slice(0, 8);
-  }, [places, links]);
+    const list = places || [];
+    const withSlug = list
+      .map((p) => ({ p, slug: placeSlug(p) }))
+      .filter((x) => Boolean(x.slug));
+    return withSlug.slice(0, 8).map((x) => x.p);
+  }, [places]);
+
+  const sidebarPlaces = useMemo(() => dbPlaces.slice(0, 6), [dbPlaces]);
 
   return (
     <div className="seo-landing">
@@ -88,7 +93,7 @@ function Page({ title, intro, sections, links, dbTitle = 'Featured places from d
             <div className="seo-landing__card">
               <h2 className="seo-landing__sideTitle">{t('nav', 'visitTripoli') || 'Visit Tripoli'}</h2>
               <p className="seo-landing__sideP">
-                {t('nav', 'navBrandTagline') || 'Places, experiences & events'}
+                {t('nav', 'navBrandTagline') || 'Best spots, experiences & plans'}
               </p>
               <div className="seo-landing__ctaRow">
                 <Link to="/discover" className="seo-landing__btn seo-landing__btn--primary">
@@ -102,13 +107,25 @@ function Page({ title, intro, sections, links, dbTitle = 'Featured places from d
 
             <div className="seo-landing__card">
               <h3 className="seo-landing__sideTitleSm">Top places</h3>
-              <ul className="seo-landing__list">
-                {links.map((l) => (
-                  <li key={l.to} className="seo-landing__li">
-                    <Link to={l.to} className="seo-landing__link">{l.label}</Link>
-                  </li>
-                ))}
-              </ul>
+              {loadingPlaces && <p className="seo-landing__sideP">Loading…</p>}
+              {!loadingPlaces && sidebarPlaces.length === 0 && (
+                <p className="seo-landing__sideP">Browse the directory for venues.</p>
+              )}
+              {!loadingPlaces && sidebarPlaces.length > 0 && (
+                <ul className="seo-landing__list">
+                  {sidebarPlaces.map((p) => {
+                    const slug = placeSlug(p);
+                    const to = `/place/${encodeURIComponent(slug)}`;
+                    return (
+                      <li key={slug} className="seo-landing__li">
+                        <Link to={to} className="seo-landing__link">
+                          {p.name || slug}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           </aside>
         </div>
@@ -135,12 +152,9 @@ function Page({ title, intro, sections, links, dbTitle = 'Featured places from d
                   getPlaceImageUrl(Array.isArray(p.images) ? p.images[0] : '');
                 return (
                   <article key={slug} className="seo-landing__dbCard">
-                    <Link
-                      to={to}
-                      className="seo-landing__dbMedia"
-                      style={img ? { backgroundImage: `url(${img})` } : undefined}
-                      aria-label={p.name || slug}
-                    />
+                    <Link to={to} className="seo-landing__dbMedia" aria-label={p.name || slug}>
+                      {img ? <DeliveryImg url={img} preset="seoDb" alt="" /> : null}
+                    </Link>
                     <div className="seo-landing__dbBody">
                       <h3>{p.name || slug}</h3>
                       <p>{p.location || 'Tripoli, Lebanon'}</p>
@@ -164,20 +178,11 @@ function Page({ title, intro, sections, links, dbTitle = 'Featured places from d
   );
 }
 
-const placeLinks = [
-  { to: '/place/clock_tower', label: 'Clock Tower' },
-  { to: '/place/great_mosque_tripoli', label: 'Great Mosque of Tripoli' },
-  { to: '/place/taynal_mosque', label: 'Taynal Mosque' },
-  { to: '/place/spice_market', label: 'Spice Market' },
-  { to: '/place/hallab_sweets', label: 'Hallab Sweets' },
-];
-
 export function ThingsToDoTripoli() {
   return (
     <Page
       title="Things to do in Tripoli, Lebanon"
       intro="Tripoli is Lebanon’s northern coastal city — famous for historic souks, beautiful mosques, traditional sweets, and a walkable old city. Here are the best things to do for a first visit."
-      links={placeLinks}
       sections={[
         {
           id: 'old-city',
@@ -221,7 +226,6 @@ export function OldCityGuide() {
     <Page
       title="Tripoli Old City guide (Lebanon)"
       intro="The old city is the heart of Tripoli: narrow streets, historic buildings, and the liveliest markets in North Lebanon. Use this guide to plan your walk."
-      links={placeLinks}
       sections={[
         {
           id: 'start',
@@ -257,7 +261,6 @@ export function SouksGuide() {
     <Page
       title="Tripoli Souks guide: markets, spices & crafts"
       intro="Tripoli’s souks are a living heritage: spices, soap, textiles, and everyday shopping in historic streets. This guide helps you choose what to see and what to buy."
-      links={placeLinks}
       sections={[
         {
           id: 'spices',
@@ -293,7 +296,6 @@ export function SweetsGuide() {
     <Page
       title="Best sweets in Tripoli, Lebanon"
       intro="Tripoli’s sweets are famous across Lebanon. Use this guide to pick a classic shop, understand what to try, and plan the perfect tasting walk."
-      links={placeLinks}
       sections={[
         {
           id: 'what',
@@ -329,7 +331,6 @@ export function TravelTipsTripoli() {
     <Page
       title="Tripoli, Lebanon travel tips"
       intro="Simple travel tips to make your Tripoli day smooth: what to wear, when to go, and how to plan a safe, comfortable walk through the old city."
-      links={placeLinks}
       sections={[
         {
           id: 'when',
@@ -363,131 +364,76 @@ export function TravelTipsTripoli() {
 export function AboutTripoli() {
   const { t } = useLanguage();
   const tt = (key, fallback) => t('aboutTripoli', key) || fallback;
-  // Lightweight scroll reveal (no big libraries)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const els = Array.from(document.querySelectorAll('[data-reveal]'));
-    if (els.length === 0) return;
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    if (reduce) {
-      els.forEach((el) => el.setAttribute('data-revealed', 'true'));
-      return;
-    }
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.setAttribute('data-revealed', 'true');
-            obs.unobserve(e.target);
-          }
-        });
-      },
-      { threshold: 0.12, rootMargin: '0px 0px -10% 0px' }
-    );
-    els.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, []);
 
-  const highlights = [
-    {
-      title: tt('highlights_layered_title', 'A city of layered eras'),
-      text: tt(
-        'highlights_layered_text',
-        'Tripoli’s identity was shaped by port routes, medieval states, Mamluk architecture, Ottoman commerce, and modern Lebanese life — all visible within a compact walk.'
-      ),
-    },
-    {
-      title: tt('highlights_arch_title', 'Architecture that tells stories'),
-      text: tt(
-        'highlights_arch_text',
-        'Courtyards, stone arches, khans, mosques, and hammams are not “ruins” — they’re living urban rooms that still guide movement and community rhythm.'
-      ),
-    },
-    {
-      title: tt('highlights_markets_title', 'Markets that never stopped'),
-      text: tt(
-        'highlights_markets_text',
-        'Souks remain functional and human-scale. The city’s merchant tradition continues through craft, food, and micro‑businesses passed down across generations.'
-      ),
-    },
-    {
-      title: tt('highlights_continuity_title', 'Culture with continuity'),
-      text: tt(
-        'highlights_continuity_text',
-        'Tripoli’s past is not behind glass: it’s heard in workshops, tasted in sweets, and seen in daily prayer, trade, and neighborhood hospitality.'
-      ),
-    },
+  const infoboxRows = [
+    { label: tt('infobox_country_l', 'Country'), value: tt('infobox_country_v', 'Lebanon') },
+    { label: tt('infobox_gov_l', 'Governorate'), value: tt('infobox_gov_v', 'North Governorate') },
+    { label: tt('infobox_district_l', 'District'), value: tt('infobox_district_v', 'Tripoli District') },
+    { label: tt('infobox_pop_l', 'Population (city)'), value: tt('infobox_pop_v', '~229,400') },
+    { label: tt('infobox_area_l', 'Area'), value: tt('infobox_area_v', '27.39 km² (10.58 sq mi)') },
+    { label: tt('infobox_demo_l', 'Demonym'), value: tt('infobox_demo_v', 'Tripolitan') },
+    { label: tt('infobox_nick_l', 'Nickname'), value: tt('infobox_nick_v', 'City of Knowledge and Scholars') },
+    { label: tt('infobox_coord_l', 'Coordinates'), value: tt('infobox_coord_v', '34°26′N 35°50′E') },
+  ];
+
+  const tocItems = [
+    { id: 'about-overview', label: tt('toc_overview', 'Overview') },
+    { id: 'about-names', label: tt('toc_names', 'Names') },
+    { id: 'about-history', label: tt('toc_history', 'History') },
+    { id: 'about-demographics', label: tt('toc_demographics', 'Demographics') },
+    { id: 'about-geography', label: tt('toc_geography', 'Geography') },
+    { id: 'about-landmarks', label: tt('toc_landmarks', 'Landmarks') },
+    { id: 'about-education', label: tt('toc_education', 'Education') },
+    { id: 'about-economy', label: tt('toc_economy', 'Economy') },
+    { id: 'about-sister', label: tt('toc_sister', 'Twin towns') },
+    { id: 'about-visit', label: tt('toc_visit', 'Visitor notes') },
+  ];
+
+  const historyBlocks = [
+    { sum: tt('hist_ancient_sum', 'Ancient period'), body: tt('hist_ancient_body', '') },
+    { sum: tt('hist_early_sum', 'Umayyad, Abbasid and Fatimid periods'), body: tt('hist_early_body', '') },
+    { sum: tt('hist_crusader_sum', 'Crusader period'), body: tt('hist_crusader_body', '') },
+    { sum: tt('hist_mamluk_sum', 'Mamluk period'), body: tt('hist_mamluk_body', '') },
+    { sum: tt('hist_ottoman_sum', 'Ottoman period'), body: tt('hist_ottoman_body', '') },
+    { sum: tt('hist_mandate_sum', 'French Mandate'), body: tt('hist_mandate_body', '') },
+    { sum: tt('hist_modern_sum', 'Independent Lebanon'), body: tt('hist_modern_body', '') },
+  ];
+
+  const landmarkBlocks = [
+    { h: tt('lm_citadel_h', 'Citadel of Tripoli'), p: tt('lm_citadel_p', '') },
+    { h: tt('lm_clock_h', 'Clock Tower'), p: tt('lm_clock_p', '') },
+    { h: tt('lm_hammam_h', 'Hammams'), p: tt('lm_hammam_p', '') },
+    { h: tt('lm_fair_h', 'Rachid Karami International Fair'), p: tt('lm_fair_p', '') },
+    { h: tt('lm_rail_h', 'Tripoli Railway Station'), p: tt('lm_rail_p', '') },
+    { h: tt('lm_churches_h', 'Churches'), p: tt('lm_churches_p', '') },
+    { h: tt('lm_mosques_h', 'Mosques'), p: tt('lm_mosques_p', '') },
   ];
 
   const quickFacts = [
-    tt('facts_1', 'A major historic city on the eastern Mediterranean (North Lebanon)'),
-    tt('facts_2', 'A dense medieval core shaped strongly in the Mamluk era'),
-    tt('facts_3', 'Known for active souks, khans, hammams, and landmark mosques'),
-    tt('facts_4', 'Famous across Lebanon for traditional sweets and craft heritage'),
-  ];
-
-  const timeline = [
-    {
-      range: tt('timeline_1_range', 'Antiquity → Early Medieval'),
-      title: tt('timeline_1_title', 'Port routes and coastal city life'),
-      body: tt(
-        'timeline_1_body',
-        'Long before modern borders, Tripoli belonged to the rhythm of the Mediterranean: trade, movement, and coastal exchange. The city’s story begins with geography — a place where routes meet.'
-      ),
-    },
-    {
-      range: tt('timeline_2_range', 'Crusader period (12th century)'),
-      title: tt('timeline_2_title', 'Fortification, conflict, and changing power'),
-      body: tt(
-        'timeline_2_body',
-        'Like many Levantine cities, Tripoli’s medieval centuries included conflict, strategic fortification, and shifting rule — a chapter that left layers of memory around the old city.'
-      ),
-    },
-    {
-      range: tt('timeline_3_range', 'Mamluk era (13th–15th centuries)'),
-      title: tt('timeline_3_title', 'Urban golden age: khans, mosques, and stone craft'),
-      body: tt(
-        'timeline_3_body',
-        'This is the era that most visibly shaped the old city. The layout of markets, major religious architecture, and civic buildings formed a dense walkable core that still holds today.'
-      ),
-    },
-    {
-      range: tt('timeline_4_range', 'Ottoman era (16th–early 20th centuries)'),
-      title: tt('timeline_4_title', 'Commerce, neighborhoods, and everyday institutions'),
-      body: tt(
-        'timeline_4_body',
-        'Trade networks and local institutions matured. The city’s “daily-life” architecture — workshops, food culture, neighborhood spaces — deepened and became tradition.'
-      ),
-    },
-    {
-      range: tt('timeline_5_range', 'Modern Lebanon (20th century → today)'),
-      title: tt('timeline_5_title', 'Continuity through craft, food, and community'),
-      body: tt(
-        'timeline_5_body',
-        'Tripoli remains a working city, not a staged set. The best way to feel it is to walk, listen, and follow the markets — where the past is carried forward by people.'
-      ),
-    },
-  ];
-
-  const keyMetrics = [
-    { value: tt('metrics_1_value', 'Walkable core'), label: tt('metrics_1_label', 'History is experienced on foot') },
-    { value: tt('metrics_2_value', 'Medieval density'), label: tt('metrics_2_label', 'Souks + khans + mosques') },
-    { value: tt('metrics_3_value', 'Mamluk imprint'), label: tt('metrics_3_label', 'Key shaping era for the old city') },
-    { value: tt('metrics_4_value', 'Living city'), label: tt('metrics_4_label', 'Not a museum — daily life continues') },
+    tt('facts_1', 'Northern Lebanon’s principal coastal metropolis and seaport.'),
+    tt('facts_2', 'Second-highest concentration of Mamluk architecture in the region after Cairo.'),
+    tt('facts_3', 'Historic Mansouri Great Mosque, citadel, clock tower, souks, khans, and hammams.'),
+    tt('facts_4', 'Palm Islands Nature Reserve offshore—turtles, seals, and bird habitat.'),
+    tt('facts_5', 'Hot-summer Mediterranean climate: mild wet winters, dry hot summers.'),
+    tt('facts_6', 'Conurbation with El Mina—the district’s port area on the coast.'),
+    tt('facts_7', 'Strong tradition of Arabic sweets, soap, and craft workshops.'),
+    tt('facts_8', 'Rachid Karami International Fair: Oscar Niemeyer complex (UNESCO-listed, in danger).'),
   ];
 
   return (
     <div className="seo-landing seo-landing--about">
       <div className="seo-landing__container">
-        <header className="seo-landing__aboutHero" data-reveal>
+        <header className="seo-landing__aboutHero">
           <p className="seo-landing__aboutEyebrow">{t('nav', 'megaAboutTripoli') || 'About Tripoli'}</p>
-          <h1 className="seo-landing__title">{tt('title', 'The history of Tripoli, Lebanon')}</h1>
-          <p className="seo-landing__intro">
-            {tt(
+          <h1 className="seo-landing__title">{tt('title', 'Tripoli, Lebanon')}</h1>
+          <AboutSplitParagraphs
+            text={tt(
               'intro',
-              'Tripoli is one of the Levant’s great historic cities — a place where Mediterranean routes, medieval power, and craft traditions shaped a dense old city that still works today. This page is a lightweight, readable history you can scroll without heavy loading.'
+              'Tripoli is the largest city in northern Lebanon and the country’s second-largest urban centre. It lies on the east Mediterranean, about 81 km north of Beirut, and serves as capital of both the North Governorate and Tripoli District.'
             )}
-          </p>
+            firstClassName="seo-landing__intro"
+            className="seo-landing__intro"
+          />
           <div className="seo-landing__aboutHeroActions" role="navigation" aria-label="Quick actions">
             <Link className="seo-landing__aboutHeroBtn" to="/discover">
               {tt('cta_explore', 'Explore places')}
@@ -498,113 +444,174 @@ export function AboutTripoli() {
           </div>
         </header>
 
-        <section className="seo-landing__aboutLead" aria-label="Tripoli lead image and summary" data-reveal>
-          <div className="seo-landing__aboutLeadMedia">
-            <img
-              className="seo-landing__aboutLeadImg"
-              src="/tripoli-history-hero.png"
-              alt={tt(
-                'lead_img_alt',
-                'Citadel of Raymond de Saint-Gilles, historic fortress on a green hillside above Tripoli’s old city, Lebanon.'
-              )}
-              loading="lazy"
-              decoding="async"
-            />
+        <div className="seo-landing__aboutWikiLayout">
+          <div className="seo-landing__aboutWikiMain">
+            <nav className="seo-landing__aboutToc" aria-label={tt('toc_title', 'Contents')}>
+              <h2 className="seo-landing__aboutTocTitle">{tt('toc_title', 'Contents')}</h2>
+              <ol className="seo-landing__aboutTocList">
+                {tocItems.map((item) => (
+                  <li key={item.id}>
+                    <a href={`#${item.id}`}>{item.label}</a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+
+            <section id="about-overview" className="seo-landing__aboutSection">
+              <h2 className="seo-landing__aboutSectionH">{tt('sec_overview_h', 'Overview')}</h2>
+              <div className="seo-landing__aboutLead seo-landing__aboutLead--inWiki">
+                <figure className="seo-landing__aboutLeadMedia">
+                  <img
+                    className="seo-landing__aboutLeadImg"
+                    src="/tripoli-history-hero.png"
+                    alt={tt(
+                      'lead_img_alt',
+                      'Citadel above Tripoli’s old city, Lebanon.'
+                    )}
+                    width={1200}
+                    height={630}
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
+                  />
+                </figure>
+                <div className="seo-landing__aboutLeadBody">
+                  <AboutSplitParagraphs
+                    text={tt(
+                      'lead_text',
+                      'The old city preserves one of the densest concentrations of Mamluk architecture in the region after Cairo. Landmarks include the Mansouri Great Mosque and the Citadel of Tripoli—the largest Crusader-era castle in Lebanon. Offshore lie the Palm Islands reserve, important for sea turtles, seals, and migratory birds.'
+                    )}
+                    firstClassName="seo-landing__p"
+                    className="seo-landing__p"
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section id="about-names" className="seo-landing__aboutSection">
+              <h2 className="seo-landing__aboutSectionH">{tt('sec_names_h', 'Names')}</h2>
+              <AboutSplitParagraphs text={tt('sec_names_p', '')} />
+            </section>
+
+            <section id="about-history" className="seo-landing__aboutSection">
+              <h2 className="seo-landing__aboutSectionH">{tt('sec_history_h', 'History')}</h2>
+              <p className="seo-landing__p">{tt('sec_history_sub', 'Expand a period for a short summary.')}</p>
+              <div className="seo-landing__aboutHistory">
+                {historyBlocks.map((blk) => (
+                  <details key={blk.sum} className="seo-landing__aboutHistoryDetails">
+                    <summary className="seo-landing__aboutHistorySummary">{blk.sum}</summary>
+                    <div className="seo-landing__aboutHistoryBody">
+                      <AboutSplitParagraphs text={blk.body} />
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </section>
+
+            <section id="about-demographics" className="seo-landing__aboutSection">
+              <h2 className="seo-landing__aboutSectionH">{tt('sec_demo_h', 'Demographics')}</h2>
+              <AboutSplitParagraphs text={tt('sec_demo_p', '')} />
+            </section>
+
+            <section id="about-geography" className="seo-landing__aboutSection">
+              <h2 className="seo-landing__aboutSectionH">{tt('sec_geo_h', 'Geography')}</h2>
+              <h3 className="seo-landing__aboutSectionH3">{tt('sec_geo_climate_h', 'Climate')}</h3>
+              <AboutSplitParagraphs text={tt('sec_geo_climate_p', '')} />
+              <h3 className="seo-landing__aboutSectionH3">{tt('sec_geo_islands_h', 'Offshore islands')}</h3>
+              <AboutSplitParagraphs text={tt('sec_geo_islands_p', '')} />
+            </section>
+
+            <section id="about-landmarks" className="seo-landing__aboutSection">
+              <h2 className="seo-landing__aboutSectionH">{tt('sec_landmarks_h', 'Landmarks')}</h2>
+              {landmarkBlocks.map((lm) => (
+                <div key={lm.h} className="seo-landing__aboutLandmark">
+                  <h3 className="seo-landing__aboutSectionH3">{lm.h}</h3>
+                  <AboutSplitParagraphs text={lm.p} />
+                </div>
+              ))}
+            </section>
+
+            <section id="about-education" className="seo-landing__aboutSection">
+              <h2 className="seo-landing__aboutSectionH">{tt('sec_edu_h', 'Education')}</h2>
+              <AboutSplitParagraphs text={tt('sec_edu_p', '')} />
+            </section>
+
+            <section id="about-economy" className="seo-landing__aboutSection">
+              <h2 className="seo-landing__aboutSectionH">{tt('sec_econ_h', 'Economy')}</h2>
+              <AboutSplitParagraphs text={tt('sec_econ_p', '')} />
+            </section>
+
+            <section id="about-sister" className="seo-landing__aboutSection">
+              <h2 className="seo-landing__aboutSectionH">{tt('sec_sister_h', 'International relations')}</h2>
+              <AboutSplitParagraphs text={tt('sec_sister_p', '')} />
+            </section>
+
+            <section id="about-visit" className="seo-landing__aboutSection seo-landing__aboutSection--visit">
+              <h2 className="seo-landing__aboutSectionH">{tt('notes_heading', 'Visitor notes')}</h2>
+              <AboutSplitParagraphs
+                text={tt(
+                  'notes_p1',
+                  'Dress modestly at religious sites; ask before photographing people. The Old City is easiest on foot—pick a landmark such as the clock tower and explore in loops.'
+                )}
+              />
+              <AboutSplitParagraphs
+                text={tt(
+                  'notes_p2',
+                  'Allow time for a congregational mosque facade, a khan courtyard, a souk passage, and a sweets stop—the sequence mirrors how the historic city was meant to be used.'
+                )}
+              />
+              <div className="seo-landing__aboutNext">
+                <Link to="/tripoli-old-city-guide" className="seo-landing__aboutNextLink">
+                  {tt('link_old_city', 'Old City guide')}
+                </Link>
+                <Link to="/tripoli-souks-guide" className="seo-landing__aboutNextLink">
+                  {tt('link_souks', 'Souks guide')}
+                </Link>
+                <Link to="/best-sweets-in-tripoli" className="seo-landing__aboutNextLink">
+                  {tt('link_sweets', 'Sweets guide')}
+                </Link>
+              </div>
+            </section>
+
+            <section className="seo-landing__aboutFacts" aria-label={tt('facts_heading', 'Quick facts')} data-reveal>
+              <h2 className="seo-landing__h2">{tt('facts_heading', 'Quick facts')}</h2>
+              <ul className="seo-landing__aboutList">
+                {quickFacts.map((fact) => (
+                  <li key={fact}>{fact}</li>
+                ))}
+              </ul>
+            </section>
           </div>
-          <div className="seo-landing__aboutLeadBody">
-            <h2 className="seo-landing__h2">{tt('lead_title', 'A city built from trade and stone')}</h2>
-            <p className="seo-landing__p">
-              {tt(
-                'lead_text',
-                'Tripoli’s old city is best understood as a system: markets connect to khans, which connect to courtyards, which connect to major landmarks. Each era added layers — but the walk remains coherent.'
-              )}
-            </p>
-            <div className="seo-landing__aboutJump">
-              <a className="seo-landing__aboutJumpLink" href="#tripoli-timeline">
-                {tt('jump_timeline', 'Jump to timeline')}
-              </a>
-              <a className="seo-landing__aboutJumpLink" href="#tripoli-visit-notes">
-                {tt('jump_notes', 'Visitor notes')}
-              </a>
+
+          <aside className="seo-landing__aboutWikiAside" aria-label={tt('infobox_title', 'City profile')}>
+            <div className="seo-landing__aboutInfobox">
+              <h2 className="seo-landing__aboutInfoboxTitle">{tt('infobox_title', 'City profile')}</h2>
+              <table className="seo-landing__aboutInfoboxTable">
+                <tbody>
+                  {infoboxRows.map((row) => (
+                    <tr key={row.label}>
+                      <th scope="row">{row.label}</th>
+                      <td>{row.value}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <th scope="row">{tt('infobox_web_l', 'Website')}</th>
+                    <td>
+                      <a
+                        className="seo-landing__aboutInfoboxLink"
+                        href="https://tripoli.gov.lb/"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        tripoli.gov.lb
+                      </a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-          </div>
-        </section>
-
-        <section className="seo-landing__aboutMetrics" aria-label="Tripoli at a glance" data-reveal>
-          {keyMetrics.map((m) => (
-            <div key={m.label} className="seo-landing__aboutMetric">
-              <strong>{m.value}</strong>
-              <span>{m.label}</span>
-            </div>
-          ))}
-        </section>
-
-        <section className="seo-landing__aboutBand" aria-label="Tripoli overview highlights" data-reveal>
-          {highlights.map((item) => (
-            <article key={item.title} className="seo-landing__aboutCard">
-              <h2>{item.title}</h2>
-              <p>{item.text}</p>
-            </article>
-          ))}
-        </section>
-
-        <section className="seo-landing__aboutTimeline" aria-labelledby="tripoli-timeline" data-reveal>
-          <h2 id="tripoli-timeline" className="seo-landing__h2">{tt('timeline_heading', 'Timeline: the eras that shaped Tripoli')}</h2>
-          <p className="seo-landing__p">
-            {tt('timeline_sub', 'This isn’t a textbook — it’s a scrollable story. Expand the eras you care about.')}
-          </p>
-          <ol className="seo-landing__timeline">
-            {timeline.map((item) => (
-              <li key={item.title} className="seo-landing__timelineItem">
-                <details className="seo-landing__timelineDetails">
-                  <summary className="seo-landing__timelineSummary">
-                    <span className="seo-landing__timelineRange">{item.range}</span>
-                    <span className="seo-landing__timelineTitle">{item.title}</span>
-                  </summary>
-                  <div className="seo-landing__timelineBody">
-                    <p className="seo-landing__p">{item.body}</p>
-                  </div>
-                </details>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section className="seo-landing__aboutNarrative" aria-labelledby="tripoli-visit-notes" data-reveal>
-          <h2 id="tripoli-visit-notes" className="seo-landing__h2">{tt('notes_heading', 'How to feel the history (without a guide)')}</h2>
-          <p className="seo-landing__p">
-            {tt(
-              'notes_p1',
-              'Start at the Clock Tower, then follow the lanes until you hit a khan or courtyard. When you see a change in stone texture or a sudden shaded passage, slow down — that’s the city showing its age through craft.'
-            )}
-          </p>
-          <p className="seo-landing__p">
-            {tt(
-              'notes_p2',
-              'A good “history walk” is simple: one landmark mosque, one khan, one market loop, and one sweets stop. The rhythm is the lesson.'
-            )}
-          </p>
-          <div className="seo-landing__aboutNext">
-            <Link to="/tripoli-old-city-guide" className="seo-landing__aboutNextLink">
-              {tt('link_old_city', 'Old City guide')}
-            </Link>
-            <Link to="/tripoli-souks-guide" className="seo-landing__aboutNextLink">
-              {tt('link_souks', 'Souks guide')}
-            </Link>
-            <Link to="/best-sweets-in-tripoli" className="seo-landing__aboutNextLink">
-              {tt('link_sweets', 'Sweets guide')}
-            </Link>
-          </div>
-        </section>
-
-        <section className="seo-landing__aboutFacts" aria-label="Quick facts" data-reveal>
-          <h2 className="seo-landing__h2">Quick facts</h2>
-          <ul className="seo-landing__aboutList">
-            {quickFacts.map((fact) => (
-              <li key={fact}>{fact}</li>
-            ))}
-          </ul>
-        </section>
+          </aside>
+        </div>
       </div>
     </div>
   );

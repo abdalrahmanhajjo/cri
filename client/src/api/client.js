@@ -18,13 +18,13 @@ function getBaseUrl() {
 /** Fix malformed extension (e.g. xxxjpg -> xxx.jpg) from old upload bug */
 export function fixImageUrlExtension(url) {
   if (!url || typeof url !== 'string') return url;
-  return url.replace(/([a-f0-9]{32})(jpe?g|png|gif|webp)$/i, '$1.$2');
+  return url.replace(/([a-f0-9]{32})(jpe?g|png|gif|webp|heic|heif)$/i, '$1.$2');
 }
 
 /** Return original-style URL (xxx.jpg -> xxxjpg) for fallback when fixed URL fails */
 export function getImageUrlAlternate(url) {
   if (!url || typeof url !== 'string') return null;
-  return url.replace(/\.(jpe?g|png|gif|webp)$/i, '$1');
+  return url.replace(/\.(jpe?g|png|gif|webp|heic|heif)$/i, '$1');
 }
 
 /** Resolve image URL - use relative path (proxied in dev) or full URL */
@@ -175,6 +175,43 @@ function clearAuthStorageAndNotify() {
   }
 }
 
+/** Parse multipart upload response: JSON error or a short snippet from HTML/plain bodies. */
+async function parseStorageUploadResponse(response, token) {
+  const raw = await response.text();
+  let data = {};
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      const looksLikeHtml = /^<!DOCTYPE/i.test(raw) || /<html[\s>]/i.test(raw);
+      let errMsg = raw.replace(/\s+/g, ' ').trim().slice(0, 240);
+      if (looksLikeHtml) {
+        errMsg =
+          response.status === 502 || response.status === 504
+            ? 'The server stopped responding (often a timeout on large videos). Try a shorter or smaller file, or ask the host to allow reel transcoding only on a larger plan.'
+            : `Request failed (${response.status}). The server returned an error page instead of JSON.`;
+      } else if (!errMsg) {
+        errMsg = `HTTP ${response.status}`;
+      }
+      data = { error: errMsg };
+    }
+  }
+  if (!response.ok) {
+    if (response.status === 401 && token) clearAuthStorageAndNotify();
+    const msg =
+      (typeof data.error === 'string' && data.error) ||
+      (response.status === 413 ? 'File too large for this server.' : '') ||
+      (response.status === 502 ? 'Storage unavailable. Try a smaller file or again later.' : '') ||
+      response.statusText ||
+      'Upload failed';
+    throw new Error(msg);
+  }
+  if (data.error) throw new Error(typeof data.error === 'string' ? data.error : 'Upload failed');
+  const url = data.url || '';
+  if (!url) throw new Error('Server did not return a file URL.');
+  return url;
+}
+
 async function requestWithDedupe(path, options = {}) {
   const url = `${getBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
   const method = (options.method || 'GET').toUpperCase();
@@ -260,7 +297,13 @@ async function requestNoDedupe(path, options = {}, serverRetriesLeft = MAX_RETRI
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401 && token) clearAuthStorageAndNotify();
-    if (res.status === 403 && token && data.code === 'ACCOUNT_BLOCKED') clearAuthStorageAndNotify();
+    if (
+      res.status === 403 &&
+      token &&
+      (data.code === 'ACCOUNT_BLOCKED' || data.code === 'EMAIL_NOT_VERIFIED')
+    ) {
+      clearAuthStorageAndNotify();
+    }
     if (res.status >= 500 && serverRetriesLeft > 0) {
       await sleepAbortable(RETRY_DELAY_MS, options.signal);
       return requestNoDedupe(path, options, serverRetriesLeft - 1);
@@ -285,6 +328,8 @@ export const api = {
   siteSettings: () => api.get('/api/site-settings'),
 
   auth: {
+    checkUsername: (username) =>
+      api.get(`/api/auth/check-username?username=${encodeURIComponent(username || '')}`),
     login: (email, password) => api.post('/api/auth/login', { email, password }),
     register: (name, username, email, password) =>
       api.post('/api/auth/register', { name, username, email, password }),
@@ -304,7 +349,12 @@ export const api = {
       const q = qs.toString();
       return api.get(`/api/places/${encodeURIComponent(id)}${q ? `?${q}` : ''}`);
     },
-    promotions: (id) => api.get(`/api/places/${encodeURIComponent(id)}/promotions`),
+    promotions: (id, opts) => {
+      const qs = new URLSearchParams();
+      if (opts?.lang) qs.set('lang', String(opts.lang));
+      const q = qs.toString();
+      return api.get(`/api/places/${encodeURIComponent(id)}/promotions${q ? `?${q}` : ''}`);
+    },
     /** Public: reviews left on Visit Tripoli (not Google). */
     reviews: (id) => api.get(`/api/places/${encodeURIComponent(id)}/reviews`),
     /** Auth: create or replace current user’s review for this place. */
@@ -458,31 +508,71 @@ export const api = {
       remove: (userId, placeId) =>
         api.delete(`/api/admin/place-owners?userId=${encodeURIComponent(userId)}&placeId=${encodeURIComponent(placeId)}`),
     },
+    /** Venue offers (place_promotions) — full CRUD; public Discover merges with coupons. */
+    placePromotions: {
+      list: (params) => {
+        const qs = new URLSearchParams();
+        if (params && typeof params === 'object') {
+          Object.entries(params).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+          });
+        }
+        const q = qs.toString();
+        return api.get(`/api/admin/place-promotions${q ? `?${q}` : ''}`);
+      },
+      create: (body) => api.post('/api/admin/place-promotions', body),
+      update: (id, body) => api.patch(`/api/admin/place-promotions/${encodeURIComponent(id)}`, body),
+      delete: (id) => api.delete(`/api/admin/place-promotions/${encodeURIComponent(id)}`),
+    },
+    /** App coupons (coupons table) — distinct from POST /api/coupons/redeem for signed-in users. */
+    managedCoupons: {
+      list: (params) => {
+        const qs = new URLSearchParams();
+        if (params && typeof params === 'object') {
+          Object.entries(params).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+          });
+        }
+        const q = qs.toString();
+        return api.get(`/api/admin/coupons${q ? `?${q}` : ''}`);
+      },
+      create: (body) => api.post('/api/admin/coupons', body),
+      update: (id, body) => api.patch(`/api/admin/coupons/${encodeURIComponent(id)}`, body),
+      delete: (id) => api.delete(`/api/admin/coupons/${encodeURIComponent(id)}`),
+    },
     siteSettings: {
       get: () => api.get('/api/admin/site-settings'),
       save: (settings) => api.put('/api/admin/site-settings', { settings }),
     },
+    sponsoredPlaces: {
+      list: () => api.get('/api/admin/sponsored-places'),
+      create: (body) => api.post('/api/admin/sponsored-places', body),
+      update: (id, body) => api.patch(`/api/admin/sponsored-places/${encodeURIComponent(id)}`, body),
+      delete: (id) => api.delete(`/api/admin/sponsored-places/${encodeURIComponent(id)}`),
+    },
+    sponsorshipPurchases: {
+      list: (params) => {
+        const qs = new URLSearchParams();
+        if (params?.limit) qs.set('limit', String(params.limit));
+        const q = qs.toString();
+        return api.get(`/api/admin/sponsorship-purchases${q ? `?${q}` : ''}`);
+      },
+    },
+    emailBroadcast: (body) => api.post('/api/admin/email-broadcast', body),
     content: {
       get: () => api.get('/api/admin/content'),
       save: (overrides) => api.put('/api/admin/content', { overrides }),
     },
-    upload: (file) => {
+    upload: (file, options = {}) => {
       const formData = new FormData();
+      if (options.purpose === 'reel') formData.append('purpose', 'reel');
       formData.append('file', file);
       const url = `${getBaseUrl()}/api/admin/upload`;
       const headers = {};
       const token = getToken();
       if (token) headers.Authorization = `Bearer ${token}`;
-      return fetchWithNetworkRetry(url, { method: 'POST', body: formData, headers, credentials: 'include' }).then(
-        async (r) => {
-          const data = await r.json().catch(() => ({}));
-          if (!r.ok) {
-            if (r.status === 401 && token) clearAuthStorageAndNotify();
-            throw new Error(data.error || r.statusText || 'Upload failed');
-          }
-          if (data.error) throw new Error(data.error);
-          return data.url || '';
-        }
+      return fetchWithNetworkRetry(url, { method: 'POST', body: formData, headers, credentials: 'include' }).then((r) =>
+        parseStorageUploadResponse(r, token)
       );
     },
   },
@@ -500,23 +590,17 @@ export const api = {
       save: (placeId, lang, body) =>
         api.put(`/api/business/places/${encodeURIComponent(placeId)}/translations/${encodeURIComponent(lang)}`, body),
     },
-    upload: (file, placeId) => {
+    upload: (file, placeId, options = {}) => {
       const formData = new FormData();
+      formData.append('placeId', String(placeId));
+      if (options.purpose === 'reel') formData.append('purpose', 'reel');
       formData.append('file', file);
-      formData.append('placeId', placeId);
       const url = `${getBaseUrl()}/api/business/upload`;
       const headers = {};
       const token = getToken();
       if (token) headers.Authorization = `Bearer ${token}`;
-      return fetchWithNetworkRetry(url, { method: 'POST', body: formData, headers, credentials: 'include' }).then(
-        async (r) => {
-          const data = await r.json().catch(() => ({}));
-          if (!r.ok) {
-            if (r.status === 401 && token) clearAuthStorageAndNotify();
-            throw new Error(data.error || r.statusText || 'Upload failed');
-          }
-          return data.url || '';
-        }
+      return fetchWithNetworkRetry(url, { method: 'POST', body: formData, headers, credentials: 'include' }).then((r) =>
+        parseStorageUploadResponse(r, token)
       );
     },
     feed: {
@@ -556,6 +640,22 @@ export const api = {
       update: (id, body) => api.patch(`/api/business/promotions/${encodeURIComponent(id)}`, body),
       delete: (id) => api.delete(`/api/business/promotions/${encodeURIComponent(id)}`),
     },
+    sponsorship: {
+      config: () => api.get('/api/business/sponsorship/config'),
+      createCheckoutSession: (body) => api.post('/api/business/sponsorship/checkout-session', body),
+      sessionStatus: (sessionId) =>
+        api.get(`/api/business/sponsorship/session-status?session_id=${encodeURIComponent(sessionId)}`),
+    },
+  },
+  sponsoredPlaces: (params) => {
+    const qs = new URLSearchParams();
+    if (params && typeof params === 'object') {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+      });
+    }
+    const q = qs.toString();
+    return api.get(`/api/sponsored-places${q ? `?${q}` : ''}`);
   },
   /** Public community feed (approved + discoverable only). GET sends Bearer token when logged in for liked_by_me / saved_by_me. */
   communityFeed: (params) => {
@@ -597,6 +697,7 @@ export const api = {
   publicPromotions: (params) => {
     const qs = new URLSearchParams();
     if (params?.limit != null && params.limit !== '') qs.set('limit', String(params.limit));
+    if (params?.lang) qs.set('lang', String(params.lang));
     const q = qs.toString();
     return api.get(`/api/promotions${q ? `?${q}` : ''}`);
   },
@@ -610,6 +711,30 @@ export const api = {
   user: {
     profile: () => api.get('/api/user/profile'),
     updateProfile: (data) => api.patch('/api/user/profile', data),
+    uploadAvatar: (file) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const url = `${getBaseUrl()}/api/user/profile/avatar`;
+      const headers = {};
+      const token = getToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+      return fetchWithNetworkRetry(url, { method: 'POST', body: formData, headers, credentials: 'include' }).then(async (r) => {
+        let json = null;
+        try {
+          json = await r.json();
+        } catch {
+          json = null;
+        }
+        if (!r.ok) {
+          const msg = json?.error || json?.detail || `Upload failed (${r.status})`;
+          const e = new Error(msg);
+          e.status = r.status;
+          e.data = json;
+          throw e;
+        }
+        return json;
+      });
+    },
     changePassword: (currentPassword, newPassword) => api.post('/api/user/change-password', { currentPassword, newPassword }),
     /** Venue inquiries sent while signed in (place messages / proposals). */
     inquiries: () => api.get('/api/user/inquiries'),

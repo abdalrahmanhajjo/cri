@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/client';
-import { siteSettingsDefaults } from '../../config/siteSettingsDefaults';
+import { mergeWithSiteSettingsDefaults } from '../../config/siteSettingsDefaults';
 import AdminTranslationsPanel from './AdminTranslationsPanel';
 import './Admin.css';
 
@@ -27,7 +27,7 @@ export default function AdminSettings() {
   const tabParam = searchParams.get('tab');
   const activeTab = TABS.some((t) => t.id === tabParam) ? tabParam : 'general';
 
-  const [form, setForm] = useState(() => ({ ...siteSettingsDefaults }));
+  const [form, setForm] = useState(() => mergeWithSiteSettingsDefaults({}));
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -69,9 +69,9 @@ export default function AdminSettings() {
       .get()
       .then((r) => {
         const server = r.settings && typeof r.settings === 'object' ? r.settings : {};
-        setForm({ ...siteSettingsDefaults, ...server });
+        setForm(mergeWithSiteSettingsDefaults(server));
       })
-      .catch(() => setForm({ ...siteSettingsDefaults }))
+      .catch(() => setForm(mergeWithSiteSettingsDefaults({})))
       .finally(() => setLoading(false));
   }, []);
 
@@ -82,7 +82,7 @@ export default function AdminSettings() {
     try {
       const r = await api.admin.siteSettings.save(form);
       const merged = r.settings && typeof r.settings === 'object' ? r.settings : form;
-      setForm({ ...siteSettingsDefaults, ...merged });
+      setForm(mergeWithSiteSettingsDefaults(merged));
       window.dispatchEvent(new Event('tripoli-site-settings-saved'));
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -153,6 +153,9 @@ export default function AdminSettings() {
                   <div className="admin-form-group">
                     <label htmlFor="as-tagline">Tagline</label>
                     <input id="as-tagline" value={form.siteTagline} onChange={(e) => setForm((f) => ({ ...f, siteTagline: e.target.value }))} />
+                    <span className="admin-form-hint">
+                      Tagline is kept for API/mobile compatibility. The web home hero and header/footer brand line use language files in the app build (translation editor overrides do not apply to those lines).
+                    </span>
                   </div>
                   <div className="admin-form-group">
                     <label htmlFor="as-meta-desc">Home page meta description (SEO)</label>
@@ -177,9 +180,196 @@ export default function AdminSettings() {
                   <div className="admin-form-row">
                     <div className="admin-form-group">
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={form.showMap} onChange={(e) => setForm((f) => ({ ...f, showMap: e.target.checked }))} />
+                        <input
+                          type="checkbox"
+                          checked={form.showMap}
+                          onChange={(e) => setForm((f) => ({ ...f, showMap: e.target.checked }))}
+                        />
                         Show map entry points (nav, home, footer)
                       </label>
+                    </div>
+                  </div>
+                  <div className="admin-form-row">
+                    <div className="admin-form-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={form?.diningGuide?.enabled !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              diningGuide: { ...(f.diningGuide || {}), enabled: e.target.checked },
+                            }))
+                          }
+                        />
+                        Public dining guide page (/dining)
+                      </label>
+                    </div>
+                  </div>
+                  <div className="admin-form-row">
+                    <div className="admin-form-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={form?.hotelsGuide?.enabled !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              hotelsGuide: { ...(f.hotelsGuide || {}), enabled: e.target.checked },
+                            }))
+                          }
+                        />
+                        Public hotels guide page (/hotels)
+                      </label>
+                    </div>
+                  </div>
+                  <hr style={{ border: 0, borderTop: '1px solid #e5e7eb', margin: '1.25rem 0' }} />
+                  <div className="admin-sponsor-settings">
+                    <div className="admin-sponsor-settings-head">
+                      <h3 className="admin-sponsor-settings-title">Sponsored places</h3>
+                      <Link className="admin-sponsor-settings-link" to="../sponsored-places">
+                        Manage placements →
+                      </Link>
+                    </div>
+                    <p className="admin-form-hint admin-sponsor-settings-lede">
+                      Turn each public surface on or off globally. Rows still respect their own schedule, enabled flag, and surface
+                      targeting in the placements table.
+                    </p>
+                    <div className="admin-sponsor-toggle-grid">
+                      <label className="admin-sponsor-toggle-card">
+                        <input
+                          type="checkbox"
+                          checked={form?.sponsoredPlacesEnabled?.home !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              sponsoredPlacesEnabled: { ...(f.sponsoredPlacesEnabled || {}), home: e.target.checked },
+                            }))
+                          }
+                        />
+                        <span className="admin-sponsor-toggle-card-title">Home</span>
+                        <span className="admin-sponsor-toggle-card-desc">Grid section on the landing page</span>
+                      </label>
+                      <label className="admin-sponsor-toggle-card">
+                        <input
+                          type="checkbox"
+                          checked={form?.sponsoredPlacesEnabled?.discover !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              sponsoredPlacesEnabled: { ...(f.sponsoredPlacesEnabled || {}), discover: e.target.checked },
+                            }))
+                          }
+                        />
+                        <span className="admin-sponsor-toggle-card-title">Discover</span>
+                        <span className="admin-sponsor-toggle-card-desc">Partner strip + list priority</span>
+                      </label>
+                      <label className="admin-sponsor-toggle-card">
+                        <input
+                          type="checkbox"
+                          checked={form?.sponsoredPlacesEnabled?.feed !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              sponsoredPlacesEnabled: { ...(f.sponsoredPlacesEnabled || {}), feed: e.target.checked },
+                            }))
+                          }
+                        />
+                        <span className="admin-sponsor-toggle-card-title">Community feed</span>
+                        <span className="admin-sponsor-toggle-card-desc">Sponsored card in the feed stack</span>
+                      </label>
+                      <label className="admin-sponsor-toggle-card">
+                        <input
+                          type="checkbox"
+                          checked={form?.sponsoredPlacesEnabled?.dining !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              sponsoredPlacesEnabled: { ...(f.sponsoredPlacesEnabled || {}), dining: e.target.checked },
+                            }))
+                          }
+                        />
+                        <span className="admin-sponsor-toggle-card-title">Dining guide</span>
+                        <span className="admin-sponsor-toggle-card-desc">Sponsored rail on /dining</span>
+                      </label>
+                      <label className="admin-sponsor-toggle-card">
+                        <input
+                          type="checkbox"
+                          checked={form?.sponsoredPlacesEnabled?.hotels !== false}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              sponsoredPlacesEnabled: { ...(f.sponsoredPlacesEnabled || {}), hotels: e.target.checked },
+                            }))
+                          }
+                        />
+                        <span className="admin-sponsor-toggle-card-title">Hotels guide</span>
+                        <span className="admin-sponsor-toggle-card-desc">Sponsored rail on /hotels</span>
+                      </label>
+                    </div>
+                  </div>
+                  <hr style={{ border: 0, borderTop: '1px solid #e5e7eb', margin: '1.25rem 0' }} />
+                  <h3 className="admin-card-title" style={{ fontSize: '1.05rem', marginBottom: '0.75rem' }}>
+                    Paid sponsorship (business portal)
+                  </h3>
+                  <p className="admin-form-hint" style={{ marginTop: 0 }}>
+                    Place owners can buy a time-limited “all surfaces” slot from Business → Sponsorship when this is on and{' '}
+                    <code>STRIPE_SECRET_KEY</code> / <code>STRIPE_WEBHOOK_SECRET</code> are set on the API. Optional{' '}
+                    <code>STRIPE_PRICE_ID</code> overrides the amount below. See <code>server/docs/SPONSORSHIP.md</code>.
+                  </p>
+                  <div className="admin-form-group">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={form.sponsorshipEnabled === true}
+                        onChange={(e) => setForm((f) => ({ ...f, sponsorshipEnabled: e.target.checked }))}
+                      />
+                      Enable self-serve sponsorship checkout
+                    </label>
+                  </div>
+                  <div className="admin-form-row admin-form-row--3">
+                    <div className="admin-form-group">
+                      <label htmlFor="as-sponsorship-days">Duration (days)</label>
+                      <input
+                        id="as-sponsorship-days"
+                        type="number"
+                        min={1}
+                        max={365}
+                        value={form.sponsorshipDurationDays ?? 30}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            sponsorshipDurationDays: Math.min(365, Math.max(1, parseInt(e.target.value, 10) || 30)),
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="admin-form-group">
+                      <label htmlFor="as-sponsorship-cents">Price (cents)</label>
+                      <input
+                        id="as-sponsorship-cents"
+                        type="number"
+                        min={50}
+                        value={form.sponsorshipAmountCents ?? 4999}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            sponsorshipAmountCents: Math.max(50, parseInt(e.target.value, 10) || 4999),
+                          }))
+                        }
+                      />
+                      <span className="admin-form-hint">Ignored when STRIPE_PRICE_ID is set on the server.</span>
+                    </div>
+                    <div className="admin-form-group">
+                      <label htmlFor="as-sponsorship-currency">Currency code</label>
+                      <input
+                        id="as-sponsorship-currency"
+                        value={form.sponsorshipCurrency || 'usd'}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, sponsorshipCurrency: e.target.value.trim().toLowerCase().slice(0, 12) }))
+                        }
+                        placeholder="usd"
+                      />
                     </div>
                   </div>
                   <div className="admin-form-group">

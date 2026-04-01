@@ -2100,3 +2100,111 @@
   line-height: 1.45;
   max-width: 52rem;
 }
+
+/* Site settings — sponsored surfaces */
+.admin-sponsor-settings {
+  padding: 1rem 1.15rem 1.15rem;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: linear-gradient(165deg, #fafdfb 0%, #f8fafc 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.admin-sponsor-settings-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.admin-sponsor-settings-title {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #14532d;
+  letter-spacing: -0.02em;
+}
+
+.admin-sponsor-settings-link {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e5631;
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 1px solid color-mix(in srgb, #1e5631 35%, transparent);
+  padding-bottom: 1px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.admin-sponsor-settings-link:hover {
+  color: #166534;
+  border-bottom-color: #166534;
+}
+
+.admin-sponsor-settings-lede {
+  margin: 0 0 1rem !important;
+  max-width: 48rem;
+  line-height: 1.5;
+}
+
+.admin-sponsor-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.85rem;
+}
+
+.admin-sponsor-toggle-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.65rem;
+  row-gap: 0.2rem;
+  align-items: start;
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.admin-sponsor-toggle-card:hover {
+  border-color: #bbf7d0;
+  box-shadow: 0 6px 18px rgba(30, 86, 49, 0.07);
+}
+
+.admin-sponsor-toggle-card:has(input:focus-visible) {
+  outline: 2px solid #1e5631;
+  outline-offset: 2px;
+}
+
+.admin-sponsor-toggle-card input[type='checkbox'] {
+  grid-row: 1 / span 2;
+  margin-top: 0.2rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: #1e5631;
+  cursor: pointer;
+}
+
+.admin-sponsor-toggle-card-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.admin-sponsor-toggle-card-desc {
+  grid-column: 2;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+@media (max-width: 640px) {
+  .admin-sponsor-toggle-grid {
+    grid-template-columns: 1fr;
+  }
+}

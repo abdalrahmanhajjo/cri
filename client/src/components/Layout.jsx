@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import Icon from './Icon';
 import BackToTop from './BackToTop';
 import GlobalSearchBar from './GlobalSearchBar';
-import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
+import { COMMUNITY_PATH, PLACES_DISCOVER_PATH, DINING_PATH, HOTELS_PATH } from '../utils/discoverPaths';
 import './Layout.css';
 
 const langLabels = { en: 'EN', ar: 'العربية', fr: 'FR' };
@@ -15,6 +16,7 @@ const AI_BANNER_DISMISSED_KEY = 'tripoli_ai_banner_dismissed';
 export default function Layout() {
   const { user, logout } = useAuth();
   const { lang, setLanguage, t } = useLanguage();
+  const { showToast } = useToast();
   const { settings } = useSiteSettings();
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,6 +30,8 @@ export default function Layout() {
     }
   });
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  /** One-time banner after email verification (set from VerifyEmail via sessionStorage). */
+  const [verifyWelcomeBanner, setVerifyWelcomeBanner] = useState(null);
   const langRef = useRef(null);
   const langDrawerRef = useRef(null);
   const isHome = location.pathname === '/';
@@ -39,12 +43,17 @@ export default function Layout() {
   const isMapPage = location.pathname === '/map';
   const isPlaceDiscoverPage =
     location.pathname === PLACES_DISCOVER_PATH || location.pathname.startsWith(`${PLACES_DISCOVER_PATH}/`);
+  const isDiningPage = location.pathname === DINING_PATH;
+  const isHotelsPage = location.pathname === HOTELS_PATH;
   const isAboutTripoliPage = location.pathname === '/about-tripoli';
   const isAiPlannerPage = location.pathname === '/plan/ai';
+  const diningGuideEnabled = settings?.diningGuide?.enabled !== false;
+  const hotelsGuideEnabled = settings?.hotelsGuide?.enabled !== false;
 
   const handleLogout = () => {
     logout();
     setMenuOpen(false);
+    showToast(t('feedback', 'signedOut'), 'info');
     navigate('/');
   };
 
@@ -74,9 +83,26 @@ export default function Layout() {
     };
   }, [lockScroll]);
 
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const raw = sessionStorage.getItem('tripoli-welcome-after-verify');
+      if (!raw) return;
+      sessionStorage.removeItem('tripoli-welcome-after-verify');
+      const data = JSON.parse(raw);
+      if (!data || typeof data.at !== 'number' || Date.now() - data.at > 120000) return;
+      setVerifyWelcomeBanner({
+        name: (data.name && String(data.name).trim()) || user.name || 'there',
+        emailSent: data.welcomeEmailSent === true,
+      });
+    } catch {
+      /* ignore */
+    }
+  }, [user?.id]);
+
   return (
     <div className="layout">
-      <header className={`header header--vd ${menuOpen ? 'menu-open' : ''}`}>
+      <header id="site-header" className={`header header--vd ${menuOpen ? 'menu-open' : ''}`}>
         <div className="header-inner">
           <div className="header-row header-row--main">
             <button
@@ -126,11 +152,29 @@ export default function Layout() {
               <Link to="/" className={`nav-link nav-link--home ${isHome ? 'nav-link--active' : ''}`} onClick={closeMenu}>{t('nav', 'home')}</Link>
               <Link
                 to={PLACES_DISCOVER_PATH}
-                className={`nav-link ${isPlaceDiscoverPage ? 'nav-link--active' : ''}`}
+                className={`nav-link ${isPlaceDiscoverPage && !isDiningPage && !isHotelsPage ? 'nav-link--active' : ''}`}
                 onClick={closeMenu}
               >
                 {t('nav', 'discoverPlaces')}
               </Link>
+              {diningGuideEnabled && (
+                <Link
+                  to={DINING_PATH}
+                  className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
+                  onClick={closeMenu}
+                >
+                  {t('nav', 'diningNav')}
+                </Link>
+              )}
+              {hotelsGuideEnabled && (
+                <Link
+                  to={HOTELS_PATH}
+                  className={`nav-link ${isHotelsPage ? 'nav-link--active' : ''}`}
+                  onClick={closeMenu}
+                >
+                  {t('nav', 'hotelsNav')}
+                </Link>
+              )}
               <Link to="/map" className={`nav-link ${isMapPage ? 'nav-link--active' : ''}`} onClick={closeMenu}>
                 {t('nav', 'viewMapNav')}
               </Link>
@@ -180,7 +224,12 @@ export default function Layout() {
                         <button
                           type="button"
                           className={`nav-lang-option ${lang === code ? 'nav-lang-option--active' : ''}`}
-                          onClick={() => { setLanguage(code); setLangOpen(false); closeMenu(); }}
+                          onClick={() => {
+                           setLanguage(code);
+                           setLangOpen(false);
+                           closeMenu();
+                           showToast(t('feedback', 'languageChanged'), 'success');
+                         }}
                         >
                           {code === 'en' ? 'English' : code === 'ar' ? 'العربية' : 'Français'}
                         </button>
@@ -250,11 +299,29 @@ export default function Layout() {
             <Link to="/" className={`nav-link nav-link--home ${isHome ? 'nav-link--active' : ''}`} onClick={closeMenu}>{t('nav', 'home')}</Link>
             <Link
               to={PLACES_DISCOVER_PATH}
-              className={`nav-link ${isPlaceDiscoverPage ? 'nav-link--active' : ''}`}
+              className={`nav-link ${isPlaceDiscoverPage && !isDiningPage && !isHotelsPage ? 'nav-link--active' : ''}`}
               onClick={closeMenu}
             >
               {t('nav', 'discoverPlaces')}
             </Link>
+            {diningGuideEnabled && (
+              <Link
+                to={DINING_PATH}
+                className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
+                onClick={closeMenu}
+              >
+                {t('nav', 'diningNav')}
+              </Link>
+            )}
+            {hotelsGuideEnabled && (
+              <Link
+                to={HOTELS_PATH}
+                className={`nav-link ${isHotelsPage ? 'nav-link--active' : ''}`}
+                onClick={closeMenu}
+              >
+                {t('nav', 'hotelsNav')}
+              </Link>
+            )}
             <Link to="/map" className={`nav-link ${isMapPage ? 'nav-link--active' : ''}`} onClick={closeMenu}>
               {t('nav', 'viewMapNav')}
             </Link>
@@ -303,7 +370,12 @@ export default function Layout() {
                       <button
                         type="button"
                         className={`nav-lang-option ${lang === code ? 'nav-lang-option--active' : ''}`}
-                        onClick={() => { setLanguage(code); setLangOpen(false); closeMenu(); }}
+                        onClick={() => {
+                          setLanguage(code);
+                          setLangOpen(false);
+                          closeMenu();
+                          showToast(t('feedback', 'languageChanged'), 'success');
+                        }}
                       >
                         {code === 'en' ? 'English' : code === 'ar' ? 'العربية' : 'Français'}
                       </button>
@@ -362,6 +434,33 @@ export default function Layout() {
             />
           </div>
         </>
+      )}
+
+      {verifyWelcomeBanner && (
+        <div
+          className="site-settings-banner site-settings-banner--announcement"
+          role="status"
+          style={{
+            background: 'linear-gradient(135deg, #14523a 0%, #0d3d2e 100%)',
+            color: '#fff',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid rgba(255,255,255,0.12)',
+          }}
+        >
+          <p className="site-settings-banner-text" style={{ color: '#fff', textAlign: 'left', flex: 1 }}>
+            Welcome to {settings.siteName?.trim() || 'Visit Tripoli'}, {verifyWelcomeBanner.name}! Your account is verified
+            {verifyWelcomeBanner.emailSent ? ' — we also sent a short welcome message to your inbox.' : '.'}
+          </p>
+          <button
+            type="button"
+            className="ai-plan-banner-dismiss"
+            onClick={() => setVerifyWelcomeBanner(null)}
+            aria-label="Dismiss welcome message"
+            style={{ color: 'rgba(255,255,255,0.9)', flexShrink: 0 }}
+          >
+            <Icon name="close" size={18} />
+          </button>
+        </div>
       )}
 
       {settings.maintenanceMode && (

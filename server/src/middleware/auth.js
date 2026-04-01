@@ -10,19 +10,39 @@ const JWT_OPTIONS = {
   clockTolerance: 0,
 };
 
-/** Returns false if response already sent (blocked / missing user / error). */
-async function assertUserNotBlocked(userId, res) {
+/**
+ * Confirms user exists, is not blocked, and (for email/password accounts) has verified email.
+ * @param {boolean} [opts.optional] If true, unverified/missing user returns false without sending 403;
+ *   blocked users still receive 403. Caller should call next() without req.user when false and !res.headersSent.
+ * @returns {Promise<boolean>}
+ */
+async function assertUserCanUseApi(userId, res, opts = {}) {
+  const optional = opts.optional === true;
   try {
     const { rows } = await query(
-      'SELECT COALESCE(is_blocked, false) AS is_blocked FROM users WHERE id = $1',
+      `SELECT COALESCE(is_blocked, false) AS is_blocked,
+              COALESCE(email_verified, false) AS email_verified,
+              LOWER(TRIM(COALESCE(auth_provider, 'email'))) AS auth_provider
+       FROM users WHERE id = $1`,
       [userId]
     );
     if (!rows.length) {
+      if (optional) return false;
       res.status(401).json({ error: 'Invalid token' });
       return false;
     }
-    if (rows[0].is_blocked === true) {
+    const row = rows[0];
+    if (row.is_blocked === true) {
       res.status(403).json({ error: 'Account disabled', code: 'ACCOUNT_BLOCKED' });
+      return false;
+    }
+    if (row.auth_provider === 'email' && row.email_verified !== true) {
+      if (optional) return false;
+      res.status(403).json({
+        error:
+          'Please verify your email to use your account. Check your inbox for the code, or open Verify email from the sign-in page.',
+        code: 'EMAIL_NOT_VERIFIED',
+      });
       return false;
     }
     return true;
@@ -31,7 +51,9 @@ async function assertUserNotBlocked(userId, res) {
       return true;
     }
     console.error(err);
-    res.status(500).json({ error: 'Auth check failed' });
+    if (!optional) {
+      res.status(500).json({ error: 'Auth check failed' });
+    }
     return false;
   }
 }
@@ -55,7 +77,7 @@ async function authMiddleware(req, res, next) {
     if (!decoded.userId) {
       return res.status(401).json({ error: 'Invalid token payload' });
     }
-    const ok = await assertUserNotBlocked(decoded.userId, res);
+    const ok = await assertUserCanUseApi(decoded.userId, res, { optional: false });
     if (!ok) return;
     req.user = decoded;
     next();
@@ -77,8 +99,11 @@ async function optionalAuthMiddleware(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET, JWT_OPTIONS);
     if (decoded.userId) {
-      const ok = await assertUserNotBlocked(decoded.userId, res);
-      if (!ok) return;
+      const ok = await assertUserCanUseApi(decoded.userId, res, { optional: true });
+      if (!ok) {
+        if (res.headersSent) return;
+        return next();
+      }
       req.user = decoded;
     }
   } catch {

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import Icon from '../components/Icon';
 import {
   chatForTripPlan,
@@ -11,7 +13,22 @@ import {
   getSlotConflictIndices,
   suggestedTimeToMinutes,
 } from '../services/aiPlannerService';
-import { tripHasDateConflict } from '../utils/tripPlannerHelpers';
+import {
+  tripHasDateConflict,
+  formatYMD,
+  findOverlappingTrips,
+  findNextNonOverlappingDateRange,
+} from '../utils/tripPlannerHelpers';
+import {
+  loadPlannerMemory,
+  savePlannerMemory,
+  createEmptyPlannerMemory,
+  recordSuccessfulPlan,
+  buildUserFamiliarityBlock,
+  sanitizePersonalNote,
+  topMemoryCategoriesForRanker,
+} from '../utils/aiPlannerUserMemory';
+import { loadPlannerPrefs, savePlannerPrefs } from '../utils/aiPlannerPrefs';
 import './AiPlanner.css';
 
 function apiBase() {
@@ -40,14 +57,119 @@ function buildDayGroupsForDisplay(slots, durationDays) {
   return rows;
 }
 
+/** Compact draft summary so the model respects user edits when refining the plan. */
+function buildDraftPlanContextLine(slots, placeById, durationDays) {
+  if (!Array.isArray(slots) || slots.length === 0) return '';
+  const groups = buildDayGroupsForDisplay(slots, durationDays);
+  const parts = groups.map(({ dayIndex, items }) => {
+    const label = items.length
+      ? items
+          .map(({ s }) => placeById[String(s.placeId)]?.name || String(s.placeId))
+          .join('; ')
+      : '—';
+    return `Day ${dayIndex + 1}: ${label}`;
+  });
+  return `Draft itinerary (user may have edited times, days, or places): ${parts.join(' | ')}.`;
+}
+
+function clampIntRange(n, lo, hi) {
+  const x = Math.floor(Number(n));
+  if (!Number.isFinite(x)) return null;
+  return Math.max(lo, Math.min(hi, x));
+}
+
+/**
+ * Best-effort parse of user chat for settings like "2 days", "3 places", "low budget".
+ * This updates the settings chips immediately when the user types those properties.
+ */
+function inferTripSettingsFromUserText(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return null;
+
+  const lower = text.toLowerCase();
+  const next = {};
+
+  const durationMatch =
+    lower.match(/\b(\d{1,2})\s*[- ]?\s*(day|days|jour|jours)\b/i) ||
+    lower.match(/\b(\d{1,2})\s*[- ]?\s*(يوم|أيام)\b/i);
+  if (durationMatch?.[1]) {
+    const d = clampIntRange(durationMatch[1], 1, 7);
+    if (d != null) next.durationDays = d;
+  }
+
+  const placesMatch = lower.match(/\b(\d{1,2})\s*(?:x\s*)?(place|places|stop|stops)\b/i);
+  if (placesMatch?.[1]) {
+    const p = clampIntRange(placesMatch[1], 2, 8);
+    if (p != null) next.placesPerDay = p;
+  }
+
+  if (/\blow\b/.test(lower) || /\bcheap\b/.test(lower)) next.budget = 'low';
+  if (/\bmoderate\b/.test(lower) || /\bmid\b/.test(lower) || /\bmedium\b/.test(lower)) next.budget = 'moderate';
+  if (/\bluxury\b/.test(lower) || /\bhigh\b/.test(lower) || /\bexpensive\b/.test(lower)) next.budget = 'luxury';
+
+  // Start date: allow "2026-04-02", "2 apr 2026", "apr 2 2026"
+  const iso = lower.match(/\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/);
+  if (iso) {
+    const y = Number(iso[1]);
+    const m = Number(iso[2]);
+    const d = Number(iso[3]);
+    if (y && m >= 1 && m <= 12 && d >= 1 && d <= 31) next.startDate = { y, m, d };
+  } else {
+    const months = {
+      jan: 1,
+      january: 1,
+      feb: 2,
+      february: 2,
+      mar: 3,
+      march: 3,
+      apr: 4,
+      april: 4,
+      may: 5,
+      jun: 6,
+      june: 6,
+      jul: 7,
+      july: 7,
+      aug: 8,
+      august: 8,
+      sep: 9,
+      sept: 9,
+      september: 9,
+      oct: 10,
+      october: 10,
+      nov: 11,
+      november: 11,
+      dec: 12,
+      december: 12,
+    };
+    const dmy = lower.match(/\b(\d{1,2})\s*(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\s*(20\d{2})\b/);
+    const mdy = lower.match(/\b(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\s*(\d{1,2})\s*(20\d{2})\b/);
+    const hit = dmy
+      ? { y: Number(dmy[3]), m: months[dmy[2]], d: Number(dmy[1]) }
+      : mdy
+        ? { y: Number(mdy[3]), m: months[mdy[1]], d: Number(mdy[2]) }
+        : null;
+    if (hit?.y && hit?.m && hit?.d) next.startDate = hit;
+  }
+
+  return Object.keys(next).length ? next : null;
+}
+
 export default function AiPlanner() {
   const { t, lang } = useLanguage();
+  const { user } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
+  const storageUserId = user?.id != null ? String(user.id) : 'anon';
   const messagesEndRef = useRef(null);
+  const messagesScrollRef = useRef(null);
   const chipsBarRef = useRef(null);
+  const composerRef = useRef(null);
   /** Lifts composer above mobile on-screen keyboard (visualViewport gap). */
   const [keyboardInsetPx, setKeyboardInsetPx] = useState(0);
+  const [composerHeight, setComposerHeight] = useState(76);
+  const [planDockDayActive, setPlanDockDayActive] = useState(0);
+  const [navFabVisible, setNavFabVisible] = useState(false);
 
   const [places, setPlaces] = useState([]);
   const [interestsList, setInterestsList] = useState([]);
@@ -63,6 +185,7 @@ export default function AiPlanner() {
     return d;
   });
   const [interestIds, setInterestIds] = useState(() => new Set());
+  const [plannerPrefsReady, setPlannerPrefsReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [messages, setMessages] = useState([]);
@@ -77,6 +200,10 @@ export default function AiPlanner() {
   const [aiReplaceSheet, setAiReplaceSheet] = useState(null);
   const [aiReplaceNote, setAiReplaceNote] = useState('');
   const [activeChipEditor, setActiveChipEditor] = useState(null);
+
+  const [plannerMemory, setPlannerMemory] = useState(() => createEmptyPlannerMemory());
+  const [profilePlannerHints, setProfilePlannerHints] = useState({});
+  const saveNoteTimeoutRef = useRef(null);
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
@@ -103,6 +230,22 @@ export default function AiPlanner() {
     });
     return m;
   }, [places]);
+
+  useEffect(() => {
+    let ro;
+    const raf = requestAnimationFrame(() => {
+      const el = composerRef.current;
+      if (!el || typeof ResizeObserver === 'undefined') return;
+      const measure = () => setComposerHeight(el.offsetHeight || 76);
+      measure();
+      ro = new ResizeObserver(measure);
+      ro.observe(el);
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const vv = window.visualViewport;
@@ -156,6 +299,124 @@ export default function AiPlanner() {
   }, [langParam]);
 
   useEffect(() => {
+    setPlannerMemory(loadPlannerMemory(storageUserId));
+  }, [storageUserId]);
+
+  useEffect(() => {
+    const p = loadPlannerPrefs(storageUserId);
+    if (p) {
+      if (p.durationDays != null) setDurationDays(p.durationDays);
+      if (p.placesPerDay != null) setPlacesPerDay(p.placesPerDay);
+      if (p.budget != null) setBudget(p.budget);
+      if (p.startDate) {
+        const parts = p.startDate.slice(0, 10).split('-').map(Number);
+        const [y, mo, da] = parts;
+        if (y && mo && da) setSelectedDate(new Date(y, mo - 1, da));
+      }
+      if (Array.isArray(p.interestIds) && p.interestIds.length > 0) {
+        setInterestIds(new Set(p.interestIds));
+      }
+    }
+    setPlannerPrefsReady(true);
+    return () => {
+      setPlannerPrefsReady(false);
+    };
+  }, [storageUserId]);
+
+  const interestIdsForPrefs = useMemo(() => [...interestIds].sort().join(','), [interestIds]);
+
+  useEffect(() => {
+    if (!plannerPrefsReady) return;
+    savePlannerPrefs(storageUserId, {
+      durationDays,
+      placesPerDay,
+      budget,
+      startDate: formatYMD(selectedDate),
+      interestIds: interestIdsForPrefs ? interestIdsForPrefs.split(',') : [],
+    });
+  }, [
+    plannerPrefsReady,
+    storageUserId,
+    durationDays,
+    placesPerDay,
+    budget,
+    selectedDate,
+    interestIdsForPrefs,
+  ]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setProfilePlannerHints({});
+      return undefined;
+    }
+    let cancelled = false;
+    api.user
+      .profile()
+      .then((p) => {
+        if (cancelled) return;
+        setProfilePlannerHints({
+          city: p.city || '',
+          mood: p.mood || '',
+          pace: p.pace || '',
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setProfilePlannerHints({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(
+    () => () => {
+      if (saveNoteTimeoutRef.current) clearTimeout(saveNoteTimeoutRef.current);
+    },
+    []
+  );
+
+  const userFamiliarityBlock = useMemo(
+    () =>
+      buildUserFamiliarityBlock({
+        memory: plannerMemory,
+        profileHints: profilePlannerHints,
+      }),
+    [plannerMemory, profilePlannerHints]
+  );
+
+  const learnedCategoryHints = useMemo(
+    () => topMemoryCategoriesForRanker(plannerMemory, 5),
+    [plannerMemory]
+  );
+
+  const updatePlannerPersonalNote = useCallback(
+    (raw) => {
+      const personalNote = sanitizePersonalNote(raw);
+      setPlannerMemory((prev) => {
+        const next = { ...prev, personalNote };
+        if (saveNoteTimeoutRef.current) clearTimeout(saveNoteTimeoutRef.current);
+        saveNoteTimeoutRef.current = setTimeout(() => {
+          savePlannerMemory(storageUserId, next);
+          saveNoteTimeoutRef.current = null;
+        }, 450);
+        return next;
+      });
+    },
+    [storageUserId]
+  );
+
+  const clearPlannerLearnedMemory = useCallback(() => {
+    if (!window.confirm(t('aiPlanner', 'visitorMemoryClearConfirm'))) return;
+    if (saveNoteTimeoutRef.current) {
+      clearTimeout(saveNoteTimeoutRef.current);
+      saveNoteTimeoutRef.current = null;
+    }
+    const empty = createEmptyPlannerMemory();
+    setPlannerMemory(empty);
+    savePlannerMemory(storageUserId, empty);
+  }, [storageUserId, t]);
+
+  useEffect(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       const m = messages[i];
       if (m.role !== 'assistant' || !Array.isArray(m.slots)) continue;
@@ -176,6 +437,33 @@ export default function AiPlanner() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, sending]);
+
+  const applyAiTripSettingsToState = useCallback(
+    (tripSettings) => {
+      if (!tripSettings) return;
+      if (tripSettings.durationDays != null) setDurationDays(tripSettings.durationDays);
+      if (tripSettings.placesPerDay != null) setPlacesPerDay(tripSettings.placesPerDay);
+      if (tripSettings.budget != null) setBudget(tripSettings.budget);
+      if (tripSettings.startDate)
+        setSelectedDate(new Date(`${tripSettings.startDate}T12:00:00`));
+      if (tripSettings.interestNames?.length && interestsList.length > 0) {
+        setInterestIds((prev) => {
+          const next = new Set(prev);
+          const lower = (s) => String(s).toLowerCase().trim();
+          for (const raw of tripSettings.interestNames) {
+            const q = lower(raw);
+            const hit = interestsList.find((i) => {
+              const n = lower(i.name || '');
+              return n === q || n.includes(q) || q.includes(n);
+            });
+            if (hit) next.add(String(hit.id));
+          }
+          return next;
+        });
+      }
+    },
+    [interestsList]
+  );
 
   useEffect(() => {
     if (!activeChipEditor) return;
@@ -277,6 +565,35 @@ export default function AiPlanner() {
     [clampSlot, placeById]
   );
 
+  /** When trip length shrinks, clamp day indices on the latest plan in one pass. */
+  useEffect(() => {
+    setMessages((prev) => {
+      let idx = -1;
+      for (let i = prev.length - 1; i >= 0; i -= 1) {
+        if (prev[i].role === 'assistant' && Array.isArray(prev[i].slots)) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx < 0) return prev;
+      const m = prev[idx];
+      if (!m?.slots?.length) return prev;
+      const slots = m.slots.map((row) => clampSlot({ ...row }));
+      const changed = slots.some((s, j) => s.dayIndex !== m.slots[j].dayIndex);
+      if (!changed) return prev;
+      const newPlaces = slots.map((s) => placeById[s.placeId]).filter(Boolean);
+      const next = [...prev];
+      next[idx] = { ...m, slots, places: newPlaces };
+      return next;
+    });
+  }, [durationDays, clampSlot, placeById]);
+
+  useEffect(() => {
+    if (durationDays > 0) {
+      setPlanDockDayActive((d) => Math.min(Math.max(0, d), durationDays - 1));
+    }
+  }, [durationDays]);
+
   const conversationHistory = useMemo(
     () =>
       messages.map((m) => ({
@@ -291,17 +608,27 @@ export default function AiPlanner() {
       const trimmed = (text || '').trim();
       if (!trimmed || sending || dataLoading) return;
 
+      const inferred = inferTripSettingsFromUserText(trimmed);
+      if (inferred?.durationDays != null) setDurationDays(inferred.durationDays);
+      if (inferred?.placesPerDay != null) setPlacesPerDay(inferred.placesPerDay);
+      if (inferred?.budget) setBudget(inferred.budget);
+      if (inferred?.startDate) setSelectedDate(new Date(inferred.startDate.y, inferred.startDate.m - 1, inferred.startDate.d));
+
       setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
       setInput('');
       setSending(true);
 
       try {
-        const activityContext =
-          interestNames.length > 0
-            ? `User selected interest themes: ${interestNames.join(', ')}.`
-            : '';
+        const draftCtx =
+          lastSlots?.length > 0 ? buildDraftPlanContextLine(lastSlots, placeById, durationDays) : '';
+        const activityContext = [
+          interestNames.length > 0 ? `User selected interest themes: ${interestNames.join(', ')}.` : '',
+          draftCtx,
+        ]
+          .filter(Boolean)
+          .join(' ');
 
-        const { text: reply, slots } = await chatForTripPlan({
+        const { text: reply, slots, tripSettings } = await chatForTripPlan({
           conversationHistory,
           userMessage: trimmed,
           places,
@@ -315,7 +642,11 @@ export default function AiPlanner() {
           previousSlots: lastSlots,
           previousPlaces: lastPlaces,
           singleReplaceSlotIndex: null,
+          userFamiliarityBlock,
+          learnedCategoryHints,
         });
+
+        applyAiTripSettingsToState(tripSettings);
 
         let resolvedPlaces = null;
         if (slots?.length) {
@@ -331,6 +662,14 @@ export default function AiPlanner() {
             places: resolvedPlaces,
           },
         ]);
+
+        if (slots?.length) {
+          setPlannerMemory((prev) => {
+            const next = recordSuccessfulPlan(prev, slots, placeById);
+            savePlannerMemory(storageUserId, next);
+            return next;
+          });
+        }
       } catch (e) {
         const msg =
           e instanceof AIPlannerApiError
@@ -359,6 +698,10 @@ export default function AiPlanner() {
       lastPlaces,
       placeById,
       t,
+      applyAiTripSettingsToState,
+      userFamiliarityBlock,
+      storageUserId,
+      learnedCategoryHints,
     ]
   );
 
@@ -380,20 +723,27 @@ export default function AiPlanner() {
     const userLine =
       `${t('aiPlanner', 'aiReplaceStopLead')} ${dayLead}${placeName}. ${note || t('aiPlanner', 'aiReplaceDefaultIntent')}`.trim();
 
+    const inferred = inferTripSettingsFromUserText(userLine);
+    if (inferred?.durationDays != null) setDurationDays(inferred.durationDays);
+    if (inferred?.placesPerDay != null) setPlacesPerDay(inferred.placesPerDay);
+    if (inferred?.budget) setBudget(inferred.budget);
+
     setAiReplaceSheet(null);
     setAiReplaceNote('');
     setSending(true);
     setMessages((p) => [...p, { role: 'user', content: userLine }]);
 
     try {
-      const activityContext =
-        interestNames.length > 0
-          ? `User selected interest themes: ${interestNames.join(', ')}.`
-          : '';
-
       const previousSlotsSnapshot = prevMsg.slots.map((s) => ({ ...s }));
+      const draftCtx = buildDraftPlanContextLine(previousSlotsSnapshot, placeById, durationDays);
+      const activityContext = [
+        interestNames.length > 0 ? `User selected interest themes: ${interestNames.join(', ')}.` : '',
+        draftCtx,
+      ]
+        .filter(Boolean)
+        .join(' ');
 
-      const { text: reply, slots } = await chatForTripPlan({
+      const { text: reply, slots, tripSettings } = await chatForTripPlan({
         conversationHistory,
         userMessage: userLine,
         places,
@@ -407,7 +757,11 @@ export default function AiPlanner() {
         previousSlots: previousSlotsSnapshot,
         previousPlaces: previousSlotsSnapshot.map((s) => placeById[s.placeId]).filter(Boolean),
         singleReplaceSlotIndex: slotIndex,
+        userFamiliarityBlock,
+        learnedCategoryHints,
       });
+
+      applyAiTripSettingsToState(tripSettings);
 
       let resolvedPlaces = null;
       if (slots?.length) {
@@ -423,6 +777,14 @@ export default function AiPlanner() {
           places: resolvedPlaces,
         },
       ]);
+
+      if (slots?.length) {
+        setPlannerMemory((prev) => {
+          const next = recordSuccessfulPlan(prev, slots, placeById);
+          savePlannerMemory(storageUserId, next);
+          return next;
+        });
+      }
     } catch (e) {
       const errMsg =
         e instanceof AIPlannerApiError ? e.message : t('aiPlanner', 'errorGeneric');
@@ -447,7 +809,129 @@ export default function AiPlanner() {
     interestNames,
     langParam,
     t,
+    applyAiTripSettingsToState,
+    userFamiliarityBlock,
+    storageUserId,
+    learnedCategoryHints,
   ]);
+
+  const pushDateOverlapAssistantMessage = useCallback(
+    (startStr, endStr, existingTrips) => {
+      const overlapTrips = findOverlappingTrips(existingTrips, startStr, endStr, null);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: t('home', 'tripDateOverlap'),
+          error: true,
+          overlapTrips,
+          overlapRange: { startStr, endStr },
+        },
+      ]);
+    },
+    [t]
+  );
+
+  const handleDeleteOverlapTrip = useCallback(
+    async (tripId, messageIndex) => {
+      const row = messages[messageIndex];
+      const tripMeta = row?.overlapTrips?.find((x) => String(x.id) === String(tripId));
+      const name = (tripMeta?.name && String(tripMeta.name).trim()) || t('aiPlanner', 'unnamedTrip');
+      if (!window.confirm(t('aiPlanner', 'overlapDeleteConfirm').replace(/\{name\}/g, name))) return;
+      try {
+        await api.user.deleteTrip(tripId);
+        const range = row?.overlapRange;
+        if (!range?.startStr || !range?.endStr) {
+          setMessages((prev) =>
+            prev.map((m, j) =>
+              j === messageIndex
+                ? {
+                    role: 'assistant',
+                    content: t('aiPlanner', 'overlapResolvedRetrySave'),
+                    error: false,
+                  }
+                : m
+            )
+          );
+          return;
+        }
+        const tripsRes = await api.user.trips();
+        const existing = tripsRes.trips || [];
+        const still = findOverlappingTrips(existing, range.startStr, range.endStr, null);
+        if (still.length === 0) {
+          setMessages((prev) =>
+            prev.map((m, j) =>
+              j === messageIndex
+                ? {
+                    role: 'assistant',
+                    content: t('aiPlanner', 'overlapResolvedRetrySave'),
+                    error: false,
+                  }
+                : m
+            )
+          );
+        } else {
+          setMessages((prev) =>
+            prev.map((m, j) => (j === messageIndex ? { ...m, overlapTrips: still } : m))
+          );
+        }
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: t('aiPlanner', 'applyFailed'), error: true },
+        ]);
+      }
+    },
+    [messages, t]
+  );
+
+  const handleShiftOverlapDates = useCallback(
+    async (messageIndex) => {
+      const row = messages[messageIndex];
+      const range = row?.overlapRange;
+      if (!range?.startStr || !range?.endStr) return;
+      try {
+        const tripsRes = await api.user.trips();
+        const existing = tripsRes.trips || [];
+        const nextRange = findNextNonOverlappingDateRange(
+          existing,
+          range.startStr,
+          range.endStr
+        );
+        if (!nextRange) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: t('aiPlanner', 'overlapNoFreeRange'),
+              error: true,
+            },
+          ]);
+          return;
+        }
+        setSelectedDate(new Date(`${nextRange.startDate}T12:00:00`));
+        setMessages((prev) =>
+          prev.map((m, j) =>
+            j === messageIndex
+              ? {
+                  role: 'assistant',
+                  content: t('aiPlanner', 'overlapDatesShifted')
+                    .replace(/\{start\}/g, nextRange.startDate)
+                    .replace(/\{end\}/g, nextRange.endDate),
+                  error: false,
+                }
+              : m
+          )
+        );
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: t('aiPlanner', 'applyFailed'), error: true },
+        ]);
+      }
+    },
+    [messages, t]
+  );
 
   const handleApplyTrip = useCallback(async () => {
     if (!lastSlots?.length || applying || planConflicts.size > 0) return;
@@ -456,19 +940,12 @@ export default function AiPlanner() {
       const days = slotsToTripDays(lastSlots, durationDays, selectedDate);
       const end = new Date(selectedDate);
       end.setDate(end.getDate() + durationDays - 1);
-      const startStr = selectedDate.toISOString().slice(0, 10);
-      const endStr = end.toISOString().slice(0, 10);
+      const startStr = formatYMD(selectedDate);
+      const endStr = formatYMD(end);
       const tripsRes = await api.user.trips();
       const existingTrips = tripsRes.trips || [];
       if (tripHasDateConflict(existingTrips, startStr, endStr, null)) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: t('home', 'tripDateOverlap'),
-            error: true,
-          },
-        ]);
+        pushDateOverlapAssistantMessage(startStr, endStr, existingTrips);
         return;
       }
       const trip = await api.user.createTrip({
@@ -478,21 +955,59 @@ export default function AiPlanner() {
         description: t('aiPlanner', 'tripDescriptionAi'),
         days,
       });
+      showToast(t('feedback', 'aiTripSaved'), 'success');
       navigate(`/plan?edit=${encodeURIComponent(trip.id)}`);
     } catch (e) {
       const overlap = e?.data?.code === 'TRIP_DATE_OVERLAP';
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: overlap ? t('home', 'tripDateOverlap') : e.message || t('aiPlanner', 'applyFailed'),
-          error: true,
-        },
-      ]);
+      if (overlap) {
+        try {
+          const end = new Date(selectedDate);
+          end.setDate(end.getDate() + durationDays - 1);
+          const startStr = formatYMD(selectedDate);
+          const endStr = formatYMD(end);
+          const tripsRes = await api.user.trips();
+          pushDateOverlapAssistantMessage(startStr, endStr, tripsRes.trips || []);
+        } catch {
+          const end = new Date(selectedDate);
+          end.setDate(end.getDate() + durationDays - 1);
+          const startStr = formatYMD(selectedDate);
+          const endStr = formatYMD(end);
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: t('home', 'tripDateOverlap'),
+              error: true,
+              overlapTrips: [],
+              overlapRange: { startStr, endStr },
+            },
+          ]);
+        }
+      } else {
+        showToast(e.message || t('aiPlanner', 'applyFailed'), 'error');
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: e.message || t('aiPlanner', 'applyFailed'),
+            error: true,
+          },
+        ]);
+      }
     } finally {
       setApplying(false);
     }
-  }, [lastSlots, durationDays, selectedDate, applying, navigate, t, planConflicts]);
+  }, [
+    lastSlots,
+    durationDays,
+    selectedDate,
+    applying,
+    navigate,
+    t,
+    planConflicts,
+    pushDateOverlapAssistantMessage,
+    showToast,
+  ]);
 
   const dayHeaderLabel = useCallback(
     (dayIndex) => {
@@ -534,8 +1049,73 @@ export default function AiPlanner() {
     setActiveChipEditor((prev) => (prev === key ? null : key));
   }, []);
 
+  const showPlanDayDock = lastSlots?.length > 0 && lastPlanMessageIndex >= 0;
+
+  const scrollToPlanDaySection = useCallback(
+    (dayIndex) => {
+      const safe = Math.min(durationDays - 1, Math.max(0, dayIndex));
+      const mi = lastPlanMessageIndex;
+      if (mi < 0) return;
+      const id =
+        durationDays > 1 ? `ai-planner-plan-${mi}-day-${safe}` : `ai-planner-plan-${mi}-anchor`;
+      requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      setPlanDockDayActive(safe);
+    },
+    [durationDays, lastPlanMessageIndex]
+  );
+
+  useEffect(() => {
+    if (!showPlanDayDock || durationDays <= 1 || lastPlanMessageIndex < 0) return undefined;
+    const mi = lastPlanMessageIndex;
+    const nodes = Array.from({ length: durationDays }, (_, d) =>
+      document.getElementById(`ai-planner-plan-${mi}-day-${d}`)
+    ).filter(Boolean);
+    if (nodes.length === 0) return undefined;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting && e.intersectionRatio > 0.06)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        const top = visible[0];
+        if (top?.target?.id) {
+          const m = new RegExp(`^ai-planner-plan-${mi}-day-(\\d+)$`).exec(top.target.id);
+          if (m) setPlanDockDayActive(Number(m[1], 10));
+        }
+      },
+      { threshold: [0.08, 0.18, 0.35], rootMargin: '-10% 0px -48% 0px' }
+    );
+    nodes.forEach((n) => obs.observe(n));
+    return () => obs.disconnect();
+  }, [showPlanDayDock, durationDays, lastPlanMessageIndex, messages.length]);
+
+  const dockBottomOffset = keyboardInsetPx + composerHeight;
+  /** Day-dock row (tabs + save) sits above composer; keep FAB fully above that band. */
+  const AI_PLANNER_DAY_DOCK_STACK_PX = 88;
+  const navFabBottomPx =
+    dockBottomOffset + (showPlanDayDock ? AI_PLANNER_DAY_DOCK_STACK_PX : 0) + 14;
+
+  useEffect(() => {
+    const onScroll = () => setNavFabVisible(window.scrollY > 160);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const scrollToSiteNav = useCallback(() => {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const behavior = reduce ? 'auto' : 'smooth';
+    const el = document.getElementById('site-header');
+    if (el) {
+      el.scrollIntoView({ behavior, block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior });
+    }
+  }, []);
+
   return (
-    <div className="ai-planner">
+    <div className={`ai-planner${showPlanDayDock ? ' ai-planner--day-dock' : ''}`}>
       <header className="ai-planner__top">
         <Link to="/plan" className="ai-planner__back">
           <Icon name="arrow_back" size={22} /> {t('aiPlanner', 'back')}
@@ -570,6 +1150,7 @@ export default function AiPlanner() {
               key={m.label}
               type="button"
               className="ai-planner__mood"
+              title={m.prompt}
               disabled={sending || !aiConfigured || dataLoading}
               onClick={() => sendMessage(m.prompt)}
             >
@@ -664,7 +1245,7 @@ export default function AiPlanner() {
                   <input
                     id="ai-chip-field-date"
                     type="date"
-                    value={selectedDate.toISOString().slice(0, 10)}
+                    value={formatYMD(selectedDate)}
                     onChange={(e) => {
                       const v = e.target.value;
                       if (v) setSelectedDate(new Date(`${v}T12:00:00`));
@@ -699,7 +1280,17 @@ export default function AiPlanner() {
       </div>
 
       <div className="ai-planner__chat">
-        <div className="ai-planner__messages">
+        <div ref={messagesScrollRef} className="ai-planner__messages">
+          {dataLoading && (
+            <div className="ai-planner__chat-loading" role="status" aria-live="polite">
+              {t('aiPlanner', 'chatLoadingPlaces')}
+            </div>
+          )}
+          {!dataLoading && messages.length === 0 && (
+            <div className="ai-planner__chat-empty">
+              <p>{t('aiPlanner', 'chatEmptyHint')}</p>
+            </div>
+          )}
           {messages.map((m, i) => (
             <div key={i}>
               <div
@@ -707,7 +1298,13 @@ export default function AiPlanner() {
                   m.role === 'user' ? 'ai-planner__bubble--user' : 'ai-planner__bubble--assistant'
                 }${m.error ? ' ai-planner__bubble--error' : ''}`}
               >
-                {m.content}
+                {m.role === 'assistant' && !m.error && m.content
+                  ? m.content.split(/\n\n+/).map((para, pi) => (
+                      <p key={pi} className="ai-planner__bubble-para">
+                        {para}
+                      </p>
+                    ))
+                  : m.content}
                 {m.error && m.retryText && (
                   <div className="ai-planner__plan-actions" style={{ marginTop: 10 }}>
                     <button
@@ -722,12 +1319,40 @@ export default function AiPlanner() {
                     </button>
                   </div>
                 )}
+                {m.overlapRange && (
+                  <div className="ai-planner__overlap-actions">
+                    <p className="ai-planner__overlap-hint">{t('aiPlanner', 'overlapActionsHint')}</p>
+                    {(m.overlapTrips || []).map((trip) => (
+                      <button
+                        key={trip.id}
+                        type="button"
+                        className="ai-planner__overlap-btn ai-planner__overlap-btn--danger"
+                        onClick={() => handleDeleteOverlapTrip(trip.id, i)}
+                      >
+                        {t('aiPlanner', 'overlapDeleteTrip').replace(
+                          /\{name\}/g,
+                          (trip.name && String(trip.name).trim()) || t('aiPlanner', 'unnamedTrip')
+                        )}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className="ai-planner__overlap-btn"
+                      onClick={() => handleShiftOverlapDates(i)}
+                    >
+                      {t('aiPlanner', 'overlapShiftDates')}
+                    </button>
+                  </div>
+                )}
               </div>
               {Array.isArray(m.slots) && (() => {
                 const editable = i === lastPlanMessageIndex;
                 const conflictForMsg = editable ? getSlotConflictIndices(m.slots) : new Set();
                 return (
-                  <div className="ai-planner__plan">
+                  <div
+                    className="ai-planner__plan"
+                    id={i === lastPlanMessageIndex ? `ai-planner-plan-${i}-anchor` : undefined}
+                  >
                     <p className="ai-planner__plan-title">{t('aiPlanner', 'proposedPlan')}</p>
                     {editable && (
                       <>
@@ -742,7 +1367,11 @@ export default function AiPlanner() {
                     )}
                     <div className="ai-planner__plan-days">
                       {buildDayGroupsForDisplay(m.slots, durationDays).map(({ dayIndex, items }) => (
-                        <div key={dayIndex} className="ai-planner__plan-day">
+                        <div
+                          key={dayIndex}
+                          className="ai-planner__plan-day"
+                          id={`ai-planner-plan-${i}-day-${dayIndex}`}
+                        >
                           <div className="ai-planner__plan-day-head">
                             <span className="ai-planner__plan-day-title">{dayHeaderLabel(dayIndex)}</span>
                             <span className="ai-planner__plan-day-count">{items.length}</span>
@@ -850,6 +1479,29 @@ export default function AiPlanner() {
                                       <div className="ai-planner__stop-name">
                                         {pl?.name || s.placeId}
                                       </div>
+                                      {editable && durationDays > 1 && (
+                                        <div className="ai-planner__stop-day-inline">
+                                          <label className="ai-planner__stop-day-inline-label" htmlFor={`ai-day-inline-${i}-${slotIndex}`}>
+                                            {t('aiPlanner', 'whichDay')}
+                                          </label>
+                                          <select
+                                            id={`ai-day-inline-${i}-${slotIndex}`}
+                                            className="ai-planner__stop-day-select ai-planner__stop-day-select--inline"
+                                            value={Math.min(durationDays - 1, Math.max(0, s.dayIndex ?? 0))}
+                                            onChange={(e) =>
+                                              patchSlotField(i, slotIndex, {
+                                                dayIndex: Number(e.target.value),
+                                              })
+                                            }
+                                          >
+                                            {Array.from({ length: durationDays }, (_, d) => (
+                                              <option key={d} value={d}>
+                                                {t('aiPlanner', 'dayLabel')} {d + 1}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      )}
                                       {pl?.category && (
                                         <div className="ai-planner__stop-cat">{pl.category}</div>
                                       )}
@@ -898,13 +1550,82 @@ export default function AiPlanner() {
             </div>
           ))}
           {sending && (
-            <div className="ai-planner__bubble ai-planner__bubble--assistant">{t('aiPlanner', 'thinking')}</div>
+            <div className="ai-planner__thinking" role="status" aria-live="polite" aria-busy="true">
+              <span className="ai-planner__thinking-icon" aria-hidden>
+                <Icon name="auto_awesome" size={22} />
+              </span>
+              <div className="ai-planner__thinking-copy">
+                <span className="ai-planner__thinking-head">{t('aiPlanner', 'thinkingHeadline')}</span>
+                <span className="ai-planner__thinking-sub">{t('aiPlanner', 'thinkingSub')}</span>
+              </div>
+            </div>
           )}
           <div ref={messagesEndRef} />
         </div>
       </div>
 
+      {showPlanDayDock && (
+        <div
+          className="ai-planner__day-dock"
+          style={{ bottom: dockBottomOffset }}
+          role="region"
+          aria-label={t('aiPlanner', 'dayDockAria')}
+        >
+          <div className="ai-planner__day-dock-tabs" role="tablist" aria-label={t('aiPlanner', 'dayDockTabsAria')}>
+            {durationDays > 1 ? (
+              Array.from({ length: durationDays }, (_, d) => (
+                <button
+                  key={d}
+                  type="button"
+                  role="tab"
+                  aria-selected={planDockDayActive === d}
+                  className={`ai-planner__day-dock-tab${planDockDayActive === d ? ' ai-planner__day-dock-tab--active' : ''}`}
+                  onClick={() => scrollToPlanDaySection(d)}
+                >
+                  <span className="ai-planner__day-dock-tab-short">{t('aiPlanner', 'dayLabel')} {d + 1}</span>
+                  <span className="ai-planner__day-dock-tab-long" aria-hidden>
+                    {dayHeaderLabel(d)}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <button
+                type="button"
+                className="ai-planner__day-dock-tab ai-planner__day-dock-tab--solo"
+                onClick={() => scrollToPlanDaySection(0)}
+              >
+                {t('aiPlanner', 'dayDockScrollPlan')}
+              </button>
+            )}
+          </div>
+          {lastPlanMessageIndex >= 0 && (
+            <button
+              type="button"
+              className="ai-planner__day-dock-apply"
+              disabled={
+                applying ||
+                planConflicts.size > 0 ||
+                !lastSlots?.length ||
+                sending ||
+                !aiConfigured
+              }
+              title={
+                planConflicts.size > 0
+                  ? t('aiPlanner', 'saveBlockedConflicts')
+                  : !lastSlots?.length
+                    ? t('aiPlanner', 'saveNeedStops')
+                    : undefined
+              }
+              onClick={() => void handleApplyTrip()}
+            >
+              {applying ? t('aiPlanner', 'applying') : t('aiPlanner', 'applyTrip')}
+            </button>
+          )}
+        </div>
+      )}
+
       <div
+        ref={composerRef}
         className="ai-planner__composer"
         style={keyboardInsetPx > 0 ? { bottom: keyboardInsetPx } : undefined}
       >
@@ -953,10 +1674,10 @@ export default function AiPlanner() {
               <input
                 id="ai-trip-date"
                 type="date"
-                value={selectedDate.toISOString().slice(0, 10)}
+                value={formatYMD(selectedDate)}
                 onChange={(e) => {
                   const v = e.target.value;
-                  if (v) setSelectedDate(new Date(v + 'T12:00:00'));
+                  if (v) setSelectedDate(new Date(`${v}T12:00:00`));
                 }}
               />
             </div>
@@ -1021,6 +1742,27 @@ export default function AiPlanner() {
                   );
                 })}
               </div>
+            </div>
+            <div className="ai-planner-field ai-planner-field--memory">
+              <h4 className="ai-planner-field__section-title">{t('aiPlanner', 'visitorMemoryTitle')}</h4>
+              <p className="ai-planner-field__help">{t('aiPlanner', 'visitorMemoryHelp')}</p>
+              <label htmlFor="ai-planner-visitor-note">{t('aiPlanner', 'visitorMemoryLabel')}</label>
+              <textarea
+                id="ai-planner-visitor-note"
+                className="ai-planner__memory-note"
+                rows={4}
+                value={plannerMemory.personalNote}
+                onChange={(e) => updatePlannerPersonalNote(e.target.value)}
+                maxLength={600}
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                className="ai-planner-memory-clear"
+                onClick={clearPlannerLearnedMemory}
+              >
+                {t('aiPlanner', 'visitorMemoryClear')}
+              </button>
             </div>
             <button type="button" className="ai-planner-sheet-close" onClick={() => setSettingsOpen(false)}>
               {t('placeDiscover', 'modalClose')}
@@ -1132,6 +1874,19 @@ export default function AiPlanner() {
             </button>
           </div>
         </>
+      )}
+
+      {navFabVisible && (
+        <button
+          type="button"
+          className="ai-planner__nav-fab"
+          style={{ bottom: `${navFabBottomPx}px` }}
+          onClick={scrollToSiteNav}
+          aria-label={t('aiPlanner', 'scrollToSiteNavAria')}
+          title={t('aiPlanner', 'scrollToSiteNav')}
+        >
+          <Icon name="expand_less" size={24} aria-hidden />
+        </button>
       )}
     </div>
   );

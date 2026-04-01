@@ -1,11 +1,18 @@
 'use strict';
 
 /**
- * Optional error monitoring. Set SENTRY_DSN on the server; no-op when unset.
+ * Optional error monitoring. Set SENTRY_DSN; no-op when unset or when SENTRY_ENABLED is off.
  */
 let Sentry = null;
 
+function sentryDisabledByFlag() {
+  const v = process.env.SENTRY_ENABLED?.trim().toLowerCase();
+  if (!v) return false;
+  return ['0', 'false', 'no', 'off'].includes(v);
+}
+
 function initSentry() {
+  if (sentryDisabledByFlag()) return;
   const dsn = process.env.SENTRY_DSN?.trim();
   if (!dsn) return;
   try {

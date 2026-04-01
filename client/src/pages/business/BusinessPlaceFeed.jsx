@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
+import {
+  isLikelyImageFile,
+  isLikelyVideoFile,
+  ACCEPT_IMAGES_WITH_HEIC,
+  ACCEPT_FEED_REEL_VIDEOS,
+} from '../../utils/imageUploadAccept';
 import './Business.css';
 
 const BASE_TITLE = 'Business — Visit Tripoli';
@@ -307,9 +313,9 @@ export default function BusinessPlaceFeed() {
 
   const uploadFormImages = async (files) => {
     if (!formPlace || !files?.length) return;
-    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    const list = Array.from(files).filter(isLikelyImageFile);
     if (!list.length) {
-      setError('Choose image files only.');
+      setError('Choose image files (JPEG, PNG, GIF, WebP, or HEIC — HEIC is saved as JPEG).');
       return;
     }
     setUploading('image');
@@ -333,14 +339,18 @@ export default function BusinessPlaceFeed() {
 
   const uploadFormVideo = async (file) => {
     if (!formPlace || !file) return;
-    if (!/^video\//i.test(file.type)) {
-      setError('Choose a video file (MP4, WebM, MOV).');
+    if (!isLikelyVideoFile(file)) {
+      setError('Choose a video file (MP4, WebM, MOV, M4V, MKV, or 3GP).');
       return;
     }
     setUploading('video');
     setError(null);
     try {
-      const url = await api.business.upload(file, formPlace);
+      const url = await api.business.upload(
+        file,
+        formPlace,
+        formContentKind === 'reel' ? { purpose: 'reel' } : {}
+      );
       if (url) setFormVideo(url);
     } catch (err) {
       setError(err.message || 'Upload failed');
@@ -351,9 +361,9 @@ export default function BusinessPlaceFeed() {
 
   const uploadEditImages = async (files) => {
     if (!editing?.id || !files?.length) return;
-    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    const list = Array.from(files).filter(isLikelyImageFile);
     if (!list.length) {
-      setError('Choose image files only.');
+      setError('Choose image files (JPEG, PNG, GIF, WebP, or HEIC — HEIC is saved as JPEG).');
       return;
     }
     setEditUploading('image');
@@ -378,14 +388,18 @@ export default function BusinessPlaceFeed() {
 
   const uploadEditVideo = async (file) => {
     if (!editing?.id || !file) return;
-    if (!/^video\//i.test(file.type)) {
-      setError('Choose a video file (MP4, WebM, MOV).');
+    if (!isLikelyVideoFile(file)) {
+      setError('Choose a video file (MP4, WebM, MOV, M4V, MKV, or 3GP).');
       return;
     }
     setEditUploading('video');
     setError(null);
     try {
-      const url = await api.business.upload(file, editing.place_id || formPlace);
+      const url = await api.business.upload(
+        file,
+        editing.place_id || formPlace,
+        contentKind(editing.type) === 'reel' ? { purpose: 'reel' } : {}
+      );
       if (url) setEditing((x) => ({ ...x, video_url: url }));
     } catch (err) {
       setError(err.message || 'Upload failed');
@@ -518,7 +532,8 @@ export default function BusinessPlaceFeed() {
                 </select>
                 {formContentKind === 'reel' && (
                   <p className="business-hint" style={{ marginTop: '0.35rem' }}>
-                    Add a direct video URL (MP4 or hosted file). Cover image is optional.
+                    Upload a short video (optional cover for thumbnails). Same normalization as admin uploads; paste URL
+                    under advanced if needed.
                   </p>
                 )}
               </div>
@@ -570,7 +585,7 @@ export default function BusinessPlaceFeed() {
                     <input
                       id="bf-file-images"
                       type="file"
-                      accept="image/*"
+                      accept={ACCEPT_IMAGES_WITH_HEIC}
                       multiple
                       style={{ display: 'none' }}
                       onChange={(e) => {
@@ -621,6 +636,10 @@ export default function BusinessPlaceFeed() {
                 <>
                   <div className="business-field">
                     <label>Reel video *</label>
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', color: '#6b7280' }}>
+                      Drop video here or click — MP4, WebM, MOV, M4V, MKV, 3GP (host max applies). Normalized to a
+                      streaming-friendly MP4 on the server; large files may take a few minutes.
+                    </p>
                     <div
                       className="business-upload-zone"
                       onDragOver={(e) => {
@@ -637,7 +656,7 @@ export default function BusinessPlaceFeed() {
                       <input
                         id="bf-file-video"
                         type="file"
-                        accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                        accept={ACCEPT_FEED_REEL_VIDEOS}
                         style={{ display: 'none' }}
                         onChange={(e) => {
                           void uploadFormVideo(e.target.files?.[0]);
@@ -646,9 +665,31 @@ export default function BusinessPlaceFeed() {
                         disabled={uploading !== null || !formPlace}
                       />
                       <label htmlFor="bf-file-video" style={{ cursor: 'pointer', margin: 0, display: 'block' }}>
-                        {uploading === 'video' ? 'Uploading reel…' : 'Drop video here or click to upload'}
+                        {uploading === 'video' ? 'Uploading video…' : 'Drop video or click to upload'}
                       </label>
                     </div>
+                    {videoSrc(formVideo) ? (
+                      <div className="business-feed-media-preview" style={{ marginTop: '0.75rem' }}>
+                        <video
+                          src={videoSrc(formVideo)}
+                          controls
+                          muted
+                          playsInline
+                          preload="metadata"
+                          style={{ width: '100%', maxHeight: 280, borderRadius: 8, background: '#111' }}
+                        />
+                      </div>
+                    ) : null}
+                    {formVideo ? (
+                      <button
+                        type="button"
+                        className="business-btn business-btn--ghost"
+                        style={{ marginTop: '0.5rem' }}
+                        onClick={() => setFormVideo('')}
+                      >
+                        Clear video
+                      </button>
+                    ) : null}
                   </div>
                   <div className="business-field">
                     <label>Optional cover image</label>
@@ -668,7 +709,7 @@ export default function BusinessPlaceFeed() {
                       <input
                         id="bf-file-cover"
                         type="file"
-                        accept="image/*"
+                        accept={ACCEPT_IMAGES_WITH_HEIC}
                         style={{ display: 'none' }}
                         onChange={(e) => {
                           void uploadFormImages(Array.from(e.target.files || []).slice(0, 1));
@@ -697,7 +738,7 @@ export default function BusinessPlaceFeed() {
                   className="business-btn business-btn--ghost"
                   onClick={() => setFormShowAdvanced((x) => !x)}
                 >
-                  {formShowAdvanced ? 'Hide' : 'Show'} advanced URL fields
+                  {formShowAdvanced ? 'Hide' : 'Show'} paste URLs (advanced)
                 </button>
                 {formShowAdvanced && (
                   <div className="business-field-row" style={{ marginTop: '0.75rem' }}>
@@ -1179,7 +1220,7 @@ export default function BusinessPlaceFeed() {
                   />
                 </div>
                 <div className="business-field">
-                  <label>Images</label>
+                  <label>{contentKind(editing.type) === 'reel' ? 'Cover image (optional)' : 'Images'}</label>
                   <div
                     className="business-upload-zone"
                     onDragOver={(e) => {
@@ -1196,7 +1237,7 @@ export default function BusinessPlaceFeed() {
                     <input
                       id="bf-e-img-file"
                       type="file"
-                      accept="image/*"
+                      accept={ACCEPT_IMAGES_WITH_HEIC}
                       multiple={contentKind(editing.type) !== 'reel'}
                       style={{ display: 'none' }}
                       disabled={editUploading !== null}
@@ -1206,7 +1247,11 @@ export default function BusinessPlaceFeed() {
                       }}
                     />
                     <label htmlFor="bf-e-img-file" style={{ cursor: 'pointer', margin: 0, display: 'block' }}>
-                      {editUploading === 'image' ? 'Uploading images…' : 'Drop images here or click to upload'}
+                      {editUploading === 'image'
+                        ? 'Uploading…'
+                        : contentKind(editing.type) === 'reel'
+                          ? 'Drop cover image or click (one image for reels)'
+                          : 'Drop images here or click to upload'}
                     </label>
                   </div>
                   {rawFeedImageUrls(editing).length > 0 && (
@@ -1250,7 +1295,7 @@ export default function BusinessPlaceFeed() {
                   )}
                 </div>
                 <div className="business-field">
-                  <label>Video URL / upload</label>
+                  <label>Video (reel or optional)</label>
                   <div
                     className="business-upload-zone"
                     onDragOver={(e) => {
@@ -1267,7 +1312,7 @@ export default function BusinessPlaceFeed() {
                     <input
                       id="bf-e-vid-file"
                       type="file"
-                      accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                      accept={ACCEPT_FEED_REEL_VIDEOS}
                       style={{ display: 'none' }}
                       disabled={editUploading !== null}
                       onChange={(e) => {
@@ -1276,16 +1321,38 @@ export default function BusinessPlaceFeed() {
                       }}
                     />
                     <label htmlFor="bf-e-vid-file" style={{ cursor: 'pointer', margin: 0, display: 'block' }}>
-                      {editUploading === 'video' ? 'Uploading video…' : 'Drop video or click to upload'}
+                      {editUploading === 'video' ? 'Uploading…' : 'Drop video or click to replace'}
                     </label>
                   </div>
+                  {videoSrc(editing.video_url) ? (
+                    <div className="business-feed-media-preview" style={{ marginTop: '0.75rem' }}>
+                      <video
+                        src={videoSrc(editing.video_url)}
+                        controls
+                        muted
+                        playsInline
+                        preload="metadata"
+                        style={{ width: '100%', maxHeight: 280, borderRadius: 8, background: '#111' }}
+                      />
+                    </div>
+                  ) : null}
+                  {(editing.video_url || '').trim() ? (
+                    <button
+                      type="button"
+                      className="business-btn business-btn--ghost"
+                      style={{ marginTop: '0.5rem' }}
+                      onClick={() => setEditing((x) => ({ ...x, video_url: '' }))}
+                    >
+                      Clear video
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="business-btn business-btn--ghost"
                     style={{ marginTop: '0.5rem' }}
                     onClick={() => setEditShowAdvanced((x) => !x)}
                   >
-                    {editShowAdvanced ? 'Hide' : 'Show'} advanced URL fields
+                    {editShowAdvanced ? 'Hide' : 'Show'} paste URLs (advanced)
                   </button>
                   {editShowAdvanced && (
                     <div className="business-field-row" style={{ marginTop: '0.75rem' }}>

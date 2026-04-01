@@ -2,7 +2,9 @@
 
 .calendar {
   font-size: 15px;
-  max-width: 320px;
+  width: 100%;
+  max-width: min(320px, 100%);
+  box-sizing: border-box;
   padding: 16px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -57,7 +59,7 @@
 
 .calendar-weekdays {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 2px;
   margin-bottom: 8px;
 }
@@ -73,8 +75,10 @@
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 2px;
+  width: 100%;
+  min-width: 0;
 }
 
 .calendar-day {
@@ -82,8 +86,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 0;
+  min-height: 0;
   padding: 0;
   font-size: 14px;
   font-family: inherit;
@@ -137,4 +141,31 @@
   font-size: 13px;
   color: var(--color-text-secondary);
   text-align: center;
+}
+
+@media (max-width: 380px) {
+  .calendar {
+    padding: 12px 10px;
+  }
+
+  .calendar-nav {
+    width: 36px;
+    height: 36px;
+  }
+
+  .calendar-title {
+    font-size: 15px;
+  }
+
+  .calendar-weekday {
+    font-size: 10px;
+  }
+
+  .calendar-day {
+    font-size: clamp(11px, 3.2vw, 14px);
+  }
+
+  .calendar-hint {
+    font-size: 12px;
+  }
 }

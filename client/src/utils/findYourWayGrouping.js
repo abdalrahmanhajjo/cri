@@ -1,10 +1,75 @@
-/* Section names and keywords — shared by home “Find your way” strip and /ways page. */
+/* Section names and keywords — home category deck and /ways detail page. */
+/* discoverQ: `/discover?q=…` search token (names, areas, categories). */
 export const WAYS_CONFIG = [
-  { wayKey: 'explorer', titleKey: 'wayExplorer', descKey: 'wayExplorerDesc', detailKey: 'wayExplorerDetail', icon: 'explore', keywords: ['attraction', 'landmark', 'souq', 'souk', 'market', 'explore', 'sightseeing', 'old city', 'shopping', 'bazaar'] },
-  { wayKey: 'food', titleKey: 'wayFood', descKey: 'wayFoodDesc', detailKey: 'wayFoodDetail', icon: 'restaurant', keywords: ['restaurant', 'food', 'cafe', 'café', 'dining', 'cuisine', 'sweet', 'sweets', 'bakery', 'coffee', 'eat', 'meal'] },
-  { wayKey: 'history', titleKey: 'wayHistory', descKey: 'wayHistoryDesc', detailKey: 'wayHistoryDetail', icon: 'account_balance', keywords: ['history', 'heritage', 'culture', 'citadel', 'mosque', 'museum', 'historic', 'monument', 'religious', 'archaeology'] },
-  { wayKey: 'sea', titleKey: 'waySea', descKey: 'waySeaDesc', detailKey: 'waySeaDetail', icon: 'waves', keywords: ['beach', 'sea', 'coast', 'corniche', 'nature', 'mina', 'water', 'port', 'marina', 'outdoors'] },
-  { wayKey: 'family', titleKey: 'wayFamily', descKey: 'wayFamilyDesc', detailKey: 'wayFamilyDetail', icon: 'family_restroom', keywords: ['family', 'park', 'kids', 'children', 'relax', 'garden', 'playground'] },
+  {
+    wayKey: 'explorer',
+    titleKey: 'wayExplorer',
+    descKey: 'wayExplorerDesc',
+    detailKey: 'wayExplorerDetail',
+    icon: 'explore',
+    discoverQ: 'Old City',
+    keywords: ['attraction', 'landmark', 'souq', 'souk', 'market', 'explore', 'sightseeing', 'old city', 'shopping', 'bazaar'],
+  },
+  {
+    wayKey: 'stay',
+    titleKey: 'wayStay',
+    descKey: 'wayStayDesc',
+    detailKey: 'wayStayDetail',
+    icon: 'hotel',
+    discoverQ: 'hotel',
+    keywords: [
+      'hotel',
+      'hotels',
+      'accommodation',
+      'lodging',
+      'guesthouse',
+      'guest house',
+      'hostel',
+      'resort',
+      'boutique hotel',
+      'bed and breakfast',
+      'b&b',
+      'motel',
+      'فندق',
+      'إقامة',
+    ],
+  },
+  {
+    wayKey: 'food',
+    titleKey: 'wayFood',
+    descKey: 'wayFoodDesc',
+    detailKey: 'wayFoodDetail',
+    icon: 'restaurant',
+    discoverQ: 'restaurant',
+    keywords: ['restaurant', 'food', 'cafe', 'café', 'dining', 'cuisine', 'sweet', 'sweets', 'bakery', 'coffee', 'eat', 'meal'],
+  },
+  {
+    wayKey: 'history',
+    titleKey: 'wayHistory',
+    descKey: 'wayHistoryDesc',
+    detailKey: 'wayHistoryDetail',
+    icon: 'account_balance',
+    discoverQ: 'heritage',
+    keywords: ['history', 'heritage', 'culture', 'citadel', 'mosque', 'museum', 'historic', 'monument', 'religious', 'archaeology'],
+  },
+  {
+    wayKey: 'sea',
+    titleKey: 'waySea',
+    descKey: 'waySeaDesc',
+    detailKey: 'waySeaDetail',
+    icon: 'waves',
+    discoverQ: 'Al-Mina',
+    keywords: ['beach', 'sea', 'coast', 'corniche', 'nature', 'mina', 'water', 'port', 'marina', 'outdoors'],
+  },
+  {
+    wayKey: 'family',
+    titleKey: 'wayFamily',
+    descKey: 'wayFamilyDesc',
+    detailKey: 'wayFamilyDetail',
+    icon: 'family_restroom',
+    discoverQ: 'park',
+    keywords: ['family', 'park', 'kids', 'children', 'relax', 'garden', 'playground'],
+  },
 ];
 
 export const FIND_YOUR_WAY_WAY_KEYS = WAYS_CONFIG.map((w) => w.wayKey);
@@ -25,6 +90,39 @@ function matchCategoryToWay(categoryName, categoryTags) {
 export function getCategoryWayKey(category) {
   if (!category) return 'explorer';
   return matchCategoryToWay(category.name, category.tags);
+}
+
+/** Directory categories that map to this theme bucket (same language as API `categories.list`). */
+export function getCategoriesForWay(wayKey, categories) {
+  return (categories || []).filter((c) => getCategoryWayKey(c) === wayKey);
+}
+
+/**
+ * Title for a theme row: localized category names from the database, sorted A–Z.
+ * When more than `maxShown` names, shows the first ones plus a short remainder (via formatMore).
+ * Returns null if no categories match — caller then uses legacy i18n title.
+ */
+export function formatFindYourWayThemeTitle(wayKey, categories, locale = 'en', formatMore, maxShown = 3) {
+  const list = getCategoriesForWay(wayKey, categories);
+  if (list.length === 0) return null;
+  const loc = locale === 'ar' ? 'ar' : locale === 'fr' ? 'fr' : 'en';
+  let collator;
+  try {
+    collator = new Intl.Collator(loc, { sensitivity: 'base' });
+  } catch {
+    collator = new Intl.Collator('en', { sensitivity: 'base' });
+  }
+  const sorted = [...list].sort((a, b) => collator.compare(String(a.name || ''), String(b.name || '')));
+  const names = sorted.map((c) => String(c.name || '').trim()).filter(Boolean);
+  if (names.length === 0) return null;
+  if (names.length <= maxShown) return names.join(' · ');
+  const head = names.slice(0, maxShown).join(' · ');
+  const extra = names.length - maxShown;
+  const more =
+    typeof formatMore === 'function'
+      ? formatMore(extra)
+      : `+${extra}`;
+  return `${head} · ${more}`;
 }
 
 /** Count of taxonomy categories assigned to a theme (for “N categories in theme” on the home deck). */

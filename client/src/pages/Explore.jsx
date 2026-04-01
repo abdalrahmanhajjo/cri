@@ -1,16 +1,41 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import Icon from '../components/Icon';
 import { CommunityFeedStrip } from '../components/CommunityFeed';
+import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { trackEvent } from '../utils/analytics';
-import { resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
-import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
+import { homeBentoDefaults, resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
+import {
+  getBentoHeroImgProps,
+  getBentoHeroPreloadHref,
+  isDefaultCityHeroPath,
+  normalizePreloadImageHref,
+} from '../utils/bentoHeroImage';
+import { cityHeroWebpSrcSet, CITY_HERO_SIZES } from '../constants/cityHero';
+import { resolveHeroTagline, resolveFooterTagline } from '../config/resolveSiteTagline';
+import {
+  COMMUNITY_PATH,
+  PLACES_DISCOVER_PATH,
+  DINING_PATH,
+  HOTELS_PATH,
+  discoverSearchUrl,
+} from '../utils/discoverPaths';
+import { PLAN_TRIP_AREA_NAV, PLAN_TRIP_AREA_I18N_KEYS, mapSearchUrl } from '../config/planTripAreas';
+import { applyHomeSeoFromSettings } from '../utils/siteSeo';
 import { getApiOrigin } from '../utils/apiOrigin';
-import { WAYS_CONFIG, groupPlacesByWay, countDirectoryCategoriesForWay } from '../utils/findYourWayGrouping';
+import {
+  WAYS_CONFIG,
+  groupPlacesByWay,
+  countDirectoryCategoriesForWay,
+  formatFindYourWayThemeTitle,
+} from '../utils/findYourWayGrouping';
+import { supabaseOptimizeForThumbnail } from '../utils/supabaseImage.js';
 import './Explore.css';
 
 const TRIPOLI_TIMEZONE = 'Asia/Beirut';
@@ -223,11 +248,16 @@ function PlaceCard({ place, size }) {
       to={`/place/${placeId}`}
       className={`vd-card vd-card--place ${isFeatured ? 'vd-card--featured' : ''}`}
     >
-      <div
-        className="vd-card-media"
-        style={{ backgroundImage: safeImgUrl ? `url(${safeImgUrl})` : undefined }}
-      >
-        {!safeImgUrl && <span className="vd-card-fallback">Place</span>}
+      <div className="vd-card-media">
+        {safeImgUrl ? (
+          <DeliveryImg
+            url={safeImgUrl}
+            preset={isFeatured ? 'gridCardFeatured' : 'gridCard'}
+            alt=""
+          />
+        ) : (
+          <span className="vd-card-fallback">Place</span>
+        )}
         <div className="vd-card-overlay">
           <h3 className="vd-card-title">{name || 'Place'}</h3>
           {location && <p className="vd-card-meta">{location}</p>}
@@ -243,6 +273,7 @@ function PlaceCard({ place, size }) {
 function TopPicksCarousel({ places, t }) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const safePlaces = Array.isArray(places) ? places : [];
   const [index, setIndex] = useState(0);
 
@@ -258,6 +289,26 @@ function TopPicksCarousel({ places, t }) {
     setIndex((i) => (safePlaces.length ? Math.min(i, safePlaces.length - 1) : 0));
   }, [safePlaces.length]);
 
+  const onCarouselKeyDown = useCallback(
+    (e) => {
+      if (safePlaces.length <= 1) return;
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setIndex((i) => (i + 1) % safePlaces.length);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setIndex((i) => (i - 1 + safePlaces.length) % safePlaces.length);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        setIndex(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        setIndex(safePlaces.length - 1);
+      }
+    },
+    [safePlaces.length]
+  );
+
   const [favouriteIds, setFavouriteIds] = useState(new Set());
   useEffect(() => {
     if (!user) {
@@ -269,26 +320,41 @@ function TopPicksCarousel({ places, t }) {
       .catch(() => setFavouriteIds(new Set()));
   }, [user]);
 
-  const toggleFavourite = useCallback((e, placeId) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!user) {
-      navigate('/login', { state: { from: 'favourite' } });
-      return;
-    }
-    const id = placeId != null ? String(placeId) : '';
-    if (!id) return;
-    const isFav = favouriteIds.has(id);
-    const next = new Set(favouriteIds);
-    if (isFav) {
-      api.user.removeFavourite(id).catch(() => {});
-      next.delete(id);
-    } else {
-      api.user.addFavourite(id).catch(() => {});
-      next.add(id);
-    }
-    setFavouriteIds(next);
-  }, [user, favouriteIds, navigate]);
+  const toggleFavourite = useCallback(
+    (e, placeId) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!user) {
+        navigate('/login', { state: { from: 'favourite' } });
+        return;
+      }
+      const id = placeId != null ? String(placeId) : '';
+      if (!id) return;
+      const isFav = favouriteIds.has(id);
+      if (isFav) {
+        api.user
+          .removeFavourite(id)
+          .then(() => {
+            setFavouriteIds((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+            showToast(t('feedback', 'favouriteRemoved'), 'success');
+          })
+          .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
+      } else {
+        api.user
+          .addFavourite(id)
+          .then(() => {
+            setFavouriteIds((prev) => new Set(prev).add(id));
+            showToast(t('feedback', 'favouriteAdded'), 'success');
+          })
+          .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
+      }
+    },
+    [user, favouriteIds, navigate, showToast, t]
+  );
 
   return (
     <section className="vd-section vd-top-picks">
@@ -297,12 +363,19 @@ function TopPicksCarousel({ places, t }) {
           <h2 className="vd-top-picks-title">{t('home', 'topPicks')}</h2>
           <p className="vd-top-picks-subtitle">{t('home', 'topPicksSub')}</p>
         </header>
-        <div className="vd-top-picks-carousel">
+        <div
+          className="vd-top-picks-carousel"
+          tabIndex={0}
+          role="region"
+          aria-roledescription="carousel"
+          aria-label={t('home', 'topPicksCarouselLabel')}
+          onKeyDown={onCarouselKeyDown}
+        >
           <div
             className="vd-top-picks-track"
             style={{ transform: `translateX(-${index * 100}%)`, direction: 'ltr' }}
           >
-            {safePlaces.map((p) => {
+            {safePlaces.map((p, slideIndex) => {
               if (!p || p.id == null) return null;
               const placeId = String(p.id);
               const safeImg = getPlaceImageUrl(p.image || (p.images && p.images[0])) || null;
@@ -316,41 +389,63 @@ function TopPicksCarousel({ places, t }) {
               const heartAria = user
                 ? (isFavourite ? t('home', 'removeFromFavourites') : t('home', 'addToFavourites'))
                 : t('home', 'signInToSave');
+              const titleId = `vd-top-picks-title-${placeId}`;
               return (
-                <Link
-                  key={placeId}
-                  to={`/place/${placeId}`}
-                  className="vd-top-picks-card"
-                >
-                  <div
-                    className="vd-top-picks-card-bg"
-                    style={{ backgroundImage: safeImg ? `url(${safeImg})` : undefined }}
+                <article key={placeId} className="vd-top-picks-card vd-top-picks-card--split-hit">
+                  <Link
+                    to={`/place/${placeId}`}
+                    className="vd-top-picks-card-bg vd-top-picks-card-bg--hit"
+                    tabIndex={-1}
+                    aria-hidden="true"
                   >
-                    {!safeImg && <span className="vd-top-picks-fallback">Place</span>}
-                  </div>
-                  <div className="vd-top-picks-card-overlay">
-                    <span className="vd-top-picks-eyebrow">{t('home', 'topPickEyebrow')}</span>
-                    <h3 className="vd-top-picks-name">{name}</h3>
-                    {desc && (
-                      <p className="vd-top-picks-desc">{desc}</p>
+                    {safeImg ? (
+                      <DeliveryImg
+                        url={safeImg}
+                        preset="topPicks"
+                        alt=""
+                        loading={slideIndex === 0 ? 'eager' : 'lazy'}
+                        fetchPriority={slideIndex === 0 ? 'high' : undefined}
+                      />
+                    ) : (
+                      <span className="vd-top-picks-fallback">Place</span>
                     )}
-                    <div className="vd-top-picks-details">
-                      {rating != null && (
-                        <span className="vd-top-picks-detail">
-                          <Icon name="star" size={18} /> {rating.toFixed(1)}
-                        </span>
-                      )}
-                      {loc && (
-                        <span className="vd-top-picks-detail">
-                          <Icon name="location_on" size={18} /> {loc}
-                        </span>
-                      )}
-                      {cat && (
-                        <span className="vd-top-picks-detail">{cat}</span>
-                      )}
-                    </div>
-                    <div className="vd-top-picks-cta-row" onClick={(e) => e.preventDefault()}>
-                      <span className="vd-top-picks-read-now">{t('home', 'readNow')} <Icon name="arrow_forward" size={18} /></span>
+                  </Link>
+                  <div className="vd-top-picks-card-body">
+                    <Link
+                      to={`/place/${placeId}`}
+                      className="vd-top-picks-card-text-hit"
+                      aria-labelledby={titleId}
+                      aria-describedby={desc ? `${titleId}-desc` : undefined}
+                    >
+                      <span className="vd-top-picks-eyebrow">{t('home', 'topPickEyebrow')}</span>
+                      <h3 id={titleId} className="vd-top-picks-name">
+                        {name}
+                      </h3>
+                      {desc ? (
+                        <p id={`${titleId}-desc`} className="vd-top-picks-desc">
+                          {desc}
+                        </p>
+                      ) : null}
+                      <div className="vd-top-picks-details">
+                        {rating != null && (
+                          <span className="vd-top-picks-detail">
+                            <Icon name="star" size={18} /> {rating.toFixed(1)}
+                          </span>
+                        )}
+                        {loc && (
+                          <span className="vd-top-picks-detail">
+                            <Icon name="location_on" size={18} /> {loc}
+                          </span>
+                        )}
+                        {cat && (
+                          <span className="vd-top-picks-detail">{cat}</span>
+                        )}
+                      </div>
+                    </Link>
+                    <div className="vd-top-picks-cta-row">
+                      <Link to={`/place/${placeId}`} className="vd-top-picks-read-now" tabIndex={-1} aria-hidden="true">
+                        {t('home', 'readNow')}
+                      </Link>
                       <button
                         type="button"
                         className={`vd-top-picks-action-btn vd-top-picks-action-btn--heart ${isFavourite ? 'vd-top-picks-action-btn--active' : ''}`}
@@ -360,23 +455,59 @@ function TopPicksCarousel({ places, t }) {
                         <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={22} />
                       </button>
                     </div>
-                    <button type="button" className="vd-top-picks-scroll-top" aria-label="Scroll to top" onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}><Icon name="arrow_upward" size={22} /></button>
                   </div>
-                </Link>
+                  <div className="vd-top-picks-card-floating-actions">
+                    <button
+                      type="button"
+                      className="vd-top-picks-scroll-top"
+                      aria-label={t('home', 'scrollToTop')}
+                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    >
+                      <Icon name="arrow_upward" size={22} />
+                    </button>
+                  </div>
+                </article>
               );
             })}
           </div>
-          <div className="vd-top-picks-dots" aria-hidden="true">
-            {safePlaces.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                className={`vd-top-picks-dot ${i === index ? 'vd-top-picks-dot--active' : ''}`}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIndex(i); }}
-                aria-label={`Go to slide ${i + 1}`}
-              />
-            ))}
+          <div className="vd-top-picks-carousel-footer">
+            {safePlaces.length > 1 ? (
+              <p
+                className="vd-top-picks-counter"
+                aria-live="polite"
+                aria-atomic="true"
+                aria-label={t('home', 'topPicksSlidePosition')
+                  .replace('{current}', String(index + 1))
+                  .replace('{total}', String(safePlaces.length))}
+              >
+                <span className="vd-top-picks-counter-label">{t('home', 'topPicksCounterLabel')}</span>
+                <span className="vd-top-picks-counter-nums" aria-hidden="true">
+                  <span className="vd-top-picks-counter-current">{index + 1}</span>
+                  <span className="vd-top-picks-counter-sep">/</span>
+                  <span className="vd-top-picks-counter-total">{safePlaces.length}</span>
+                </span>
+              </p>
+            ) : (
+              <span className="vd-top-picks-counter vd-top-picks-counter--placeholder" aria-hidden="true" />
+            )}
+            <div className="vd-top-picks-dots" role="group" aria-label={t('home', 'topPicksCarouselLabel')}>
+              {safePlaces.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={`vd-top-picks-dot ${i === index ? 'vd-top-picks-dot--active' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIndex(i);
+                  }}
+                  aria-label={`${t('home', 'topPicks')} — ${i + 1} / ${safePlaces.length}`}
+                  aria-current={i === index ? 'true' : undefined}
+                />
+              ))}
+            </div>
           </div>
+          <p className="vd-top-picks-carousel-keys-hint">{t('home', 'topPicksCarouselKeysHint')}</p>
         </div>
       </div>
     </section>
@@ -398,18 +529,31 @@ function themeCategoryStats(bucket, categories) {
   return { categoryCount: resolved, listingCount: (bucket || []).length };
 }
 
-/** Home “Find your way” — themes + indirect category framing (no named places). */
-export function ExperienceTripoliSection({ t, lang, places = [], categories = [] }) {
+/** Discover browse by theme — links go to `/discover` with `q` (not the map). */
+function BrowseMapByThemeSection({
+  t,
+  lang,
+  places = [],
+  categories = [],
+  diningGuideEnabled = true,
+  hotelsGuideEnabled = true,
+}) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const placesByWay = groupPlacesByWay(places, categories);
   const stepClass = ['vd-find-your-way-row--a', 'vd-find-your-way-row--b', 'vd-find-your-way-row--c', 'vd-find-your-way-row--d'];
   return (
-    <section id="experience" className="vd-section vd-experience-tripoli vd-find-your-way vd-find-your-way--deck">
+    <section
+      id="experience"
+      className="vd-section vd-experience-tripoli vd-find-your-way vd-find-your-way--deck vd-find-your-way--map-themes"
+      aria-labelledby="browse-map-themes-title"
+    >
       <div className="vd-container">
         <header className="vd-find-your-way-header">
-          <h2 className="vd-find-your-way-title">{safeT('home', 'findYourWayTitle')}</h2>
-          <p className="vd-find-your-way-sub">{safeT('home', 'findYourWaySub')}</p>
+          <h2 id="browse-map-themes-title" className="vd-find-your-way-title">
+            {safeT('home', 'findYourWayThemeDeckLabel')}
+          </h2>
         </header>
+
         <div className="vd-find-your-way-deck" role="list">
           {WAYS_CONFIG.map((way, i) => {
             const bucket = placesByWay.get(way.wayKey) || [];
@@ -430,10 +574,29 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
                 : listingCount > 0
                   ? safeT('home', 'findYourWayThemeEntriesLabel')
                   : null;
+            const titleFromCategories = formatFindYourWayThemeTitle(
+              way.wayKey,
+              categories,
+              lang,
+              (n) => safeT('home', 'findYourWayThemeMore').split('{count}').join(String(n))
+            );
+            const rowTitle = titleFromCategories || safeT('home', way.titleKey);
+            const discoverTo =
+              way.wayKey === 'food'
+                ? diningGuideEnabled
+                  ? DINING_PATH
+                  : discoverSearchUrl('restaurant')
+                : way.wayKey === 'stay'
+                  ? hotelsGuideEnabled
+                    ? HOTELS_PATH
+                    : discoverSearchUrl('hotel')
+                  : way.discoverQ
+                    ? discoverSearchUrl(way.discoverQ)
+                    : discoverSearchUrl('');
             return (
               <Link
                 key={way.wayKey}
-                to={PLACES_DISCOVER_PATH}
+                to={discoverTo}
                 className={`vd-find-your-way-row ${stagger}`}
                 role="listitem"
               >
@@ -445,7 +608,7 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
                 </span>
                 <div className="vd-find-your-way-row-copy">
                   <span className="vd-find-your-way-row-theme">{safeT('home', 'findYourWayRowKicker')}</span>
-                  <h3 className="vd-find-your-way-row-title">{safeT('home', way.titleKey)}</h3>
+                  <h3 className="vd-find-your-way-row-title">{rowTitle}</h3>
                   <p className="vd-find-your-way-row-desc">{safeT('home', way.descKey)}</p>
                   <p className="vd-find-your-way-row-detail">{safeT('home', way.detailKey)}</p>
                 </div>
@@ -468,11 +631,116 @@ export function ExperienceTripoliSection({ t, lang, places = [], categories = []
             );
           })}
         </div>
+
         <div className="vd-find-your-way-cta-wrap">
-          <Link to={PLACES_DISCOVER_PATH} className="vd-find-your-way-cta">
-            {safeT('home', 'seeAllWays')}
+          <Link to={discoverSearchUrl('')} className="vd-find-your-way-cta">
+            {safeT('home', 'seeAllWaysDiscover')}
             <Icon name="arrow_forward" size={20} />
           </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Areas, transport/stay/tips — below featured picks and community on the home page. */
+function FindYourWayPracticalSection({ t, showMap = true, showTips = true }) {
+  const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
+  return (
+    <section
+      className="vd-section vd-experience-tripoli vd-find-your-way vd-find-your-way--practical"
+      aria-labelledby="find-your-way-practical-title"
+    >
+      <div className="vd-container">
+        <header className="vd-find-your-way-header">
+          <h2 id="find-your-way-practical-title" className="vd-find-your-way-title">
+            {safeT('home', 'findYourWayTitle')}
+          </h2>
+          <p className="vd-find-your-way-sub">{safeT('home', 'findYourWaySub')}</p>
+          <p className="vd-find-your-way-community">
+            <Link to={COMMUNITY_PATH} className="vd-find-your-way-community-link">
+              {safeT('home', 'findYourWayCommunityHint')}
+              <Icon name="arrow_forward" size={18} aria-hidden />
+            </Link>
+          </p>
+        </header>
+
+        <div className="vd-find-your-way-main-grid">
+          <div className="vd-find-your-way-areas-panel">
+            <div id="areas" className="vd-plan-trip-block vd-find-your-way-areas-card">
+              <h3 className="vd-plan-trip-block-title">{safeT('home', 'areasTitle')}</h3>
+              <p className="vd-plan-trip-block-desc">{safeT('home', 'areasSub')}</p>
+              <div className="vd-plan-trip-areas vd-find-your-way-areas-list">
+                {PLAN_TRIP_AREA_NAV.map((nav) => {
+                  const keys = PLAN_TRIP_AREA_I18N_KEYS[nav.key];
+                  if (!keys) return null;
+                  const mapTo = mapSearchUrl(nav.discoverQ);
+                  const areaName = safeT('home', keys.name);
+                  return (
+                    <Link
+                      key={nav.key}
+                      to={mapTo}
+                      className="vd-plan-trip-area vd-plan-trip-area--link"
+                      aria-label={safeT('home', 'planTripAreaExploreAria').replace(/\{name\}/g, areaName)}
+                    >
+                      <span className="vd-plan-trip-area-main">
+                        <span className="vd-plan-trip-area-name">{areaName}</span>
+                        <span className="vd-plan-trip-area-desc">{safeT('home', keys.desc)}</span>
+                      </span>
+                      <Icon name="arrow_forward" size={18} className="vd-plan-trip-area-chevron" aria-hidden />
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <div className="vd-find-your-way-side-stack">
+            <div className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card">
+              <h3 className="vd-plan-trip-block-title">{safeT('home', 'gettingThereTitle')}</h3>
+              <p className="vd-plan-trip-block-desc">{safeT('home', 'gettingThereSub')}</p>
+              <Link to="/plan" className="vd-plan-trip-cta vd-btn vd-btn--primary">
+                {safeT('home', 'gettingThereCta')}
+                <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
+              </Link>
+            </div>
+            <div className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card">
+              <h3 className="vd-plan-trip-block-title">{safeT('home', 'stayTitle')}</h3>
+              <p className="vd-plan-trip-block-desc">{safeT('home', 'staySub')}</p>
+              <Link to={HOTELS_PATH} className="vd-plan-trip-cta vd-btn vd-btn--primary">
+                {safeT('home', 'stayBrowseHotels')}
+                <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
+              </Link>
+              {showMap ? (
+                <Link to="/map" className="vd-find-your-way-stay-map-link">
+                  {safeT('home', 'stayCta')}
+                  <Icon name="arrow_forward" size={16} aria-hidden />
+                </Link>
+              ) : null}
+            </div>
+            {showTips ? (
+              <div
+                id="plan-trip"
+                className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card vd-find-your-way-tips-block"
+              >
+                <h3 className="vd-plan-trip-block-title">{safeT('home', 'tipsTitle')}</h3>
+                <p className="vd-plan-trip-block-desc">{safeT('home', 'tipsSub')}</p>
+                <div className="vd-plan-trip-inline-actions vd-find-your-way-tips-actions">
+                  <Link to={COMMUNITY_PATH} className="vd-plan-trip-inline-link">
+                    {safeT('home', 'planTripTipsCommunityCta')}
+                    <Icon name="arrow_forward" size={18} aria-hidden />
+                  </Link>
+                  <a href="#areas" className="vd-plan-trip-inline-link">
+                    {safeT('home', 'planTripLinkAreas')}
+                    <Icon name="arrow_forward" size={18} aria-hidden />
+                  </a>
+                  <a href="#plan" className="vd-plan-trip-inline-link">
+                    {safeT('home', 'tipsCta')}
+                    <Icon name="arrow_forward" size={18} aria-hidden />
+                  </a>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </section>
@@ -489,7 +757,12 @@ export default function Explore() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [communityPosts, setCommunityPosts] = useState([]);
+  const [sponsoredHome, setSponsoredHome] = useState([]);
   const [loadNonce, setLoadNonce] = useState(0);
+
+  const diningGuideEnabled = settings?.diningGuide?.enabled !== false;
+  const hotelsGuideEnabled = settings?.hotelsGuide?.enabled !== false;
+  const sponsoredHomeEnabled = settings?.sponsoredPlacesEnabled?.home !== false;
 
   useEffect(() => {
     const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
@@ -532,7 +805,7 @@ export default function Explore() {
   useEffect(() => {
     if (loading || error) return;
     const hash = window.location.hash;
-    const allowedHashes = ['#plan', '#experience', '#why', '#plan-trip', '#download-app', '#community'];
+    const allowedHashes = ['#plan', '#experience', '#why', '#plan-trip', '#download-app', '#community', '#areas'];
     if (hash && allowedHashes.includes(hash)) {
       const el = document.querySelector(hash);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -544,16 +817,40 @@ export default function Explore() {
   }, [user]);
 
   useEffect(() => {
-    const d = settings.metaDescription?.trim();
-    if (!d) return;
-    let meta = document.querySelector('meta[name="description"]');
-    if (!meta) {
-      meta = document.createElement('meta');
-      meta.setAttribute('name', 'description');
-      document.head.appendChild(meta);
+    applyHomeSeoFromSettings(settings);
+  }, [settings.metaDescription, settings.siteName]);
+
+  const bentoHeroUrl = useMemo(() => resolveHomeBentoVisuals(settings).hero, [settings]);
+
+  useEffect(() => {
+    const id = 'tripoli-preload-bento-hero';
+    const heroTrim = (bentoHeroUrl || '').trim();
+    const defaultHero = (homeBentoDefaults.hero || '').trim();
+    /* index.html preloads default city WebP srcset; skip JS tag to avoid duplicate requests */
+    if (heroTrim === defaultHero) {
+      document.getElementById(id)?.remove();
+      return undefined;
     }
-    meta.setAttribute('content', d);
-  }, [settings.metaDescription]);
+    const raw = getBentoHeroPreloadHref(bentoHeroUrl);
+    const href = normalizePreloadImageHref(raw);
+    if (!href) {
+      document.getElementById(id)?.remove();
+      return undefined;
+    }
+    let link = document.getElementById(id);
+    if (!link) {
+      link = document.createElement('link');
+      link.id = id;
+      link.rel = 'preload';
+      link.as = 'image';
+      document.head.appendChild(link);
+    }
+    link.href = href;
+    link.setAttribute('fetchpriority', 'high');
+    return () => {
+      link?.remove();
+    };
+  }, [bentoHeroUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -570,11 +867,55 @@ export default function Explore() {
     };
   }, []);
 
+  useEffect(() => {
+    const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
+    let cancelled = false;
+    if (!sponsoredHomeEnabled) {
+      setSponsoredHome([]);
+      return undefined;
+    }
+    api
+      .sponsoredPlaces({ surface: 'home', lang: langParam })
+      .then((r) => {
+        if (cancelled) return;
+        setSponsoredHome(Array.isArray(r.items) ? r.items : []);
+      })
+      .catch(() => {
+        if (!cancelled) setSponsoredHome([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lang, sponsoredHomeEnabled]);
+
   const heroTitle = settings.siteName?.trim() || t('home', 'heroTitle');
-  const heroTagline = settings.siteTagline?.trim() || t('home', 'heroTagline');
+  const heroTagline = resolveHeroTagline(settings, t);
   const appStoreHref = settings.appStoreUrl?.trim() || 'https://apps.apple.com';
   const playStoreHref = settings.playStoreUrl?.trim() || 'https://play.google.com';
   const showMap = settings.showMap !== false;
+
+  const placesList = Array.isArray(places) ? places : [];
+  const placeNameById = useMemo(() => {
+    const m = new Map();
+    for (const p of placesList) {
+      if (p?.id == null) continue;
+      const nm = p?.name != null ? String(p.name).trim() : '';
+      m.set(String(p.id), nm);
+    }
+    return m;
+  }, [placesList]);
+
+  const bentoAvatarLinkLabel = useCallback(
+    (slot) => {
+      if (slot.placeId) {
+        const name = placeNameById.get(String(slot.placeId)) || '';
+        if (name) return t('home', 'bentoAvatarPlaceLink').replace(/\{name\}/g, name);
+        return t('home', 'bentoAvatarPlaceLinkNoName');
+      }
+      return t('home', 'bentoAvatarCommunityLink');
+    },
+    [placeNameById, t]
+  );
 
   if (loading) {
     return (
@@ -619,7 +960,6 @@ export default function Explore() {
     );
   }
 
-  const placesList = Array.isArray(places) ? places : [];
   const placeCountStr = formatDirectoryCount(placesList.length, lang);
   const categoryCountStr = formatDirectoryCount(categoryCount, lang);
   const topPicks = placesList.slice().sort((a, b) => (Number(b?.rating) || 0) - (Number(a?.rating) || 0)).slice(0, 6);
@@ -637,14 +977,24 @@ export default function Explore() {
           <div className="vd-home-bento-grid">
             <div className="vd-bento-hero-why-bundle">
               <div className="vd-bento-card vd-bento-hero-main">
-                <img
-                  className="vd-bento-hero-main-photo"
-                  src={bentoV.hero}
-                  alt=""
-                  loading="eager"
-                  decoding="async"
-                  draggable={false}
-                />
+                {isDefaultCityHeroPath(bentoV.hero) ? (
+                  <picture>
+                    <source type="image/webp" srcSet={cityHeroWebpSrcSet()} sizes={CITY_HERO_SIZES} />
+                    <img
+                      className="vd-bento-hero-main-photo"
+                      alt=""
+                      draggable={false}
+                      {...getBentoHeroImgProps(bentoV.hero)}
+                    />
+                  </picture>
+                ) : (
+                  <img
+                    className="vd-bento-hero-main-photo"
+                    alt=""
+                    draggable={false}
+                    {...getBentoHeroImgProps(bentoV.hero)}
+                  />
+                )}
                 <div className="vd-bento-hero-main-scrim" aria-hidden="true" />
                 <div className="vd-bento-hero-main-content">
                   <h1 className="vd-bento-hero-title">{heroTitle}</h1>
@@ -656,7 +1006,11 @@ export default function Explore() {
                     </Link>
                   </div>
                   {showBentoAvatarStack && (
-                    <div className="vd-bento-avatar-stack" aria-label={t('home', 'bentoAvatarStackAria')}>
+                    <div
+                      className="vd-bento-avatar-stack"
+                      role="group"
+                      aria-label={t('home', 'bentoAvatarStackAria')}
+                    >
                       {bentoAvatarSlots.map((slot, i) => {
                         const to = slot.placeId ? `/place/${slot.placeId}` : COMMUNITY_PATH;
                         const key = slot.placeId ? `bento-av-${slot.placeId}` : `bento-av-${i}`;
@@ -665,9 +1019,14 @@ export default function Explore() {
                             key={key}
                             to={to}
                             className="vd-bento-avatar"
-                            style={slot.href ? { backgroundImage: bentoCssUrl(slot.href) } : undefined}
+                            aria-label={bentoAvatarLinkLabel(slot)}
+                            style={
+                              slot.href
+                                ? { backgroundImage: bentoCssUrl(supabaseOptimizeForThumbnail(slot.href, 120)) }
+                                : undefined
+                            }
                           >
-                            {!slot.href && <Icon name="travel_explore" size={22} />}
+                            {!slot.href && <Icon name="travel_explore" size={22} aria-hidden />}
                           </Link>
                         );
                       })}
@@ -688,10 +1047,7 @@ export default function Explore() {
               </div>
             </div>
 
-            <Link
-              to="/plan"
-              className="vd-bento-card vd-bento-hero-side vd-bento-web-hub"
-            >
+            <div className="vd-bento-card vd-bento-hero-side vd-bento-web-hub">
               <div className="vd-bento-web-hub-inner">
                 <p className="vd-bento-web-hub-kicker">{t('home', 'useWebCta')}</p>
                 <div className="vd-bento-web-hub-header">
@@ -701,15 +1057,20 @@ export default function Explore() {
                   <div className="vd-bento-web-hub-titles">
                     <p className="vd-bento-web-hub-name">{t('home', 'bentoWebHubTitle')}</p>
                     <p className="vd-bento-web-hub-sub">{t('home', 'bentoWebHubSub')}</p>
-                    <p className="vd-bento-web-hub-footnote">{t('home', 'bentoWebHubFootnote')}</p>
                   </div>
                 </div>
-                <span className="vd-bento-web-hub-cta">
+                <ul className="vd-bento-web-hub-facts">
+                  <li>{t('home', 'bentoWebHubFact1')}</li>
+                  <li>{t('home', 'bentoWebHubFact2')}</li>
+                  <li>{t('home', 'bentoWebHubFact3')}</li>
+                </ul>
+                <p className="vd-bento-web-hub-footnote">{t('home', 'bentoWebHubFootnote')}</p>
+                <Link to="/plan" className="vd-bento-web-hub-cta">
                   <span className="vd-bento-web-hub-cta-label">{t('home', 'bentoWebHubCta')}</span>
                   <Icon name="arrow_forward" size={20} aria-hidden="true" />
-                </span>
+                </Link>
               </div>
-            </Link>
+            </div>
 
             <div
               id="why"
@@ -810,69 +1171,70 @@ export default function Explore() {
         </div>
       </section>
 
-      {/* Highlights — curated picks before thematic browsing (DMO-style flow) */}
+      {/* Discover by theme — first; #experience hash targets this block */}
+      <BrowseMapByThemeSection
+        t={t}
+        lang={lang}
+        places={placesList}
+        categories={categories}
+        diningGuideEnabled={diningGuideEnabled}
+        hotelsGuideEnabled={hotelsGuideEnabled}
+      />
+
+      {/* Featured picks first; community feed directly below */}
       {topPicks.length > 0 && (
         <TopPicksCarousel places={topPicks} t={t} />
       )}
 
-      <ExperienceTripoliSection t={t} lang={lang} places={placesList} categories={categories} />
+      {sponsoredHomeEnabled && sponsoredHome.length > 0 && (
+        <section className="vd-section vd-sponsored" aria-label={t('discover', 'sponsoredSectionTitle')}>
+          <div className="vd-container">
+            <header className="vd-section-head vd-sponsored-head">
+              <h2 className="vd-section-title">{t('discover', 'sponsoredSectionTitle')}</h2>
+              <p className="vd-section-subtitle vd-sponsored-sub">{t('discover', 'sponsoredSectionSub')}</p>
+            </header>
+            <div className="vd-sponsored-grid">
+              {sponsoredHome.slice(0, 6).map((item) => (
+                <SponsoredPlaceCard key={item.id || item.placeId} item={item} t={t} variant="tile" />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {communityPosts.length > 0 && (
         <CommunityFeedStrip posts={communityPosts} t={t} moreTo={COMMUNITY_PATH} layout="bento" />
       )}
 
-      {/* Plan your trip – one section: areas, getting there, stay, tips */}
-      <section id="plan-trip" className="vd-section vd-plan-trip-one">
-        <div className="vd-container">
-          <header className="vd-plan-trip-header">
-            <h2 className="vd-plan-trip-section-title">{t('home', 'planTitle')}</h2>
-            <p className="vd-plan-trip-section-sub">{t('home', 'planTripSectionSub')}</p>
-          </header>
-          <div className="vd-plan-trip-grid">
-            <div className="vd-plan-trip-block">
-              <h3 className="vd-plan-trip-block-title">{t('home', 'areasTitle')}</h3>
-              <p className="vd-plan-trip-block-desc">{t('home', 'areasSub')}</p>
-              <div className="vd-plan-trip-areas">
-                <div className="vd-plan-trip-area">
-                  <span className="vd-plan-trip-area-name">{t('home', 'areaOldCity')}</span>
-                  <span className="vd-plan-trip-area-desc">{t('home', 'areaOldCityDesc')}</span>
-                </div>
-                <div className="vd-plan-trip-area">
-                  <span className="vd-plan-trip-area-name">{t('home', 'areaMina')}</span>
-                  <span className="vd-plan-trip-area-desc">{t('home', 'areaMinaDesc')}</span>
-                </div>
-                <div className="vd-plan-trip-area">
-                  <span className="vd-plan-trip-area-name">{t('home', 'areaTel')}</span>
-                  <span className="vd-plan-trip-area-desc">{t('home', 'areaTelDesc')}</span>
-                </div>
+      <FindYourWayPracticalSection
+        t={t}
+        showMap={showMap}
+        showTips={user?.showTips !== false}
+      />
+
+      {user?.showTips === false && (
+        <section id="plan-trip" className="vd-section vd-plan-trip-one vd-plan-trip-one--tips">
+          <div className="vd-container">
+            <header className="vd-plan-trip-header">
+              <h2 className="vd-plan-trip-section-title">{t('home', 'planTripTipsSectionTitle')}</h2>
+              <p className="vd-plan-trip-section-sub">{t('home', 'planTripTipsSectionSub')}</p>
+            </header>
+            <div className="vd-plan-trip-block vd-plan-trip-block--compact">
+              <p className="vd-plan-trip-block-desc">{t('home', 'planTripTipsFallback')}</p>
+              <div className="vd-plan-trip-inline-actions">
+                <Link to="/plan" className="vd-plan-trip-inline-link">
+                  {t('home', 'gettingThereCta')}
+                  <Icon name="arrow_forward" size={18} />
+                </Link>
+                <Link to={PLACES_DISCOVER_PATH} className="vd-plan-trip-inline-link">
+                  {t('home', 'seeAllWays')}
+                  <Icon name="arrow_forward" size={18} />
+                </Link>
               </div>
             </div>
-            <div className="vd-plan-trip-block">
-              <h3 className="vd-plan-trip-block-title">{t('home', 'gettingThereTitle')}</h3>
-              <p className="vd-plan-trip-block-desc">{t('home', 'gettingThereSub')}</p>
-              <Link to="/#plan" className="vd-plan-trip-cta vd-btn vd-btn--primary">
-                {t('home', 'gettingThereCta')}
-                <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
-              </Link>
-            </div>
-            <div className="vd-plan-trip-block">
-              <h3 className="vd-plan-trip-block-title">{t('home', 'stayTitle')}</h3>
-              <p className="vd-plan-trip-block-desc">{t('home', 'staySub')}</p>
-              <Link to={showMap ? '/map' : '/plan'} className="vd-plan-trip-cta vd-btn vd-btn--primary">
-                {t('home', 'stayCta')}
-                <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
-              </Link>
-            </div>
-            {user?.showTips !== false && (
-              <div className="vd-plan-trip-block">
-                <h3 className="vd-plan-trip-block-title">{t('home', 'tipsTitle')}</h3>
-                <p className="vd-plan-trip-block-desc">{t('home', 'tipsSub')}</p>
-                <a href="#plan" className="vd-plan-trip-link vd-link-arrow">{t('home', 'tipsCta')} <Icon name="arrow_forward" size={18} /></a>
-              </div>
-            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Plan your visit – one card: time + weather, then description & View map */}
       <section id="plan" className="vd-section vd-plan">
@@ -937,7 +1299,7 @@ export default function Explore() {
         <div className="vd-container vd-footer-inner">
           <div className="vd-footer-brand">
             <Link to="/" className="vd-footer-logo">{settings.siteName?.trim() || t('nav', 'visitTripoli')}</Link>
-            <span className="vd-footer-tagline">{settings.siteTagline?.trim() || t('nav', 'tripoliLebanon')}</span>
+            <span className="vd-footer-tagline">{resolveFooterTagline(settings, t)}</span>
           </div>
           {(settings.contactEmail || settings.contactPhone) && (
             <p className="vd-footer-contact-line">

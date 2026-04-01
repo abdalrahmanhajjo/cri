@@ -1,6 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
+import api from '../api/client';
 import Icon from '../components/Icon';
 import {
   checkPasswordRequirements,
@@ -21,10 +24,14 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
-  /** After register when API did not send email (no SMTP) — show instructions before home */
-  const [smtpNotice, setSmtpNotice] = useState(false);
   const [loading, setLoading] = useState(false);
+  /** idle | checking | available | taken — username handle availability vs DB */
+  const [usernameAvailability, setUsernameAvailability] = useState('idle');
+  const usernameInputRef = useRef(null);
+  const usernameCheckGenRef = useRef(0);
   const { register } = useAuth();
+  const { t } = useLanguage();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const requirements = useMemo(
@@ -35,10 +42,50 @@ export default function Register() {
     () => checkUsernameRequirements(username),
     [username]
   );
+  const usernameFormatOk =
+    usernameReqs.minLength &&
+    usernameReqs.maxLength &&
+    usernameReqs.format &&
+    usernameReqs.notReserved;
+
+  useEffect(() => {
+    if (!usernameFormatOk) {
+      setUsernameAvailability('idle');
+      return;
+    }
+
+    usernameCheckGenRef.current += 1;
+    const gen = usernameCheckGenRef.current;
+    setUsernameAvailability('checking');
+    const t = setTimeout(async () => {
+      try {
+        const r = await api.auth.checkUsername(username.trim());
+        if (gen !== usernameCheckGenRef.current) return;
+        if (!r.validFormat) {
+          setUsernameAvailability('invalid');
+          return;
+        }
+        setUsernameAvailability(r.available ? 'available' : 'taken');
+        if (!r.available && usernameInputRef.current) {
+          usernameInputRef.current.focus();
+          usernameInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } catch {
+        if (gen === usernameCheckGenRef.current) setUsernameAvailability('error');
+      }
+    }, 450);
+
+    return () => {
+      clearTimeout(t);
+      usernameCheckGenRef.current += 1;
+    };
+  }, [username, usernameFormatOk]);
+
   const passwordsMatch =
     password.length > 0 && confirmPassword.length > 0 && password === confirmPassword;
   const confirmMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
+  const usernameReady = usernameFormatOk && usernameAvailability === 'available';
   const canSubmit =
     name.trim() &&
     username.trim() &&
@@ -46,10 +93,7 @@ export default function Register() {
     password &&
     confirmPassword &&
     passwordsMatch &&
-    usernameReqs.minLength &&
-    usernameReqs.maxLength &&
-    usernameReqs.format &&
-    usernameReqs.notReserved &&
+    usernameReady &&
     requirements.minLength &&
     requirements.uppercase &&
     requirements.lowercase &&
@@ -69,17 +113,26 @@ export default function Register() {
         email.trim(),
         password
       );
-      if (result?.verificationEmailDelivered === false) {
-        setSmtpNotice(true);
-        return;
-      }
-      navigate('/', { replace: true });
+      const q = new URLSearchParams();
+      q.set('email', email.trim());
+      if (result?.verificationEmailDelivered === false) q.set('nosmtp', '1');
+      showToast(t('feedback', 'registerCheckEmail'), 'success');
+      navigate(`/verify-email?${q.toString()}`, { replace: true });
     } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
+      const msg = err.message || 'Registration failed. Please try again.';
+      setError(msg);
+      showToast(msg, 'error');
+      if (/username.*taken|already taken/i.test(msg) && usernameInputRef.current) {
+        setUsernameAvailability('taken');
+        usernameInputRef.current.focus();
+      }
     } finally {
       setLoading(false);
     }
   }
+
+  const usernameTaken = usernameFormatOk && usernameAvailability === 'taken';
+  const usernameChecking = usernameFormatOk && usernameAvailability === 'checking';
 
   return (
     <div className="auth-page">
@@ -93,32 +146,6 @@ export default function Register() {
         </div>
 
         <div className="auth-card card">
-          {smtpNotice ? (
-            <>
-              <h2 className="auth-title">Account created</h2>
-              <div className="auth-error auth-error--info" role="status">
-                We could not send a verification email. Ask your administrator to configure outgoing mail (SMTP) in
-                the API <code className="auth-code-inline">.env</code>, or check the server log for your 6-digit code.
-              </div>
-              <p className="auth-error-help" style={{ marginTop: 14 }}>
-                Already have a code?{' '}
-                <Link
-                  to={`/verify-email?email=${encodeURIComponent(email.trim())}`}
-                  className="auth-error-help-link"
-                >
-                  Verify your email
-                </Link>
-              </p>
-              <button
-                type="button"
-                className="btn-primary auth-submit"
-                onClick={() => navigate('/', { replace: true })}
-              >
-                Continue to Tripoli
-              </button>
-            </>
-          ) : (
-            <>
           <h2 className="auth-title">Sign up</h2>
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
             {error && (
@@ -156,19 +183,21 @@ export default function Register() {
               <div className="auth-input-wrap">
                 <Icon name="alternate_email" className="auth-input-icon" size={22} />
                 <input
+                  ref={usernameInputRef}
                   id="register-username"
                   type="text"
-                  className={`auth-input ${error ? 'auth-input--error' : ''}`}
+                  className={`auth-input ${usernameTaken || error ? 'auth-input--error' : ''}`}
                   placeholder="your_handle"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    setError('');
+                  }}
                   autoComplete="username"
                   autoCapitalize="off"
                   spellCheck={false}
-                  aria-invalid={!!error}
-                  aria-describedby={
-                    error ? 'register-username-requirements register-error' : 'register-username-requirements'
-                  }
+                  aria-invalid={usernameTaken || !!error}
+                  aria-describedby="register-username-requirements register-username-status register-error"
                   disabled={loading}
                 />
               </div>
@@ -188,6 +217,32 @@ export default function Register() {
                   </p>
                 ))}
               </div>
+              <p id="register-username-status" className="auth-requirement" role="status" style={{ marginTop: 8 }}>
+                {usernameChecking && (
+                  <>
+                    <Icon name="hourglass_empty" className="auth-requirement-icon" size={16} />
+                    Checking availability…
+                  </>
+                )}
+                {usernameFormatOk && usernameAvailability === 'available' && (
+                  <>
+                    <Icon name="check_circle" className="auth-requirement-icon" size={16} style={{ color: 'var(--color-success)' }} />
+                    This username is available
+                  </>
+                )}
+                {usernameTaken && (
+                  <>
+                    <Icon name="error" className="auth-requirement-icon" size={16} style={{ color: 'var(--color-error)' }} />
+                    This username is already taken — pick another handle before continuing.
+                  </>
+                )}
+                {usernameFormatOk && usernameAvailability === 'error' && (
+                  <>
+                    <Icon name="error" className="auth-requirement-icon" size={16} style={{ color: 'var(--color-error)' }} />
+                    Could not check this username. Check your connection and try changing the field slightly.
+                  </>
+                )}
+              </p>
             </div>
 
             <div className="auth-field">
@@ -320,8 +375,6 @@ export default function Register() {
           <p className="auth-footer">
             Already have an account? <Link to="/login">Log in</Link>
           </p>
-            </>
-          )}
         </div>
 
         <div className="auth-secure-note" role="status">

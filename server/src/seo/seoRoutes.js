@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const { query } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
@@ -17,7 +18,11 @@ const LANGS = ['en', 'ar', 'fr'];
 
 function wantsHtml(req) {
   const accept = String(req.get('accept') || '');
-  return accept.includes('text/html') || accept.includes('*/*');
+  // Do not treat image/font/etc. fetches as HTML. Favicon uses Accept: ... ,*/* ; matching * alone
+  // would wrongly return index.html and break the tab icon (generic globe in the address bar).
+  if (accept.includes('text/html')) return true;
+  if (accept.includes('*/*') && !accept.includes('image/') && !accept.includes('font/')) return true;
+  return false;
 }
 
 function normalizeSlugSegment(seg) {
@@ -63,7 +68,7 @@ function organizationSameAsFromEnv() {
 }
 
 function jsonLdOrg({ baseUrl }) {
-  const logoUrl = safeUrlJoin(baseUrl, '/tripoli-lebanon-icon.svg');
+  const logoUrl = safeUrlJoin(baseUrl, '/icon-192.png');
   const sameAs = organizationSameAsFromEnv();
   const out = {
     '@context': 'https://schema.org',
@@ -242,6 +247,7 @@ router.get('/sitemap.xml', async (req, res) => {
 function makeSeoResponder({ clientDistPath }) {
   return async function seoResponder(req, res, next) {
     try {
+      if (path.extname(req.path)) return next();
       if (!wantsHtml(req)) return next();
       const baseUrl = getBaseUrl(req);
       const lang = getRequestLang(req);
@@ -504,6 +510,7 @@ function makeSeoResponder({ clientDistPath }) {
         lang,
         jsonLd,
         alternates,
+        baseUrl,
       });
       res.status(status).type('text/html').send(out);
     } catch (err) {
@@ -512,5 +519,10 @@ function makeSeoResponder({ clientDistPath }) {
   };
 }
 
-module.exports = { seoRouter: router, makeSeoResponder };
+/** Call after places/tours/events are deleted or merged so /sitemap.xml drops stale URLs immediately. */
+function invalidateSitemapCache() {
+  sitemapCache = { xml: null, ts: 0 };
+}
+
+module.exports = { seoRouter: router, makeSeoResponder, invalidateSitemapCache };
 

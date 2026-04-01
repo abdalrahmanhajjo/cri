@@ -1,6 +1,8 @@
 /**
- * Shared SQL fragments for public place_promotions + coupons (Discover + place detail).
- * Date rules: ends_at / valid_until stay valid through end of local calendar day when stored as midnight.
+ * Shared SQL for public place_promotions + coupons (Discover + place detail).
+ * - $1 / $2 depend on query (see each SQL_* constant).
+ * - $3 = lang (en | ar | fr) for place_translations + promotion/coupon translation joins.
+ * Coupon rows include raw numeric fields so the client can format labels without English SQL.
  */
 
 const PLACE_PROMOTION_ACTIVE = `
@@ -34,15 +36,28 @@ function placePromoBranch(placeAndLine) {
   return `
     SELECT ('promo-' || pr.id::text) AS id,
            pr.place_id AS "placeId",
-           pr.title, pr.subtitle, pr.code,
-           pr.discount_label AS "discountLabel",
-           pr.terms,
+           COALESCE(NULLIF(TRIM(ppt.title), ''), pr.title) AS title,
+           COALESCE(NULLIF(TRIM(ppt.subtitle), ''), pr.subtitle) AS subtitle,
+           pr.code,
+           COALESCE(NULLIF(TRIM(ppt.discount_label), ''), pr.discount_label) AS "discountLabel",
+           COALESCE(NULLIF(TRIM(ppt.terms), ''), pr.terms) AS terms,
            pr.starts_at AS "startsAt",
            pr.ends_at AS "endsAt",
-           COALESCE(NULLIF(TRIM(pl.name), ''), NULLIF(TRIM(pr.place_id::text), ''), '') AS "placeName",
+           COALESCE(
+             NULLIF(TRIM(plt.name), ''),
+             NULLIF(TRIM(pl.name), ''),
+             NULLIF(TRIM(pr.place_id::text), ''),
+             ''
+           ) AS "placeName",
+           NULL::text AS "discountType",
+           NULL::numeric AS "discountValue",
+           NULL::numeric AS "minPurchase",
+           NULL::int AS "usageLimit",
            pr.created_at AS _sort
     FROM place_promotions pr
     LEFT JOIN places pl ON pl.id = pr.place_id
+    LEFT JOIN place_translations plt ON plt.place_id = pl.id AND plt.lang = $3
+    LEFT JOIN place_promotion_translations ppt ON ppt.promotion_id = pr.id AND ppt.lang = $3
     WHERE ` + PLACE_PROMOTION_ACTIVE + `
       AND (` + placeAndLine + `)`;
 }
@@ -51,40 +66,45 @@ function couponAsPromoBranch(placeAndLine) {
   return `
     SELECT ('coupon-' || c.id::text) AS id,
            c.place_id AS "placeId",
-           COALESCE(NULLIF(TRIM(cl.name), ''), 'Special offer') AS title,
-           CASE
-             WHEN c.min_purchase > 0 THEN ('Min. purchase: ' || TRIM(TO_CHAR(c.min_purchase, 'FM999990.99')))
-             ELSE NULL
-           END AS subtitle,
+           COALESCE(
+             NULLIF(TRIM(ct.title), ''),
+             NULLIF(TRIM(clt.name), ''),
+             NULLIF(TRIM(cl.name), ''),
+             ''
+           ) AS title,
+           NULLIF(TRIM(ct.subtitle), '') AS subtitle,
            c.code,
-           CASE (c.discount_type)::text
-             WHEN 'percent' THEN TRIM(TO_CHAR(c.discount_value, 'FM999990.99')) || '% off'
-             ELSE TRIM(TO_CHAR(c.discount_value, 'FM999990.99')) || ' off'
-           END AS "discountLabel",
-           CASE WHEN c.usage_limit IS NOT NULL THEN 'Usage limit: ' || c.usage_limit::text ELSE NULL END AS terms,
+           NULLIF(TRIM(ct.discount_label), '') AS "discountLabel",
+           NULLIF(TRIM(ct.terms), '') AS terms,
            c.valid_from AS "startsAt",
            c.valid_until AS "endsAt",
-           COALESCE(NULLIF(TRIM(cl.name), ''), '') AS "placeName",
+           COALESCE(NULLIF(TRIM(clt.name), ''), NULLIF(TRIM(cl.name), ''), '') AS "placeName",
+           (c.discount_type)::text AS "discountType",
+           c.discount_value AS "discountValue",
+           c.min_purchase AS "minPurchase",
+           c.usage_limit AS "usageLimit",
            c.created_at AS _sort
     FROM coupons c
     LEFT JOIN places cl ON cl.id = c.place_id
+    LEFT JOIN place_translations clt ON clt.place_id = cl.id AND clt.lang = $3
+    LEFT JOIN coupon_translations ct ON ct.coupon_id = c.id AND ct.lang = $3
     WHERE ` + COUPON_ACTIVE + `
       AND (` + placeAndLine + `)`;
 }
 
-/** Inner SELECT for merged public query (Discover); $1 = limit, $2 = optional place id. */
+/** Discover merged list: $1 = LIMIT, $2 = optional place_id filter, $3 = lang */
 const PLACE_PROMO_SELECT = placePromoBranch(`$2::text IS NULL OR pr.place_id = $2::text`);
+const COUPON_AS_PROMO_SELECT = couponAsPromoBranch(
+  `($2::text IS NULL OR c.place_id IS NULL OR c.place_id = $2::text)`
+);
 
-/** Inner SELECT for merged public query (Discover); coupon branch. */
-const COUPON_AS_PROMO_SELECT = couponAsPromoBranch(`$2::text IS NULL OR c.place_id = $2::text`);
-
-/** Single-place inner branches: $1 = place_id, $2 = limit on outer query. */
+/** Single place: $1 = place_id, $3 = lang; outer LIMIT uses $2 */
 const PLACE_PROMO_SELECT_FOR_PLACE = placePromoBranch(`pr.place_id = $1`);
-/** Match mobile/public feed: venue-scoped coupons plus app-wide coupons (place_id IS NULL). */
 const COUPON_AS_PROMO_SELECT_FOR_PLACE = couponAsPromoBranch(`(c.place_id IS NULL OR c.place_id = $1)`);
 
 const SQL_PLACE_PROMOTIONS = `
-SELECT id, title, subtitle, code, "discountLabel", terms, "startsAt", "endsAt"
+SELECT id, "placeId", title, subtitle, code, "discountLabel", terms, "startsAt", "endsAt", "placeName",
+       "discountType", "discountValue", "minPurchase", "usageLimit"
 FROM (
 ` + PLACE_PROMO_SELECT_FOR_PLACE + `
     UNION ALL
@@ -94,12 +114,27 @@ ORDER BY sub._sort DESC
 LIMIT $2`;
 
 const SQL_PROMOTIONS_ONLY = `
-  SELECT ('promo-' || pr.id::text) AS id, pr.place_id AS "placeId", pr.title, pr.subtitle, pr.code,
-         pr.discount_label AS "discountLabel", pr.terms,
+  SELECT ('promo-' || pr.id::text) AS id, pr.place_id AS "placeId",
+         COALESCE(NULLIF(TRIM(ppt.title), ''), pr.title) AS title,
+         COALESCE(NULLIF(TRIM(ppt.subtitle), ''), pr.subtitle) AS subtitle,
+         pr.code,
+         COALESCE(NULLIF(TRIM(ppt.discount_label), ''), pr.discount_label) AS "discountLabel",
+         COALESCE(NULLIF(TRIM(ppt.terms), ''), pr.terms) AS terms,
          pr.starts_at AS "startsAt", pr.ends_at AS "endsAt",
-         COALESCE(NULLIF(TRIM(p.name), ''), NULLIF(TRIM(pr.place_id::text), ''), '') AS "placeName"
+         COALESCE(
+           NULLIF(TRIM(plt.name), ''),
+           NULLIF(TRIM(p.name), ''),
+           NULLIF(TRIM(pr.place_id::text), ''),
+           ''
+         ) AS "placeName",
+         NULL::text AS "discountType",
+         NULL::numeric AS "discountValue",
+         NULL::numeric AS "minPurchase",
+         NULL::int AS "usageLimit"
   FROM place_promotions pr
   LEFT JOIN places p ON p.id = pr.place_id
+  LEFT JOIN place_translations plt ON plt.place_id = p.id AND plt.lang = $3
+  LEFT JOIN place_promotion_translations ppt ON ppt.promotion_id = pr.id AND ppt.lang = $3
   WHERE ` + PLACE_PROMOTION_ACTIVE + `
     AND ($2::text IS NULL OR pr.place_id = $2::text)
   ORDER BY pr.created_at DESC
@@ -107,12 +142,28 @@ const SQL_PROMOTIONS_ONLY = `
 
 const SQL_PLACE_PROMOTIONS_FALLBACK = `
   SELECT ('promo-' || pr.id::text) AS id,
-         pr.title, pr.subtitle, pr.code,
-         pr.discount_label AS "discountLabel",
-         pr.terms,
+         pr.place_id AS "placeId",
+         COALESCE(NULLIF(TRIM(ppt.title), ''), pr.title) AS title,
+         COALESCE(NULLIF(TRIM(ppt.subtitle), ''), pr.subtitle) AS subtitle,
+         pr.code,
+         COALESCE(NULLIF(TRIM(ppt.discount_label), ''), pr.discount_label) AS "discountLabel",
+         COALESCE(NULLIF(TRIM(ppt.terms), ''), pr.terms) AS terms,
          pr.starts_at AS "startsAt",
-         pr.ends_at AS "endsAt"
+         pr.ends_at AS "endsAt",
+         COALESCE(
+           NULLIF(TRIM(plt.name), ''),
+           NULLIF(TRIM(pl.name), ''),
+           NULLIF(TRIM(pr.place_id::text), ''),
+           ''
+         ) AS "placeName",
+         NULL::text AS "discountType",
+         NULL::numeric AS "discountValue",
+         NULL::numeric AS "minPurchase",
+         NULL::int AS "usageLimit"
   FROM place_promotions pr
+  LEFT JOIN places pl ON pl.id = pr.place_id
+  LEFT JOIN place_translations plt ON plt.place_id = pl.id AND plt.lang = $3
+  LEFT JOIN place_promotion_translations ppt ON ppt.promotion_id = pr.id AND ppt.lang = $3
   WHERE ` + PLACE_PROMOTION_ACTIVE + `
     AND pr.place_id = $1
   ORDER BY pr.created_at DESC

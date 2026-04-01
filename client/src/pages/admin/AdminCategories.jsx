@@ -112,9 +112,11 @@ function CategoryFormModal({ category, onClose, onSaved }) {
               </div>
               <div className="admin-form-row">
                 <div className="admin-form-group">
-                  <label>Place count</label>
+                  <label>Place count (stored)</label>
                   <input type="number" value={form.count} onChange={(e) => setForm((f) => ({ ...f, count: e.target.value }))} placeholder="0" />
-                  <span className="admin-form-hint">Number of places in this category</span>
+                  <span className="admin-form-hint">
+                    The categories table shows live counts from places (matching category ID). This value is stored on save for reporting only.
+                  </span>
                 </div>
                 <div className="admin-form-group">
                   <label>Color</label>

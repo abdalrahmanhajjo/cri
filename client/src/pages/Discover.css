@@ -1049,6 +1049,8 @@
 }
 
 .ig-proposal-pick-thumb {
+  position: relative;
+  overflow: hidden;
   aspect-ratio: 1;
   width: 100%;
   background-size: cover;
@@ -1334,6 +1336,37 @@
   max-width: var(--ig-feed-max);
   margin: 0 auto;
   width: 100%;
+}
+
+.ig-feed-stagger {
+  animation: ig-feed-stagger-in 0.42s var(--ig-ease) both;
+}
+
+@keyframes ig-feed-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sponsored slot: reads as a deliberate break, aligned with feed rhythm */
+.ig-feed-stagger--sponsored {
+  margin: 2px 0 6px;
+  padding: 4px 0 2px;
+}
+
+.ig-feed-stagger--sponsored .sp-card {
+  border-radius: 16px;
+  box-shadow: 0 10px 32px rgba(30, 86, 49, 0.09);
+  border-color: color-mix(in srgb, var(--ig-accent, #1e5631) 24%, var(--ig-border, #dbdbdb));
+}
+
+.ig-feed-stagger--sponsored .sp-card:hover {
+  box-shadow: 0 16px 40px rgba(30, 86, 49, 0.12);
 }
 
 .ig-feed-sentinel {
@@ -1902,6 +1935,13 @@ a.ig-feed-avatar--link:focus-visible {
   display: block;
 }
 
+/* Ensure no parent filter/backdrop stack blurs decoded video pixels */
+.ig-feed-video,
+.ig-reel-video {
+  filter: none;
+  -webkit-filter: none;
+}
+
 .ig-feed-img {
   object-fit: cover;
 }
@@ -1973,6 +2013,74 @@ a.ig-feed-avatar--link:focus-visible {
   position: relative;
   max-width: min(96vw, 1200px);
   max-height: 92vh;
+  width: 100%;
+}
+
+.ig-feed-image-zoom-track {
+  display: flex;
+  width: 100%;
+  max-height: 92vh;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-radius: 10px;
+}
+
+.ig-feed-image-zoom-track::-webkit-scrollbar {
+  display: none;
+}
+
+.ig-feed-image-zoom-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 100%;
+  max-height: 92vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.ig-feed-image-zoom-slide .ig-feed-image-zoom-img {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.ig-feed-image-zoom-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 4px;
+  flex-wrap: wrap;
+}
+
+.ig-feed-image-zoom-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.ig-feed-image-zoom-dot:hover,
+.ig-feed-image-zoom-dot:focus-visible {
+  opacity: 1;
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+
+.ig-feed-image-zoom-dot--active {
+  background: rgba(255, 255, 255, 0.95);
+  opacity: 1;
 }
 
 .ig-feed-image-zoom-close {
@@ -2379,7 +2487,7 @@ a.ig-feed-avatar--link:focus-visible {
   border: 1px solid rgba(15, 118, 110, 0.2);
 }
 
-.ig-feed-comment-reply-label .material-symbols-outlined {
+.ig-feed-comment-reply-label .icon--feather {
   font-size: 14px;
   opacity: 0.9;
 }
@@ -2912,6 +3020,27 @@ a.ig-feed-avatar--link:focus-visible {
   color: #fff;
 }
 
+/* Tablet/desktop: reel column narrower than feed photo posts — compact frame, cover = crisp */
+@media (min-width: 768px) {
+  .ig-feed-stack--reels .ig-feed-post--reel {
+    max-width: min(400px, 100%);
+    margin-inline: auto;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .ig-feed-stack--reels .ig-reel-theater {
+    max-height: min(70vh, 680px);
+    border-radius: 0;
+  }
+
+  .ig-feed-stack--reels .ig-reel-video,
+  .ig-feed-stack--reels .ig-reel-img {
+    object-fit: cover;
+    object-position: center;
+  }
+}
+
 .ig-reel-media-layer {
   position: absolute;
   inset: 0;
@@ -3338,6 +3467,11 @@ a.ig-reel-handle--link:hover {
 
   .ig-discover-main--feed .ig-feed-stack > .ig-feed-stagger:first-child {
     margin-top: 10px;
+  }
+
+  .ig-feed-stagger--sponsored {
+    margin: 10px 0 6px;
+    padding: 2px 0;
   }
 
   /* Instagram-like reels: one reel per full screen with snap. */

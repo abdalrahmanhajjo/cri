@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import Icon from '../components/Icon';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import {
   getDayCount,
   toDateOnly,
@@ -31,6 +33,7 @@ export default function TripDetail() {
   const { tripId } = useParams();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const [trip, setTrip] = useState(null);
   const [placesById, setPlacesById] = useState({});
   const [loading, setLoading] = useState(true);
@@ -107,6 +110,7 @@ export default function TripDetail() {
 
   const openMap = useCallback(() => {
     if (!trip) return;
+    showToast(t('feedback', 'tripMapOpened'), 'info');
     const placeIds = dayBlocks.flatMap((d) => d.slots.map((s) => s.placeId));
     const days = Array.isArray(trip.days) ? trip.days : [{ placeIds }];
     navigate('/map', {
@@ -117,18 +121,24 @@ export default function TripDetail() {
         tripStartDate: trip.startDate || '',
       },
     });
-  }, [trip, dayBlocks, navigate, t]);
+  }, [trip, dayBlocks, navigate, t, showToast]);
 
   const handleShare = useCallback(() => {
     if (!trip) return;
     const name = trip.name || t('home', 'planTitle');
     const url = typeof window !== 'undefined' ? window.location.href : '';
     if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({ title: name, text: name, url }).catch(() => {});
+      navigator
+        .share({ title: name, text: name, url })
+        .then(() => showToast(t('feedback', 'tripShareOpened'), 'success'))
+        .catch(() => {});
     } else {
-      navigator.clipboard?.writeText(url).catch(() => {});
+      navigator.clipboard
+        ?.writeText(url)
+        .then(() => showToast(t('feedback', 'tripLinkCopied'), 'success'))
+        .catch(() => showToast(t('feedback', 'actionFailed'), 'error'));
     }
-  }, [trip, t]);
+  }, [trip, t, showToast]);
 
   const handleDeleteTrip = useCallback(() => {
     if (!trip || deleting) return;
@@ -137,12 +147,16 @@ export default function TripDetail() {
     setDeleteError(null);
     api.user
       .deleteTrip(trip.id)
-      .then(() => navigate('/plan'))
+      .then(() => {
+        showToast(t('feedback', 'tripDeleted'), 'success');
+        navigate('/plan');
+      })
       .catch((e) => {
         setDeleteError(e?.message || t('home', 'tripDeleteFailed'));
         setDeleting(false);
+        showToast(t('feedback', 'actionFailed'), 'error');
       });
-  }, [trip, deleting, t, navigate]);
+  }, [trip, deleting, t, navigate, showToast]);
 
   if (loading) {
     return (
@@ -259,10 +273,8 @@ export default function TripDetail() {
                       return (
                         <li key={`${pid}-${si}`} className="trip-detail-stop">
                           <Link to={`/place/${encodeURIComponent(pid)}`} className="trip-detail-stop-link">
-                            <div
-                              className="trip-detail-stop-media"
-                              style={img ? { backgroundImage: `url(${img})` } : undefined}
-                            >
+                            <div className="trip-detail-stop-media">
+                              {img ? <DeliveryImg url={img} preset="tripStop" alt="" /> : null}
                               {!img && <Icon name="place" size={28} aria-hidden />}
                             </div>
                             <div className="trip-detail-stop-body">

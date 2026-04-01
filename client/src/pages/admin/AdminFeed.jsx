@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
+import {
+  isLikelyImageFile,
+  isLikelyVideoFile,
+  ACCEPT_IMAGES_WITH_HEIC,
+  ACCEPT_FEED_REEL_VIDEOS,
+} from '../../utils/imageUploadAccept';
 import './Admin.css';
 
 function contentKind(t) {
@@ -179,9 +185,9 @@ export default function AdminFeed() {
 
   const uploadComposerImages = async (files) => {
     if (!files?.length) return;
-    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    const list = Array.from(files).filter(isLikelyImageFile);
     if (!list.length) {
-      setError('Choose image files (JPEG, PNG, GIF, or WebP).');
+      setError('Choose image files (JPEG, PNG, GIF, WebP, or HEIC — HEIC is saved as JPEG).');
       return;
     }
     setComposerUploading('image');
@@ -205,12 +211,12 @@ export default function AdminFeed() {
 
   const uploadComposerFile = async (file, kind) => {
     if (!file) return;
-    if (kind === 'image' && !/^image\//i.test(file.type)) {
-      setError('Choose an image file (JPEG, PNG, GIF, or WebP).');
+    if (kind === 'image' && !isLikelyImageFile(file)) {
+      setError('Choose an image file (JPEG, PNG, GIF, WebP, or HEIC — HEIC is saved as JPEG).');
       return;
     }
-    if (kind === 'video' && !/^video\//i.test(file.type)) {
-      setError('Choose a video file (MP4, WebM, or MOV).');
+    if (kind === 'video' && !isLikelyVideoFile(file)) {
+      setError('Choose a video file (MP4, WebM, MOV, M4V, MKV, or 3GP).');
       return;
     }
     if (kind === 'image') {
@@ -220,7 +226,7 @@ export default function AdminFeed() {
     setComposerUploading(kind);
     setError(null);
     try {
-      const url = await api.admin.upload(file);
+      const url = await api.admin.upload(file, composerContentKind === 'reel' ? { purpose: 'reel' } : {});
       if (!url) return;
       setComposerVideo(url);
     } catch (err) {
@@ -232,9 +238,9 @@ export default function AdminFeed() {
 
   const uploadEditImages = async (files) => {
     if (!editPost || !files?.length) return;
-    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    const list = Array.from(files).filter(isLikelyImageFile);
     if (!list.length) {
-      setError('Choose image files.');
+      setError('Choose image files (HEIC uploads are saved as JPEG).');
       return;
     }
     setEditUploading('image');
@@ -263,14 +269,17 @@ export default function AdminFeed() {
       await uploadEditImages([file]);
       return;
     }
-    if (!/^video\//i.test(file.type)) {
-      setError('Choose a video file.');
+    if (!isLikelyVideoFile(file)) {
+      setError('Choose a video file (MP4, WebM, MOV, M4V, MKV, or 3GP).');
       return;
     }
     setEditUploading(kind);
     setError(null);
     try {
-      const url = await api.admin.upload(file);
+      const url = await api.admin.upload(
+        file,
+        contentKind(editPost.type) === 'reel' ? { purpose: 'reel' } : {}
+      );
       if (!url) return;
       setEditPost((x) => ({ ...x, video_url: url }));
     } catch (err) {
@@ -397,7 +406,7 @@ export default function AdminFeed() {
           <div className="admin-card-header">
             <h2 className="admin-card-title">Create post or reel (any place)</h2>
             <p className="admin-subtitle" style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', opacity: 0.9 }}>
-              Same upload pipeline as place photos (Supabase or local dev). Drop an image for posts; reels use a video file (MP4, WebM, MOV). Optional cover image for reels.
+              Same pipeline as place photos (Supabase or local). Images for posts; MP4/WebM/MOV for reels (~80MB before processing). Reel videos are normalized on the server to H.264 MP4 (up to ~1080×1920, streaming-friendly) when ffmpeg is available—large uploads may take a minute. Optional cover for reels.
             </p>
           </div>
           <button
@@ -519,7 +528,7 @@ export default function AdminFeed() {
                     <input
                       id="admin-feed-composer-image-post"
                       type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      accept={ACCEPT_IMAGES_WITH_HEIC}
                       multiple
                       style={{ display: 'none' }}
                       disabled={composerUploading !== null}
@@ -534,7 +543,7 @@ export default function AdminFeed() {
                     >
                       {composerUploading === 'image'
                         ? 'Uploading…'
-                        : 'Drop images here or click — add multiple (JPEG, PNG, GIF, WebP; same storage as place listings)'}
+                        : 'Drop images here or click — add multiple (JPEG, PNG, GIF, WebP, or HEIC stored as JPEG; same storage as place listings)'}
                     </label>
                   </div>
                   {composerImages.length > 0 && (
@@ -607,7 +616,7 @@ export default function AdminFeed() {
                       <input
                         id="admin-feed-composer-video"
                         type="file"
-                        accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                        accept={ACCEPT_FEED_REEL_VIDEOS}
                         style={{ display: 'none' }}
                         disabled={composerUploading !== null}
                         onChange={(e) => {
@@ -621,7 +630,7 @@ export default function AdminFeed() {
                       >
                         {composerUploading === 'video'
                           ? 'Uploading video…'
-                          : 'Drop video here or click — MP4, WebM, MOV (about 80MB max, same admin upload as images)'}
+                          : 'Drop video here or click — MP4, WebM, MOV, M4V, MKV, 3GP (host max applies; same pipeline as business uploads)'}
                       </label>
                     </div>
                     {resolvedMediaUrl(composerVideo) ? (
@@ -667,7 +676,7 @@ export default function AdminFeed() {
                       <input
                         id="admin-feed-composer-image-reel"
                         type="file"
-                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        accept={ACCEPT_IMAGES_WITH_HEIC}
                         style={{ display: 'none' }}
                         disabled={composerUploading !== null}
                         onChange={(e) => {
@@ -1053,7 +1062,7 @@ export default function AdminFeed() {
                     <input
                       id="admin-feed-edit-image"
                       type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      accept={ACCEPT_IMAGES_WITH_HEIC}
                       multiple={contentKind(editPost.type) !== 'reel'}
                       style={{ display: 'none' }}
                       disabled={editUploading !== null}
@@ -1143,7 +1152,7 @@ export default function AdminFeed() {
                     <input
                       id="admin-feed-edit-video"
                       type="file"
-                      accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                      accept={ACCEPT_FEED_REEL_VIDEOS}
                       style={{ display: 'none' }}
                       disabled={editUploading !== null}
                       onChange={(e) => {
