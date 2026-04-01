@@ -653,11 +653,13 @@ export default function AiPlanner() {
           resolvedPlaces = slots.map((s) => placeById[s.placeId]).filter(Boolean);
         }
 
+        const assistantContent = (reply || t('aiPlanner', 'assistantFallback')).trim();
+
         setMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
-            content: reply,
+            content: assistantContent,
             slots: slots || null,
             places: resolvedPlaces,
           },
@@ -768,11 +770,12 @@ export default function AiPlanner() {
         resolvedPlaces = slots.map((s) => placeById[s.placeId]).filter(Boolean);
       }
 
+      const assistantContent = (reply || t('aiPlanner', 'assistantFallback')).trim();
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: reply,
+          content: assistantContent,
           slots: slots || null,
           places: resolvedPlaces,
         },
