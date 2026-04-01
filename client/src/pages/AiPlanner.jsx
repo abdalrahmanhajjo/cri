@@ -226,6 +226,36 @@ export default function AiPlanner() {
     [t]
   );
 
+  const quickStartSteps = useMemo(
+    () => [
+      {
+        number: '01',
+        title: t('aiPlanner', 'starterStepOneTitle'),
+        body: t('aiPlanner', 'starterStepOneBody'),
+      },
+      {
+        number: '02',
+        title: t('aiPlanner', 'starterStepTwoTitle'),
+        body: t('aiPlanner', 'starterStepTwoBody'),
+      },
+      {
+        number: '03',
+        title: t('aiPlanner', 'starterStepThreeTitle'),
+        body: t('aiPlanner', 'starterStepThreeBody'),
+      },
+    ],
+    [t]
+  );
+
+  const examplePrompts = useMemo(
+    () => [
+      t('aiPlanner', 'examplePromptOne'),
+      t('aiPlanner', 'examplePromptTwo'),
+      t('aiPlanner', 'examplePromptThree'),
+    ],
+    [t]
+  );
+
   const placeById = useMemo(() => {
     const m = {};
     places.forEach((p) => {
@@ -1147,8 +1177,28 @@ export default function AiPlanner() {
       )}
 
       <div className="ai-planner__hero">
+        <p className="ai-planner__eyebrow">{t('aiPlanner', 'heroEyebrow')}</p>
+        <h2 className="ai-planner__hero-title">{t('aiPlanner', 'heroTitle')}</h2>
         <p className="ai-planner__greeting">{greeting}</p>
         <p className="ai-planner__sub">{t('aiPlanner', 'heroSub')}</p>
+
+        <div className="ai-planner__starter">
+          <div className="ai-planner__starter-copy">
+            <h3 className="ai-planner__section-title">{t('aiPlanner', 'starterTitle')}</h3>
+            <p className="ai-planner__section-sub">{t('aiPlanner', 'starterLead')}</p>
+          </div>
+          <div className="ai-planner__steps" role="list" aria-label={t('aiPlanner', 'starterTitle')}>
+            {quickStartSteps.map((step) => (
+              <article key={step.number} className="ai-planner__step" role="listitem">
+                <span className="ai-planner__step-number">{step.number}</span>
+                <div>
+                  <h4>{step.title}</h4>
+                  <p>{step.body}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
 
         <div className="ai-planner__moods">
           {moodCards.map((m) => (
@@ -1168,7 +1218,34 @@ export default function AiPlanner() {
           ))}
         </div>
 
+        <div className="ai-planner__examples" aria-label={t('aiPlanner', 'promptIdeasTitle')}>
+          <div className="ai-planner__examples-head">
+            <h3 className="ai-planner__section-title">{t('aiPlanner', 'promptIdeasTitle')}</h3>
+            <p className="ai-planner__section-sub">{t('aiPlanner', 'promptIdeasLead')}</p>
+          </div>
+          <div className="ai-planner__examples-list">
+            {examplePrompts.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                className="ai-planner__example-btn"
+                disabled={sending || !aiConfigured || dataLoading}
+                onClick={() => sendMessage(prompt)}
+              >
+                <Icon name="auto_awesome" size={18} aria-hidden />
+                <span>{prompt}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="ai-planner__chips-wrap" ref={chipsBarRef}>
+          <div className="ai-planner__chips-head">
+            <div>
+              <h3 className="ai-planner__section-title">{t('aiPlanner', 'tripBriefTitle')}</h3>
+              <p className="ai-planner__section-sub">{t('aiPlanner', 'tripBriefHint')}</p>
+            </div>
+          </div>
           <div className="ai-planner__chips" role="toolbar" aria-label={t('aiPlanner', 'configure')}>
             <button
               type="button"
@@ -1294,7 +1371,26 @@ export default function AiPlanner() {
           )}
           {!dataLoading && messages.length === 0 && (
             <div className="ai-planner__chat-empty">
+              <div className="ai-planner__chat-empty-icon" aria-hidden>
+                <Icon name="travel_explore" size={24} />
+              </div>
+              <h3>{t('aiPlanner', 'chatEmptyTitle')}</h3>
               <p>{t('aiPlanner', 'chatEmptyHint')}</p>
+              <p className="ai-planner__chat-empty-tip">{t('aiPlanner', 'chatEmptyTip')}</p>
+              <div className="ai-planner__examples-list ai-planner__examples-list--empty">
+                {examplePrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    className="ai-planner__example-btn ai-planner__example-btn--soft"
+                    disabled={sending || !aiConfigured || dataLoading}
+                    onClick={() => sendMessage(prompt)}
+                  >
+                    <Icon name="north_east" size={16} aria-hidden />
+                    <span>{prompt}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {messages.map((m, i) => (
@@ -1636,33 +1732,39 @@ export default function AiPlanner() {
         style={keyboardInsetPx > 0 ? { bottom: keyboardInsetPx } : undefined}
       >
         <div className="ai-planner__composer-inner">
-          <textarea
-            className="ai-planner__input"
-            rows={1}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage(input);
-              }
-            }}
-            placeholder={t('aiPlanner', 'placeholder')}
-            aria-label={t('aiPlanner', 'placeholder')}
-            disabled={!aiConfigured || dataLoading}
-            enterKeyHint="send"
-            autoComplete="off"
-          />
-          <button
-            type="button"
-            className="ai-planner__send"
-            disabled={!aiConfigured || dataLoading || sending || !input.trim()}
-            onClick={() => sendMessage(input)}
-            aria-label={t('aiPlanner', 'send')}
-          >
-            <Icon name="send" size={22} aria-hidden />
-            <span className="ai-planner__send-label">{t('aiPlanner', 'send')}</span>
-          </button>
+          <div className="ai-planner__composer-guide">
+            <span className="ai-planner__composer-guide-title">{t('aiPlanner', 'composerGuide')}</span>
+            <span className="ai-planner__composer-guide-text">{t('aiPlanner', 'composerTip')}</span>
+          </div>
+          <div className="ai-planner__composer-row">
+            <textarea
+              className="ai-planner__input"
+              rows={1}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage(input);
+                }
+              }}
+              placeholder={t('aiPlanner', 'placeholder')}
+              aria-label={t('aiPlanner', 'placeholder')}
+              disabled={!aiConfigured || dataLoading}
+              enterKeyHint="send"
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              className="ai-planner__send"
+              disabled={!aiConfigured || dataLoading || sending || !input.trim()}
+              onClick={() => sendMessage(input)}
+              aria-label={t('aiPlanner', 'send')}
+            >
+              <Icon name="send" size={22} aria-hidden />
+              <span className="ai-planner__send-label">{t('aiPlanner', 'send')}</span>
+            </button>
+          </div>
         </div>
       </div>
 

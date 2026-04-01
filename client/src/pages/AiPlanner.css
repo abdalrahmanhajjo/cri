@@ -97,6 +97,23 @@
   box-shadow: 0 24px 60px rgba(15, 118, 110, 0.08);
 }
 
+.ai-planner__eyebrow {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-primary, #0f766e);
+}
+
+.ai-planner__hero-title {
+  margin: 0 0 10px;
+  font-family: var(--font-serif, 'DM Serif Display', Georgia, serif);
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.04;
+  color: var(--color-text-primary, #1c1917);
+}
+
 .ai-planner__greeting {
   margin: 0 0 10px;
   font-size: 16px;
@@ -110,6 +127,78 @@
   color: var(--color-text-secondary, #57534e);
   line-height: 1.6;
   max-width: 100%;
+}
+
+.ai-planner__section-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-text-primary, #1c1917);
+}
+
+.ai-planner__section-sub {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-text-secondary, #57534e);
+}
+
+.ai-planner__starter {
+  margin-bottom: 18px;
+  padding: 18px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(15, 118, 110, 0.06), rgba(15, 118, 110, 0.02));
+  border: 1px solid rgba(15, 118, 110, 0.14);
+}
+
+.ai-planner__starter-copy {
+  margin-bottom: 14px;
+}
+
+.ai-planner__steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.ai-planner__step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--color-surface, #fff) 88%, transparent);
+  border: 1px solid rgba(15, 118, 110, 0.12);
+}
+
+.ai-planner__step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(15, 118, 110, 0.18), rgba(15, 118, 110, 0.08));
+  color: var(--color-primary, #0f766e);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.ai-planner__step h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary, #1c1917);
+}
+
+.ai-planner__step p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #57534e);
 }
 
 .ai-planner__moods {
@@ -163,12 +252,63 @@
   color: var(--color-primary, #0f766e);
 }
 
+.ai-planner__examples {
+  margin-top: 18px;
+}
+
+.ai-planner__examples-head {
+  margin-bottom: 12px;
+}
+
+.ai-planner__examples-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ai-planner__example-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  background: color-mix(in srgb, var(--color-surface, #fff) 94%, rgba(15, 118, 110, 0.06));
+  color: var(--color-text-primary, #1c1917);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.ai-planner__example-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--color-primary, #0f766e);
+  box-shadow: 0 10px 24px rgba(15, 118, 110, 0.1);
+}
+
+.ai-planner__example-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ai-planner__example-btn--soft {
+  background: var(--color-surface-elevated, #fafaf9);
+}
+
 .ai-planner__chips-wrap {
   margin-top: 18px;
   padding: 18px;
   border-radius: 22px;
   background: rgba(15, 118, 110, 0.04);
   border: 1px solid rgba(15, 118, 110, 0.12);
+}
+
+.ai-planner__chips-head {
+  margin-bottom: 12px;
 }
 
 .ai-planner__chips {
@@ -317,11 +457,32 @@
 
 .ai-planner__chat-empty {
   align-self: stretch;
-  padding: 16px 14px;
-  border-radius: 14px;
-  background: var(--color-surface, #fff);
-  border: 1px solid var(--color-border, #e7e5e4);
-  box-shadow: 0 2px 10px rgba(28, 25, 23, 0.04);
+  padding: 20px 18px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 36%),
+    var(--color-surface, #fff);
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  box-shadow: 0 14px 34px rgba(28, 25, 23, 0.05);
+}
+
+.ai-planner__chat-empty-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, rgba(15, 118, 110, 0.16), rgba(15, 118, 110, 0.05));
+  color: var(--color-primary, #0f766e);
+}
+
+.ai-planner__chat-empty h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text-primary, #1c1917);
 }
 
 .ai-planner__chat-empty p {
@@ -330,6 +491,15 @@
   line-height: 1.5;
   color: var(--color-text-secondary, #57534e);
   text-align: center;
+}
+
+.ai-planner__chat-empty-tip {
+  margin-top: 8px;
+}
+
+.ai-planner__examples-list--empty {
+  justify-content: center;
+  margin-top: 14px;
 }
 
 .ai-planner__bubble-para {
@@ -747,10 +917,39 @@
 
 .ai-planner__composer-inner {
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 10px;
   max-width: 800px;
   margin: 0 auto;
+  flex-direction: column;
+}
+
+.ai-planner__composer-guide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 0 6px;
+}
+
+.ai-planner__composer-guide-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-primary, #0f766e);
+}
+
+.ai-planner__composer-guide-text {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-secondary, #57534e);
+}
+
+.ai-planner__composer-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
 }
 
 .ai-planner__input {
@@ -811,10 +1010,9 @@
     padding-bottom: calc(168px + env(safe-area-inset-bottom, 0px));
   }
 
-  .ai-planner__composer-inner {
+  .ai-planner__composer-row {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
   }
 
   .ai-planner__input {

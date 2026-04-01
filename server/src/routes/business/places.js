@@ -25,6 +25,10 @@ function safeJson(val, fallback = []) {
 function rowToEditorPlace(row) {
   const images = safeJson(row.images, []);
   const tags = safeJson(row.tags, []);
+  const diningProfile =
+    row.dining_profile && typeof row.dining_profile === 'object' && !Array.isArray(row.dining_profile)
+      ? row.dining_profile
+      : {};
   const tagList = Array.isArray(tags) ? tags.map((x) => (typeof x === 'string' ? normalizeDbText(x) : x)) : [];
   return {
     id: row.id,
@@ -43,6 +47,7 @@ function rowToEditorPlace(row) {
     rating: row.rating ?? null,
     reviewCount: row.review_count ?? null,
     hours: typeof row.hours === 'string' ? normalizeDbText(row.hours) : row.hours ?? null,
+    diningProfile,
     tags: tagList,
   };
 }
@@ -228,6 +233,7 @@ router.put('/:placeId', requirePlaceOwnerParam('placeId'), async (req, res) => {
 
     const imagesJson = s.images !== undefined ? JSON.stringify(s.images) : null;
     const tagsJson = s.tags !== undefined ? JSON.stringify(s.tags) : null;
+    const diningProfileJson = s.diningProfile !== undefined ? JSON.stringify(s.diningProfile || {}) : null;
 
     const result = await query(
       `UPDATE places SET
@@ -235,7 +241,8 @@ router.put('/:placeId', requirePlaceOwnerParam('placeId'), async (req, res) => {
          latitude = COALESCE($5, latitude), longitude = COALESCE($6, longitude), search_name = COALESCE($7, search_name),
          images = COALESCE($8::jsonb, images), category = COALESCE($9, category), category_id = COALESCE($10, category_id),
          duration = COALESCE($11, duration), price = COALESCE($12, price), best_time = COALESCE($13, best_time),
-         rating = COALESCE($14, rating), review_count = COALESCE($15, review_count), hours = COALESCE($16::jsonb, hours), tags = COALESCE($17::jsonb, tags)
+         rating = COALESCE($14, rating), review_count = COALESCE($15, review_count), hours = COALESCE($16::jsonb, hours), tags = COALESCE($17::jsonb, tags),
+         dining_profile = COALESCE($18::jsonb, dining_profile)
        WHERE id = $1`,
       [
         id,
@@ -255,6 +262,7 @@ router.put('/:placeId', requirePlaceOwnerParam('placeId'), async (req, res) => {
         s.reviewCount !== undefined ? s.reviewCount : null,
         s.hours !== undefined ? JSON.stringify(s.hours) : null,
         tagsJson,
+        diningProfileJson,
       ]
     );
     if (result.rowCount === 0) return res.status(404).json({ error: 'Place not found' });
