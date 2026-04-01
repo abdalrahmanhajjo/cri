@@ -256,6 +256,51 @@
   --plan-accent-dim: rgba(15, 118, 110, 0.12);
 }
 
+:root[data-theme="dark"] .vd-home-bento {
+  background: linear-gradient(180deg, var(--color-surface-variant) 0%, var(--color-background) 48%, var(--color-background) 100%);
+}
+
+:root[data-theme="dark"] .vd-home .vd-bento-card {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .vd-home .vd-bento-web-hub-inner {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .vd-home .vd-bento-web-hub-icon {
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--color-primary);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme="dark"] .vd-home .vd-community-feed.vd-community-feed--showcase {
+  background: radial-gradient(ellipse 120% 70% at 50% -35%, rgba(15, 118, 110, 0.14), transparent 55%),
+    radial-gradient(ellipse 50% 45% at 95% 25%, rgba(15, 118, 110, 0.06), transparent 45%),
+    linear-gradient(188deg, var(--color-surface) 0%, var(--color-background) 38%, rgba(238, 241, 240, 0.04) 100%);
+}
+
+:root[data-theme="dark"] .vd-home .vd-bento-mosaic-snap--phone {
+  background: rgba(15, 118, 110, 0.28);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme="dark"] .vd-home .vd-bento-stat.vd-bento-stat--light {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme="dark"] .vd-home .vd-bento-stat.vd-bento-stat--dark {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+:root[data-theme="dark"] .vd-home .vd-bento-web-hub-cta {
+  box-shadow: 0 2px 12px rgba(15, 118, 110, 0.32);
+}
+
 * { box-sizing: border-box; }
 
 ::selection {
