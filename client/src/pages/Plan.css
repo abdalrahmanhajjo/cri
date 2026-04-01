@@ -2235,6 +2235,24 @@
     linear-gradient(180deg, rgba(43, 212, 192, 0.14) 0%, rgba(16, 27, 36, 0.96) 58%, rgba(16, 27, 36, 1) 100%);
 }
 
+:root[data-theme="dark"] .plan-page .plan-unified-section--discover {
+  background:
+    radial-gradient(circle at top right, rgba(43, 212, 192, 0.08), transparent 26%),
+    linear-gradient(180deg, rgba(18, 30, 40, 0.98) 0%, rgba(16, 27, 36, 1) 100%);
+}
+
+:root[data-theme="dark"] .plan-page .plan-unified-section--favourites {
+  background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.07), transparent 24%),
+    linear-gradient(180deg, rgba(17, 28, 39, 0.98) 0%, rgba(16, 27, 36, 1) 100%);
+}
+
+:root[data-theme="dark"] .plan-page .plan-unified-section--itinerary {
+  background:
+    radial-gradient(circle at 80% 0%, rgba(251, 191, 36, 0.05), transparent 22%),
+    linear-gradient(180deg, rgba(19, 30, 39, 0.98) 0%, rgba(16, 27, 36, 1) 100%);
+}
+
 :root[data-theme="dark"] .plan-page .plan-trips-filters-panel,
 :root[data-theme="dark"] .plan-page .plan-builder-actions,
 :root[data-theme="dark"] .plan-page .plan-trip-card-actions,
@@ -2464,6 +2482,29 @@
   background-color: #0f1b25;
 }
 
+:root[data-theme="dark"] .plan-page .plan-discover-card-media .delivery-img-cover,
+:root[data-theme="dark"] .plan-page .plan-event-card-media .delivery-img-cover,
+:root[data-theme="dark"] .plan-page .plan-fav-card-media .delivery-img-cover {
+  z-index: 0;
+  opacity: 1;
+  visibility: visible;
+  filter: saturate(1.05) contrast(1.02) brightness(0.92);
+  transform: scale(1.01);
+}
+
+:root[data-theme="dark"] .plan-page .plan-discover-card-media::after,
+:root[data-theme="dark"] .plan-page .plan-event-card-media::after,
+:root[data-theme="dark"] .plan-page .plan-fav-card-media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    linear-gradient(180deg, rgba(4, 10, 16, 0.02) 0%, rgba(4, 10, 16, 0.16) 100%),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 34%);
+}
+
 :root[data-theme="dark"] .plan-page .plan-discover-card-overlay {
   background:
     linear-gradient(to top, rgba(4, 10, 16, 0.92) 0%, rgba(4, 10, 16, 0.42) 42%, transparent 72%);
@@ -2481,6 +2522,26 @@
   background:
     linear-gradient(180deg, rgba(43, 212, 192, 0.08), rgba(255, 255, 255, 0.015)),
     var(--plan-surface);
+}
+
+:root[data-theme="dark"] .plan-page .plan-discover-card-footer {
+  background: rgba(12, 21, 29, 0.72);
+}
+
+:root[data-theme="dark"] .plan-page .plan-discover-card-tag {
+  background: rgba(43, 212, 192, 0.12);
+  border: 1px solid rgba(43, 212, 192, 0.14);
+  color: #bafdf4;
+}
+
+:root[data-theme="dark"] .plan-page .plan-discover-fav-btn {
+  background: rgba(19, 31, 43, 0.84);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+:root[data-theme="dark"] .plan-page .plan-discover-fav-btn:hover {
+  background: rgba(28, 43, 56, 0.96);
 }
 
 :root[data-theme="dark"] .plan-page .plan-fav-card-cat,
@@ -2514,6 +2575,34 @@
   color: #fde68a;
   background: rgba(245, 158, 11, 0.14);
   border-color: rgba(245, 158, 11, 0.26);
+}
+
+:root[data-theme="dark"] .plan-page .plan-section-step,
+:root[data-theme="dark"] .plan-page .plan-section-head-toggle,
+:root[data-theme="dark"] .plan-page .plan-builder-section-body {
+  color: var(--plan-text);
+}
+
+:root[data-theme="dark"] .plan-page .plan-step-num {
+  background: linear-gradient(135deg, #2bd4c0 0%, #18b4a2 100%);
+  color: #061215;
+  box-shadow: 0 10px 20px rgba(43, 212, 192, 0.18);
+}
+
+:root[data-theme="dark"] .plan-page .plan-section-nav {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 24%),
+    #0f1a23;
+}
+
+:root[data-theme="dark"] .plan-page .plan-calendar-wrap {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(11, 23, 32, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 14px 30px rgba(0, 0, 0, 0.18);
 }
 
 :root[data-theme="dark"] .plan-page .trips-error,

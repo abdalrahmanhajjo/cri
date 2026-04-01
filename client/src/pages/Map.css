@@ -1764,3 +1764,158 @@
 :root[data-theme="dark"] .gm-style .gm-ui-hover-effect span {
   filter: invert(1) brightness(1.2);
 }
+
+/* Google Maps info window hardening for light + dark mode */
+.gm-info-content {
+  width: min(280px, calc(100vw - 96px));
+  max-width: 280px;
+  padding: 12px;
+  box-sizing: border-box;
+  font-size: 14px;
+  color: #0f172a;
+  background: #ffffff !important;
+  overflow: hidden;
+}
+
+.gm-info-image {
+  display: block;
+  width: calc(100% + 24px);
+  height: 180px;
+  object-fit: cover;
+  margin: -12px -12px 12px;
+  background: #e5e7eb;
+}
+
+.gm-info-title {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 16px;
+  line-height: 1.35;
+  color: #0f172a;
+}
+
+.gm-info-address,
+.gm-info-rating,
+.gm-info-open {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.gm-info-address,
+.gm-info-rating {
+  color: #475569;
+}
+
+.gm-info-open--yes {
+  color: #15803d;
+}
+
+.gm-info-open--no {
+  color: #b91c1c;
+}
+
+.gm-info-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  line-height: 1.35;
+}
+
+.map-info-link,
+.map-info-directions {
+  color: #0f766e;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.map-info-link:hover,
+.map-info-directions:hover {
+  text-decoration: underline;
+}
+
+.gm-style .gm-style-iw-c {
+  padding: 0 !important;
+  max-width: 280px !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.22) !important;
+  overflow: hidden !important;
+}
+
+.gm-style .gm-style-iw-d {
+  max-width: 280px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+}
+
+.gm-style .gm-style-iw-tc::after {
+  background: #ffffff !important;
+}
+
+.gm-style .gm-ui-hover-effect {
+  top: 8px !important;
+  right: 8px !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 10px !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  opacity: 1 !important;
+}
+
+.gm-style .gm-ui-hover-effect span {
+  margin: 6px !important;
+}
+
+:root[data-theme="dark"] .gm-info-content {
+  color: #eef2ff;
+  background: #111b24 !important;
+}
+
+:root[data-theme="dark"] .gm-info-image {
+  background: #0f1720;
+}
+
+:root[data-theme="dark"] .gm-info-title {
+  color: #eef2ff;
+}
+
+:root[data-theme="dark"] .gm-info-address,
+:root[data-theme="dark"] .gm-info-rating {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .gm-info-open--yes {
+  color: #86efac;
+}
+
+:root[data-theme="dark"] .gm-info-open--no {
+  color: #fca5a5;
+}
+
+:root[data-theme="dark"] .map-info-link,
+:root[data-theme="dark"] .map-info-directions {
+  color: #7dd3fc;
+}
+
+:root[data-theme="dark"] .gm-style .gm-style-iw-c,
+:root[data-theme="dark"] .gm-style .gm-style-iw-d {
+  background: #111b24 !important;
+  color: #eef2ff !important;
+  border-radius: 14px !important;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42) !important;
+}
+
+:root[data-theme="dark"] .gm-style .gm-style-iw-tc::after {
+  background: #111b24 !important;
+}
+
+:root[data-theme="dark"] .gm-style .gm-ui-hover-effect {
+  background: #162431 !important;
+}
+
+:root[data-theme="dark"] .gm-style .gm-ui-hover-effect span {
+  filter: invert(1) brightness(1.2);
+}
