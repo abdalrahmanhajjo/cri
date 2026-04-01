@@ -488,13 +488,42 @@
   color: var(--color-text-primary) !important;
 }
 
-:root[data-theme="dark"] :where(a, [class*="link"]) {
+:root[data-theme="dark"] :where(
+  a:not([class*="btn"]):not([class*="button"]):not([class*="cta"]):not([role="button"]),
+  [class*="link"]:not([class*="btn"]):not([class*="button"]):not([class*="cta"])
+) {
   color: var(--color-link);
 }
 
 :root[data-theme="dark"] :where(hr, [class*="divider"], [class*="separator"]) {
   border-color: var(--color-border) !important;
   background: var(--color-border) !important;
+}
+
+:root[data-theme="dark"] :where(
+  .vd-find-your-way-cta,
+  .vd-bento-web-hub-cta,
+  .vd-bento-mosaic-cta,
+  .vd-download-app-badge,
+  .vd-btn--primary,
+  .btn-primary
+) {
+  color: #fff !important;
+}
+
+:root[data-theme="dark"] :where(
+  .vd-find-your-way-cta .icon,
+  .vd-find-your-way-cta .icon--feather,
+  .vd-bento-web-hub-cta .icon,
+  .vd-bento-web-hub-cta .icon--feather,
+  .vd-bento-mosaic-cta .icon,
+  .vd-bento-mosaic-cta .icon--feather,
+  .vd-download-app-badge .icon,
+  .vd-download-app-badge .icon--feather,
+  .vd-btn--primary .icon,
+  .vd-btn--primary .icon--feather
+) {
+  color: #fff !important;
 }
 
 * { box-sizing: border-box; }

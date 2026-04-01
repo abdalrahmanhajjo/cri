@@ -905,6 +905,30 @@
   border-color: rgba(15, 118, 110, 0.35);
 }
 
+.pd-card-action--fav {
+  flex: 1;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--color-text-secondary);
+}
+
+.pd-card-action--fav:hover {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.3);
+  color: #b91c1c;
+}
+
+.pd-card-action--fav-on {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.32);
+  color: #b91c1c;
+}
+
+.pd-card-action--fav-on .icon,
+.pd-card-action--fav-on .icon--feather {
+  color: #b91c1c;
+}
+
 .pd-empty {
   text-align: center;
   padding: 48px 24px;
@@ -1074,4 +1098,69 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+:root[data-theme="dark"] .pd-page {
+  --pd-ink: var(--color-text-primary);
+  --pd-forest: #d4fff5;
+  --pd-teal: #30c5b6;
+  --pd-teal-deep: #1ca899;
+  --pd-sand: var(--color-background);
+  --pd-divider: rgba(255, 255, 255, 0.1);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+:root[data-theme="dark"] .pd-hero-grid {
+  background: linear-gradient(180deg, rgba(22, 32, 45, 0.95) 0%, rgba(7, 17, 22, 1) 100%);
+}
+
+:root[data-theme="dark"] .pd-filters-card,
+:root[data-theme="dark"] .pd-toolbar,
+:root[data-theme="dark"] .pd-card,
+:root[data-theme="dark"] .pd-modal,
+:root[data-theme="dark"] .pd-modal-trip-row {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .pd-card-actions-row {
+  background: var(--color-surface-variant);
+  border-top-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .pd-app-dock {
+  background: rgba(7, 17, 22, 0.92);
+  border-top-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .pd-view {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .pd-view-btn--on {
+  background: var(--color-surface-elevated);
+  color: var(--pd-teal);
+}
+
+:root[data-theme="dark"] .pd-cat-pill,
+:root[data-theme="dark"] .pd-select,
+:root[data-theme="dark"] .pd-card-action--trip,
+:root[data-theme="dark"] .pd-card-action--map,
+:root[data-theme="dark"] .pd-card-action--fav {
+  background: var(--color-surface-elevated);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+:root[data-theme="dark"] .pd-card-action--fav:hover,
+:root[data-theme="dark"] .pd-card-action--fav-on {
+  background: rgba(248, 113, 113, 0.16);
+  border-color: rgba(248, 113, 113, 0.38);
+  color: #fca5a5;
+}
+
+:root[data-theme="dark"] .pd-card-action--fav-on .icon,
+:root[data-theme="dark"] .pd-card-action--fav-on .icon--feather {
+  color: #fca5a5;
 }
