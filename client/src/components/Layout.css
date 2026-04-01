@@ -1172,6 +1172,10 @@ button.nav-icon {
     background: var(--color-surface-variant);
   }
 
+  .btn-drawer-footer--theme {
+    gap: 8px;
+  }
+
   .nav-lang-wrap--drawer {
     position: relative;
   }
@@ -1259,6 +1263,10 @@ button.nav-icon {
   .btn-drawer-footer {
     min-height: 44px;
     padding: 12px 18px;
+  }
+
+  .header-mobile-right {
+    gap: 2px;
   }
 }
 
