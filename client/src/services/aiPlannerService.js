@@ -2,9 +2,20 @@
  * AI planner client — calls POST /api/ai/complete with the same prompts as VisitTripoliApp
  * (lib/services/ai_planner_service.dart chatForTripPlan).
  */
-import { buildFewShotPrompt, plannerQualityRules, getPlanningTrainingContext } from '../data/aiPlannerTrainingData';
+import {
+  buildFewShotPrompt,
+  plannerQualityRules,
+  plannerReplyStyleRules,
+  getPlanningTrainingContext,
+  tripoliLebanonContext,
+  multilingualInputRules,
+} from '../data/aiPlannerTrainingData';
 import { formatYMD } from '../utils/tripPlannerHelpers';
 import { loadSmartScheduleContext, sortAndAssignSmartSlotTimes } from '../utils/smartVisitTiming';
+import {
+  rankPlacesForPlanner,
+  compactPlaceRowForModel,
+} from '../utils/aiPlannerPlaceRanker';
 
 function apiBase() {
   const raw = import.meta.env.VITE_API_URL;
@@ -233,6 +244,72 @@ function parsePlanJson(rawText, placeIdSet) {
   return { text: beforePlan || 'Here’s a plan for you!', slots };
 }
 
+/** Optional block from the model: TRIP_SETTINGS_JSON: {"startDate":"YYYY-MM-DD",...} */
+function normalizeTripSettingsPayload(raw) {
+  if (raw == null || typeof raw !== 'object') return null;
+  const out = {};
+  if (raw.startDate != null) {
+    const s = String(raw.startDate).trim().slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) out.startDate = s;
+  }
+  if (raw.durationDays != null) {
+    const n = Number(raw.durationDays);
+    if (Number.isFinite(n)) out.durationDays = Math.min(7, Math.max(1, Math.round(n)));
+  }
+  if (raw.placesPerDay != null) {
+    const n = Number(raw.placesPerDay);
+    if (Number.isFinite(n)) out.placesPerDay = Math.min(8, Math.max(2, Math.round(n)));
+  }
+  if (raw.budget != null) {
+    const b = String(raw.budget).toLowerCase().trim();
+    if (b === 'low' || b === 'moderate' || b === 'luxury') out.budget = b;
+  }
+  const interestSrc = Array.isArray(raw.interests)
+    ? raw.interests
+    : Array.isArray(raw.interestNames)
+      ? raw.interestNames
+      : null;
+  if (interestSrc?.length) {
+    out.interestNames = interestSrc.map((x) => String(x).trim()).filter(Boolean);
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function extractTripSettingsAndStrip(rawText) {
+  if (rawText == null || typeof rawText !== 'string') return { cleaned: rawText, tripSettings: null };
+  const label = /TRIP_SETTINGS_JSON\s*:/i;
+  const m = label.exec(rawText);
+  if (!m) return { cleaned: rawText, tripSettings: null };
+  const idx = m.index;
+  const before = rawText.slice(0, idx);
+  const afterLabel = rawText.slice(idx + m[0].length).trimStart();
+  const objStart = afterLabel.indexOf('{');
+  if (objStart < 0) return { cleaned: rawText, tripSettings: null };
+  let depth = 0;
+  let end = -1;
+  for (let i = objStart; i < afterLabel.length; i += 1) {
+    const c = afterLabel[i];
+    if (c === '{') depth += 1;
+    else if (c === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end < 0) return { cleaned: rawText, tripSettings: null };
+  let tripSettings = null;
+  try {
+    tripSettings = normalizeTripSettingsPayload(JSON.parse(afterLabel.slice(objStart, end + 1)));
+  } catch {
+    tripSettings = null;
+  }
+  const rest = (afterLabel.slice(end + 1) || '').trim();
+  const cleaned = `${before.trimEnd()}${rest ? `\n${rest}` : ''}`.trim();
+  return { cleaned, tripSettings };
+}
+
 /** Parse PLAN_JSON array without validating placeIds (for single-slot merge). */
 function extractPlanJsonArray(rawText) {
   const planLabel = /PLAN_JSON\s*:/i;
@@ -330,6 +407,20 @@ export async function applySmartScheduleToAiSlots(slots, durationDays, selectedD
   }
 }
 
+/** Same place only once per trip (keeps first occurrence in list order). */
+export function dedupeSlotsByPlacePreserveOrder(slots) {
+  if (!Array.isArray(slots) || slots.length === 0) return slots;
+  const seen = new Set();
+  const out = [];
+  for (const s of slots) {
+    const id = String(s.placeId);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(s);
+  }
+  return out;
+}
+
 /** Clamp each slot's dayIndex to 0..durationDays-1 (required for multi-day trips and saving). */
 export function normalizeSlotsForDuration(slots, durationDays) {
   if (!Array.isArray(slots) || slots.length === 0) return slots;
@@ -424,6 +515,76 @@ export function mergeSingleReplaceFromRawPlan(rawText, previousSlots, replaceInd
  * @param {object} params
  * @returns {Promise<{ text: string, slots: object[]|null }>}
  */
+/**
+ * Build ordered place list + JSON rows for the model. Refinements use the full catalog for IDs
+ * but still surface ranked, enriched rows first (plus any places already on the draft).
+ */
+function buildPlacesPromptPayload(places, ctx) {
+  const {
+    userMessage,
+    userInterests,
+    budget,
+    previousSlots,
+    singleReplaceSlotIndex,
+    learnedCategoryHints,
+  } = ctx;
+  const placeById = Object.fromEntries((places || []).map((p) => [String(p.id), p]));
+  const fullIdSet = new Set((places || []).map((p) => String(p.id)));
+  const rankOpts = {
+    userMessage,
+    interestNames: userInterests,
+    budget,
+    maxForPrompt: 56,
+    learnedCategoryHints: Array.isArray(learnedCategoryHints) ? learnedCategoryHints : [],
+  };
+
+  const isRefinement =
+    (Array.isArray(previousSlots) && previousSlots.length > 0) ||
+    singleReplaceSlotIndex != null;
+
+  const pinnedIds = new Set();
+  if (Array.isArray(previousSlots)) {
+    for (const s of previousSlots) {
+      if (s?.placeId != null) pinnedIds.add(String(s.placeId));
+    }
+  }
+
+  const { ordered: ranked, hintLines } = rankPlacesForPlanner(places || [], rankOpts);
+
+  if (!isRefinement) {
+    const placeIdSet = new Set(ranked.map((p) => String(p.id)));
+    return {
+      placeIdSet,
+      placesContext: ranked.map(compactPlaceRowForModel),
+      rankingHints: hintLines,
+      fallbackPlaceIds: ranked.map((p) => String(p.id)),
+    };
+  }
+
+  const merged = [];
+  const seen = new Set();
+  const push = (p) => {
+    if (!p?.id) return;
+    const id = String(p.id);
+    if (seen.has(id)) return;
+    seen.add(id);
+    merged.push(p);
+  };
+  for (const id of pinnedIds) {
+    const p = placeById[id];
+    if (p) push(p);
+  }
+  for (const p of ranked) push(p);
+  for (const p of places || []) push(p);
+  const ordered = merged.slice(0, 64);
+  return {
+    placeIdSet: fullIdSet,
+    placesContext: ordered.map(compactPlaceRowForModel),
+    rankingHints: hintLines,
+    fallbackPlaceIds: ordered.map((p) => String(p.id)),
+  };
+}
+
 export async function chatForTripPlan(params) {
   const {
     conversationHistory = [],
@@ -438,7 +599,18 @@ export async function chatForTripPlan(params) {
     responseLanguage = 'en',
     previousSlots = null,
     singleReplaceSlotIndex = null,
+    userFamiliarityBlock = '',
+    learnedCategoryHints = [],
   } = params;
+
+  const { placeIdSet, placesContext, rankingHints, fallbackPlaceIds } = buildPlacesPromptPayload(places, {
+    userMessage,
+    userInterests,
+    budget,
+    previousSlots,
+    singleReplaceSlotIndex,
+    learnedCategoryHints,
+  });
 
   const lang = ['en', 'ar', 'fr'].includes(responseLanguage) ? responseLanguage : 'en';
   const languageInstruction =
@@ -455,14 +627,13 @@ export async function chatForTripPlan(params) {
         ? 'Les noms des lieux et les catégories viennent de la base en français : utilisez exactement ces libellés dans le texte et dans chaque "reason".'
         : 'Place names and categories in the list are in English from the database—use those exact names in your text and in each slot\'s "reason" field.';
 
-  const placeIdSet = new Set(places.map((p) => String(p.id)));
-  const placesContext = places.slice(0, 40).map((p) => ({
-    id: String(p.id),
-    name: p.name != null ? String(p.name) : '',
-    category: p.category != null ? String(p.category) : '',
-  }));
+  const recentUserText = conversationHistory
+    .filter((e) => e && e.role === 'user' && e.content)
+    .slice(-4)
+    .map((e) => String(e.content))
+    .join('\n');
 
-  const fewShot = buildFewShotPrompt(userMessage, 10);
+  const fewShot = buildFewShotPrompt(userMessage, 12, { recentUserText });
   const trainingBlock = getPlanningTrainingContext();
 
   const historyStr =
@@ -489,9 +660,16 @@ ${Array.from({ length: durationDays }, (_, d) => `- Exactly ${placesPerDay} obje
 
   const planInstruction = `
 When you have enough information (e.g. days, interests, or the user asks for a plan), you MAY propose an itinerary. To do that, end your reply with a single newline then exactly: PLAN_JSON:
-Then a JSON array of objects with placeId, suggestedTime, reason; add dayIndex (0,1,...) if multiple days. Use ONLY placeIds from the list. Example: [{"placeId":"id1","suggestedTime":"9:00","reason":"...","dayIndex":0}]
+Then a JSON array of objects with placeId, suggestedTime, reason; add dayIndex (0,1,...) if multiple days. Use ONLY placeIds from the "Available places" list (copy ids exactly). Example: [{"placeId":"id1","suggestedTime":"9:00","reason":"...","dayIndex":0}]
+Each "reason" should be one short sentence: why this stop fits the day, how it connects to the previous stop or user request, or a timing note (use the place's bestTime when relevant).
+Within each dayIndex, use suggestedTime values in **chronological order** from first stop to last (earlier starts first); the app requires spacing between starts on the same day.
 If the user wants 2 or more days, you MUST set dayIndex on every slot: 0 = first day, 1 = second day, etc. Spread places evenly across days.${exactCountNote}
-If you are just chatting or asking for more details, do NOT include PLAN_JSON.`;
+If you are just chatting or asking for more details, do NOT include PLAN_JSON.
+
+When the user asks to change trip settings (start date, trip length / number of days, stops per day, budget, or themes/interests), you MUST reflect that in the UI by adding at the very END of your reply (after PLAN_JSON if any):
+TRIP_SETTINGS_JSON:
+{"startDate":"YYYY-MM-DD","durationDays":3,"placesPerDay":4,"budget":"moderate","interests":["Culture","Food"]}
+Include ONLY fields that actually change. budget must be one of: low, moderate, luxury. interests is optional — short labels in the user's language that match themes they asked for. If they only change one field, output a one-key JSON object.`;
 
   const daySchedulingNote =
     durationDays <= 1
@@ -500,6 +678,15 @@ If you are just chatting or asking for more details, do NOT include PLAN_JSON.`;
 
   const tripoliOnly = `
 You ONLY help with Tripoli, Lebanon. Answer only about Tripoli—trip planning, its places, food, culture, history, and visiting Tripoli. If the user asks about anything unrelated to Tripoli (other cities, general knowledge, etc.), politely say you can only help with Tripoli and ask how you can help with their Tripoli visit. Never discuss other destinations.`;
+
+  const familiarity =
+    typeof userFamiliarityBlock === 'string' && userFamiliarityBlock.trim().length > 0
+      ? `
+
+**Known visitor (this browser + optional account hints — treat as private, personalize subtly):**
+${userFamiliarityBlock.trim()}
+`
+      : '';
 
   let currentPlanBlock = '';
   if (previousSlots?.length) {
@@ -550,9 +737,14 @@ ${lines.join('\n')}${replaceOneStopNote}`;
 
 ${languageInstruction}
 ${dbLocaleNote}
+${multilingualInputRules}
+${tripoliLebanonContext}
 ${tripoliOnly}
+${familiarity}
 
 ${plannerQualityRules}
+
+${plannerReplyStyleRules}
 
 **Intent examples (match user wording loosely):**
 ${fewShot}
@@ -566,7 +758,8 @@ Chat naturally. When you have enough to suggest a plan (or the user asks for one
 
 ${planInstruction}
 
-Available places (use ONLY these placeIds): ${JSON.stringify(placesContext)}
+Available places (each object: id, name, category, area hint, optional location, bestTime, duration, price, tags — use this to cluster routing and pick times):
+${JSON.stringify(placesContext)}
 
 Trip context: ${durationDays} day(s)${
     placesPerDay != null && placesPerDay > 0
@@ -574,14 +767,18 @@ Trip context: ${durationDays} day(s)${
       : ''
   }, budget ${budget}${
     selectedDate
-      ? `, date ${selectedDate.getDate()}/${selectedDate.getMonth() + 1}/${selectedDate.getFullYear()}`
+      ? `, trip start date (ISO) ${formatYMD(selectedDate instanceof Date ? selectedDate : new Date(selectedDate))}`
       : ''
   }${
     userInterests.length
       ? `, interests: ${userInterests.map((x) => String(x)).join(', ')}`
       : ''
   }
-${activityContext ? `\n${activityContext}\n` : ''}${daySchedulingNote}${currentPlanBlock}`;
+${activityContext ? `\n${activityContext}\n` : ''}${
+    rankingHints?.length
+      ? `\n**Planning hints (follow when consistent with the user):**\n${rankingHints.map((h) => `- ${h}`).join('\n')}\n`
+      : ''
+  }${daySchedulingNote}${currentPlanBlock}`;
 
   const userPrompt =
     historyStr === ''
@@ -590,35 +787,102 @@ ${activityContext ? `\n${activityContext}\n` : ''}${daySchedulingNote}${currentP
 
   const plannerTemperature =
     singleReplaceSlotIndex != null
-      ? 0.32
+      ? 0.28
       : previousSlots?.length
-        ? 0.38
+        ? 0.35
         : placesPerDay != null && placesPerDay > 0
-          ? 0.34
-          : 0.52;
+          ? 0.3
+          : 0.48;
 
   try {
     const result = await callAICompleteReliable({
       system: systemPrompt,
       user: userPrompt,
       temperature: plannerTemperature,
-      maxTokens: 2048,
+      maxTokens: 2688,
     });
     const raw = result.text;
     if (raw == null || raw === '') {
       const hint = result.errorDetail ? ` ${result.errorDetail}` : '';
-      return { text: `Sorry, I couldn't reply.${hint}`, slots: null };
+      return { text: `Sorry, I couldn't reply.${hint}`, slots: null, tripSettings: null };
     }
-    let { text, slots } = parsePlanJson(raw, placeIdSet);
+
+    const { cleaned: rawForPlan, tripSettings } = extractTripSettingsAndStrip(raw);
+
+    let effDays = durationDays;
+    let effPlacesPerDay = placesPerDay;
+    let effSelectedDate = selectedDate instanceof Date ? selectedDate : new Date(selectedDate);
+    if (tripSettings?.durationDays != null) effDays = tripSettings.durationDays;
+    if (tripSettings?.placesPerDay != null) effPlacesPerDay = tripSettings.placesPerDay;
+    if (tripSettings?.startDate) {
+      effSelectedDate = new Date(`${tripSettings.startDate}T12:00:00`);
+    }
+
+    let { text, slots } = parsePlanJson(rawForPlan, placeIdSet);
     const outText = text || 'Here’s a plan for you!';
+
+    const pickFillTimes = (n) => {
+      const base = ['09:30', '11:00', '13:30', '15:00', '16:30', '18:00', '19:30', '21:00'];
+      const out = [];
+      for (let i = 0; i < n; i += 1) out.push(base[i % base.length]);
+      return out;
+    };
+
+    const ensureExactSlotCount = (rawSlots) => {
+      if (!Array.isArray(rawSlots) || rawSlots.length === 0) return rawSlots;
+      if (effPlacesPerDay == null || effPlacesPerDay <= 0 || effDays < 1) return rawSlots;
+
+      const target = effDays * effPlacesPerDay;
+      let next = rawSlots.slice(0, target);
+      if (next.length >= target) return next;
+
+      const counts = Array.from({ length: effDays }, () => 0);
+      const used = new Set();
+      next.forEach((s) => {
+        used.add(String(s.placeId));
+        const d = Number.isFinite(Number(s.dayIndex)) ? Number(s.dayIndex) : 0;
+        const di = Math.min(effDays - 1, Math.max(0, d));
+        counts[di] += 1;
+      });
+
+      const candidates = (fallbackPlaceIds || []).filter((id) => placeIdSet.has(String(id)) && !used.has(String(id)));
+      const fillsNeeded = target - next.length;
+      const fillTimes = pickFillTimes(effPlacesPerDay);
+
+      for (let i = 0; i < fillsNeeded; i += 1) {
+        const pid = candidates[i];
+        if (!pid) break;
+        let dayIndex = counts.indexOf(Math.min(...counts));
+        if (counts[dayIndex] >= effPlacesPerDay) {
+          // All full (shouldn't happen with fillsNeeded math), bail.
+          break;
+        }
+        const place = (places || []).find((p) => String(p.id) === String(pid));
+        const time = fillTimes[counts[dayIndex]] || '09:30';
+        next.push({
+          placeId: String(pid),
+          suggestedTime: time,
+          dayIndex,
+          reason: place?.category
+            ? `Added to complete your ${effPlacesPerDay} stops/day plan (${place.category}).`
+            : `Added to complete your ${effPlacesPerDay} stops/day plan.`,
+        });
+        used.add(String(pid));
+        counts[dayIndex] += 1;
+      }
+
+      return next;
+    };
 
     const finalizeTripSlots = async (rawSlots) => {
       if (!rawSlots?.length) return rawSlots;
-      let next = normalizeSlotsForDuration(rawSlots, durationDays);
-      if (placesPerDay != null && placesPerDay > 0) {
-        next = enforcePlacesPerDay(next, durationDays, placesPerDay);
+      let next = normalizeSlotsForDuration(rawSlots, effDays);
+      next = dedupeSlotsByPlacePreserveOrder(next);
+      if (effPlacesPerDay != null && effPlacesPerDay > 0) {
+        next = enforcePlacesPerDay(next, effDays, effPlacesPerDay);
       }
-      return applySmartScheduleToAiSlots(next, durationDays, selectedDate, places);
+      next = ensureExactSlotCount(next);
+      return applySmartScheduleToAiSlots(next, effDays, effSelectedDate, places);
     };
 
     if (
@@ -629,7 +893,7 @@ ${activityContext ? `\n${activityContext}\n` : ''}${daySchedulingNote}${currentP
       singleReplaceSlotIndex < previousSlots.length
     ) {
       const { ok, slots: merged } = mergeSingleReplaceFromRawPlan(
-        raw,
+        rawForPlan,
         previousSlots,
         singleReplaceSlotIndex,
         placeIdSet
@@ -638,6 +902,7 @@ ${activityContext ? `\n${activityContext}\n` : ''}${daySchedulingNote}${currentP
         return {
           text: outText,
           slots: await finalizeTripSlots(merged),
+          tripSettings,
         };
       }
       slots = merged;
@@ -650,16 +915,17 @@ ${activityContext ? `\n${activityContext}\n` : ''}${daySchedulingNote}${currentP
       return {
         text: `${outText}${fail}`,
         slots: slots?.length ? await finalizeTripSlots(slots) : slots,
+        tripSettings,
       };
     }
 
     if (slots?.length) {
       slots = await finalizeTripSlots(slots);
     }
-    return { text: outText, slots };
+    return { text: outText, slots, tripSettings };
   } catch (e) {
     if (e instanceof AIPlannerApiError) throw e;
-    return { text: 'Something went wrong. Please try again.', slots: null };
+    return { text: 'Something went wrong. Please try again.', slots: null, tripSettings: null };
   }
 }
 

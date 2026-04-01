@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import Icon from '../components/Icon';
+import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
 import './Detail.css';
 
@@ -187,7 +189,6 @@ export default function TourDetail() {
   }
 
   const img = getPlaceImageUrl(tour.image);
-  const heroStyle = img ? { backgroundImage: `url(${img})` } : {};
   const locationsStr = Array.isArray(tour.locations) ? tour.locations.join(', ') : tour.locations;
   const languagesStr = Array.isArray(tour.languages) && tour.languages.length > 0
     ? tour.languages.join(', ')
@@ -218,7 +219,18 @@ export default function TourDetail() {
         </Link>
 
         <article className="place-detail-article">
-          <header className="place-detail-hero place-detail-hero--tour" style={img ? heroStyle : undefined}>
+          <header className="place-detail-hero place-detail-hero--tour">
+            {img && (
+              <img
+                key={img}
+                className="place-detail-hero__img"
+                alt=""
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+                {...getDeliveryImgProps(img, 'detailHero')}
+              />
+            )}
             {!img && (
               <div className="place-detail-hero-fallback">
                 <Icon name="explore" size={48} />
@@ -350,11 +362,23 @@ export default function TourDetail() {
                               {imgs.map((src, gi) =>
                                 place._missing ? (
                                   <span key={gi} className="tour-stop-gallery-item">
-                                    <span className="tour-stop-gallery-img" style={{ backgroundImage: `url(${src})` }} role="img" aria-label="" />
+                                    <img
+                                      className="tour-stop-gallery-img"
+                                      alt=""
+                                      loading="lazy"
+                                      decoding="async"
+                                      {...getDeliveryImgProps(src, 'galleryTile')}
+                                    />
                                   </span>
                                 ) : (
                                   <Link key={gi} to={`/place/${pid}`} className="tour-stop-gallery-item">
-                                    <span className="tour-stop-gallery-img" style={{ backgroundImage: `url(${src})` }} role="img" aria-label="" />
+                                    <img
+                                      className="tour-stop-gallery-img"
+                                      alt=""
+                                      loading="lazy"
+                                      decoding="async"
+                                      {...getDeliveryImgProps(src, 'galleryTile')}
+                                    />
                                   </Link>
                                 )
                               )}
@@ -421,7 +445,9 @@ export default function TourDetail() {
                       const simImg = getPlaceImageUrl(st.image);
                       return (
                         <Link key={st.id} to={`/tour/${st.id}`} className="detail-similar-card">
-                          <div className="detail-similar-card-media" style={simImg ? { backgroundImage: `url(${simImg})` } : undefined} />
+                          <div className="detail-similar-card-media">
+                            {simImg ? <DeliveryImg url={simImg} preset="similarStrip" alt="" /> : null}
+                          </div>
                           <span className="detail-similar-card-title">{st.name}</span>
                           {st.duration && <span className="detail-similar-card-meta">{st.duration}</span>}
                         </Link>

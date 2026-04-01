@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension, getPlaceImageUrl, API_ERROR_NETWORK } from '../api/client';
 import Icon from './Icon';
@@ -6,18 +6,18 @@ import { isCommunityFeedVideo } from './CommunityFeed';
 import { useLanguage } from '../context/LanguageContext';
 import { formatFeedTime } from '../utils/feedTime';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../utils/feedPostImages';
+import {
+  isLikelyImageFile,
+  isLikelyVideoFile,
+  ACCEPT_IMAGES_WITH_HEIC,
+  ACCEPT_FEED_REEL_VIDEOS,
+} from '../utils/imageUploadAccept';
 import { COMMUNITY_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
+import { isLikelyDirectStreamableVideo } from '../utils/feedVideoPlayback';
 
 function mediaUrl(url) {
   if (!url || typeof url !== 'string') return '';
   return getImageUrl(fixImageUrlExtension(url));
-}
-
-function isLikelyStreamableVideoUrl(url) {
-  if (!url || typeof url !== 'string') return false;
-  const u = url.trim().toLowerCase();
-  if (u.includes('youtube.com') || u.includes('youtu.be') || u.includes('vimeo.com')) return false;
-  return /^https?:\/\//i.test(u) || u.startsWith('/');
 }
 
 /** Group flat API list into roots with nested replies (one level). */
@@ -115,7 +115,11 @@ export default function FeedPostCard({
   const [ownerEditShowAdvanced, setOwnerEditShowAdvanced] = useState(false);
   const [ownerSaving, setOwnerSaving] = useState(false);
   const [imageZoomOpen, setImageZoomOpen] = useState(false);
-  const [imageZoomSrc, setImageZoomSrc] = useState('');
+  /** Which slide is shown in the full-screen image viewer (swipe / keys). */
+  const [imageZoomSlideIndex, setImageZoomSlideIndex] = useState(0);
+  const imageZoomTrackRef = useRef(null);
+  /** Slide index to snap when lightbox opens (avoids stale layout effect vs swipe). */
+  const imageZoomOpenTargetRef = useRef(0);
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : false
   );
@@ -147,7 +151,7 @@ export default function FeedPostCard({
   }, [post.id, post.image_url, post.image_urls]);
   const img = gallerySrcs[0] || '';
   const vid = post.video_url ? mediaUrl(post.video_url) : '';
-  const showVideo = isVideo && vid && isLikelyStreamableVideoUrl(post.video_url);
+  const showVideo = isVideo && vid && isLikelyDirectStreamableVideo(vid, post.video_url);
   const externalVideo = isVideo && post.video_url && !showVideo;
   const timeLabel = formatFeedTime(post.created_at, lang);
   const hideLikes = post.hide_likes === true;
@@ -288,11 +292,57 @@ export default function FeedPostCard({
   useEffect(() => {
     if (!imageZoomOpen) return undefined;
     const onKey = (e) => {
-      if (e.key === 'Escape') setImageZoomOpen(false);
+      if (e.key === 'Escape') {
+        setImageZoomOpen(false);
+        return;
+      }
+      if (gallerySrcs.length < 2) return;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setImageZoomSlideIndex((i) => {
+          const next = Math.max(0, i - 1);
+          requestAnimationFrame(() => {
+            const track = imageZoomTrackRef.current;
+            if (track) {
+              const ww = track.clientWidth || 1;
+              track.scrollTo({ left: next * ww, behavior: 'smooth' });
+            }
+          });
+          return next;
+        });
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setImageZoomSlideIndex((i) => {
+          const next = Math.min(gallerySrcs.length - 1, i + 1);
+          requestAnimationFrame(() => {
+            const track = imageZoomTrackRef.current;
+            if (track) {
+              const ww = track.clientWidth || 1;
+              track.scrollTo({ left: next * ww, behavior: 'smooth' });
+            }
+          });
+          return next;
+        });
+      }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [imageZoomOpen]);
+  }, [imageZoomOpen, gallerySrcs.length]);
+
+  /** Snap track when lightbox opens to the slide that was tapped (see imageZoomOpenTargetRef). */
+  useLayoutEffect(() => {
+    if (!imageZoomOpen || gallerySrcs.length < 2 || !imageZoomTrackRef.current) return;
+    const el = imageZoomTrackRef.current;
+    const idx = imageZoomOpenTargetRef.current;
+    const apply = () => {
+      const w = el.clientWidth;
+      if (w > 0) el.scrollLeft = idx * w;
+    };
+    apply();
+    const id = requestAnimationFrame(apply);
+    return () => cancelAnimationFrame(id);
+  }, [imageZoomOpen, gallerySrcs.length, post.id]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
@@ -645,7 +695,7 @@ export default function FeedPostCard({
       setFeedActionMsg('This post is not linked to a place. Upload from Business dashboard.');
       return;
     }
-    const list = Array.from(files).filter((f) => /^image\//i.test(f.type));
+    const list = Array.from(files).filter(isLikelyImageFile);
     if (!list.length) return;
     setOwnerEditUploading('image');
     try {
@@ -671,13 +721,17 @@ export default function FeedPostCard({
       setFeedActionMsg('This post is not linked to a place. Upload from Business dashboard.');
       return;
     }
-    if (!/^video\//i.test(file.type)) {
-      setFeedActionMsg('Choose a video file (MP4, WebM, MOV).');
+    if (!isLikelyVideoFile(file)) {
+      setFeedActionMsg('Choose a video file (MP4, WebM, MOV, M4V, MKV, or 3GP).');
       return;
     }
     setOwnerEditUploading('video');
     try {
-      const url = await api.business.upload(file, placeId);
+      const url = await api.business.upload(
+        file,
+        placeId,
+        contentKind(post.type) === 'reel' ? { purpose: 'reel' } : {}
+      );
       if (url) setOwnerEditVideoUrl(url);
     } catch (e) {
       showFeedActionError(e);
@@ -1082,7 +1136,7 @@ export default function FeedPostCard({
                 loop
                 autoPlay={isActiveReel}
                 controls={isDesktop}
-                preload={isDesktop ? 'auto' : 'metadata'}
+                preload="auto"
                 onTimeUpdate={(e) => {
                   const el = e.currentTarget;
                   if (el.duration) setReelProgress(el.currentTime / el.duration);
@@ -1373,7 +1427,7 @@ export default function FeedPostCard({
           <div className="ig-feed-media-wrap" role="presentation" {...mediaTapProps}>
             <div className="ig-feed-media">
               {showVideo ? (
-                <video className="ig-feed-video" src={vid} controls playsInline preload="metadata" poster={img || undefined} />
+                <video className="ig-feed-video" src={vid} controls playsInline preload="auto" poster={img || undefined} />
               ) : gallerySrcs.length > 1 ? (
                 <div className="ig-feed-gallery">
                   <div
@@ -1395,7 +1449,8 @@ export default function FeedPostCard({
                           loading={i === 0 ? 'eager' : 'lazy'}
                           decoding="async"
                           onClick={() => {
-                            setImageZoomSrc(src);
+                            imageZoomOpenTargetRef.current = i;
+                            setImageZoomSlideIndex(i);
                             setImageZoomOpen(true);
                           }}
                         />
@@ -1419,7 +1474,8 @@ export default function FeedPostCard({
                   loading="lazy"
                   decoding="async"
                   onClick={() => {
-                    setImageZoomSrc(gallerySrcs[0]);
+                    imageZoomOpenTargetRef.current = 0;
+                    setImageZoomSlideIndex(0);
                     setImageZoomOpen(true);
                   }}
                 />
@@ -1531,13 +1587,23 @@ export default function FeedPostCard({
 
       {!showReelTheater && !commentsDisabled ? renderCommentsPanel() : null}
 
-      {imageZoomOpen && imageZoomSrc ? (
+      {imageZoomOpen && gallerySrcs.length > 0 ? (
         <div
           className="ig-feed-image-zoom-backdrop"
           role="presentation"
           onClick={() => setImageZoomOpen(false)}
         >
-          <div className="ig-feed-image-zoom-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="ig-feed-image-zoom-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              gallerySrcs.length > 1
+                ? `${t('discover', 'feedImageLightbox')} ${imageZoomSlideIndex + 1} / ${gallerySrcs.length}`
+                : t('discover', 'feedImageLightbox')
+            }
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               className="ig-feed-image-zoom-close"
@@ -1546,7 +1612,49 @@ export default function FeedPostCard({
             >
               <Icon name="close" size={20} />
             </button>
-            <img src={imageZoomSrc} alt="" className="ig-feed-image-zoom-img" />
+            {gallerySrcs.length > 1 ? (
+              <>
+                <div
+                  ref={imageZoomTrackRef}
+                  className="ig-feed-image-zoom-track"
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    const w = el.clientWidth || 1;
+                    const i = Math.round(el.scrollLeft / w);
+                    const clamped = Math.min(gallerySrcs.length - 1, Math.max(0, i));
+                    setImageZoomSlideIndex((prev) => (prev === clamped ? prev : clamped));
+                  }}
+                >
+                  {gallerySrcs.map((src, zi) => (
+                    <div key={zi} className="ig-feed-image-zoom-slide">
+                      <img src={src} alt="" className="ig-feed-image-zoom-img" loading={zi === 0 ? 'eager' : 'lazy'} />
+                    </div>
+                  ))}
+                </div>
+                <div className="ig-feed-image-zoom-dots" role="tablist" aria-label={t('discover', 'feedImageLightboxTabs')}>
+                  {gallerySrcs.map((_, zi) => (
+                    <button
+                      key={zi}
+                      type="button"
+                      role="tab"
+                      aria-selected={zi === imageZoomSlideIndex}
+                      className={`ig-feed-image-zoom-dot${zi === imageZoomSlideIndex ? ' ig-feed-image-zoom-dot--active' : ''}`}
+                      onClick={() => {
+                        imageZoomOpenTargetRef.current = zi;
+                        setImageZoomSlideIndex(zi);
+                        const track = imageZoomTrackRef.current;
+                        if (track) {
+                          const ww = track.clientWidth || 1;
+                          track.scrollTo({ left: zi * ww, behavior: 'smooth' });
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <img src={gallerySrcs[0]} alt="" className="ig-feed-image-zoom-img" />
+            )}
           </div>
         </div>
       ) : null}
@@ -1609,7 +1717,7 @@ export default function FeedPostCard({
                 <input
                   id={`owner-edit-images-${post.id}`}
                   type="file"
-                  accept="image/*"
+                  accept={ACCEPT_IMAGES_WITH_HEIC}
                   multiple={contentKind(post.type) !== 'reel'}
                   style={{ display: 'none' }}
                   disabled={ownerSaving || ownerEditUploading !== null}
@@ -1669,7 +1777,7 @@ export default function FeedPostCard({
                 <input
                   id={`owner-edit-video-${post.id}`}
                   type="file"
-                  accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                  accept={ACCEPT_FEED_REEL_VIDEOS}
                   style={{ display: 'none' }}
                   disabled={ownerSaving || ownerEditUploading !== null}
                   onChange={(e) => {
@@ -1678,7 +1786,7 @@ export default function FeedPostCard({
                   }}
                 />
                 <label htmlFor={`owner-edit-video-${post.id}`}>
-                  {ownerEditUploading === 'video' ? 'Uploading video…' : 'Drop video here or click to upload'}
+                  {ownerEditUploading === 'video' ? 'Uploading…' : 'Drop video or click to replace'}
                 </label>
               </div>
               <button
@@ -1688,7 +1796,7 @@ export default function FeedPostCard({
                 onClick={() => setOwnerEditShowAdvanced((x) => !x)}
                 disabled={ownerSaving}
               >
-                {ownerEditShowAdvanced ? 'Hide' : 'Show'} advanced URL fields
+                {ownerEditShowAdvanced ? 'Hide' : 'Show'} paste URLs (advanced)
               </button>
               {ownerEditShowAdvanced && (
                 <div className="ig-feed-owner-edit-advanced">

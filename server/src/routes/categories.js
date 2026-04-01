@@ -22,7 +22,8 @@ router.get('/', cachePublicList(120, 600), async (req, res) => {
   try {
     const lang = getRequestLang(req);
     const result = await query(
-      `SELECT c.id, c.icon, c.count, c.color,
+      `SELECT c.id, c.icon, c.color,
+              (SELECT COUNT(*)::int FROM places p WHERE p.category_id = c.id) AS count,
               COALESCE(ct.name, c.name) AS name,
               COALESCE(ct.description, c.description) AS description,
               COALESCE(ct.tags, c.tags) AS tags

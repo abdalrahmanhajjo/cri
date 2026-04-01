@@ -54,9 +54,18 @@ const server = app.listen(basePort, listenHost, () => {
   console.log(
     `  AI planner: ${groqOk ? 'GROQ_API_KEY set' : n8nOk ? 'N8N_WEBHOOK_URL set' : 'not configured'}`
   );
-  console.log(`  Sentry: ${sentryEnabled() ? 'enabled (SENTRY_DSN)' : 'off (set SENTRY_DSN to capture errors)'}`);
+  console.log(`  Sentry: ${sentryEnabled() ? 'on' : 'off'}`);
   void verifyDatabaseConnection();
 });
+
+/** Long uploads + ffmpeg (reels). Host/proxy may still enforce a lower max (set same on the platform if possible). */
+const HTTP_SERVER_TIMEOUT_MS = parseInt(process.env.HTTP_SERVER_TIMEOUT_MS || '900000', 10);
+if (Number.isFinite(HTTP_SERVER_TIMEOUT_MS) && HTTP_SERVER_TIMEOUT_MS > 0) {
+  server.timeout = HTTP_SERVER_TIMEOUT_MS;
+  server.requestTimeout = HTTP_SERVER_TIMEOUT_MS;
+  server.headersTimeout = Math.min(HTTP_SERVER_TIMEOUT_MS + 120000, 1_800_000);
+  console.log(`  HTTP server timeout: ${HTTP_SERVER_TIMEOUT_MS}ms (HTTP_SERVER_TIMEOUT_MS)`);
+}
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {

@@ -4,14 +4,15 @@ import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import { getPlaceImageUrl } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import './Explore.css';
 
 function TourCard({ tour }) {
   const img = getPlaceImageUrl(tour.image) || null;
   return (
     <Link to={`/tour/${tour.id}`} className="vd-card vd-card--tour">
-      <div className="vd-card-media" style={{ backgroundImage: img ? `url(${img})` : undefined }}>
-        {!img && <span className="vd-card-fallback">Tour</span>}
+      <div className="vd-card-media">
+        {img ? <DeliveryImg url={img} preset="gridCard" alt="" /> : <span className="vd-card-fallback">Tour</span>}
         {tour.duration && <span className="vd-card-badge">{tour.duration}</span>}
       </div>
       <div className="vd-card-content">

@@ -144,11 +144,24 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  overflow: hidden;
+}
+
+.place-detail-hero__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .place-detail-hero-overlay {
   position: absolute;
   inset: 0;
+  z-index: 1;
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.15) 0%,
@@ -160,6 +173,7 @@
 .place-detail-hero-fallback {
   position: absolute;
   inset: 0;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -170,7 +184,7 @@
   background: var(--color-surface-variant);
 }
 
-.place-detail-hero-fallback .material-symbols-outlined {
+.place-detail-hero-fallback .icon--feather {
   opacity: 0.5;
 }
 
@@ -403,7 +417,7 @@
 
 .place-detail-hero-content {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .place-detail-title {
@@ -531,7 +545,7 @@
   color: var(--color-primary);
 }
 
-.place-detail-btn--icon.place-detail-btn--active .material-symbols-outlined {
+.place-detail-btn--icon.place-detail-btn--active .icon--feather {
   color: var(--color-primary);
 }
 
@@ -1406,8 +1420,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  background-size: cover;
-  background-position: center;
+  object-fit: cover;
 }
 
 .tour-stop-no-img {
@@ -1480,6 +1493,8 @@
 }
 
 .detail-similar-card-media {
+  position: relative;
+  overflow: hidden;
   height: 100px;
   background: var(--color-surface-variant);
   background-size: cover;
@@ -1542,8 +1557,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  background-size: cover;
-  background-position: center;
+  object-fit: cover;
 }
 
 .event-venue-body {

@@ -8,8 +8,13 @@ This document supports **layer 4** goals: calm production operations, observabil
 |----------|---------|
 | `LOG_FORMAT=json` | One JSON object per log line for log aggregators (Render, Datadog, etc.). |
 | `DB_SLOW_QUERY_MS` | Log queries slower than this many ms (default `750`). Set `0` to disable. |
-| `SENTRY_DSN` | Optional. When set, the API loads `@sentry/node` and reports unhandled errors from the Express error handler. Use `SENTRY_ENVIRONMENT` / `SENTRY_RELEASE` for filtering in Sentry. |
+| `SENTRY_DSN` | Optional. When set (and not disabled below), the API loads `@sentry/node` and reports unhandled errors from the Express error handler. Use `SENTRY_ENVIRONMENT` / `SENTRY_RELEASE` for filtering in Sentry. |
+| `SENTRY_ENABLED` | Optional killswitch: `off`, `false`, `0`, or `no` disables Sentry even if `SENTRY_DSN` is set. |
 | `GOOGLE_SITE_VERIFICATION` | Search Console HTML-tag value (injected by SEO middleware). |
+
+**Site settings:** The web home **hero tagline** and **nav brand tagline** come from the client i18n bundles (`client/src/i18n/translations.js`), not from `site_settings.siteTagline`, so deploys update that copy.
+
+**Translation overrides (`translation_overrides` table):** Admin CMS overrides still apply to most strings, but **not** to `home.heroTagline`, `nav.navBrandTagline`, `home.useWebCta`, or any `home.bento*` key — those always follow the shipped bundle so marketing copy cannot stay stuck in the database.
 
 ## Health and uptime
 

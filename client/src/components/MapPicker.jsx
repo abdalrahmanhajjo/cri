@@ -66,7 +66,8 @@ export default function MapPicker({ lat, lng, onSelect, onClose }) {
         const map = new maps.Map(mapRef.current, {
           center: { lat: initialLat, lng: initialLng },
           zoom: 15,
-          mapTypeControl: true,
+          mapTypeId: 'satellite',
+          mapTypeControl: false,
           streetViewControl: false,
         });
         const marker = new maps.Marker({

@@ -30,14 +30,8 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (name, username, email, password) => {
     const data = await api.auth.register(name, username, email, password);
-    const { token, user: u, verificationEmailDelivered } = data;
-    saveToken(token);
-    setStoredUser(u);
-    setUser(u);
-    const code = generateSessionCode();
-    setSessionCode(code);
-    setSessionCodeState(code);
-    return { user: u, verificationEmailDelivered };
+    const { user: u, verificationEmailDelivered, requiresEmailVerification } = data;
+    return { user: u, verificationEmailDelivered, requiresEmailVerification };
   }, []);
 
   /** Same session shape as login/register — used after POST /api/auth/verify-email (shared with the mobile app). */
@@ -113,7 +107,7 @@ export function AuthProvider({ children }) {
         const shouldClearSession =
           status === 401 ||
           status === 404 ||
-          (status === 403 && code === 'ACCOUNT_BLOCKED');
+          (status === 403 && (code === 'ACCOUNT_BLOCKED' || code === 'EMAIL_NOT_VERIFIED'));
         if (shouldClearSession) {
           saveToken(null);
           setStoredUser(null);
@@ -143,7 +137,7 @@ export function AuthProvider({ children }) {
           const shouldClearSession =
             status === 401 ||
             status === 404 ||
-            (status === 403 && code === 'ACCOUNT_BLOCKED');
+            (status === 403 && (code === 'ACCOUNT_BLOCKED' || code === 'EMAIL_NOT_VERIFIED'));
           if (shouldClearSession) {
             saveToken(null);
             setStoredUser(null);

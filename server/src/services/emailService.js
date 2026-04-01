@@ -180,9 +180,67 @@ function isSmtpConfigured() {
   return getTransporter() != null;
 }
 
+/**
+ * After email verification — optional welcome (failure does not block verify).
+ * @returns {Promise<{ delivered: boolean }>}
+ */
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function sendWelcomeEmail(toEmail, displayName) {
+  const safeName = (displayName || toEmail.split('@')[0] || 'there').trim() || 'there';
+  const safeNameHtml = escapeHtml(safeName);
+  const subject = `Welcome to ${appName}`;
+  const clientUrl = getPublicClientUrl();
+  const text = [
+    `Hi ${safeName},`,
+    '',
+    `Thanks for verifying your email. Your ${appName} account is ready — you can sign in anytime with your email or username.`,
+    '',
+    clientUrl ? `Start exploring: ${clientUrl}` : '',
+    '',
+    `— ${appName}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const linkBlock = clientUrl
+    ? `<a href="${clientUrl}" style="display:inline-block;padding:12px 22px;background:#1a5f4a;color:#fff;text-decoration:none;border-radius:10px;font-weight:600">Open ${appName}</a>`
+    : '';
+
+  const html = `<!DOCTYPE html><html><body style="margin:0;background:#f4f6f8;font-family:system-ui,Segoe UI,sans-serif">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px">
+    <tr><td align="center">
+      <table role="presentation" width="100%" style="max-width:520px;background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,0.06)">
+        <tr><td style="padding:28px 26px 8px;font-size:22px;font-weight:700;color:#0f172a">Welcome, ${safeNameHtml}</td></tr>
+        <tr><td style="padding:8px 26px 20px;font-size:15px;line-height:1.55;color:#475569">
+          Thanks for verifying your email. Your account is ready — sign in with your <strong>email</strong> or <strong>username</strong>.
+        </td></tr>
+        <tr><td style="padding:0 26px 26px">${linkBlock}</td></tr>
+        <tr><td style="padding:14px 26px;border-top:1px solid #e2e8f0;font-size:12px;color:#94a3b8">${appName} · Lebanon</td></tr>
+      </table>
+    </td></tr>
+  </table></body></html>`;
+
+  const transport = getTransporter();
+  if (transport) {
+    await transport.sendMail({ from, to: toEmail, subject, text, html });
+    console.log('[Email] Welcome sent to', toEmail);
+    return { delivered: true };
+  }
+  console.log('[Email] No SMTP — welcome not sent to', toEmail);
+  return { delivered: false };
+}
+
 module.exports = {
   sendPasswordResetCode,
   sendVerificationCode,
+  sendWelcomeEmail,
   isSmtpConfigured,
   RESET_LINK_EXPIRY_MINUTES,
   VERIFICATION_LINK_EXPIRY_MINUTES,

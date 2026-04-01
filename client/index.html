@@ -11,12 +11,13 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','GTM-5P8FD3C5');</script>
     <!-- End Google Tag Manager -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="shortcut icon" href="/favicon.svg" />
-    <link rel="alternate icon" href="/city.png" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <!-- ICO + 48×48 PNG for Google Search; SVG for modern tabs; apple-touch for home screen -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/favicon-48.png" sizes="48x48" />
+    <link rel="icon" type="image/svg+xml" href="/tripoli-lebanon-icon.svg" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#0D5C55" />
     <meta name="description" content="Visit Tripoli – Best spots, experiences & plans in Tripoli, Lebanon." />
     <meta property="og:title" content="Visit Tripoli – Best spots, experiences & plans" />
     <meta property="og:description" content="Featured places to visit · Great al-Mansouri Mosque · Taynal Mosque · Tripoli Castle · Discover Tripoli’s top attractions." />
@@ -28,19 +29,75 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     <meta name="twitter:title" content="Visit Tripoli – Best spots, experiences & plans" />
     <meta name="twitter:description" content="Featured places to visit · Great al-Mansouri Mosque · Taynal Mosque · Tripoli Castle." />
     <meta name="twitter:image" content="https://visit-tripoli.com/city.png" />
+    <!-- Warm CDN used by bento hero + many cards (cuts TLS/DNS before first Unsplash request) -->
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
+    <!-- Default home LCP image: discoverable before JS; skipped in-app when admin sets another hero -->
+    <link rel="preload" as="image" href="/city.png" fetchpriority="high" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+    <!-- Non-blocking; display=swap -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap"
+      />
+    </noscript>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Visit Tripoli – Places, experiences & events</title>
+    <title>Visit Tripoli – Best spots, experiences & plans</title>
+    <!-- Tiny critical paint while async CSS loads (matches theme.css) -->
+    <style>
+      html {
+        background: #fafaf9;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #fafaf9;
+        color: #1c1917;
+      }
+      #root {
+        min-height: 100vh;
+      }
+    </style>
   </head>
   <body>
-    <!-- Google Tag Manager (noscript) -->
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5P8FD3C5"
-    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-    <!-- End Google Tag Manager (noscript) -->
+    <!-- GTM after idle / load — cuts main-thread JS during LCP; tags still fire same session -->
+    <script>
+      function tripoliInitGtm() {
+        (function (w, d, s, l, i) {
+          w[l] = w[l] || [];
+          w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+          var f = d.getElementsByTagName(s)[0],
+            j = d.createElement(s),
+            dl = l != 'dataLayer' ? '&l=' + l : '';
+          j.async = true;
+          j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+          f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-5P8FD3C5');
+      }
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(tripoliInitGtm, { timeout: 4500 });
+      } else {
+        window.addEventListener('load', function () {
+          setTimeout(tripoliInitGtm, 1);
+        });
+      }
+    </script>
+    <noscript
+      ><iframe
+        src="https://www.googletagmanager.com/ns.html?id=GTM-5P8FD3C5"
+        height="0"
+        width="0"
+        style="display: none; visibility: hidden"
+      ></iframe
+    ></noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

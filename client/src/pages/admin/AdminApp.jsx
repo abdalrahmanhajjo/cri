@@ -11,6 +11,11 @@ import AdminUserTrips from './AdminUserTrips';
 import AdminFeed from './AdminFeed';
 import AdminInterests from './AdminInterests';
 import AdminPlaceOwners from './AdminPlaceOwners';
+import AdminOffers from './AdminOffers';
+import AdminEmailBroadcast from './AdminEmailBroadcast';
+import AdminSponsoredPlaces from './AdminSponsoredPlaces';
+import AdminDiningGuide from './AdminDiningGuide';
+import AdminHotelsGuide from './AdminHotelsGuide';
 
 export default function AdminApp() {
   return (
@@ -19,14 +24,19 @@ export default function AdminApp() {
         <Route index element={<AdminDashboard />} />
         <Route path="places" element={<AdminPlaces />} />
         <Route path="categories" element={<AdminCategories />} />
+        <Route path="dining" element={<AdminDiningGuide />} />
+        <Route path="hotels" element={<AdminHotelsGuide />} />
         <Route path="experiences" element={<AdminExperiences />} />
         <Route path="events" element={<AdminEvents />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="email-broadcast" element={<AdminEmailBroadcast />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="user-trips" element={<AdminUserTrips />} />
         <Route path="feed" element={<AdminFeed />} />
         <Route path="interests" element={<AdminInterests />} />
         <Route path="place-owners" element={<AdminPlaceOwners />} />
+        <Route path="offers" element={<AdminOffers />} />
+        <Route path="sponsored-places" element={<AdminSponsoredPlaces />} />
       </Route>
     </Routes>
   );

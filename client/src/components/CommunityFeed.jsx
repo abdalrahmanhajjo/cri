@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom';
 import { getImageUrl, fixImageUrlExtension, getPlaceImageUrl } from '../api/client';
 import Icon from './Icon';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
+import { isLikelyDirectStreamableVideo } from '../utils/feedVideoPlayback';
 import { rawFeedImageUrls } from '../utils/feedPostImages';
+import { getDeliveryImgProps } from '../utils/responsiveImages.js';
+import { optimizeVideoPosterUrl } from '../utils/supabaseImage.js';
 
 /** Reels / video items: explicit type, or legacy rows stored as `post` with video and no cover image (matches business portal). */
 export function isCommunityFeedVideo(post) {
@@ -58,14 +61,6 @@ function feedMediaUrl(url) {
   return getImageUrl(fixImageUrlExtension(url));
 }
 
-/** Prefer a native video element for direct files; YouTube/Vimeo use thumbnail + external link. */
-function isLikelyStreamableVideoUrl(url) {
-  if (!url || typeof url !== 'string') return false;
-  const u = url.trim().toLowerCase();
-  if (u.includes('youtube.com') || u.includes('youtu.be') || u.includes('vimeo.com')) return false;
-  return /^https?:\/\//i.test(u) || u.startsWith('/');
-}
-
 export function CommunityFeedCard({ post, t }) {
   const isVideo = isCommunityFeedVideo(post);
   const fullCap = post.caption != null ? String(post.caption) : '';
@@ -75,7 +70,7 @@ export function CommunityFeedCard({ post, t }) {
   const firstRaw = rawFeedImageUrls(post)[0];
   const img = firstRaw ? feedMediaUrl(firstRaw) : '';
   const vid = post.video_url ? feedMediaUrl(post.video_url) : '';
-  const showVideo = isVideo && vid && isLikelyStreamableVideoUrl(post.video_url);
+  const showVideo = isVideo && vid && isLikelyDirectStreamableVideo(vid, post.video_url);
   const externalVideo = isVideo && post.video_url && !showVideo;
   const typeLower = String(post?.type || '').toLowerCase();
   const reelLabel =
@@ -90,12 +85,12 @@ export function CommunityFeedCard({ post, t }) {
             src={vid}
             controls
             playsInline
-            preload="metadata"
-            poster={img || undefined}
+            preload="auto"
+            poster={img ? optimizeVideoPosterUrl(img) : undefined}
             aria-label={fullCap.slice(0, 120) || reelLabel}
           />
         ) : img ? (
-          <img src={img} alt="" className="vd-community-feed-img" />
+          <img alt="" className="vd-community-feed-img" loading="lazy" decoding="async" {...getDeliveryImgProps(img, 'gridCard')} />
         ) : (
           <div className="vd-community-feed-placeholder" aria-hidden="true" />
         )}
@@ -123,7 +118,15 @@ export function CommunityFeedCard({ post, t }) {
                 ? getPlaceImageUrl(String(post.place_image_url).trim())
                 : null;
               return av ? (
-                <img src={av} alt="" className="vd-community-feed-place-avatar" width={36} height={36} />
+                <img
+                  alt=""
+                  className="vd-community-feed-place-avatar"
+                  width={36}
+                  height={36}
+                  loading="lazy"
+                  decoding="async"
+                  {...getDeliveryImgProps(av, 'thumb')}
+                />
               ) : (
                 <span className="vd-community-feed-place-avatar vd-community-feed-place-avatar--icon" aria-hidden>
                   <Icon name="storefront" size={18} />
@@ -202,7 +205,7 @@ export function CommunityFeedStrip({ posts, t, moreTo, layout = 'scroll' }) {
                       className={`vd-community-feed-mosaic-cell vd-community-feed-mosaic-cell--${i + 1}`}
                     >
                       {src ? (
-                        <img src={src} alt="" className="vd-community-feed-mosaic-img" />
+                        <img alt="" className="vd-community-feed-mosaic-img" loading="lazy" decoding="async" {...getDeliveryImgProps(src, 'thumb')} />
                       ) : (
                         <span className="vd-community-feed-mosaic-fallback">
                           <Icon name={isCommunityFeedVideo(p) ? 'play_circle' : 'photo_camera'} size={22} />

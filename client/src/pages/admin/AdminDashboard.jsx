@@ -15,7 +15,17 @@ function formatDate(str) {
 
 export default function AdminDashboard() {
   const [search, setSearch] = useState('');
-  const [stats, setStats] = useState({ places: 0, categories: 0, tours: 0, events: 0, users: 0, trips: 0, feedPosts: 0 });
+  const [stats, setStats] = useState({
+    places: 0,
+    categories: 0,
+    tours: 0,
+    events: 0,
+    users: 0,
+    trips: 0,
+    feedPosts: 0,
+    placePromotions: 0,
+    coupons: 0,
+  });
   const [places, setPlaces] = useState([]);
   const [events, setEvents] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -46,6 +56,8 @@ export default function AdminDashboard() {
           users: st.users ?? 0,
           trips: st.trips ?? 0,
           feedPosts: st.feedPosts ?? 0,
+          placePromotions: st.placePromotions ?? 0,
+          coupons: st.coupons ?? 0,
         });
         setPlaces(placesArr.slice(0, 5));
         setEvents(eventsArr.slice(0, 5));
@@ -60,7 +72,17 @@ export default function AdminDashboard() {
     return () => { cancelled = true; };
   }, []);
 
-  const { places: placesNum, categories: categoriesNum, tours: toursNum, events: eventsNum, users: usersNum, trips: tripsNum, feedPosts: feedNum } = stats;
+  const {
+    places: placesNum,
+    categories: categoriesNum,
+    tours: toursNum,
+    events: eventsNum,
+    users: usersNum,
+    trips: tripsNum,
+    feedPosts: feedNum,
+    placePromotions: promosNum,
+    coupons: couponsNum,
+  } = stats;
   const total = placesNum + categoriesNum + toursNum + eventsNum;
 
   const categoryCounts = categories.slice(0, 4).map((c) => ({
@@ -324,6 +346,13 @@ export default function AdminDashboard() {
             <div className="admin-stat-value">{feedNum}</div>
             <div className="admin-stat-label">Feed posts</div>
             <Link to="/admin/feed">Open →</Link>
+          </div>
+        </div>
+        <div className="admin-card" style={{ gridColumn: 'span 2' }}>
+          <div className="admin-card-body">
+            <div className="admin-stat-value">{promosNum + couponsNum}</div>
+            <div className="admin-stat-label">Offers & coupons</div>
+            <Link to="/admin/offers">Manage →</Link>
           </div>
         </div>
         <div className="admin-card" style={{ gridColumn: 'span 2' }}>

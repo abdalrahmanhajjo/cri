@@ -4,8 +4,10 @@ import api from '../api/client';
 import Icon from '../components/Icon';
 import OfferCard from '../components/OfferCard';
 import { getPlaceImageUrl } from '../api/client';
+import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
 import './Detail.css';
 
@@ -65,6 +67,7 @@ export default function PlaceDetail() {
   const location = useLocation();
   const { t, lang } = useLanguage();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [place, setPlace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -138,8 +141,10 @@ export default function PlaceDetail() {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     api.places
-      .get(id)
+      .get(id, { lang })
       .then((p) => {
         if (!cancelled) {
           setPlace(p);
@@ -152,7 +157,7 @@ export default function PlaceDetail() {
       cancelled = true;
       document.title = 'Visit Tripoli';
     };
-  }, [id]);
+  }, [id, lang]);
 
   const galleryUrls = useMemo(() => collectPlaceImageUrls(place), [place]);
 
@@ -187,8 +192,11 @@ export default function PlaceDetail() {
       .redeemed()
       .then((r) => {
         if (cancelled) return;
-        const ids = Array.isArray(r.couponIds) ? r.couponIds.map((cid) => `coupon-${cid}`) : [];
-        setRedeemedPromotionIds(ids);
+        const cids = Array.isArray(r.couponIds) ? r.couponIds.map((cid) => `coupon-${cid}`) : [];
+        const pids = Array.isArray(r.placePromotionIds)
+          ? r.placePromotionIds.map((id) => `promo-${id}`)
+          : [];
+        setRedeemedPromotionIds([...cids, ...pids]);
       })
       .catch(() => {
         if (!cancelled) setRedeemedPromotionIds([]);
@@ -209,7 +217,7 @@ export default function PlaceDetail() {
     }
     let cancelled = false;
     api.places
-      .promotions(id)
+      .promotions(id, { lang })
       .then((r) => {
         if (!cancelled) setPromotions(Array.isArray(r.promotions) ? r.promotions : []);
       })
@@ -219,7 +227,7 @@ export default function PlaceDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, lang]);
 
   useEffect(() => {
     if (loading || !place) return;
@@ -250,32 +258,50 @@ export default function PlaceDetail() {
     if (!place) return;
     const placeId = String(place.id);
     if (isFavourite) {
-      api.user.removeFavourite(placeId).catch(() => {});
-      setIsFavourite(false);
+      api.user
+        .removeFavourite(placeId)
+        .then(() => {
+          setIsFavourite(false);
+          showToast(t('feedback', 'favouriteRemoved'), 'success');
+        })
+        .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
     } else {
-      api.user.addFavourite(placeId).catch(() => {});
-      setIsFavourite(true);
+      api.user
+        .addFavourite(placeId)
+        .then(() => {
+          setIsFavourite(true);
+          showToast(t('feedback', 'favouriteAdded'), 'success');
+        })
+        .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
     }
-  }, [user, place, isFavourite, navigate]);
+  }, [user, place, isFavourite, navigate, showToast, t]);
 
   const handleShare = useCallback(() => {
     if (typeof navigator !== 'undefined' && navigator.share && place) {
-      navigator.share({
-        title: place.name,
-        text: place.description || place.name,
-        url: window.location.href,
-      }).catch(() => {});
+      navigator
+        .share({
+          title: place.name,
+          text: place.description || place.name,
+          url: window.location.href,
+        })
+        .then(() => showToast(t('feedback', 'tripShareOpened'), 'success'))
+        .catch(() => {});
     } else {
-      navigator.clipboard?.writeText(window.location.href).then(() => {
-        setCopyToast(true);
-        setTimeout(() => setCopyToast(false), 2000);
-      }).catch(() => {});
+      navigator.clipboard
+        ?.writeText(window.location.href)
+        .then(() => {
+          setCopyToast(true);
+          setTimeout(() => setCopyToast(false), 2000);
+          showToast(t('feedback', 'linkCopied'), 'success');
+        })
+        .catch(() => showToast(t('feedback', 'actionFailed'), 'error'));
     }
-  }, [place]);
+  }, [place, showToast, t]);
 
   const handlePrint = useCallback(() => {
+    showToast(t('feedback', 'printDialog'), 'info');
     window.print();
-  }, []);
+  }, [showToast, t]);
 
   const handleCheckIn = useCallback(() => {
     if (!place) return;
@@ -297,12 +323,17 @@ export default function PlaceDetail() {
           setCheckinMsg(
             r.alreadyCheckedInToday ? t('detail', 'checkInAlreadyToday') : t('detail', 'checkInSuccess')
           );
+          showToast(
+            r.alreadyCheckedInToday ? t('detail', 'checkInAlreadyToday') : t('feedback', 'checkInDone'),
+            r.alreadyCheckedInToday ? 'info' : 'success'
+          );
         })
         .catch((e) => {
           const code = e?.data?.code;
           if (code === 'LOCATION_REQUIRED') setCheckinMsg(t('detail', 'checkInNeedLocation'));
           else if (code === 'TOO_FAR') setCheckinMsg(t('detail', 'checkInTooFar'));
           else setCheckinMsg(e.message || t('detail', 'checkInFailed'));
+          showToast(t('feedback', 'actionFailed'), 'error');
         });
     };
 
@@ -330,7 +361,7 @@ export default function PlaceDetail() {
       },
       { enableHighAccuracy: true, timeout: 18000, maximumAge: 0 }
     );
-  }, [place, user, navigate, t]);
+  }, [place, user, navigate, t, showToast]);
 
   const submitInquiry = useCallback(
     (e) => {
@@ -365,11 +396,15 @@ export default function PlaceDetail() {
           setGuestPhone('');
           if (user?.email) setGuestEmail(user.email);
           else setGuestEmail('');
+          showToast(t('feedback', 'inquirySent'), 'success');
         })
-        .catch((err) => setInqStatus(err.message || 'Could not send'))
+        .catch((err) => {
+          setInqStatus(err.message || 'Could not send');
+          showToast(t('feedback', 'inquiryFailed'), 'error');
+        })
         .finally(() => setInqSending(false));
     },
-    [place, user, inqMessage, guestName, guestEmail, guestPhone, inquiryIntent]
+    [place, user, inqMessage, guestName, guestEmail, guestPhone, inquiryIntent, showToast, t]
   );
 
   const submitSiteReview = useCallback(
@@ -389,10 +424,14 @@ export default function PlaceDetail() {
           title: reviewTitle.trim() || undefined,
           review: text || undefined,
         });
-        const [p, revRes] = await Promise.all([api.places.get(id), api.places.reviews(id)]);
+        const [p, revRes] = await Promise.all([
+          api.places.get(id, { lang }),
+          api.places.reviews(id),
+        ]);
         setPlace(p);
         setPlaceReviews(Array.isArray(revRes.reviews) ? revRes.reviews : []);
         setReviewMsg({ type: 'ok', text: t('detail', 'reviewThanks') });
+        showToast(t('feedback', 'reviewSaved'), 'success');
       } catch (err) {
         const code = err?.data?.code;
         const msg =
@@ -400,11 +439,12 @@ export default function PlaceDetail() {
             ? t('detail', 'reviewHiddenByModeration')
             : err?.message || t('detail', 'reviewSubmitFailed');
         setReviewMsg({ type: 'err', text: msg });
+        showToast(t('feedback', 'reviewFailed'), 'error');
       } finally {
         setReviewSubmitting(false);
       }
     },
-    [user, place, id, reviewBody, reviewRating, reviewTitle, t]
+    [user, place, id, reviewBody, reviewRating, reviewTitle, t, lang, showToast]
   );
 
   const deleteMyReview = useCallback(async () => {
@@ -414,16 +454,21 @@ export default function PlaceDetail() {
     setReviewMsg(null);
     try {
       await api.places.deleteReview(place.id, myReview.id);
-      const [p, revRes] = await Promise.all([api.places.get(id), api.places.reviews(id)]);
+      const [p, revRes] = await Promise.all([
+        api.places.get(id, { lang }),
+        api.places.reviews(id),
+      ]);
       setPlace(p);
       setPlaceReviews(Array.isArray(revRes.reviews) ? revRes.reviews : []);
       setReviewMsg({ type: 'ok', text: t('detail', 'reviewDeleted') });
+      showToast(t('feedback', 'reviewDeleted'), 'success');
     } catch (err) {
       setReviewMsg({ type: 'err', text: err?.message || t('detail', 'reviewSubmitFailed') });
+      showToast(t('feedback', 'reviewFailed'), 'error');
     } finally {
       setReviewSubmitting(false);
     }
-  }, [user, place, id, myReview, t]);
+  }, [user, place, id, myReview, t, lang, showToast]);
 
   const openLightbox = useCallback(
     (index) => {
@@ -497,7 +542,6 @@ export default function PlaceDetail() {
   }
 
   const heroUrl = galleryUrls[galleryIndex] || null;
-  const heroStyle = heroUrl ? { backgroundImage: `url(${heroUrl})` } : {};
   const hasMultiGallery = galleryUrls.length > 1;
 
   const hours = place.hours;
@@ -519,7 +563,18 @@ export default function PlaceDetail() {
         </Link>
 
         <article className="place-detail-article">
-          <header className={`place-detail-hero ${hasMultiGallery ? 'place-detail-hero--gallery' : ''}`} style={heroUrl ? heroStyle : undefined}>
+          <header className={`place-detail-hero ${hasMultiGallery ? 'place-detail-hero--gallery' : ''}`}>
+            {heroUrl && (
+              <img
+                key={heroUrl}
+                className="place-detail-hero__img"
+                alt=""
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+                {...getDeliveryImgProps(heroUrl, 'detailHero')}
+              />
+            )}
             {!heroUrl && (
               <div className="place-detail-hero-fallback">
                 <Icon name="place" size={48} />
@@ -579,7 +634,7 @@ export default function PlaceDetail() {
                       className={`place-detail-hero-thumb ${i === galleryIndex ? 'place-detail-hero-thumb--on' : ''}`}
                       onClick={() => setGalleryIndex(i)}
                     >
-                      <img src={url} alt="" loading="lazy" decoding="async" />
+                      <img alt="" loading="lazy" decoding="async" {...getDeliveryImgProps(url, 'thumb')} />
                     </button>
                   ))}
                 </div>

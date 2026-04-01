@@ -8,6 +8,7 @@ const { validateUsername } = require('../utils/usernameValidator');
 const {
   sendPasswordResetCode,
   sendVerificationCode,
+  sendWelcomeEmail,
   RESET_LINK_EXPIRY_MINUTES,
   VERIFICATION_LINK_EXPIRY_MINUTES,
   isSmtpConfigured,
@@ -45,6 +46,36 @@ function sanitizeAuthInput(req, res, next) {
   if (name != null && (typeof name !== 'string' || name.length > 150)) return res.status(400).json({ error: 'Invalid name' });
   next();
 }
+
+/** Login accepts email or username in the `email` field (mobile/web compatibility). */
+function sanitizeLoginInput(req, res, next) {
+  const id = typeof req.body?.email === 'string' ? req.body.email.trim() : '';
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
+  if (!id || id.length > 254) return res.status(400).json({ error: 'Email or username and password required' });
+  if (!password || password.length > 128) return res.status(400).json({ error: 'Invalid password' });
+  next();
+}
+
+/** GET /api/auth/check-username?username= — availability for sign-up (debounced on client). */
+router.get('/check-username', async (req, res) => {
+  try {
+    const raw = typeof req.query.username === 'string' ? req.query.username : '';
+    const u = validateUsername(raw);
+    if (!u.ok) {
+      return res.status(200).json({ validFormat: false, available: false, error: u.error });
+    }
+    const taken = await query(
+      `SELECT 1 FROM profiles WHERE username IS NOT NULL
+       AND REGEXP_REPLACE(LOWER(TRIM(username)), '^@', '') = $1
+       LIMIT 1`,
+      [u.handle]
+    );
+    res.json({ validFormat: true, available: taken.rows.length === 0 });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not check username' });
+  }
+});
 
 router.post('/register', sanitizeAuthInput, async (req, res) => {
   try {
@@ -86,9 +117,9 @@ router.post('/register', sanitizeAuthInput, async (req, res) => {
       console.error('[Register] Verification email failed:', e.message);
       return res.status(500).json({ error: 'Could not send verification email. Try again later.' });
     }
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    /** No JWT until email is verified — same rule as all authenticated API routes (see auth middleware). */
     res.status(201).json({
-      token,
+      requiresEmailVerification: true,
       verificationEmailDelivered,
       user: {
         id: user.id,
@@ -109,34 +140,58 @@ router.post('/register', sanitizeAuthInput, async (req, res) => {
   }
 });
 
-router.post('/login', sanitizeAuthInput, async (req, res) => {
+router.post('/login', sanitizeLoginInput, async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+    const identifier = (req.body.email || '').trim();
+    const password = req.body.password;
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const rate = await checkLoginRateLimit(ip);
     if (!rate.ok) return res.status(429).json({ error: 'Too many attempts.', retryAfter: rate.retryAfter });
-    const result = await query(
-      `SELECT u.id, u.email, u.name, u.password_hash, u.email_verified, u.is_business_owner,
+
+    const userSelectEmail = `SELECT u.id, u.email, u.name, u.password_hash, u.email_verified, u.is_business_owner,
               COALESCE(u.is_admin, false) AS is_admin,
               COALESCE(u.is_blocked, false) AS is_blocked,
               COALESCE(p.onboarding_completed, false) AS onboarding_completed,
               (SELECT COUNT(*)::int FROM place_owners po WHERE po.user_id = u.id) AS owned_place_count
        FROM users u
-       LEFT JOIN profiles p ON p.user_id = u.id
-       WHERE LOWER(u.email) = LOWER($1) AND u.auth_provider = 'email'`,
-      [email]
-    );
+       LEFT JOIN profiles p ON p.user_id = u.id`;
+
+    let result;
+    if (identifier.includes('@')) {
+      result = await query(
+        `${userSelectEmail} WHERE LOWER(TRIM(u.email)) = LOWER(TRIM($1)) AND u.auth_provider = 'email'`,
+        [identifier]
+      );
+    } else {
+      const u = validateUsername(identifier);
+      if (!u.ok) {
+        await recordFailedLoginAttempt(ip);
+        return res.status(401).json({ error: 'Wrong email, username, or password. Please try again.' });
+      }
+      result = await query(
+        `SELECT u.id, u.email, u.name, u.password_hash, u.email_verified, u.is_business_owner,
+              COALESCE(u.is_admin, false) AS is_admin,
+              COALESCE(u.is_blocked, false) AS is_blocked,
+              COALESCE(p.onboarding_completed, false) AS onboarding_completed,
+              (SELECT COUNT(*)::int FROM place_owners po WHERE po.user_id = u.id) AS owned_place_count
+         FROM users u
+         INNER JOIN profiles p ON p.user_id = u.id
+         WHERE u.auth_provider = 'email'
+         AND REGEXP_REPLACE(LOWER(TRIM(p.username)), '^@', '') = $1`,
+        [u.handle]
+      );
+    }
+
     const user = result.rows[0];
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       await recordFailedLoginAttempt(ip);
-      return res.status(401).json({ error: 'Wrong email or password. Please try again.' });
+      return res.status(401).json({ error: 'Wrong email, username, or password. Please try again.' });
     }
     if (user.is_blocked === true) {
       return res.status(403).json({ error: 'This account has been disabled.', code: 'ACCOUNT_BLOCKED' });
     }
     if (!user.email_verified) {
-      const emailNorm = (email || '').trim().toLowerCase();
+      const emailNorm = (user.email || '').trim().toLowerCase();
       let verificationEmailDelivered = false;
       let resendTooSoon = false;
       let emailSendFailed = false;
@@ -174,6 +229,7 @@ router.post('/login', sanitizeAuthInput, async (req, res) => {
       return res.status(403).json({
         error,
         code: 'EMAIL_NOT_VERIFIED',
+        verificationEmail: user.email,
         verificationEmailDelivered,
         resendTooSoon,
         smtpConfigured: smtpOn,
@@ -185,7 +241,7 @@ router.post('/login', sanitizeAuthInput, async (req, res) => {
       token,
       user: {
         id: user.id,
-        name: user.name || email.split('@')[0],
+        name: user.name || user.email.split('@')[0],
         email: user.email,
         emailVerified: true,
         onboardingCompleted: user.onboarding_completed === true,
@@ -343,9 +399,18 @@ router.post('/verify-email', async (req, res) => {
     await query('UPDATE users SET email_verified = true WHERE id = $1', [user.id]);
     await query('DELETE FROM email_verification_tokens WHERE user_id = $1', [user.id]);
 
+    let welcomeEmailDelivered = false;
+    try {
+      const w = await sendWelcomeEmail(user.email, user.name || emailRaw.split('@')[0]);
+      welcomeEmailDelivered = w.delivered;
+    } catch (e) {
+      console.warn('[verify-email] welcome email:', e.message);
+    }
+
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({
       token,
+      welcomeEmailDelivered,
       user: {
         id: user.id,
         name: user.name || emailRaw.split('@')[0],

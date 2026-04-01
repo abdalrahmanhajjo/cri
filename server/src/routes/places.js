@@ -102,7 +102,7 @@ function isPlausiblePhone(s) {
 /** Fix malformed extension (e.g. xxxjpg -> xxx.jpg) from old upload bug */
 function fixImageUrlExtension(url) {
   if (!url || typeof url !== 'string') return url;
-  return url.replace(/([a-f0-9]{32})(jpe?g|png|gif|webp)$/i, '$1.$2');
+  return url.replace(/([a-f0-9]{32})(jpe?g|png|gif|webp|heic|heif)$/i, '$1.$2');
 }
 
 function resolveImageUrls(images, baseUrl) {
@@ -228,17 +228,18 @@ router.get('/', cachePublicList(60, 300), async (req, res) => {
 router.get('/:id/promotions', async (req, res) => {
   const rawId = req.params.id;
   const limit = 200;
+  const lang = getRequestLang(req);
   try {
     const { rows: placeRows } = await query('SELECT id FROM places WHERE id = $1', [rawId]);
     if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
     const placeId = placeRows[0].id;
     let rows;
     try {
-      ({ rows } = await query(SQL_PLACE_PROMOTIONS, [placeId, limit]));
+      ({ rows } = await query(SQL_PLACE_PROMOTIONS, [placeId, limit, lang]));
     } catch (err) {
       if (err.code !== '42P01') throw err;
       try {
-        ({ rows } = await query(SQL_PLACE_PROMOTIONS_FALLBACK, [placeId, limit]));
+        ({ rows } = await query(SQL_PLACE_PROMOTIONS_FALLBACK, [placeId, limit, lang]));
       } catch (e2) {
         if (e2.code === '42P01') rows = [];
         else throw e2;
@@ -246,6 +247,8 @@ router.get('/:id/promotions', async (req, res) => {
     }
     const forDetail = rows.map((r) => ({
       id: r.id,
+      placeId: r.placeId,
+      placeName: r.placeName,
       title: r.title,
       subtitle: r.subtitle,
       code: r.code,
@@ -253,6 +256,10 @@ router.get('/:id/promotions', async (req, res) => {
       terms: r.terms,
       startsAt: r.startsAt,
       endsAt: r.endsAt,
+      discountType: r.discountType != null ? String(r.discountType) : null,
+      discountValue: r.discountValue != null ? Number(r.discountValue) : null,
+      minPurchase: r.minPurchase != null ? Number(r.minPurchase) : null,
+      usageLimit: r.usageLimit != null ? Number(r.usageLimit) : null,
     }));
     res.json({ placeId, promotions: forDetail });
   } catch (err) {

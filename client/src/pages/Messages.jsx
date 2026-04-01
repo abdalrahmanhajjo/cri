@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { COMMUNITY_PATH } from '../utils/discoverPaths';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import api from '../api/client';
 import Icon from '../components/Icon';
 import './Discover.css';
@@ -92,6 +93,7 @@ function previewForGroup(group, locale) {
 
 export default function Messages() {
   const { t, lang } = useLanguage();
+  const { showToast } = useToast();
   const { placeId: placeIdParam } = useParams();
   const selectedKey = placeIdParam != null && String(placeIdParam).trim() !== '' ? placeIdParam : null;
   const [inquiries, setInquiries] = useState([]);
@@ -200,8 +202,10 @@ export default function Messages() {
             : row
         )
       );
+      showToast(t('feedback', 'threadUpdated'), 'success');
     } catch (e) {
       setLoadErr(e?.message || t('discover', 'error'));
+      showToast(t('feedback', 'actionFailed'), 'error');
     } finally {
       setRowRefreshingId(null);
     }
@@ -244,6 +248,7 @@ export default function Messages() {
         )
       );
       setFollowUpDraft((d) => ({ ...d, [sid]: '' }));
+      showToast(t('feedback', 'followUpSent'), 'success');
     } catch (e) {
       const code = e?.data?.code;
       if (code === 'MESSAGING_BLOCKED') {
@@ -254,6 +259,7 @@ export default function Messages() {
         void load();
       } else {
         setFollowUpErr((err) => ({ ...err, [sid]: e?.message || t('discover', 'proposalFollowUpError') }));
+        showToast(t('feedback', 'actionFailed'), 'error');
       }
     } finally {
       setFollowUpSendingId(null);

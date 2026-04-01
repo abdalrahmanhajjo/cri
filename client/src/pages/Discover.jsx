@@ -1,13 +1,16 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api, { getPlaceImageUrl, API_ERROR_NETWORK } from '../api/client';
+import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
 import FeedPostCard from '../components/FeedPostCard';
 import OfferCard from '../components/OfferCard';
+import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { trackEvent } from '../utils/analytics';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import './Discover.css';
 
 const TABS = [
@@ -298,11 +301,12 @@ function DiscoverProposalPanel({ places, t, user }) {
                   className={`ig-proposal-pick-cell ${sel ? 'ig-proposal-pick-cell--selected' : ''}`}
                   onClick={() => setSelectedId(pid)}
                 >
-                  <div
-                    className="ig-proposal-pick-thumb"
-                    style={{ backgroundImage: img ? `url(${img})` : undefined }}
-                  >
-                    {!img && <Icon name="location_city" size={28} className="ig-proposal-pick-fallback" aria-hidden="true" />}
+                  <div className="ig-proposal-pick-thumb">
+                    {img ? (
+                      <DeliveryImg url={img} preset="thumb" alt="" />
+                    ) : (
+                      <Icon name="location_city" size={28} className="ig-proposal-pick-fallback" aria-hidden="true" />
+                    )}
                   </div>
                   <span className="ig-proposal-pick-name" title={place.name}>
                     {place.name}
@@ -484,9 +488,11 @@ export default function Discover() {
   const [promotions, setPromotions] = useState([]);
   const [redeemedPromotionIds, setRedeemedPromotionIds] = useState([]);
   const [places, setPlaces] = useState([]);
+  const [sponsoredFeed, setSponsoredFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [placeScopeMeta, setPlaceScopeMeta] = useState(null);
+  const { settings } = useSiteSettings();
 
   useEffect(() => {
     if (!placeScopeId) {
@@ -743,8 +749,11 @@ export default function Discover() {
       .redeemed()
       .then((r) => {
         if (cancelled) return;
-        const ids = Array.isArray(r.couponIds) ? r.couponIds.map((id) => `coupon-${id}`) : [];
-        setRedeemedPromotionIds(ids);
+        const cids = Array.isArray(r.couponIds) ? r.couponIds.map((id) => `coupon-${id}`) : [];
+        const pids = Array.isArray(r.placePromotionIds)
+          ? r.placePromotionIds.map((id) => `promo-${id}`)
+          : [];
+        setRedeemedPromotionIds([...cids, ...pids]);
       })
       .catch(() => {
         if (!cancelled) setRedeemedPromotionIds([]);
@@ -791,6 +800,37 @@ export default function Discover() {
     };
   }, [tab, placeScopeId, t]);
 
+  const sponsoredFeedEnabled = settings?.sponsoredPlacesEnabled?.feed !== false;
+
+  useEffect(() => {
+    if (tab !== 'feed' || placeScopeId || !sponsoredFeedEnabled) {
+      setSponsoredFeed([]);
+      return undefined;
+    }
+    const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
+    let cancelled = false;
+    api
+      .sponsoredPlaces({ surface: 'feed', lang: langParam })
+      .then((r) => {
+        if (cancelled) return;
+        setSponsoredFeed(Array.isArray(r.items) ? r.items : []);
+      })
+      .catch(() => {
+        if (!cancelled) setSponsoredFeed([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, placeScopeId, lang, sponsoredFeedEnabled]);
+
+  const injectedFeedRows = useMemo(() => {
+    const base = orderedFeedPosts.map((p) => ({ kind: 'post', post: p }));
+    if (tab !== 'feed' || sponsoredFeed.length === 0 || base.length === 0) return base;
+    const rows = base.slice();
+    rows.splice(Math.min(2, rows.length), 0, { kind: 'sponsored', item: sponsoredFeed[0] });
+    return rows;
+  }, [tab, sponsoredFeed, orderedFeedPosts]);
+
   useEffect(() => {
     if (tab !== 'reel') return;
     let cancelled = false;
@@ -833,8 +873,9 @@ export default function Discover() {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
     api
-      .publicPromotions({ limit: 100 })
+      .publicPromotions({ limit: 100, lang: langParam })
       .then((r) => {
         if (cancelled) return;
         let list = Array.isArray(r.promotions) ? r.promotions : [];
@@ -852,7 +893,7 @@ export default function Discover() {
     return () => {
       cancelled = true;
     };
-  }, [tab, placeScopeId, t]);
+  }, [tab, placeScopeId, lang, t]);
 
   useEffect(() => {
     if (tab !== 'proposals' || !placeScopeId) return;
@@ -1118,24 +1159,39 @@ export default function Discover() {
         {!loading && !error && tab === 'feed' && orderedFeedPosts.length > 0 && (
           <>
             <div className="ig-feed-stack">
-              {orderedFeedPosts.map((p, i) => (
-                <div
-                  key={p.id}
-                  className="ig-feed-stagger"
-                  style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}
-                  data-feed-kind="feed"
-                  data-post-id={String(p.id)}
-                >
-                  <FeedPostCard
-                    post={p}
-                    user={user}
-                    onPatch={patchFeedPost}
-                    onRemove={removeFeedPost}
-                    t={t}
-                    discoverBasePath={discoverBasePath}
-                  />
-                </div>
-              ))}
+              {injectedFeedRows.map((row, i) => {
+                if (row.kind === 'sponsored') {
+                  return (
+                    <div
+                      key={`sponsored-${row.item?.id || row.item?.placeId || i}`}
+                      className="ig-feed-stagger ig-feed-stagger--sponsored"
+                      style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}
+                      data-feed-kind="sponsored"
+                    >
+                      <SponsoredPlaceCard item={row.item} t={t} variant="inline" />
+                    </div>
+                  );
+                }
+                const p = row.post;
+                return (
+                  <div
+                    key={p.id}
+                    className="ig-feed-stagger"
+                    style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}
+                    data-feed-kind="feed"
+                    data-post-id={String(p.id)}
+                  >
+                    <FeedPostCard
+                      post={p}
+                      user={user}
+                      onPatch={patchFeedPost}
+                      onRemove={removeFeedPost}
+                      t={t}
+                      discoverBasePath={discoverBasePath}
+                    />
+                  </div>
+                );
+              })}
             </div>
             {feedHasMore ? <div ref={feedSentinelRef} className="ig-feed-sentinel" aria-hidden="true" /> : null}
             {feedLoadingMore ? (

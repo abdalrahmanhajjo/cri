@@ -5,6 +5,7 @@ const { adminMiddleware } = require('../../middleware/admin');
 
 const { normalizeDbText } = require('../../utils/normalizeDbText');
 const { validateAdminPlaceUpsert } = require('../../utils/validateAdminPlace');
+const { invalidateSitemapCache } = require('../../seo/seoRoutes');
 
 const router = express.Router();
 
@@ -21,7 +22,7 @@ function safeJson(val, fallback = []) {
 
 /** GET /api/admin/places?q=&limit= — search places for admin pickers (id, name, location) */
 router.get('/', async (req, res) => {
-  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 40, 1), 100);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 40, 1), 500);
   const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 120) : '';
   const params = [];
   let whereSql = '';
@@ -220,6 +221,7 @@ router.delete('/:id', async (req, res) => {
     const id = req.params.id;
     const result = await query('DELETE FROM places WHERE id = $1', [id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Place not found' });
+    invalidateSitemapCache();
     res.json({ message: 'Place deleted' });
   } catch (err) {
     console.error(err);

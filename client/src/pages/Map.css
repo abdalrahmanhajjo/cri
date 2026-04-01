@@ -362,7 +362,7 @@
   color: #202124;
 }
 
-.map-trip-banner-label .material-symbols-outlined {
+.map-trip-banner-label .icon--feather {
   color: var(--color-primary, #0f766e);
 }
 
@@ -444,7 +444,7 @@
   color: #5f6368;
 }
 
-.gm-summary-time-label .material-symbols-outlined {
+.gm-summary-time-label .icon--feather {
   color: #1967d2;
 }
 
@@ -490,7 +490,7 @@
   color: #202124;
 }
 
-.gm-roads-to-pass-title .material-symbols-outlined {
+.gm-roads-to-pass-title .icon--feather {
   color: #1967d2;
 }
 
@@ -835,7 +835,7 @@
   color: #5f6368;
 }
 
-.map-trip-route-via .material-symbols-outlined {
+.map-trip-route-via .icon--feather {
   flex-shrink: 0;
   color: #5f6368;
 }
@@ -1362,7 +1362,7 @@
   height: 100vh;
   background: #fff;
   box-shadow: 2px 0 12px rgba(0,0,0,0.15);
-  z-index: 30;
+  z-index: 150;
   display: flex;
   flex-direction: column;
   transform: translateX(-100%);
@@ -1475,7 +1475,7 @@
   color: #5f6368;
 }
 
-.map-drawer-item-rating .material-symbols-outlined {
+.map-drawer-item-rating .icon--feather {
   color: #f9ab00;
 }
 
@@ -1496,7 +1496,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.4);
-  z-index: 25;
+  z-index: 140;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s;

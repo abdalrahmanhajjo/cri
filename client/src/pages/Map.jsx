@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
+import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import GlobalSearchBar from '../components/GlobalSearchBar';
@@ -18,12 +19,6 @@ const MAP_FIT_PADDING = 64;
 const PLACES_REGION = 'Tripoli, Lebanon';
 const GOOGLE_PLACES_CONCURRENCY = 3;
 const GOOGLE_PLACES_DELAY_MS = 200;
-const MAP_TYPES = Object.freeze([
-  { id: 'roadmap', label: 'Map', icon: 'map' },
-  { id: 'satellite', label: 'Satellite', icon: 'satellite_alt' },
-  { id: 'terrain', label: 'Terrain', icon: 'terrain' },
-]);
-
 /** Car & walking only (matches product request; avoids transit/bike in web nav). */
 const TRAVEL_MODES = Object.freeze([
   { id: 'DRIVING', icon: 'directions_car', labelKey: 'travelModeCar' },
@@ -193,7 +188,7 @@ function getPlaceDetails(placeId, apiKey) {
 }
 
 /** Build Google Place Photo URL */
-function placePhotoUrl(photoReference, apiKey, maxWidth = 400) {
+function placePhotoUrl(photoReference, apiKey, maxWidth = 320) {
   if (!photoReference || !apiKey) return '';
   return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${encodeURIComponent(photoReference)}&key=${encodeURIComponent(apiKey)}`;
 }
@@ -242,6 +237,7 @@ export default function MapPage() {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -252,7 +248,6 @@ export default function MapPage() {
   const [googlePlaceData, setGooglePlaceData] = useState({});
   const [fetchingPlaces, setFetchingPlaces] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [mapTypeId, setMapTypeId] = useState('roadmap');
   const [listOpen, setListOpen] = useState(false);
   const [selectedPlaceId, setSelectedPlaceId] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
@@ -313,11 +308,11 @@ export default function MapPage() {
     const state = location.state;
     const tripIds = state?.tripPlaceIds;
     const days = state?.tripDays;
+    const qParam = (searchParams.get('q') || '').trim();
     setLiveNavigation(false);
     setLiveNavError(null);
     setLiveNavRequestingPermission(false);
     setAddingTripStop(false);
-    setSearchQuery('');
     setGooglePlaceData({});
     setTripPlaceIds(null);
     setTripDays(null);
@@ -325,6 +320,7 @@ export default function MapPage() {
     setTripDayLabel(state?.tripDayLabel || null);
     setSelectedDayIndex(0);
     if (Array.isArray(tripIds) && tripIds.length > 0) {
+      setSearchQuery('');
       setLoading(true);
       setTripFilterName(state.tripName || 'Trip');
       setTripPlaceIds(tripIds);
@@ -338,6 +334,7 @@ export default function MapPage() {
         .catch(() => setPlaces([]))
         .finally(() => setLoading(false));
     } else {
+      setSearchQuery(qParam);
       setLoading(true);
       setTripFilterName(null);
       setTripDayLabel(null);
@@ -347,7 +344,7 @@ export default function MapPage() {
         .catch(() => setPlaces([]))
         .finally(() => setLoading(false));
     }
-  }, [langParam, location.state]);
+  }, [langParam, location.state, searchParams]);
 
   useEffect(() => {
     if (!addingTripStop || catalogFetched) return undefined;
@@ -504,24 +501,36 @@ export default function MapPage() {
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
+  /** Browse mode: markers match the search bar (same algorithm as Discover); empty match → show all. */
+  const mapBrowseMarkers = useMemo(() => {
+    if (tripFilterName && currentDayPlaceIds.length > 0) return mapDisplayPlaces;
+    const qq = deferredSearchQuery.trim();
+    if (!qq) return mapDisplayPlaces;
+    const narrow = filterPlacesByQuery(mapDisplayPlaces, qq);
+    return narrow.length > 0 ? narrow : mapDisplayPlaces;
+  }, [tripFilterName, currentDayPlaceIds.length, mapDisplayPlaces, deferredSearchQuery]);
+
   const catalogPickerPlaces = useMemo(() => {
     if (!addingTripStop) return [];
     return filterPlacesByQuery(catalogPlaces, deferredSearchQuery);
   }, [addingTripStop, catalogPlaces, deferredSearchQuery]);
 
   const markersForMapList = useMemo(() => {
-    if (!addingTripStop) return mapDisplayPlaces;
+    if (!addingTripStop) return mapBrowseMarkers;
     const tripOrdered = mapDisplayPlaces;
     const idSet = new Set(tripOrdered.map((p) => String(p.id)));
     const extras = catalogPickerPlaces.filter((p) => !idSet.has(String(p.id)));
     return [...tripOrdered, ...extras];
-  }, [addingTripStop, mapDisplayPlaces, catalogPickerPlaces]);
+  }, [addingTripStop, mapBrowseMarkers, mapDisplayPlaces, catalogPickerPlaces]);
 
-  const drawerPlaces = useMemo(
-    () =>
-      filterPlacesByQuery(addingTripStop ? catalogPlaces : mapDisplayPlaces, deferredSearchQuery),
-    [addingTripStop, catalogPlaces, mapDisplayPlaces, deferredSearchQuery]
-  );
+  const drawerPlaces = useMemo(() => {
+    const base = addingTripStop ? catalogPlaces : mapDisplayPlaces;
+    const narrow = filterPlacesByQuery(base, deferredSearchQuery);
+    if (addingTripStop) return narrow;
+    const qq = deferredSearchQuery.trim();
+    if (!qq) return base;
+    return narrow.length > 0 ? narrow : base;
+  }, [addingTripStop, catalogPlaces, mapDisplayPlaces, deferredSearchQuery]);
 
   const selectedPlace = useMemo(
     () =>
@@ -743,6 +752,7 @@ export default function MapPage() {
           zoom: DEFAULT_ZOOM,
           minZoom: 2,
           maxZoom: 21,
+          mapTypeId: 'satellite',
           mapTypeControl: false,
           streetViewControl: true,
           fullscreenControl: false,
@@ -782,12 +792,6 @@ export default function MapPage() {
       infoWindowRef.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-    map.setMapTypeId(mapTypeId);
-  }, [mapTypeId]);
 
   /* Live reload: resize map when layout changes (panel open/close) or window resize */
   const triggerMapResize = useCallback(() => {
@@ -1257,22 +1261,6 @@ export default function MapPage() {
           <Icon name={listOpen ? 'close' : 'list'} size={24} />
         </button>
 
-        {/* Map type selector — hidden during live navigation for a cleaner view */}
-        <div className={`map-type-pill${liveNavigation ? ' map-type-pill--hidden' : ''}`}>
-          {MAP_TYPES.map((type) => (
-            <button
-              key={type.id}
-              type="button"
-              className={`map-type-btn ${mapTypeId === type.id ? 'map-type-btn--active' : ''}`}
-              onClick={() => setMapTypeId(type.id)}
-              aria-pressed={mapTypeId === type.id}
-            >
-              <Icon name={type.icon} size={18} />
-              <span>{type.label}</span>
-            </button>
-          ))}
-        </div>
-
         {/* My location */}
         <button
           type="button"
@@ -1648,13 +1636,21 @@ function buildInfoContent(p, apiKey = '', strings = {}) {
     (Array.isArray(p.images) && p.images[0]) ||
     '';
   const img = rawImg ? (getPlaceImageUrl(rawImg) || rawImg) : '';
+  let imgHtml = '';
+  if (img) {
+    const { src, srcSet, sizes } = getDeliveryImgProps(img, 'similarStrip');
+    const srcEsc = escapeHtml(src);
+    const setEsc = srcSet ? escapeHtml(srcSet) : '';
+    const szEsc = sizes ? escapeHtml(sizes) : '';
+    imgHtml = `<img src="${srcEsc}"${setEsc ? ` srcset="${setEsc}"` : ''}${szEsc ? ` sizes="${szEsc}"` : ''} alt="" loading="lazy" decoding="async" width="280" height="100" style="width:100%;height:100px;object-fit:cover;border-radius:8px 8px 0 0;margin:-8px -8px 8px -8px;" />`;
+  }
   const dirLink =
     placeId != null && String(placeId) !== ''
       ? `<a href="#" class="map-info-directions" data-place-id="${escapeHtml(String(placeId))}" data-trip-name="${encodeURIComponent(name)}" style="display:inline-block;color:#1a73e8;font-weight:600;text-decoration:none;cursor:pointer;">${escapeHtml(s.directions)}</a>`
       : '';
   return `
     <div class="gm-info-content" style="padding:0;min-width:220px;max-width:280px;font-size:14px;">
-      ${img ? `<img src="${escapeHtml(img)}" alt="" style="width:100%;height:100px;object-fit:cover;border-radius:8px 8px 0 0;margin:-8px -8px 8px -8px;" />` : ''}
+      ${imgHtml}
       <strong style="display:block;margin-bottom:4px;font-size:15px;">${escapeHtml(name)}</strong>
       ${address ? `<p style="margin:0 0 6px 0;color:#5f6368;font-size:13px;">${escapeHtml(address)}</p>` : ''}
       ${rating != null ? `<p style="margin:0 0 4px 0;font-size:13px;">★ ${Number(rating).toFixed(1)}${reviews != null ? ` (${reviews} reviews)` : ''}</p>` : ''}

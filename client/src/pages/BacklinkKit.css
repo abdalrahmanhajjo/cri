@@ -155,6 +155,8 @@
 }
 
 .backlink-kit__dbImage {
+  position: relative;
+  overflow: hidden;
   height: 120px;
   background: linear-gradient(120deg, #dbeafe, #e2f6f2);
   background-size: cover;

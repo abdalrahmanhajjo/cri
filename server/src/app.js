@@ -34,6 +34,11 @@ const adminFeedRoutes = require('./routes/admin/feed');
 const adminInterestsRoutes = require('./routes/admin/interests');
 const adminPlaceOwnersRoutes = require('./routes/admin/placeOwners');
 const adminSiteSettingsRoutes = require('./routes/admin/siteSettings');
+const adminPlacePromotionsRoutes = require('./routes/admin/placePromotions');
+const adminSponsoredPlacesRoutes = require('./routes/admin/sponsoredPlaces');
+const adminSponsorshipPurchasesRoutes = require('./routes/admin/sponsorshipPurchases');
+const adminCouponsMgmtRoutes = require('./routes/admin/couponsMgmt');
+const adminEmailBroadcastRoutes = require('./routes/admin/emailBroadcast');
 const siteSettingsPublicRoutes = require('./routes/siteSettingsPublic');
 const weatherPublicRoutes = require('./routes/weatherPublic');
 const businessRoutes = require('./routes/business');
@@ -41,7 +46,9 @@ const feedPublicRoutes = require('./routes/feed');
 const promotionsPublicRoutes = require('./routes/promotionsPublic');
 const couponsRoutes = require('./routes/coupons');
 const aiRoutes = require('./routes/ai');
+const sponsoredPlacesPublicRoutes = require('./routes/sponsoredPlacesPublic');
 const { seoRouter, makeSeoResponder } = require('./seo/seoRoutes');
+const { injectAbsoluteFaviconLinks, getBaseUrl } = require('./seo/seoUtils');
 const { isDatabaseConnectivityError, userFacingDbUnavailableMessage } = require('./utils/dbHttpError');
 
 const app = express();
@@ -87,6 +94,8 @@ app.use((req, res, next) => {
 app.use(
   helmet({
     contentSecurityPolicy: {
+      // Helmet's defaults also define script-src; merging produced duplicate script-src (browser warning).
+      useDefaults: false,
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: [
@@ -109,7 +118,8 @@ app.use(
           'https://*.supabase.co',
           'https://*.pooler.supabase.com',
         ],
-        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        frameSrc: ["'self'", 'https://www.googletagmanager.com'],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
       },
@@ -124,6 +134,11 @@ app.use(
 );
 
 app.use(compression());
+
+/** Stripe webhooks require raw body for signature verification (must run before express.json). */
+const stripeWebhookRouter = require('./routes/stripeWebhook');
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookRouter);
+
 app.use(express.json({ limit: JSON_BODY_LIMIT, strict: true }));
 app.use(sanitizeBody);
 
@@ -238,6 +253,7 @@ app.use('/api/promotions', promotionsPublicRoutes);
 app.use('/api/coupons', couponsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/site-settings', siteSettingsPublicRoutes);
+app.use('/api/sponsored-places', sponsoredPlacesPublicRoutes);
 app.use('/api/user', profileRoutes);
 app.use('/api/user', tripsRoutes);
 app.use('/api/admin/places', adminPlacesRoutes);
@@ -253,6 +269,11 @@ app.use('/api/admin/feed', adminFeedRoutes);
 app.use('/api/admin/interests', adminInterestsRoutes);
 app.use('/api/admin/place-owners', adminPlaceOwnersRoutes);
 app.use('/api/admin/site-settings', adminSiteSettingsRoutes);
+app.use('/api/admin/place-promotions', adminPlacePromotionsRoutes);
+app.use('/api/admin/sponsored-places', adminSponsoredPlacesRoutes);
+app.use('/api/admin/sponsorship-purchases', adminSponsorshipPurchasesRoutes);
+app.use('/api/admin/coupons', adminCouponsMgmtRoutes);
+app.use('/api/admin/email-broadcast', adminEmailBroadcastRoutes);
 app.use('/api/business', businessRoutes);
 
 const serveClientDist =
@@ -277,7 +298,18 @@ if (serveClientDist) {
         return next();
       }
       if (path.extname(req.path)) return next();
-      res.sendFile(path.join(clientDistPath, 'index.html'), (err) => next(err));
+      const indexPath = path.join(clientDistPath, 'index.html');
+      try {
+        const st = fs.statSync(indexPath);
+        if (!cachedSpaIndexHtml || st.mtimeMs !== cachedSpaIndexMtime) {
+          cachedSpaIndexHtml = fs.readFileSync(indexPath, 'utf8');
+          cachedSpaIndexMtime = st.mtimeMs;
+        }
+        const html = injectAbsoluteFaviconLinks(cachedSpaIndexHtml, getBaseUrl(req));
+        res.type('text/html').send(html);
+      } catch (e) {
+        res.sendFile(indexPath, (err) => next(err || e));
+      }
     });
     console.log(`Serving SPA from ${clientDistPath} (SERVE_CLIENT_DIST)`);
   } else {
@@ -287,7 +319,40 @@ if (serveClientDist) {
   }
 }
 
+let cachedSpaIndexHtml = null;
+let cachedSpaIndexMtime = 0;
+
 let lastDbConnectivityLog = 0;
+
+/** Multer / upload filter errors must stay readable in production (global handler would hide them). */
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  try {
+    const multer = require('multer');
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        const cap = process.env.UPLOAD_MAX_FILE_BYTES?.trim();
+        const msg = cap
+          ? `File too large. Maximum is ${cap} bytes (UPLOAD_MAX_FILE_BYTES).`
+          : 'File too large.';
+        return res.status(413).json({ error: msg });
+      }
+      return res.status(400).json({ error: err.message || 'Upload rejected.' });
+    }
+  } catch (_) {
+    /* multer not available */
+  }
+  const uploadMsg = String(err.message || '');
+  if (
+    uploadMsg.includes('Only images (JPEG') ||
+    uploadMsg.includes('videos (MP4') ||
+    uploadMsg.includes('HEIC is saved as JPEG')
+  ) {
+    return res.status(400).json({ error: uploadMsg });
+  }
+  next(err);
+});
+
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   const msg = String(err.message || err);

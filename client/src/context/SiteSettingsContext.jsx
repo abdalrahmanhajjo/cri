@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { api, API_ERROR_NETWORK } from '../api/client';
-import { siteSettingsDefaults } from '../config/siteSettingsDefaults';
+import { mergeWithSiteSettingsDefaults } from '../config/siteSettingsDefaults';
 import { getStoredLanguage, getTranslation } from '../i18n/translations';
 
 const SiteSettingsContext = createContext(null);
 
 export function SiteSettingsProvider({ children }) {
-  const [settings, setSettings] = useState(() => ({ ...siteSettingsDefaults }));
+  const [settings, setSettings] = useState(() => mergeWithSiteSettingsDefaults({}));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -16,7 +16,7 @@ export function SiteSettingsProvider({ children }) {
       .siteSettings()
       .then((r) => {
         const s = r?.settings && typeof r.settings === 'object' ? r.settings : {};
-        setSettings({ ...siteSettingsDefaults, ...s });
+        setSettings(mergeWithSiteSettingsDefaults(s));
         setError(null);
       })
       .catch((e) => {
@@ -26,7 +26,7 @@ export function SiteSettingsProvider({ children }) {
             ? getTranslation(lang, 'errors', 'networkError')
             : e?.message || 'Failed to load site settings'
         );
-        setSettings({ ...siteSettingsDefaults });
+        setSettings(mergeWithSiteSettingsDefaults({}));
       })
       .finally(() => setLoading(false));
   }, []);
