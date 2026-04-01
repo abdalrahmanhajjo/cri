@@ -107,6 +107,29 @@
   --shadow-card-hover: 0 20px 44px rgba(0, 0, 0, 0.6);
   --shadow-nav: 0 1px 0 rgba(255, 255, 255, 0.05);
   --shadow-focus: 0 0 0 3px rgba(15, 118, 110, 0.35);
+
+  --ig-bg: var(--color-background);
+  --ig-surface: var(--color-surface);
+  --ig-border: var(--color-border);
+  --ig-text: var(--color-text-primary);
+  --ig-muted: var(--color-text-secondary);
+  --ig-brand: var(--color-primary);
+  --ig-brand-soft: rgba(15, 118, 110, 0.12);
+  --ig-brand-glow: rgba(15, 118, 110, 0.18);
+
+  --dg-cream: #111827;
+  --dg-sand: #111827;
+  --dg-ink: #eef2ff;
+  --dg-muted: #94a3b8;
+  --dg-copper: var(--color-primary);
+  --dg-copper-deep: var(--color-primary-dark);
+
+  --hg-ice: #111827;
+  --hg-slate: #cbd5e1;
+  --hg-gold: var(--color-primary);
+  --hg-gold-soft: rgba(15, 118, 110, 0.15);
+  --hg-night: #eef2ff;
+  --hg-night-mid: #0d3d38;
 }
 
 :root[data-theme="dark"] body {
@@ -140,6 +163,97 @@
 :root[data-theme="dark"] .ai-plan-banner-cta {
   background: var(--color-background);
   color: var(--color-primary);
+}
+
+:root[data-theme="dark"] .ig-discover,
+:root[data-theme="dark"] .pd-page,
+:root[data-theme="dark"] .dg-page,
+:root[data-theme="dark"] .hg-page,
+:root[data-theme="dark"] .plan-page,
+:root[data-theme="dark"] .messages-page,
+:root[data-theme="dark"] .trips-page,
+:root[data-theme="dark"] .spots-page,
+:root[data-theme="dark"] .profile-page,
+:root[data-theme="dark"] .auth-page,
+:root[data-theme="dark"] .place-detail,
+:root[data-theme="dark"] .trip-detail,
+:root[data-theme="dark"] .event-detail {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+:root[data-theme="dark"] .ig-discover {
+  --ig-bg: var(--color-background);
+  --ig-surface: var(--color-surface);
+  --ig-border: var(--color-border);
+  --ig-text: var(--color-text-primary);
+  --ig-muted: var(--color-text-secondary);
+  --ig-brand: var(--color-primary);
+  --ig-brand-soft: rgba(15, 118, 110, 0.12);
+  --ig-brand-glow: rgba(15, 118, 110, 0.18);
+  background: var(--ig-bg);
+  color: var(--ig-text);
+}
+
+:root[data-theme="dark"] .ig-discover-top {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .ig-discover-place-scope-card,
+:root[data-theme="dark"] .ig-skeleton-card,
+:root[data-theme="dark"] .ig-skeleton-offer-card,
+:root[data-theme="dark"] .ig-skeleton-proposals,
+:root[data-theme="dark"] .messages-inbox-row,
+:root[data-theme="dark"] .trip-item-link {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .pd-page {
+  --pd-ink: var(--color-text-primary);
+  --pd-forest: #d4fff5;
+  --pd-teal: var(--color-primary);
+  --pd-teal-deep: var(--color-primary-dark);
+  --pd-sand: var(--color-background);
+  --pd-divider: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+:root[data-theme="dark"] .pd-hero-grid,
+:root[data-theme="dark"] .pd-hero-action,
+:root[data-theme="dark"] .pd-hero-action:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme="dark"] .dg-page {
+  --dg-cream: var(--color-surface);
+  --dg-sand: var(--color-surface);
+  --dg-ink: var(--color-text-primary);
+  --dg-muted: var(--color-text-secondary);
+  --dg-copper: var(--color-primary);
+  --dg-copper-deep: var(--color-primary-dark);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+:root[data-theme="dark"] .hg-page {
+  --hg-ice: var(--color-surface);
+  --hg-slate: var(--color-text-secondary);
+  --hg-gold: var(--color-primary);
+  --hg-gold-soft: rgba(15, 118, 110, 0.12);
+  --hg-night: #eef2ff;
+  --hg-night-mid: #0d3d38;
+}
+
+:root[data-theme="dark"] .plan-page {
+  --plan-surface: var(--color-surface);
+  --plan-border: var(--color-border);
+  --plan-text: var(--color-text-primary);
+  --plan-muted: var(--color-text-secondary);
+  --plan-accent: var(--color-primary);
+  --plan-accent-dim: rgba(15, 118, 110, 0.12);
 }
 
 * { box-sizing: border-box; }
