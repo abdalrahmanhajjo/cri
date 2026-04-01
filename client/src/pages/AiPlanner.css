@@ -1,23 +1,33 @@
-/* AI Trip Planner — Visit Tripoli web (parity with mobile AI planner screen) */
+/* AI Trip Planner — new layout and modern card style */
 .ai-planner {
   min-height: calc(100dvh - 120px);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  padding: 0 var(--page-padding, 16px) 16px;
   background: linear-gradient(180deg, rgba(15, 118, 110, 0.06) 0%, var(--color-surface, #fafaf9) 28%, var(--color-surface, #fafaf9) 100%);
+}
+
+@media (min-width: 980px) {
+  .ai-planner {
+    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+    padding-inline: 24px;
+    gap: 28px;
+  }
 }
 
 .ai-planner__top {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px var(--page-padding, 16px);
-  background: color-mix(in srgb, var(--color-surface, #fff) 92%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--color-border, #e7e5e4);
+  padding: 14px 18px;
+  background: color-mix(in srgb, var(--color-surface, #fff) 96%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(15, 118, 110, 0.12);
 }
 
 .ai-planner__back {
@@ -80,54 +90,55 @@
 }
 
 .ai-planner__hero {
-  padding: 8px var(--page-padding, 16px) 16px;
+  padding: 24px;
+  border-radius: 28px;
+  background: var(--color-surface, #fff);
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  box-shadow: 0 24px 60px rgba(15, 118, 110, 0.08);
 }
 
 .ai-planner__greeting {
-  margin: 0 0 6px;
-  font-size: 15px;
-  font-weight: 600;
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--color-text-primary, #1c1917);
 }
 
 .ai-planner__sub {
-  margin: 0 0 16px;
-  font-size: 14px;
+  margin: 0 0 20px;
+  font-size: 15px;
   color: var(--color-text-secondary, #57534e);
-  line-height: 1.45;
-  max-width: 52ch;
+  line-height: 1.6;
+  max-width: 100%;
 }
 
 .ai-planner__moods {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  margin: 0 calc(-1 * var(--page-padding, 16px)) 0;
-  padding-left: var(--page-padding, 16px);
-  padding-right: var(--page-padding, 16px);
-  scrollbar-width: thin;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
 }
 
 .ai-planner__mood {
-  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  width: 104px;
-  padding: 14px 10px;
+  gap: 10px;
+  padding: 18px 14px;
   border: 1px solid var(--color-border, #e7e5e4);
-  border-radius: 16px;
+  border-radius: 20px;
   background: var(--color-surface, #fff);
-  box-shadow: 0 2px 12px rgba(28, 25, 23, 0.06);
+  box-shadow: 0 18px 40px rgba(28, 25, 23, 0.06);
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-  font-size: 12px;
-  font-weight: 600;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--color-text-primary, #1c1917);
   text-align: center;
-  line-height: 1.25;
+  line-height: 1.35;
+  min-height: 118px;
+  justify-content: center;
 }
 
 .ai-planner__mood:hover:not(:disabled) {
@@ -153,13 +164,17 @@
 }
 
 .ai-planner__chips-wrap {
-  margin-top: 14px;
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(15, 118, 110, 0.04);
+  border: 1px solid rgba(15, 118, 110, 0.12);
 }
 
 .ai-planner__chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .ai-planner__chip {
@@ -263,16 +278,19 @@
 }
 
 .ai-planner__chat {
-  flex: 1;
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  /* Space for fixed composer + mobile send bar + safe area */
-  padding: 0 var(--page-padding, 16px) calc(120px + env(safe-area-inset-bottom, 0px));
+  padding: 24px 20px calc(124px + env(safe-area-inset-bottom, 0px));
+  border-radius: 28px;
+  background: var(--color-surface, #fff);
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  box-shadow: 0 24px 50px rgba(15, 118, 110, 0.07);
 }
 
 .ai-planner--day-dock .ai-planner__chat {
-  padding-bottom: calc(176px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(180px + env(safe-area-inset-bottom, 0px));
 }
 
 .ai-planner__messages {
@@ -490,11 +508,11 @@
 }
 
 .ai-planner__plan {
-  margin-top: 10px;
-  padding: 12px;
-  border-radius: 12px;
-  background: rgba(15, 118, 110, 0.06);
-  border: 1px solid rgba(15, 118, 110, 0.2);
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(15, 118, 110, 0.08);
+  border: 1px solid rgba(15, 118, 110, 0.18);
 }
 
 .ai-planner__plan-title {
