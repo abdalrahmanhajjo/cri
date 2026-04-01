@@ -413,6 +413,121 @@ function plannerDateYmdForDayIndex(selectedDate, dayIndex) {
   return formatYMD(d);
 }
 
+function normalizeBestTimeBucket(raw) {
+  const s = String(raw || '').toLowerCase();
+  if (!s) return '';
+  if (/(morning|am|sunrise|early|صبح)/.test(s)) return 'morning';
+  if (/(afternoon|midday|noon|pm|بعد الظهر|ظهر)/.test(s)) return 'afternoon';
+  if (/(evening|night|sunset|dinner|مساء|ليل)/.test(s)) return 'evening';
+  return '';
+}
+
+function fallbackTimeForIndex(index, bestTime) {
+  const bucket = normalizeBestTimeBucket(bestTime);
+  if (bucket === 'morning') {
+    return ['09:00', '10:15', '11:30'][Math.min(index, 2)] || '09:00';
+  }
+  if (bucket === 'afternoon') {
+    return ['12:30', '14:00', '15:30'][Math.min(index, 2)] || '13:00';
+  }
+  if (bucket === 'evening') {
+    return ['16:30', '18:00', '19:30'][Math.min(index, 2)] || '18:00';
+  }
+  return ['09:30', '11:00', '13:30', '15:00', '16:30', '18:00', '19:30', '21:00'][index] || '09:30';
+}
+
+function buildFallbackReason(place, { userInterests = [], budget = 'moderate', slotIndex = 0 } = {}) {
+  const area = place?.location ? String(place.location).trim() : '';
+  const category = place?.category ? String(place.category).trim() : '';
+  const bestTime = normalizeBestTimeBucket(place?.bestTime);
+  const interestLead = Array.isArray(userInterests) && userInterests.length
+    ? `${String(userInterests[0])}`
+    : category || 'your plan';
+  const timeLead =
+    bestTime === 'morning'
+      ? 'Best earlier in the day'
+      : bestTime === 'afternoon'
+        ? 'Fits well around midday'
+        : bestTime === 'evening'
+          ? 'Works especially well later in the day'
+          : slotIndex === 0
+            ? 'A strong first stop'
+            : 'Keeps the day flowing well';
+  const areaLead = area ? ` and keeps you around ${area}` : '';
+  const budgetLead =
+    budget === 'low'
+      ? ' while staying friendly for a lighter budget'
+      : budget === 'luxury'
+        ? ' with a stronger premium feel'
+        : '';
+  return `${timeLead} for ${interestLead}${areaLead}${budgetLead}.`;
+}
+
+function buildHeuristicFallbackSlots({
+  places = [],
+  fallbackPlaceIds = [],
+  durationDays = 1,
+  placesPerDay = 4,
+  userInterests = [],
+  budget = 'moderate',
+}) {
+  const dd = Number.isFinite(Number(durationDays)) && Number(durationDays) > 0 ? Number(durationDays) : 1;
+  const ppd = Number.isFinite(Number(placesPerDay)) && Number(placesPerDay) > 0 ? Number(placesPerDay) : 4;
+  const placeById = Object.fromEntries((places || []).map((p) => [String(p.id), p]));
+  const ranked = (fallbackPlaceIds || [])
+    .map((id) => placeById[String(id)])
+    .filter(Boolean);
+  if (!ranked.length) return [];
+
+  const slots = [];
+  const used = new Set();
+  let cursor = 0;
+
+  for (let dayIndex = 0; dayIndex < dd; dayIndex += 1) {
+    const preferredArea = dayIndex % 2 === 0 ? 'old_city' : 'mina';
+    const dayChosen = [];
+    const dayCategories = new Set();
+
+    const tryTake = (predicate) => {
+      for (let i = 0; i < ranked.length; i += 1) {
+        const place = ranked[(cursor + i) % ranked.length];
+        const id = String(place.id);
+        if (used.has(id)) continue;
+        if (!predicate(place)) continue;
+        used.add(id);
+        dayChosen.push(place);
+        if (place.category) dayCategories.add(String(place.category).toLowerCase());
+        cursor = (cursor + i + 1) % ranked.length;
+        return true;
+      }
+      return false;
+    };
+
+    tryTake((place) => compactPlaceRowForModel(place).area === preferredArea);
+
+    while (dayChosen.length < ppd) {
+      const added =
+        tryTake((place) => {
+          const cat = String(place.category || '').toLowerCase();
+          return !dayCategories.has(cat);
+        }) ||
+        tryTake(() => true);
+      if (!added) break;
+    }
+
+    dayChosen.forEach((place, slotIndex) => {
+      slots.push({
+        placeId: String(place.id),
+        suggestedTime: fallbackTimeForIndex(slotIndex, place.bestTime),
+        dayIndex,
+        reason: buildFallbackReason(place, { userInterests, budget, slotIndex }),
+      });
+    });
+  }
+
+  return slots;
+}
+
 /**
  * Reorder each day's stops and assign start/end times using Tripoli weather + prayer windows
  * (same logic as Plan "Smart schedule"). Falls back to original slots on error.
@@ -881,6 +996,12 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
     }
 
     let { text, slots } = parsePlanJson(rawForPlan, placeIdSet);
+    const fallbackLead =
+      lang === 'ar'
+        ? 'Ø£Ø¹Ø¯Øª ØªØ±ØªÙŠØ¨ Ø§Ù„Ø®Ø·Ø© Ø¨Ø§Ø¹ØªÙ…Ø§Ø¯ Ø¹Ù„Ù‰ Ø£ÙØ¶Ù„ Ø§Ù„Ø£Ù…Ø§ÙƒÙ† Ø§Ù„Ù…Ù†Ø§Ø³Ø¨Ø© Ù„Ø·Ù„Ø¨Ùƒ Ù„Ù„Ø­ÙØ§Ø¸ Ø¹Ù„Ù‰ Ø®Ø·Ø© ÙˆØ§Ø¶Ø­Ø© ÙˆÙ…ÙˆØ«ÙˆÙ‚Ø©.'
+        : lang === 'fr'
+          ? 'Jâ€™ai reconstruit le plan Ã  partir des lieux les plus pertinents pour garder un itinÃ©raire clair et fiable.'
+          : 'I rebuilt the plan from the strongest matching places to keep the itinerary clear and reliable.';
     const outText = text || 'Here’s a plan for you!';
 
     const pickFillTimes = (n) => {
@@ -946,6 +1067,31 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
       next = ensureExactSlotCount(next);
       return applySmartScheduleToAiSlots(next, effDays, effSelectedDate, places);
     };
+
+    const targetSlotCount =
+      effPlacesPerDay != null && effPlacesPerDay > 0 && effDays > 0 ? effDays * effPlacesPerDay : null;
+    const needFallbackPlan =
+      !Array.isArray(slots) ||
+      slots.length === 0 ||
+      (targetSlotCount != null && slots.length < Math.min(targetSlotCount, Math.max(2, effDays)));
+
+    if (needFallbackPlan && singleReplaceSlotIndex == null) {
+      const fallbackSlots = buildHeuristicFallbackSlots({
+        places,
+        fallbackPlaceIds,
+        durationDays: effDays,
+        placesPerDay: effPlacesPerDay || placesPerDay || 4,
+        userInterests,
+        budget,
+      });
+      if (fallbackSlots.length) {
+        return {
+          text: text ? `${outText}\n\n${fallbackLead}` : fallbackLead,
+          slots: await finalizeTripSlots(fallbackSlots),
+          tripSettings,
+        };
+      }
+    }
 
     if (
       singleReplaceSlotIndex != null &&

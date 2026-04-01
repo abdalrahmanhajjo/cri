@@ -19,8 +19,14 @@ function groqApiKey() {
 function n8nWebhookUrl() {
   return (process.env.N8N_WEBHOOK_URL || '').trim();
 }
-function groqModel() {
-  return process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+function groqModels() {
+  const rawPriority = (process.env.GROQ_MODEL_PRIORITY || '').trim();
+  const fromPriority = rawPriority
+    ? rawPriority.split(',').map((x) => x.trim()).filter(Boolean)
+    : [];
+  const explicit = (process.env.GROQ_MODEL || '').trim();
+  const defaults = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+  return [...new Set([...fromPriority, explicit, ...defaults].filter(Boolean))];
 }
 
 function useGroqDirect() {
@@ -35,7 +41,9 @@ function isConfigured() {
   return useGroqDirect() || useN8n();
 }
 
-async function callGroqOnce(messages, temperature = 0.5, maxTokens = 2048) {
+async function callGroqOnce(messages, temperature = 0.5, maxTokens = 2048, model) {
+  const safeTemperature = Math.max(0, Math.min(1, Number(temperature) || 0.5));
+  const safeMaxTokens = Math.max(128, Math.min(4096, Number(maxTokens) || 2048));
   const res = await fetch(GROQ_URL, {
     method: 'POST',
     headers: {
@@ -43,10 +51,10 @@ async function callGroqOnce(messages, temperature = 0.5, maxTokens = 2048) {
       Authorization: `Bearer ${groqApiKey()}`,
     },
     body: JSON.stringify({
-      model: groqModel(),
+      model,
       messages,
-      temperature: Number(temperature) || 0.5,
-      max_tokens: Number(maxTokens) || 2048,
+      temperature: safeTemperature,
+      max_tokens: safeMaxTokens,
     }),
     signal: AbortSignal.timeout(60000),
   });
@@ -62,32 +70,49 @@ async function callGroqOnce(messages, temperature = 0.5, maxTokens = 2048) {
     const e = new Error(err);
     e.status = res.status;
     e.isRateLimit = res.status === 429 || (typeof err === 'string' && /rate limit/i.test(err));
+    e.isRetryable = res.status === 408 || res.status === 429 || res.status === 500 || res.status === 502 || res.status === 503 || res.status === 504;
+    e.isModelIssue =
+      res.status === 400 &&
+      typeof err === 'string' &&
+      /(model|decommissioned|not found|unsupported|does not exist)/i.test(err);
+    e.model = model;
     throw e;
   }
   const text = json?.choices?.[0]?.message?.content ?? json?.choices?.[0]?.text ?? '';
-  return { text: String(text).trim(), raw: json };
+  return { text: String(text).trim(), raw: json, model };
 }
 
 const MAX_GROQ_RETRIES = 3;
 const MAX_RATE_LIMIT_WAIT_MS = 20000;
 
 async function callGroq(messages, temperature = 0.5, maxTokens = 2048) {
+  const models = groqModels();
   let lastErr;
-  for (let attempt = 0; attempt <= MAX_GROQ_RETRIES; attempt += 1) {
-    try {
-      return await callGroqOnce(messages, temperature, maxTokens);
-    } catch (err) {
-      lastErr = err;
-      if (err.isRateLimit && attempt < MAX_GROQ_RETRIES) {
-        const msg = String(err.message || '');
-        const match = msg.match(/try again in ([\d.]+)\s*s/i);
-        const sec = match ? Math.min(parseFloat(match[1]) || 5, MAX_RATE_LIMIT_WAIT_MS / 1000) : 5;
-        const ms = Math.min(Math.ceil(sec * 1000), MAX_RATE_LIMIT_WAIT_MS);
-        console.log(`[AI] Groq rate limited, waiting ${(ms / 1000).toFixed(1)}s then retry (${attempt + 1}/${MAX_GROQ_RETRIES})`);
-        await new Promise((r) => setTimeout(r, ms));
-        continue;
+  for (const model of models) {
+    for (let attempt = 0; attempt <= MAX_GROQ_RETRIES; attempt += 1) {
+      try {
+        return await callGroqOnce(messages, temperature, maxTokens, model);
+      } catch (err) {
+        lastErr = err;
+        if (err.isRateLimit && attempt < MAX_GROQ_RETRIES) {
+          const msg = String(err.message || '');
+          const match = msg.match(/try again in ([\d.]+)\s*s/i);
+          const sec = match ? Math.min(parseFloat(match[1]) || 5, MAX_RATE_LIMIT_WAIT_MS / 1000) : 5;
+          const ms = Math.min(Math.ceil(sec * 1000), MAX_RATE_LIMIT_WAIT_MS);
+          console.log(`[AI] Groq rate limited on ${model}, waiting ${(ms / 1000).toFixed(1)}s then retry (${attempt + 1}/${MAX_GROQ_RETRIES})`);
+          await new Promise((r) => setTimeout(r, ms));
+          continue;
+        }
+        if ((err.isModelIssue || (err.isRetryable && attempt === MAX_GROQ_RETRIES)) && model !== models[models.length - 1]) {
+          console.warn(`[AI] Groq model ${model} failed, trying fallback model. Reason: ${err.message}`);
+          break;
+        }
+        if (err.isRetryable && attempt < MAX_GROQ_RETRIES) {
+          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+          continue;
+        }
+        throw err;
       }
-      throw err;
     }
   }
   throw lastErr;
@@ -132,10 +157,10 @@ router.post('/complete', aiAuthIfRequired, async (req, res) => {
       : [{ role: 'user', content: prompt }];
     console.log('[AI] POST /complete (Groq direct)', hasSystemUser ? 'system+user' : 'prompt');
     try {
-      const { text } = await callGroq(messages, temperature, maxTokens);
+      const { text, model } = await callGroq(messages, temperature, maxTokens);
       if (!text) console.warn('[AI] Groq returned empty text');
-      else console.log('[AI] Groq 200 OK, response length:', text.length);
-      return res.json({ text: text || '' });
+      else console.log('[AI] Groq 200 OK, model:', model, 'response length:', text.length);
+      return res.json({ text: text || '', model: model || null });
     } catch (err) {
       console.error('[AI] Groq error:', err.message);
       const isAuth = err.message && /api.key|401|403|invalid|unauthorized/i.test(err.message);

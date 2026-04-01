@@ -134,6 +134,10 @@ function normalizeTags(tags) {
 function rowToPlace(row, baseUrl) {
   let images = safeParseJson(row.images, []);
   images = resolveImageUrls(images, baseUrl);
+  const diningProfile =
+    row.dining_profile && typeof row.dining_profile === 'object' && !Array.isArray(row.dining_profile)
+      ? row.dining_profile
+      : {};
   const appN = row.app_review_count != null ? Number(row.app_review_count) : 0;
   const appAvg = row.app_avg_rating != null ? Number(row.app_avg_rating) : null;
   const useAppReviews = appN > 0 && appAvg != null && Number.isFinite(appAvg);
@@ -160,6 +164,7 @@ function rowToPlace(row, baseUrl) {
     reviewCount:
       reviewCount != null && Number.isFinite(reviewCount) ? Math.round(reviewCount) : null,
     hours: typeof row.hours === 'string' ? normalizeDbText(row.hours) : row.hours,
+    diningProfile,
     tags: normalizeTags(row.tags),
     searchName: row.search_name != null ? normalizeDbText(String(row.search_name)) : row.search_name
   };
@@ -184,7 +189,7 @@ router.get('/', cachePublicList(60, 300), async (req, res) => {
       return res.status(400).json({ error: pag.invalid });
     }
     const { statsJoinSql } = await getPlaceReviewMeta();
-    const listSql = `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
+    const listSql = `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id, p.dining_profile,
               pr_stats.app_avg_rating, pr_stats.app_review_count,
               COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,
               COALESCE(pt.location, p.location) AS location, COALESCE(pt.category, p.category) AS category,
@@ -857,7 +862,7 @@ router.get('/:id', async (req, res) => {
     const slugNorm = rawId.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
     let result = bySlug
       ? await query(
-          `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
+          `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id, p.dining_profile,
                   pr_stats.app_avg_rating, pr_stats.app_review_count,
                   COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,
                   COALESCE(pt.location, p.location) AS location, COALESCE(pt.category, p.category) AS category,
@@ -873,7 +878,7 @@ router.get('/:id', async (req, res) => {
           [lang, rawId, slugNorm]
         )
       : await query(
-          `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
+          `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id, p.dining_profile,
                   pr_stats.app_avg_rating, pr_stats.app_review_count,
                   COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,
                   COALESCE(pt.location, p.location) AS location, COALESCE(pt.category, p.category) AS category,
@@ -887,7 +892,7 @@ router.get('/:id', async (req, res) => {
         );
     if (result.rows.length === 0 && !bySlug) {
       result = await query(
-        `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id,
+        `SELECT p.id, p.latitude, p.longitude, p.images, p.rating, p.review_count, p.hours, p.search_name, p.category_id, p.dining_profile,
                 pr_stats.app_avg_rating, pr_stats.app_review_count,
                 COALESCE(pt.name, p.name) AS name, COALESCE(pt.description, p.description) AS description,
                 COALESCE(pt.location, p.location) AS location, COALESCE(pt.category, p.category) AS category,

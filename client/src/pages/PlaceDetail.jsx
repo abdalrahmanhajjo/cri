@@ -46,6 +46,112 @@ function placeHasGpsForCheckin(place) {
   return !!(c && Number.isFinite(c.lat) && Number.isFinite(c.lng));
 }
 
+function isDiningPlace(place) {
+  const hay = [
+    place?.category,
+    place?.categoryId,
+    ...(Array.isArray(place?.tags) ? place.tags : place?.tags ? [place.tags] : []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return /(restaurant|food|dining|cafe|café|coffee|bakery|sweet|dessert|cuisine|breakfast|lunch|dinner)/.test(hay);
+}
+
+function pickDiningTags(tags, matcher, limit = 4) {
+  const list = Array.isArray(tags) ? tags : tags ? [tags] : [];
+  const seen = new Set();
+  return list
+    .map((tag) => String(tag || '').trim())
+    .filter(Boolean)
+    .filter((tag) => {
+      const key = tag.toLowerCase();
+      if (!matcher.test(key) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, limit);
+}
+
+function titleizeTokens(value) {
+  return String(value || '')
+    .split(/[_-]+/)
+    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : part))
+    .join(' ');
+}
+
+function buildDiningSummary(place) {
+  const tags = Array.isArray(place?.tags) ? place.tags : place?.tags ? [place.tags] : [];
+  const diningProfile = place?.diningProfile && typeof place.diningProfile === 'object' ? place.diningProfile : {};
+  const cuisines = [
+    ...pickDiningTags(tags, /(lebanese|mediterranean|seafood|dessert|sweets|bakery|coffee|breakfast|grill|mezza|traditional|patisserie|cocktail)/, 5),
+    ...(Array.isArray(diningProfile.cuisines) ? diningProfile.cuisines.map(titleizeTokens) : []),
+  ]
+    .filter((v, i, arr) => arr.findIndex((x) => String(x).toLowerCase() === String(v).toLowerCase()) === i)
+    .slice(0, 5);
+
+  const bestFor = [
+    ...pickDiningTags(tags, /(breakfast|brunch|lunch|dinner|dessert|coffee|date night|family|quick bite|late night|mana2ish|knefe|baklava)/, 5),
+    ...(Array.isArray(diningProfile.bestFor) ? diningProfile.bestFor.map(titleizeTokens) : []),
+  ]
+    .filter((v, i, arr) => arr.findIndex((x) => String(x).toLowerCase() === String(v).toLowerCase()) === i)
+    .slice(0, 5);
+
+  const features = [
+    ...(diningProfile.reservations ? ['Reservations'] : []),
+    ...(diningProfile.delivery ? ['Delivery'] : []),
+    ...(diningProfile.takeaway ? ['Takeaway'] : []),
+    ...(diningProfile.outdoorSeating ? ['Outdoor seating'] : []),
+    ...(diningProfile.familyFriendly ? ['Family friendly'] : []),
+    ...(Array.isArray(diningProfile.paymentMethods) ? diningProfile.paymentMethods.map(titleizeTokens) : []),
+  ].slice(0, 6);
+
+  return { cuisines, bestFor, features };
+}
+
+function normalizeDiningProfile(place) {
+  const raw = place?.diningProfile && typeof place.diningProfile === 'object' ? place.diningProfile : {};
+  const safeArray = (value) => (Array.isArray(value) ? value.filter(Boolean) : []);
+  const signatureDishes = safeArray(raw.signatureDishes).map((item) =>
+    typeof item === 'string'
+      ? { name: item }
+      : {
+          name: String(item?.name || '').trim(),
+          description: String(item?.description || '').trim(),
+          price: String(item?.price || '').trim(),
+          badge: String(item?.badge || '').trim(),
+        }
+  ).filter((item) => item.name);
+  const menuSections = safeArray(raw.menuSections)
+    .map((section) => ({
+      title: String(section?.title || '').trim(),
+      note: String(section?.note || '').trim(),
+      items: safeArray(section?.items)
+        .map((item) =>
+          typeof item === 'string'
+            ? { name: item }
+            : {
+                name: String(item?.name || '').trim(),
+                description: String(item?.description || '').trim(),
+                price: String(item?.price || '').trim(),
+                badge: String(item?.badge || '').trim(),
+              }
+        )
+        .filter((item) => item.name),
+    }))
+    .filter((section) => section.title || section.items.length > 0);
+
+  return {
+    atmosphere: String(raw.atmosphere || '').trim(),
+    reservationNotes: String(raw.reservationNotes || '').trim(),
+    menuNote: String(raw.menuNote || '').trim(),
+    serviceModes: safeArray(raw.serviceModes).map(titleizeTokens),
+    dietaryOptions: safeArray(raw.dietaryOptions).map(titleizeTokens),
+    signatureDishes,
+    menuSections,
+  };
+}
+
 function InfoRow({ icon, label, value }) {
   if (value == null || value === '') return null;
   return (
@@ -96,6 +202,7 @@ export default function PlaceDetail() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewMsg, setReviewMsg] = useState(null);
   const [reviewsOpen, setReviewsOpen] = useState(false);
+  const [diningTab, setDiningTab] = useState('overview');
 
   const myReview = useMemo(() => placeReviews.find((r) => r.isYours), [placeReviews]);
 
@@ -113,6 +220,7 @@ export default function PlaceDetail() {
 
   useEffect(() => {
     setReviewsOpen(false);
+    setDiningTab('overview');
   }, [id]);
 
   useEffect(() => {
@@ -249,6 +357,11 @@ export default function PlaceDetail() {
       })
       .catch(() => setIsFavourite(false));
   }, [user, place]);
+
+  useEffect(() => {
+    if (!place) return;
+    setInquiryIntent(isDiningPlace(place) ? 'booking' : 'general');
+  }, [place?.id, place?.category, place?.categoryId, place?.tags]);
 
   const toggleFavourite = useCallback(() => {
     if (!user) {
@@ -543,9 +656,148 @@ export default function PlaceDetail() {
 
   const heroUrl = galleryUrls[galleryIndex] || null;
   const hasMultiGallery = galleryUrls.length > 1;
+  const diningPlace = isDiningPlace(place);
+  const diningSummary = buildDiningSummary(place);
+  const diningProfile = normalizeDiningProfile(place);
 
   const hours = place.hours;
   const hoursStr = typeof hours === 'string' ? hours : Array.isArray(hours) ? hours.join(' · ') : hours;
+  const diningTabs = [
+    { id: 'overview', label: t('detail', 'diningTabOverview') },
+    { id: 'menu', label: t('detail', 'diningTabMenu') },
+    { id: 'reviews', label: t('detail', 'diningTabReviews') },
+    { id: 'contact', label: t('detail', 'diningTabContact') },
+  ];
+
+  const reviewsContent = (
+    <div className="place-detail-reviews-panel place-detail-reviews-panel--embedded">
+      <p className="place-detail-engage-hint">{t('detail', 'reviewSiteHint')}</p>
+
+      {placeReviewsLoading && (
+        <p className="place-detail-engage-hint" aria-live="polite">
+          {t('detail', 'loading')}
+        </p>
+      )}
+      {placeReviewsError && !placeReviewsLoading && (
+        <p className="place-detail-error-inline" role="alert">
+          {t('detail', 'reviewsLoadError')}
+        </p>
+      )}
+      {!placeReviewsLoading && !placeReviewsError && placeReviews.length === 0 && (
+        <p className="place-detail-engage-hint">{t('detail', 'reviewsEmpty')}</p>
+      )}
+      {placeReviews.length > 0 && (
+        <ul className="place-detail-reviews-list">
+          {placeReviews.map((rev) => (
+            <li key={rev.id} className="place-detail-review-item">
+              <div className="place-detail-review-item-head">
+                <span className="place-detail-review-item-author">{rev.authorName}</span>
+                <span className="place-detail-review-item-head-right">
+                  <time className="place-detail-review-item-date" dateTime={rev.createdAt || ''}>
+                    {formatReviewDate(rev.createdAt, lang)}
+                  </time>
+                  {rev.isYours && (
+                    <button
+                      type="button"
+                      className="place-detail-review-delete"
+                      onClick={deleteMyReview}
+                      disabled={reviewSubmitting}
+                    >
+                      {t('detail', 'reviewDeleteMyReview')}
+                    </button>
+                  )}
+                </span>
+              </div>
+              <div className="place-detail-review-item-stars" aria-label={`${rev.rating} of 5`}>
+                {Array.from({ length: 5 }, (_, si) => (
+                  <Icon
+                    key={si}
+                    name="star"
+                    size={18}
+                    className={si < rev.rating ? 'place-detail-review-star--on' : 'place-detail-review-star--off'}
+                  />
+                ))}
+              </div>
+              {rev.title ? <p className="place-detail-review-item-title">{rev.title}</p> : null}
+              {rev.review ? <p className="place-detail-review-item-text">{rev.review}</p> : null}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {user ? (
+        <form className="place-detail-review-form" onSubmit={submitSiteReview}>
+          {myReview && (
+            <p className="place-detail-engage-hint place-detail-review-editing-hint">{t('detail', 'reviewEditingYours')}</p>
+          )}
+          <p className="place-detail-form-label">{t('detail', 'reviewYourRating')}</p>
+          <div className="place-detail-star-input" role="radiogroup" aria-label={t('detail', 'reviewYourRating')}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                role="radio"
+                aria-checked={reviewRating === n}
+                className={`place-detail-star-btn ${n <= reviewRating ? 'place-detail-star-btn--on' : ''}`}
+                onClick={() => setReviewRating(n)}
+              >
+                <Icon name="star" size={26} aria-hidden />
+                <span className="place-detail-sr-only">{n}</span>
+              </button>
+            ))}
+          </div>
+          <label className="place-detail-review-field">
+            <span>{t('detail', 'reviewTitleOptional')}</span>
+            <input
+              type="text"
+              value={reviewTitle}
+              onChange={(e) => setReviewTitle(e.target.value)}
+              maxLength={200}
+              autoComplete="off"
+            />
+          </label>
+          <label className="place-detail-review-field">
+            <span>{t('detail', 'reviewTextLabel')}</span>
+            <span className="place-detail-field-hint">{t('detail', 'reviewTextOptional')}</span>
+            <textarea
+              value={reviewBody}
+              onChange={(e) => setReviewBody(e.target.value)}
+              rows={4}
+              maxLength={8000}
+            />
+          </label>
+          <button
+            type="submit"
+            className="place-detail-btn place-detail-btn--primary"
+            disabled={reviewSubmitting}
+          >
+            <Icon name="rate_review" size={20} aria-hidden />
+            {reviewSubmitting
+              ? t('detail', 'reviewUpdating')
+              : myReview
+                ? t('detail', 'reviewUpdate')
+                : t('detail', 'reviewSubmit')}
+          </button>
+          {reviewMsg?.type === 'ok' && (
+            <p className="place-detail-toast-inline" role="status">
+              {reviewMsg.text}
+            </p>
+          )}
+          {reviewMsg?.type === 'err' && (
+            <p className="place-detail-error-inline" role="alert">
+              {reviewMsg.text}
+            </p>
+          )}
+        </form>
+      ) : (
+        <p className="place-detail-engage-hint">
+          <Link to="/login" state={{ from: location.pathname }}>
+            {t('detail', 'reviewLoginPrompt')}
+          </Link>
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <div className="place-detail">
@@ -696,6 +948,228 @@ export default function PlaceDetail() {
             <InfoRow icon="payments" label={t('detail', 'priceRange')} value={place.price} />
           </div>
 
+          {diningPlace && (
+            <section className="place-detail-section place-detail-dining" aria-labelledby="place-dining-heading">
+              <div className="place-detail-dining-shell">
+              <div className="place-detail-dining-head">
+                <div className="place-detail-dining-head-copy">
+                  <span className="place-detail-dining-kicker">{t('detail', 'diningSectionEyebrow')}</span>
+                  <h2 id="place-dining-heading" className="place-detail-section-title">
+                    {t('detail', 'diningSectionTitle')}
+                  </h2>
+                  <p className="place-detail-dining-sub">{t('detail', 'diningSectionSub')}</p>
+                </div>
+                <div className="place-detail-dining-hero-rail">
+                  {diningSummary.cuisines.slice(0, 3).map((item) => (
+                    <span key={item} className="place-detail-dining-hero-pill">{item}</span>
+                  ))}
+                  {place.price ? <span className="place-detail-dining-hero-pill">{place.price}</span> : null}
+                  {hoursStr ? <span className="place-detail-dining-hero-pill">{hoursStr}</span> : null}
+                </div>
+              </div>
+
+              <div className="place-detail-dining-toolbar">
+                <div className="place-detail-dining-tabs" role="tablist" aria-label={t('detail', 'diningSectionTitle')}>
+                  {diningTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={diningTab === tab.id}
+                      className={`place-detail-dining-tab ${diningTab === tab.id ? 'place-detail-dining-tab--on' : ''}`}
+                      onClick={() => setDiningTab(tab.id)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="place-detail-dining-toolbar-actions">
+                  <button
+                    type="button"
+                    className="place-detail-btn place-detail-btn--secondary place-detail-dining-cta"
+                    onClick={() => {
+                      const el = document.getElementById('place-proposal');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                  >
+                    <Icon name="chat" size={20} />
+                    {t('detail', 'diningContactCta')}
+                  </button>
+                  <button
+                    type="button"
+                    className="place-detail-btn place-detail-btn--ghost place-detail-dining-cta"
+                    onClick={openPlaceOnMap}
+                  >
+                    <Icon name="map" size={20} />
+                    {t('detail', 'diningMapCta')}
+                  </button>
+                </div>
+              </div>
+
+              {diningTab === 'overview' && (
+                <div className="place-detail-dining-grid">
+                  <article className="place-detail-dining-card">
+                    <div className="place-detail-dining-card-icon" aria-hidden="true">
+                      <Icon name="menu_book" size={22} />
+                    </div>
+                    <h3>{t('detail', 'diningMenuTitle')}</h3>
+                    <p>{diningProfile.menuNote || t('detail', 'diningMenuHint')}</p>
+                    {diningSummary.cuisines.length > 0 && (
+                      <div className="place-detail-dining-chip-list">
+                        {diningSummary.cuisines.map((item) => (
+                          <span key={item} className="place-detail-dining-chip">{item}</span>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+
+                  <article className="place-detail-dining-card">
+                    <div className="place-detail-dining-card-icon" aria-hidden="true">
+                      <Icon name="event_available" size={22} />
+                    </div>
+                    <h3>{t('detail', 'diningBookingTitle')}</h3>
+                    <p>{place.price ? `${t('detail', 'priceRange')}: ${place.price}` : t('detail', 'diningBookingHint')}</p>
+                    <div className="place-detail-dining-meta-list">
+                      {hoursStr ? <span>{hoursStr}</span> : null}
+                      {place.location ? <span>{place.location}</span> : null}
+                    </div>
+                  </article>
+
+                  <article className="place-detail-dining-card">
+                    <div className="place-detail-dining-card-icon" aria-hidden="true">
+                      <Icon name="local_dining" size={22} />
+                    </div>
+                    <h3>{t('detail', 'diningBestForTitle')}</h3>
+                    <p>{diningProfile.atmosphere || t('detail', 'diningBestForHint')}</p>
+                    {([...diningSummary.bestFor, ...diningSummary.features, ...diningProfile.dietaryOptions].length > 0) && (
+                      <div className="place-detail-dining-chip-list">
+                        {[...diningSummary.bestFor, ...diningSummary.features, ...diningProfile.dietaryOptions].slice(0, 8).map((item) => (
+                          <span key={item} className="place-detail-dining-chip">{item}</span>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                </div>
+              )}
+
+              {diningTab === 'menu' && (
+                <div className="place-detail-dining-menu">
+                  {diningProfile.signatureDishes.length > 0 && (
+                    <div className="place-detail-dining-featured">
+                      <h3 className="place-detail-dining-panel-title">{t('detail', 'diningSignatureTitle')}</h3>
+                      <div className="place-detail-dining-featured-grid">
+                        {diningProfile.signatureDishes.map((dish) => (
+                          <article key={`${dish.name}-${dish.price}`} className="place-detail-dining-dish">
+                            <div className="place-detail-dining-dish-head">
+                              <strong>{dish.name}</strong>
+                              {dish.price ? <span>{dish.price}</span> : null}
+                            </div>
+                            {dish.badge ? <span className="place-detail-dining-dish-badge">{dish.badge}</span> : null}
+                            {dish.description ? <p>{dish.description}</p> : null}
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {diningProfile.menuSections.length > 0 ? (
+                    <div className="place-detail-dining-menu-sections">
+                      {diningProfile.menuSections.map((section) => (
+                        <section key={section.title || section.note} className="place-detail-dining-menu-section">
+                          {section.title ? <h3 className="place-detail-dining-panel-title">{section.title}</h3> : null}
+                          {section.note ? <p className="place-detail-dining-menu-note">{section.note}</p> : null}
+                          <div className="place-detail-dining-menu-items">
+                            {section.items.map((item) => (
+                              <article key={`${section.title}-${item.name}-${item.price}`} className="place-detail-dining-menu-item">
+                                <div className="place-detail-dining-menu-item-head">
+                                  <strong>{item.name}</strong>
+                                  {item.price ? <span>{item.price}</span> : null}
+                                </div>
+                                {item.badge ? <span className="place-detail-dining-dish-badge">{item.badge}</span> : null}
+                                {item.description ? <p>{item.description}</p> : null}
+                              </article>
+                            ))}
+                          </div>
+                        </section>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="place-detail-dining-empty">
+                      <Icon name="menu_book" size={30} />
+                      <h3>{t('detail', 'diningMenuEmptyTitle')}</h3>
+                      <p>{t('detail', 'diningMenuEmptyBody')}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {diningTab === 'reviews' && reviewsContent}
+
+              {diningTab === 'contact' && (
+                <div className="place-detail-dining-grid">
+                  <article className="place-detail-dining-card">
+                    <div className="place-detail-dining-card-icon" aria-hidden="true">
+                      <Icon name="schedule" size={22} />
+                    </div>
+                    <h3>{t('detail', 'openingHours')}</h3>
+                    <p>{hoursStr || t('detail', 'diningContactHoursFallback')}</p>
+                  </article>
+                  <article className="place-detail-dining-card">
+                    <div className="place-detail-dining-card-icon" aria-hidden="true">
+                      <Icon name="concierge" size={22} />
+                    </div>
+                    <h3>{t('detail', 'diningServicesTitle')}</h3>
+                    {diningProfile.serviceModes.length > 0 ? (
+                      <div className="place-detail-dining-chip-list">
+                        {diningProfile.serviceModes.map((item) => (
+                          <span key={item} className="place-detail-dining-chip">{item}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>{t('detail', 'diningServicesHint')}</p>
+                    )}
+                  </article>
+                  <article className="place-detail-dining-card">
+                    <div className="place-detail-dining-card-icon" aria-hidden="true">
+                      <Icon name="calendar_month" size={22} />
+                    </div>
+                    <h3>{t('detail', 'diningReservationTitle')}</h3>
+                    <p>{diningProfile.reservationNotes || t('detail', 'diningReservationHint')}</p>
+                  </article>
+                  <article className="place-detail-dining-card place-detail-dining-card--contact">
+                    <div className="place-detail-dining-card-icon" aria-hidden="true">
+                      <Icon name="mail" size={22} />
+                    </div>
+                    <h3>{t('detail', 'engageContactTitle')}</h3>
+                    <p>{t('detail', 'diningContactLead')}</p>
+                    <div className="place-detail-dining-contact-actions">
+                      <button
+                        type="button"
+                        className="place-detail-btn place-detail-btn--primary"
+                        onClick={() => {
+                          const el = document.getElementById('place-proposal');
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }}
+                      >
+                        <Icon name="chat" size={18} />
+                        {t('detail', 'diningContactCta')}
+                      </button>
+                      <button
+                        type="button"
+                        className="place-detail-btn place-detail-btn--secondary"
+                        onClick={openPlaceOnMap}
+                      >
+                        <Icon name="map" size={18} />
+                        {t('detail', 'diningMapCta')}
+                      </button>
+                    </div>
+                  </article>
+                </div>
+              )}
+              </div>
+            </section>
+          )}
+
           {place.description && (
             <section className="place-detail-section" aria-labelledby="place-description-heading">
               <h2 id="place-description-heading" className="place-detail-section-title">{t('detail', 'description')}</h2>
@@ -742,7 +1216,7 @@ export default function PlaceDetail() {
                 </div>
               )}
 
-              <div className="place-detail-engage-block place-detail-reviews-box">
+              {!diningPlace && <div className="place-detail-engage-block place-detail-reviews-box">
                 <button
                   type="button"
                   id="place-reviews-heading"
@@ -773,138 +1247,13 @@ export default function PlaceDetail() {
                 {reviewsOpen && (
                   <div
                     id="place-reviews-panel"
-                    className="place-detail-reviews-panel"
                     role="region"
                     aria-labelledby="place-reviews-heading"
                   >
-                    <p className="place-detail-engage-hint">{t('detail', 'reviewSiteHint')}</p>
-
-                    {placeReviewsLoading && (
-                      <p className="place-detail-engage-hint" aria-live="polite">
-                        {t('detail', 'loading')}
-                      </p>
-                    )}
-                    {placeReviewsError && !placeReviewsLoading && (
-                      <p className="place-detail-error-inline" role="alert">
-                        {t('detail', 'reviewsLoadError')}
-                      </p>
-                    )}
-                    {!placeReviewsLoading && !placeReviewsError && placeReviews.length === 0 && (
-                      <p className="place-detail-engage-hint">{t('detail', 'reviewsEmpty')}</p>
-                    )}
-                    {placeReviews.length > 0 && (
-                      <ul className="place-detail-reviews-list">
-                        {placeReviews.map((rev) => (
-                          <li key={rev.id} className="place-detail-review-item">
-                            <div className="place-detail-review-item-head">
-                              <span className="place-detail-review-item-author">{rev.authorName}</span>
-                              <span className="place-detail-review-item-head-right">
-                                <time className="place-detail-review-item-date" dateTime={rev.createdAt || ''}>
-                                  {formatReviewDate(rev.createdAt, lang)}
-                                </time>
-                                {rev.isYours && (
-                                  <button
-                                    type="button"
-                                    className="place-detail-review-delete"
-                                    onClick={deleteMyReview}
-                                    disabled={reviewSubmitting}
-                                  >
-                                    {t('detail', 'reviewDeleteMyReview')}
-                                  </button>
-                                )}
-                              </span>
-                            </div>
-                            <div className="place-detail-review-item-stars" aria-label={`${rev.rating} of 5`}>
-                              {Array.from({ length: 5 }, (_, si) => (
-                                <Icon
-                                  key={si}
-                                  name="star"
-                                  size={18}
-                                  className={si < rev.rating ? 'place-detail-review-star--on' : 'place-detail-review-star--off'}
-                                />
-                              ))}
-                            </div>
-                            {rev.title ? <p className="place-detail-review-item-title">{rev.title}</p> : null}
-                            {rev.review ? <p className="place-detail-review-item-text">{rev.review}</p> : null}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    {user ? (
-                      <form className="place-detail-review-form" onSubmit={submitSiteReview}>
-                        {myReview && (
-                          <p className="place-detail-engage-hint place-detail-review-editing-hint">{t('detail', 'reviewEditingYours')}</p>
-                        )}
-                        <p className="place-detail-form-label">{t('detail', 'reviewYourRating')}</p>
-                        <div className="place-detail-star-input" role="radiogroup" aria-label={t('detail', 'reviewYourRating')}>
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <button
-                              key={n}
-                              type="button"
-                              role="radio"
-                              aria-checked={reviewRating === n}
-                              className={`place-detail-star-btn ${n <= reviewRating ? 'place-detail-star-btn--on' : ''}`}
-                              onClick={() => setReviewRating(n)}
-                            >
-                              <Icon name="star" size={26} aria-hidden />
-                              <span className="place-detail-sr-only">{n}</span>
-                            </button>
-                          ))}
-                        </div>
-                        <label className="place-detail-review-field">
-                          <span>{t('detail', 'reviewTitleOptional')}</span>
-                          <input
-                            type="text"
-                            value={reviewTitle}
-                            onChange={(e) => setReviewTitle(e.target.value)}
-                            maxLength={200}
-                            autoComplete="off"
-                          />
-                        </label>
-                        <label className="place-detail-review-field">
-                          <span>{t('detail', 'reviewTextLabel')}</span>
-                          <span className="place-detail-field-hint">{t('detail', 'reviewTextOptional')}</span>
-                          <textarea
-                            value={reviewBody}
-                            onChange={(e) => setReviewBody(e.target.value)}
-                            rows={4}
-                            maxLength={8000}
-                          />
-                        </label>
-                        <button
-                          type="submit"
-                          className="place-detail-btn place-detail-btn--primary"
-                          disabled={reviewSubmitting}
-                        >
-                          <Icon name="rate_review" size={20} aria-hidden />
-                          {reviewSubmitting
-                            ? t('detail', 'reviewUpdating')
-                            : myReview
-                              ? t('detail', 'reviewUpdate')
-                              : t('detail', 'reviewSubmit')}
-                        </button>
-                        {reviewMsg?.type === 'ok' && (
-                          <p className="place-detail-toast-inline" role="status">
-                            {reviewMsg.text}
-                          </p>
-                        )}
-                        {reviewMsg?.type === 'err' && (
-                          <p className="place-detail-error-inline" role="alert">
-                            {reviewMsg.text}
-                          </p>
-                        )}
-                      </form>
-                    ) : (
-                      <p className="place-detail-engage-hint">
-                        <Link to="/login" state={{ from: location.pathname }}>
-                          {t('detail', 'reviewLoginPrompt')}
-                        </Link>
-                      </p>
-                    )}
+                    {reviewsContent}
                   </div>
                 )}
-              </div>
+              </div>}
 
               {user && (
                 <div className="place-detail-engage-block place-detail-checkin">

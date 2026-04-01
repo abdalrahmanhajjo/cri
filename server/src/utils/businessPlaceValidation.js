@@ -70,6 +70,19 @@ function sanitizeHoursInput(raw) {
   return { ok: false, error: 'hours must be a JSON object or null' };
 }
 
+function sanitizeDiningProfileInput(raw) {
+  if (raw == null) return { ok: true, value: {} };
+  if (typeof raw === 'object' && !Array.isArray(raw)) {
+    try {
+      JSON.stringify(raw);
+      return { ok: true, value: raw };
+    } catch {
+      return { ok: false, error: 'Invalid dining profile data' };
+    }
+  }
+  return { ok: false, error: 'diningProfile must be a JSON object' };
+}
+
 /**
  * Validates and returns sanitized payload for UPDATE places (only defined fields applied upstream).
  * @returns {{ ok: boolean, error?: string, body?: object }}
@@ -155,6 +168,12 @@ function validateBusinessPlacePut(body) {
     const tg = sanitizeTagsInput(body.tags);
     if (!tg.ok) return { ok: false, error: tg.error };
     out.tags = tg.value;
+  }
+
+  if (body.diningProfile !== undefined || body.dining_profile !== undefined) {
+    const dp = sanitizeDiningProfileInput(body.diningProfile ?? body.dining_profile);
+    if (!dp.ok) return { ok: false, error: dp.error };
+    out.diningProfile = dp.value;
   }
 
   return { ok: true, body: out };
