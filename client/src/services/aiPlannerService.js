@@ -184,62 +184,107 @@ export async function callAICompleteReliable(body) {
   throw lastErr;
 }
 
+function extractJsonBlock(text) {
+  const trimmed = text.trimStart();
+  const start = trimmed.search(/[\[{]/);
+  if (start < 0) return null;
+  const raw = trimmed.slice(start);
+  const open = raw[0];
+  const close = open === '[' ? ']' : '}';
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < raw.length; i += 1) {
+    const c = raw[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (c === '\\') {
+      escape = true;
+      continue;
+    }
+    if (c === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (c === open) depth += 1;
+    else if (c === close) {
+      depth -= 1;
+      if (depth === 0) {
+        return raw.slice(0, i + 1);
+      }
+    }
+  }
+  return null;
+}
+
 function parsePlanJson(rawText, placeIdSet) {
-  const planLabel = /PLAN_JSON\s*:/i;
+  const planLabel = /[*_]*PLAN_JSON[*_]*\s*:?/i;
   const planIdx = rawText.search(planLabel);
   if (planIdx < 0) return { text: rawText.trim(), slots: null };
 
   const beforePlan = rawText.slice(0, planIdx).trim();
-  const afterLabel = rawText.slice(planIdx).replace(/^\s*PLAN_JSON\s*:/i, '').trim();
-  const arrStart = afterLabel.indexOf('[');
-  if (arrStart < 0) return { text: beforePlan || rawText.trim(), slots: null };
+  const afterLabel = rawText.slice(planIdx).replace(/^\s*[*_]*PLAN_JSON[*_]*\s*:?/i, '').trim();
+  const jsonBlock = extractJsonBlock(afterLabel);
+  if (!jsonBlock) return { text: beforePlan || rawText.trim(), slots: null };
 
-  let depth = 0;
-  let end = -1;
-  for (let i = arrStart; i < afterLabel.length; i += 1) {
-    const c = afterLabel[i];
-    if (c === '[') depth += 1;
-    else if (c === ']') {
-      depth -= 1;
-      if (depth === 0) {
-        end = i;
-        break;
-      }
-    }
-  }
-  if (end < 0) return { text: beforePlan || rawText.trim(), slots: null };
-
-  let slots = null;
+  let parsed;
   try {
-    const list = JSON.parse(afterLabel.slice(arrStart, end + 1));
-    if (!Array.isArray(list)) return { text: beforePlan, slots: null };
-    slots = [];
-    for (const item of list) {
-      if (!item || typeof item !== 'object') continue;
-      const placeIdRaw = item.placeId ?? item.place_id;
-      const placeId = placeIdRaw != null ? String(placeIdRaw) : null;
-      if (!placeId || !placeIdSet.has(placeId)) continue;
-      const dayRaw = item.dayIndex ?? item.day_index;
-      const dayIndex =
-        typeof dayRaw === 'number'
-          ? dayRaw
-          : typeof dayRaw === 'string' && dayRaw !== ''
-            ? parseInt(dayRaw, 10)
-            : null;
-      const timeStr = item.suggestedTime ?? item.suggested_time;
-      slots.push({
-        placeId,
-        suggestedTime: normalizeSuggestedTime(
-          timeStr != null && String(timeStr) !== '' ? String(timeStr) : '9:00'
-        ),
-        reason: item.reason != null ? String(item.reason) : null,
-        dayIndex: Number.isFinite(dayIndex) ? dayIndex : null,
-      });
-    }
-    if (slots.length === 0) slots = null;
+    parsed = JSON.parse(jsonBlock);
   } catch {
-    slots = null;
+    return { text: beforePlan || rawText.trim(), slots: null };
   }
+
+  let list = null;
+  let topDayIndex = null;
+  if (Array.isArray(parsed)) {
+    list = parsed;
+  } else if (parsed && typeof parsed === 'object') {
+    if (Array.isArray(parsed.slots)) {
+      list = parsed.slots;
+      if (parsed.dayIndex != null) topDayIndex = parsed.dayIndex;
+    } else if (Array.isArray(parsed.plan)) {
+      list = parsed.plan;
+    } else if (Array.isArray(parsed.itinerary)) {
+      list = parsed.itinerary;
+    }
+  }
+
+  if (!Array.isArray(list)) return { text: beforePlan || rawText.trim(), slots: null };
+  if (topDayIndex != null) {
+    list = list.map((item) =>
+      item && typeof item === 'object' && item.dayIndex == null && item.day_index == null
+        ? { ...item, dayIndex: topDayIndex }
+        : item
+    );
+  }
+
+  let slots = [];
+  for (const item of list) {
+    if (!item || typeof item !== 'object') continue;
+    const placeIdRaw = item.placeId ?? item.place_id;
+    const placeId = placeIdRaw != null ? String(placeIdRaw) : null;
+    if (!placeId || !placeIdSet.has(placeId)) continue;
+    const dayRaw = item.dayIndex ?? item.day_index;
+    const dayIndex =
+      typeof dayRaw === 'number'
+        ? dayRaw
+        : typeof dayRaw === 'string' && dayRaw !== ''
+          ? parseInt(dayRaw, 10)
+          : null;
+    const timeStr = item.suggestedTime ?? item.suggested_time;
+    slots.push({
+      placeId,
+      suggestedTime: normalizeSuggestedTime(
+        timeStr != null && String(timeStr) !== '' ? String(timeStr) : '9:00'
+      ),
+      reason: item.reason != null ? String(item.reason) : null,
+      dayIndex: Number.isFinite(dayIndex) ? dayIndex : null,
+    });
+  }
+  if (slots.length === 0) slots = null;
 
   return { text: beforePlan || 'Here’s a plan for you!', slots };
 }
@@ -312,29 +357,22 @@ function extractTripSettingsAndStrip(rawText) {
 
 /** Parse PLAN_JSON array without validating placeIds (for single-slot merge). */
 function extractPlanJsonArray(rawText) {
-  const planLabel = /PLAN_JSON\s*:/i;
+  const planLabel = /[*_]*PLAN_JSON[*_]*\s*:?/i;
   const planIdx = rawText.search(planLabel);
   if (planIdx < 0) return null;
-  const afterLabel = rawText.slice(planIdx).replace(/^\s*PLAN_JSON\s*:/i, '').trim();
-  const arrStart = afterLabel.indexOf('[');
-  if (arrStart < 0) return null;
-  let depth = 0;
-  let end = -1;
-  for (let i = arrStart; i < afterLabel.length; i += 1) {
-    const c = afterLabel[i];
-    if (c === '[') depth += 1;
-    else if (c === ']') {
-      depth -= 1;
-      if (depth === 0) {
-        end = i;
-        break;
-      }
-    }
-  }
-  if (end < 0) return null;
+  const afterLabel = rawText.slice(planIdx).replace(/^\s*[*_]*PLAN_JSON[*_]*\s*:?/i, '').trim();
+  const jsonBlock = extractJsonBlock(afterLabel);
+  if (!jsonBlock) return null;
+
   try {
-    const list = JSON.parse(afterLabel.slice(arrStart, end + 1));
-    return Array.isArray(list) ? list : null;
+    const parsed = JSON.parse(jsonBlock);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && typeof parsed === 'object') {
+      if (Array.isArray(parsed.slots)) return parsed.slots;
+      if (Array.isArray(parsed.plan)) return parsed.plan;
+      if (Array.isArray(parsed.itinerary)) return parsed.itinerary;
+    }
+    return null;
   } catch {
     return null;
   }
