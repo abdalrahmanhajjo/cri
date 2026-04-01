@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Icon from '../components/Icon';
@@ -156,10 +157,12 @@ function inferTripSettingsFromUserText(raw) {
 
 export default function AiPlanner() {
   const { t, lang } = useLanguage();
+  const { settings } = useSiteSettings();
   const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
+  if (settings.aiPlannerEnabled === false) return <Navigate to="/plan" replace />;
   const storageUserId = user?.id != null ? String(user.id) : 'anon';
   const messagesEndRef = useRef(null);
   const messagesScrollRef = useRef(null);

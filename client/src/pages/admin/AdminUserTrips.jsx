@@ -14,6 +14,7 @@ function formatDate(str) {
 }
 
 export default function AdminUserTrips() {
+  const { settings } = useSiteSettings();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -66,9 +67,11 @@ export default function AdminUserTrips() {
               />
             </div>
             <div className="admin-toolbar-actions">
-              <Link to="/plan/ai" className="admin-btn admin-btn--secondary">
-                Open AI planner
-              </Link>
+              {settings.aiPlannerEnabled !== false && (
+                <Link to="/plan/ai" className="admin-btn admin-btn--secondary">
+                  Open AI planner
+                </Link>
+              )}
               <button type="button" className="admin-btn admin-btn--secondary" onClick={load} disabled={loading}>
                 Refresh
               </button>

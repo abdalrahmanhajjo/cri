@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { getPlaceImageUrl } from '../api/client';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
@@ -233,6 +234,7 @@ export default function Plan() {
   const [tripFilterPhase, setTripFilterPhase] = useState('all');
   const [tripFilterStops, setTripFilterStops] = useState('any');
   const [tripFiltersOpen, setTripFiltersOpen] = useState(false);
+  const { settings } = useSiteSettings();
 
   const sortedTrips = useMemo(() => sortTripsSmart(trips), [trips]);
 
@@ -1452,9 +1454,11 @@ export default function Plan() {
               <div className="plan-section-head">
                 <h2 className="plan-section-title">{t('nav', 'myTrips')}</h2>
                 <div className="plan-section-head-actions">
-                  <Link to="/plan/ai" className="plan-btn-ai">
-                    <Icon name="auto_awesome" size={22} /> {t('nav', 'aiPlanBannerCta')}
-                  </Link>
+                  {settings.aiPlannerEnabled !== false && (
+                    <Link to="/plan/ai" className="plan-btn-ai">
+                      <Icon name="auto_awesome" size={22} /> {t('nav', 'aiPlanBannerCta')}
+                    </Link>
+                  )}
                   {!showCreateForm && (
                     <button
                       type="button"
