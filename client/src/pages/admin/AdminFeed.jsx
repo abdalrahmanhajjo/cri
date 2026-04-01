@@ -67,6 +67,8 @@ export default function AdminFeed() {
   const [placeSearch, setPlaceSearch] = useState('');
   const [placeOptions, setPlaceOptions] = useState([]);
   const [composerPlaceId, setComposerPlaceId] = useState('');
+  const [editPlaceSearch, setEditPlaceSearch] = useState('');
+  const [editPlaceOptions, setEditPlaceOptions] = useState([]);
   const [composerContentKind, setComposerContentKind] = useState('post');
   const [composerCaption, setComposerCaption] = useState('');
   const [composerImages, setComposerImages] = useState([]);
@@ -145,6 +147,26 @@ export default function AdminFeed() {
       clearTimeout(t);
     };
   }, [placeSearch]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const t = setTimeout(() => {
+      api.admin.places
+        .list({ q: editPlaceSearch.trim() || undefined, limit: 100 })
+        .then((r) => {
+          if (cancelled) return;
+          const list = r.places || [];
+          setEditPlaceOptions(list);
+        })
+        .catch(() => {
+          if (!cancelled) setEditPlaceOptions([]);
+        });
+    }, 280);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [editPlaceSearch]);
 
   const submitComposer = async (e) => {
     e.preventDefault();
@@ -361,9 +383,10 @@ export default function AdminFeed() {
   const saveEdit = async (e) => {
     e.preventDefault();
     if (!editPost) return;
-    const { id, caption, video_url, admin_notes, moderation_status } = editPost;
+    const { id, caption, video_url, admin_notes, moderation_status, place_id } = editPost;
     const imgs = rawFeedImageUrls(editPost);
     await patchPost(id, {
+      placeId: place_id,
       caption,
       type: contentKind(editPost.type) === 'reel' ? 'video' : 'post',
       image_urls: imgs.length ? imgs : null,
@@ -941,6 +964,8 @@ export default function AdminFeed() {
                                 type="button"
                                 className="admin-btn admin-btn--sm admin-btn--secondary"
                                 onClick={() => {
+                                  setEditPlaceSearch('');
+                                  setEditPlaceOptions(placeOptions);
                                   setEditShowAdvancedUrls(false);
                                   setEditPost({
                                     ...p,
@@ -1017,6 +1042,38 @@ export default function AdminFeed() {
             </div>
             <form onSubmit={saveEdit}>
               <div className="admin-modal-body">
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
+                    <label htmlFor="edit-place-search">Find place</label>
+                    <input
+                      id="edit-place-search"
+                      type="search"
+                      value={editPlaceSearch}
+                      onChange={(e) => setEditPlaceSearch(e.target.value)}
+                      placeholder="Search by name, id, or location…"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="admin-form-group">
+                    <label htmlFor="edit-place-select">Linked place</label>
+                    <select
+                      id="edit-place-select"
+                      value={editPost.place_id || ''}
+                      onChange={(e) => setEditPost((x) => ({ ...x, place_id: e.target.value }))}
+                      required
+                    >
+                      {editPost.place_id && !editPlaceOptions.some((p) => p.id === editPost.place_id) ? (
+                        <option value={editPost.place_id}>{editPost.place_id}</option>
+                      ) : null}
+                      {!editPlaceOptions.length && <option value="">No places — adjust search</option>}
+                      {editPlaceOptions.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {(p.name || p.id) + (p.location ? ` — ${p.location}` : '')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 <div className="admin-form-group">
                   <label htmlFor="edit-cap">Caption</label>
                   <textarea

@@ -133,11 +133,7 @@ export default function FeedPostCard({
     post.place_name != null && String(post.place_name).trim()
       ? String(post.place_name).trim()
       : '';
-  const authorName =
-    post.author_name != null && String(post.author_name).trim()
-      ? String(post.author_name).trim()
-      : '';
-  const displayName = placeName || authorName || '—';
+  const displayName = placeName || 'Place';
   const venueFeedPath = placeId ? discoverPlaceFeedPath(placeId) : '';
   const placeAvatarUrl = (() => {
     const raw = post.place_image_url;
@@ -799,16 +795,7 @@ export default function FeedPostCard({
     ? {}
     : { onDoubleClick: onMediaDoubleClick, onTouchEnd: onMediaTouchEnd };
 
-  const reelHandle = (() => {
-    const s = String(post.author_name || 'user')
-      .replace(/\s+/g, '')
-      .replace(/[^a-zA-Z0-9_-]/g, '')
-      .slice(0, 28);
-    return s || 'user';
-  })();
-  /** Reels bottom row: place name when linked to a place; else @handle from author. */
-  const reelOverlayPrimary = placeId && placeName ? placeName : `@${reelHandle}`;
-  const showVerified = post.author_role === 'business_owner';
+  const reelOverlayPrimary = placeName || 'Place';
 
   useEffect(() => {
     if (!showReelTheater || !showVideo) return;
@@ -1245,14 +1232,14 @@ export default function FeedPostCard({
                   {placeAvatarUrl ? (
                     <img src={placeAvatarUrl} alt="" width={48} height={48} />
                   ) : (
-                    <Icon name="person" size={28} />
+                    <Icon name="place" size={28} />
                   )}
                 </span>
               </Link>
             ) : (
               <div className="ig-reel-rail-avatar-link ig-reel-rail-avatar-link--static" aria-hidden="true">
                 <span className="ig-reel-rail-avatar">
-                  <Icon name="person" size={28} />
+                  <Icon name="place" size={28} />
                 </span>
               </div>
             )}
@@ -1328,11 +1315,6 @@ export default function FeedPostCard({
                   <span className="ig-reel-handle">{reelOverlayPrimary}</span>
                 </span>
               )}
-              {showVerified && (
-                <span className="ig-reel-verified" title={t('discover', 'feedVerifiedBusiness')} aria-label={t('discover', 'feedVerifiedBusiness')}>
-                  <Icon name="verified" size={18} ariaHidden={false} />
-                </span>
-              )}
             </div>
             {post.caption && <p className="ig-reel-caption ig-reel-caption--clean">{String(post.caption)}</p>}
             {commentsDisabled && (
@@ -1378,13 +1360,23 @@ export default function FeedPostCard({
       ) : (
         <>
           <header className={`ig-feed-post-header${iManagePost ? ' ig-feed-post-header--with-tools' : ''}`}>
-            <div className="ig-feed-avatar" aria-hidden="true">
-              {placeAvatarUrl ? (
-                <img src={placeAvatarUrl} alt="" className="ig-feed-avatar-img" width={36} height={36} />
-              ) : (
-                <Icon name="person" size={22} />
-              )}
-            </div>
+            {placeId ? (
+              <Link to={`/place/${encodeURIComponent(placeId)}`} className="ig-feed-avatar ig-feed-avatar--link" aria-label={displayName}>
+                {placeAvatarUrl ? (
+                  <img src={placeAvatarUrl} alt="" className="ig-feed-avatar-img" width={36} height={36} />
+                ) : (
+                  <Icon name="place" size={22} />
+                )}
+              </Link>
+            ) : (
+              <div className="ig-feed-avatar" aria-hidden="true">
+                {placeAvatarUrl ? (
+                  <img src={placeAvatarUrl} alt="" className="ig-feed-avatar-img" width={36} height={36} />
+                ) : (
+                  <Icon name="place" size={22} />
+                )}
+              </div>
+            )}
             <div className="ig-feed-post-meta">
               <div className="ig-feed-post-meta-row">
                 {placeId && venueFeedPath && placeName ? (
