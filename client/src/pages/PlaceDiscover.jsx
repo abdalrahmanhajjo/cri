@@ -74,9 +74,9 @@ function DiscoverCard({
             onClick={() => onToggleFavourite(place)}
             aria-label={favouriteLabel}
             aria-pressed={Boolean(isFavourite)}
+            title={favouriteLabel}
           >
             <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={20} aria-hidden />
-            <span className="pd-card-action-text">{favouriteLabel}</span>
           </button>
         )}
         {onAddToTrip && (
