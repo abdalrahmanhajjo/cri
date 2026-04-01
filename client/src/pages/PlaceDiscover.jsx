@@ -28,9 +28,12 @@ function DiscoverCard({
   viewMode,
   onMapClick,
   onAddToTrip,
+  onToggleFavourite,
+  isFavourite,
   viewDetailsLabel,
   mapAriaLabel,
   addToTripLabel,
+  favouriteLabel,
 }) {
   const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
   const rating = place.rating != null ? Number(place.rating).toFixed(1) : null;
@@ -64,6 +67,18 @@ function DiscoverCard({
         </div>
       </Link>
       <div className="pd-card-actions-row">
+        {onToggleFavourite && (
+          <button
+            type="button"
+            className={`pd-card-action pd-card-action--fav ${isFavourite ? 'pd-card-action--fav-on' : ''}`}
+            onClick={() => onToggleFavourite(place)}
+            aria-label={favouriteLabel}
+            aria-pressed={Boolean(isFavourite)}
+          >
+            <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={20} aria-hidden />
+            <span className="pd-card-action-text">{favouriteLabel}</span>
+          </button>
+        )}
         {onAddToTrip && (
           <button
             type="button"
@@ -116,6 +131,7 @@ export default function PlaceDiscover() {
   const [tripAddSaving, setTripAddSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [sponsoredDiscover, setSponsoredDiscover] = useState([]);
+  const [favouriteIds, setFavouriteIds] = useState(new Set());
   const { settings } = useSiteSettings();
 
   const searchParamsRef = useRef(searchParams);
@@ -189,6 +205,27 @@ export default function PlaceDiscover() {
       cancelled = true;
     };
   }, [langParam, sponsoredDiscoverEnabled]);
+
+  useEffect(() => {
+    if (!user) {
+      setFavouriteIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    api.user
+      .favourites()
+      .then((res) => {
+        if (cancelled) return;
+        const ids = Array.isArray(res.placeIds) ? res.placeIds.map(String) : [];
+        setFavouriteIds(new Set(ids));
+      })
+      .catch(() => {
+        if (!cancelled) setFavouriteIds(new Set());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     if (!tripPickPlace || !user) {
@@ -285,6 +322,43 @@ export default function PlaceDiscover() {
       setTripPickPlace(place);
     },
     [user, navigate, location.pathname, location.search, location.hash]
+  );
+
+  const toggleFavourite = useCallback(
+    (place) => {
+      const returnTo = `${location.pathname}${location.search}${location.hash || ''}`;
+      if (!user) {
+        navigate('/login', { state: { from: returnTo } });
+        return;
+      }
+      const placeId = place?.id != null ? String(place.id) : '';
+      if (!placeId) return;
+
+      const isFav = favouriteIds.has(placeId);
+      if (isFav) {
+        api.user
+          .removeFavourite(placeId)
+          .then(() => {
+            setFavouriteIds((prev) => {
+              const next = new Set(prev);
+              next.delete(placeId);
+              return next;
+            });
+            showToast(t('feedback', 'favouriteRemoved'), 'success');
+          })
+          .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
+        return;
+      }
+
+      api.user
+        .addFavourite(placeId)
+        .then(() => {
+          setFavouriteIds((prev) => new Set(prev).add(placeId));
+          showToast(t('feedback', 'favouriteAdded'), 'success');
+        })
+        .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
+    },
+    [favouriteIds, location.hash, location.pathname, location.search, navigate, showToast, t, user]
   );
 
   const closeTripModal = useCallback(() => {
@@ -493,9 +567,18 @@ export default function PlaceDiscover() {
                 viewMode={viewMode}
                 onMapClick={handleViewOnMap}
                 onAddToTrip={openAddToTrip}
+                onToggleFavourite={toggleFavourite}
+                isFavourite={favouriteIds.has(String(p.id))}
                 viewDetailsLabel={t('home', 'viewDetails')}
                 mapAriaLabel={t('placeDiscover', 'viewOnMap')}
                 addToTripLabel={t('placeDiscover', 'addToTrip')}
+                favouriteLabel={
+                  favouriteIds.has(String(p.id))
+                    ? t('home', 'removeFromFavourites')
+                    : user
+                      ? t('home', 'addToFavourites')
+                      : t('home', 'signInToSave')
+                }
               />
             ))}
           </section>
