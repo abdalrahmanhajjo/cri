@@ -301,6 +301,69 @@
   box-shadow: 0 2px 12px rgba(15, 118, 110, 0.32);
 }
 
+:root[data-theme="dark"] .vd-home {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+:root[data-theme="dark"] .vd-find-your-way--deck {
+  background: var(--color-background);
+}
+
+:root[data-theme="dark"] .vd-find-your-way-row {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.26);
+}
+
+:root[data-theme="dark"] .vd-find-your-way-row:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(15, 118, 110, 0.35);
+}
+
+:root[data-theme="dark"] .vd-find-your-way-row-glyph {
+  background: rgba(15, 118, 110, 0.14);
+  border-color: rgba(15, 118, 110, 0.22);
+  color: var(--color-primary);
+}
+
+:root[data-theme="dark"] .vd-find-your-way-row-index,
+:root[data-theme="dark"] .vd-find-your-way-row-theme,
+:root[data-theme="dark"] .vd-find-your-way-row-chevron {
+  color: var(--color-primary);
+}
+
+:root[data-theme="dark"] .vd-find-your-way-row-title {
+  color: var(--color-text-primary);
+}
+
+:root[data-theme="dark"] .vd-find-your-way-row-desc,
+:root[data-theme="dark"] .vd-find-your-way-row-detail,
+:root[data-theme="dark"] .vd-find-your-way-count-label,
+:root[data-theme="dark"] .vd-find-your-way-count {
+  color: var(--color-text-secondary);
+}
+
+:root[data-theme="dark"] .vd-find-your-way-count strong {
+  color: var(--color-primary);
+}
+
+:root[data-theme="dark"] .vd-home .vd-plan-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.12));
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28), 0 4px 18px rgba(255, 255, 255, 0.08) inset;
+}
+
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-widget--open {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme="dark"] .vd-home .vd-plan-text {
+  color: rgba(255, 255, 255, 0.92);
+}
+
 * { box-sizing: border-box; }
 
 ::selection {
