@@ -239,6 +239,19 @@ router.patch('/:id', async (req, res) => {
     updates.push(`caption = $${n++}`);
     vals.push(cap);
   }
+  if (body.placeId !== undefined || body.place_id !== undefined) {
+    const pid = parsePlaceId(body.placeId ?? body.place_id);
+    if (!pid.valid) return res.status(400).json({ error: 'Valid placeId is required' });
+    try {
+      const { rows: placeRows } = await query('SELECT id FROM places WHERE id = $1 LIMIT 1', [pid.value]);
+      if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to validate place' });
+    }
+    updates.push(`place_id = $${n++}`);
+    vals.push(pid.value);
+  }
   if (body.type !== undefined) {
     const t = String(body.type).slice(0, 40);
     updates.push(`type = $${n++}`);
