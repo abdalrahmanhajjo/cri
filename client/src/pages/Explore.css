@@ -2410,7 +2410,7 @@ a.vd-top-picks-card-bg--hit {
 
 /* Home — merged hero + Why (bento grid, reference layout) */
 .vd-home-bento {
-  background: linear-gradient(180deg, #f0f4f3 0%, var(--color-background) 48%, var(--color-background) 100%);
+  background: linear-gradient(180deg, var(--color-surface-variant) 0%, var(--color-background) 48%, var(--color-background) 100%);
   padding: clamp(18px, 2.2vw, 28px) var(--page-padding) clamp(16px, 2vw, 24px);
   padding-left: max(var(--page-padding), env(safe-area-inset-left, 0px));
   padding-right: max(var(--page-padding), env(safe-area-inset-right, 0px));
@@ -2549,6 +2549,7 @@ a.vd-top-picks-card-bg--hit {
   border-radius: clamp(22px, 2.5vw, 30px);
   overflow: hidden;
   box-shadow: 0 4px 24px rgba(28, 25, 23, 0.07), 0 1px 4px rgba(28, 25, 23, 0.04);
+  background: var(--color-surface);
 }
 
 /* Mosaic reads as a tight module — slightly tighter corners than hero */
