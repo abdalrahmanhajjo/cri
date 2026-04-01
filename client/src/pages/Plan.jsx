@@ -88,7 +88,10 @@ function PlaceCardDiscover({ place, isFavourite, onToggleFavourite, tripDayCount
     <div className="plan-discover-card">
       <div className="plan-discover-card-top">
         <Link to={`/place/${placeId}`} className="plan-discover-card-link">
-          <div className="plan-discover-card-media">
+          <div
+            className="plan-discover-card-media"
+            style={imgUrl ? { backgroundImage: `url("${imgUrl}")` } : undefined}
+          >
             {imgUrl ? (
               <DeliveryImg url={imgUrl} preset="planDiscover" alt="" />
             ) : (
