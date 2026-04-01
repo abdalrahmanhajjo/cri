@@ -220,73 +220,92 @@ function extractJsonBlock(text) {
   return null;
 }
 
+function stripCodeFences(text) {
+  const trimmed = text.trim();
+  const fence = /^```(?:json)?\s*\r?\n([\s\S]*?)\r?\n```$/i;
+  const match = trimmed.match(fence);
+  return match ? match[1].trim() : text;
+}
+
+function normalizePlanPayload(parsed) {
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed && typeof parsed === 'object') {
+    if (Array.isArray(parsed.slots)) return parsed.slots;
+    if (Array.isArray(parsed.plan)) return parsed.plan;
+    if (Array.isArray(parsed.itinerary)) return parsed.itinerary;
+  }
+  return null;
+}
+
 function parsePlanJson(rawText, placeIdSet) {
+  const tryParse = (text, beforeText) => {
+    const jsonBlock = extractJsonBlock(text);
+    if (!jsonBlock) return null;
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonBlock);
+    } catch {
+      return null;
+    }
+    let list = normalizePlanPayload(parsed);
+    let topDayIndex = null;
+    if (Array.isArray(list)) {
+      // keep as-is
+    } else if (parsed && typeof parsed === 'object') {
+      if (Array.isArray(parsed.slots)) {
+        list = parsed.slots;
+        if (parsed.dayIndex != null) topDayIndex = parsed.dayIndex;
+      }
+    }
+    if (!Array.isArray(list)) return null;
+    if (topDayIndex != null) {
+      list = list.map((item) =>
+        item && typeof item === 'object' && item.dayIndex == null && item.day_index == null
+          ? { ...item, dayIndex: topDayIndex }
+          : item
+      );
+    }
+    const slots = [];
+    for (const item of list) {
+      if (!item || typeof item !== 'object') continue;
+      const placeIdRaw = item.placeId ?? item.place_id;
+      const placeId = placeIdRaw != null ? String(placeIdRaw) : null;
+      if (!placeId || !placeIdSet.has(placeId)) continue;
+      const dayRaw = item.dayIndex ?? item.day_index;
+      const dayIndex =
+        typeof dayRaw === 'number'
+          ? dayRaw
+          : typeof dayRaw === 'string' && dayRaw !== ''
+            ? parseInt(dayRaw, 10)
+            : null;
+      const timeStr = item.suggestedTime ?? item.suggested_time;
+      slots.push({
+        placeId,
+        suggestedTime: normalizeSuggestedTime(
+          timeStr != null && String(timeStr) !== '' ? String(timeStr) : '9:00'
+        ),
+        reason: item.reason != null ? String(item.reason) : null,
+        dayIndex: Number.isFinite(dayIndex) ? dayIndex : null,
+      });
+    }
+    if (slots.length === 0) return null;
+    return { text: beforeText || 'Here’s a plan for you!', slots };
+  };
+
   const planLabel = /[*_]*PLAN_JSON[*_]*\s*:?/i;
   const planIdx = rawText.search(planLabel);
-  if (planIdx < 0) return { text: rawText.trim(), slots: null };
-
-  const beforePlan = rawText.slice(0, planIdx).trim();
-  const afterLabel = rawText.slice(planIdx).replace(/^\s*[*_]*PLAN_JSON[*_]*\s*:?/i, '').trim();
-  const jsonBlock = extractJsonBlock(afterLabel);
-  if (!jsonBlock) return { text: beforePlan || rawText.trim(), slots: null };
-
-  let parsed;
-  try {
-    parsed = JSON.parse(jsonBlock);
-  } catch {
-    return { text: beforePlan || rawText.trim(), slots: null };
+  if (planIdx >= 0) {
+    const beforePlan = rawText.slice(0, planIdx).trim();
+    const afterLabel = rawText.slice(planIdx).replace(/^\s*[*_]*PLAN_JSON[*_]*\s*:?/i, '').trim();
+    const labeled = tryParse(afterLabel, beforePlan);
+    if (labeled) return labeled;
   }
 
-  let list = null;
-  let topDayIndex = null;
-  if (Array.isArray(parsed)) {
-    list = parsed;
-  } else if (parsed && typeof parsed === 'object') {
-    if (Array.isArray(parsed.slots)) {
-      list = parsed.slots;
-      if (parsed.dayIndex != null) topDayIndex = parsed.dayIndex;
-    } else if (Array.isArray(parsed.plan)) {
-      list = parsed.plan;
-    } else if (Array.isArray(parsed.itinerary)) {
-      list = parsed.itinerary;
-    }
-  }
+  const stripped = stripCodeFences(rawText.trim());
+  const fallback = tryParse(stripped, '');
+  if (fallback) return fallback;
 
-  if (!Array.isArray(list)) return { text: beforePlan || rawText.trim(), slots: null };
-  if (topDayIndex != null) {
-    list = list.map((item) =>
-      item && typeof item === 'object' && item.dayIndex == null && item.day_index == null
-        ? { ...item, dayIndex: topDayIndex }
-        : item
-    );
-  }
-
-  let slots = [];
-  for (const item of list) {
-    if (!item || typeof item !== 'object') continue;
-    const placeIdRaw = item.placeId ?? item.place_id;
-    const placeId = placeIdRaw != null ? String(placeIdRaw) : null;
-    if (!placeId || !placeIdSet.has(placeId)) continue;
-    const dayRaw = item.dayIndex ?? item.day_index;
-    const dayIndex =
-      typeof dayRaw === 'number'
-        ? dayRaw
-        : typeof dayRaw === 'string' && dayRaw !== ''
-          ? parseInt(dayRaw, 10)
-          : null;
-    const timeStr = item.suggestedTime ?? item.suggested_time;
-    slots.push({
-      placeId,
-      suggestedTime: normalizeSuggestedTime(
-        timeStr != null && String(timeStr) !== '' ? String(timeStr) : '9:00'
-      ),
-      reason: item.reason != null ? String(item.reason) : null,
-      dayIndex: Number.isFinite(dayIndex) ? dayIndex : null,
-    });
-  }
-  if (slots.length === 0) slots = null;
-
-  return { text: beforePlan || 'Here’s a plan for you!', slots };
+  return { text: rawText.trim(), slots: null };
 }
 
 /** Optional block from the model: TRIP_SETTINGS_JSON: {"startDate":"YYYY-MM-DD",...} */
