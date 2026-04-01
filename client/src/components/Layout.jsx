@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
+import { useTheme } from '../context/ThemeContext';
 import Icon from './Icon';
 import BackToTop from './BackToTop';
 import GlobalSearchBar from './GlobalSearchBar';
@@ -30,6 +31,8 @@ export default function Layout() {
     }
   });
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
+  const themeActionLabel = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
   /** One-time banner after email verification (set from VerifyEmail via sessionStorage). */
   const [verifyWelcomeBanner, setVerifyWelcomeBanner] = useState(null);
   const langRef = useRef(null);
@@ -205,6 +208,15 @@ export default function Layout() {
             </nav>
 
             <div className="header-meta">
+              <button
+                type="button"
+                className="nav-icon nav-icon--theme-toggle"
+                onClick={toggleTheme}
+                aria-label={themeActionLabel}
+                title={themeActionLabel}
+              >
+                <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={20} />
+              </button>
               <div className={`nav-lang-wrap ${langOpen ? 'nav-lang-wrap--open' : ''}`} ref={langRef}>
                 <button
                   type="button"
