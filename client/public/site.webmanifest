@@ -7,6 +7,11 @@
   "theme_color": "#ffffff",
   "icons": [
     {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
       "src": "/tripoli-lebanon-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
