@@ -688,6 +688,9 @@ ${userFamiliarityBlock.trim()}
 `
       : '';
 
+  const efficiencyInstruction = `
+Your itinerary must be efficient. Group places by nearby areas when possible, keep same-day stops in a compact logical order, and avoid unnecessary back-and-forth travel across Tripoli. Prefer sequences that are practical for a visitor and match each stop's best visiting time when available.`;
+
   let currentPlanBlock = '';
   if (previousSlots?.length) {
     const idToName = Object.fromEntries(
@@ -745,6 +748,8 @@ ${familiarity}
 ${plannerQualityRules}
 
 ${plannerReplyStyleRules}
+
+${efficiencyInstruction}
 
 **Intent examples (match user wording loosely):**
 ${fewShot}
