@@ -479,7 +479,7 @@ export default function Layout() {
         </div>
       )}
 
-      {!aiBannerDismissed && (
+      {!aiBannerDismissed && settings.aiPlannerEnabled !== false && (
         <div className="ai-plan-banner" role="banner">
           <p className="ai-plan-banner-text">{t('nav', 'aiPlanBanner')}</p>
           <div className="ai-plan-banner-actions">

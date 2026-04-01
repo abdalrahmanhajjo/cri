@@ -104,6 +104,7 @@ const siteSettingsDefaultsBase = {
     "Discover Tripoli's best spots, local experiences, and ready-made plans — all in one place.",
   defaultLanguage: 'en',
   showMap: true,
+  aiPlannerEnabled: true,
   contactEmail: '',
   contactPhone: '',
   socialFacebook: '',

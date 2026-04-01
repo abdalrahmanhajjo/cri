@@ -194,6 +194,18 @@ export default function AdminSettings() {
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
+                          checked={form.aiPlannerEnabled !== false}
+                          onChange={(e) => setForm((f) => ({ ...f, aiPlannerEnabled: e.target.checked }))}
+                        />
+                        Public AI planner page (/plan/ai)
+                      </label>
+                    </div>
+                  </div>
+                  <div className="admin-form-row">
+                    <div className="admin-form-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
                           checked={form?.diningGuide?.enabled !== false}
                           onChange={(e) =>
                             setForm((f) => ({

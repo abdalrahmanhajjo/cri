@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 import './Admin.css';
 
 function buildUserListParams(debouncedQ, provider, isAdmin, isBusinessOwner, emailVerified, blocked) {
@@ -17,6 +18,7 @@ function buildUserListParams(debouncedQ, provider, isAdmin, isBusinessOwner, ema
 
 export default function AdminUsers() {
   const { user: me } = useAuth();
+  const { settings } = useSiteSettings();
   const myId = me?.id;
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
@@ -158,9 +160,11 @@ export default function AdminUsers() {
               </select>
             </div>
             <div className="admin-toolbar-actions">
-              <Link to="/plan/ai" className="admin-btn admin-btn--secondary">
-                Open AI planner
-              </Link>
+              {settings.aiPlannerEnabled !== false && (
+                <Link to="/plan/ai" className="admin-btn admin-btn--secondary">
+                  Open AI planner
+                </Link>
+              )}
               <button type="button" className="admin-btn admin-btn--secondary" onClick={load} disabled={loading}>
                 Refresh
               </button>
