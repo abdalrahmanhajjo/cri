@@ -301,6 +301,19 @@
   box-shadow: 0 2px 12px rgba(15, 118, 110, 0.32);
 }
 
+:root[data-theme="dark"] .vd-home .vd-bento-web-hub-cta,
+:root[data-theme="dark"] .vd-home .vd-bento-web-hub-cta:hover,
+:root[data-theme="dark"] .vd-home .vd-find-your-way-cta,
+:root[data-theme="dark"] .vd-home .vd-find-your-way-cta:hover {
+  color: #fff;
+}
+
+:root[data-theme="dark"] .vd-home .vd-bento-web-hub-cta .vd-bento-web-hub-cta-label,
+:root[data-theme="dark"] .vd-home .vd-bento-web-hub-cta .icon,
+:root[data-theme="dark"] .vd-home .vd-bento-web-hub-cta .icon--feather {
+  color: #fff;
+}
+
 :root[data-theme="dark"] .vd-home {
   background: var(--color-background);
   color: var(--color-text-primary);
