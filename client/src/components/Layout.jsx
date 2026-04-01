@@ -133,6 +133,15 @@ export default function Layout() {
             <div className="header-mobile-right">
               <button
                 type="button"
+                className="nav-icon nav-icon--theme-toggle"
+                onClick={toggleTheme}
+                aria-label={themeActionLabel}
+                title={themeActionLabel}
+              >
+                <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={22} />
+              </button>
+              <button
+                type="button"
                 className="nav-icon nav-icon--search"
                 onClick={() => {
                   setMobileSearchOpen(true);
@@ -363,6 +372,16 @@ export default function Layout() {
             </Link>
           </nav>
           <div className="header-drawer__footer">
+            <button
+              type="button"
+              className="btn-drawer-footer btn-drawer-footer--theme"
+              onClick={toggleTheme}
+              aria-label={themeActionLabel}
+              title={themeActionLabel}
+            >
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
+              <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+            </button>
             <div className={`nav-lang-wrap nav-lang-wrap--drawer ${langOpen ? 'nav-lang-wrap--open' : ''}`} ref={langDrawerRef}>
               <button
                 type="button"
