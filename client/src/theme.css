@@ -7,10 +7,15 @@
   --color-secondary: #0EA5E9;
   --color-background: #FAFAF9;
   --color-surface: #FFFFFF;
+  --color-surface-elevated: #FCFCFB;
   --color-surface-variant: #F5F5F4;
+  --color-overlay: rgba(28, 25, 23, 0.04);
   --color-text-primary: #1C1917;
   --color-text-secondary: #57534E;
   --color-text-tertiary: #A8A29E;
+  --color-link: #0F766E;
+  --color-input-bg: #FFFFFF;
+  --color-input-text: #1C1917;
   --color-border: #E7E5E4;
   --color-error: #DC2626;
   --color-success: #059669;
@@ -89,10 +94,15 @@
   color-scheme: dark;
   --color-background: #071116;
   --color-surface: #111b24;
+  --color-surface-elevated: #162431;
   --color-surface-variant: #16202d;
+  --color-overlay: rgba(0, 0, 0, 0.35);
   --color-text-primary: #eef2ff;
   --color-text-secondary: #cbd5e1;
   --color-text-tertiary: #94a3b8;
+  --color-link: #30c5b6;
+  --color-input-bg: #0f1821;
+  --color-input-text: #eef2ff;
   --color-border: #24303f;
   --color-primary: #0F766E;
   --color-primary-dark: #0D5C55;
@@ -375,6 +385,116 @@
 
 :root[data-theme="dark"] .vd-home .vd-plan-text {
   color: rgba(255, 255, 255, 0.92);
+}
+
+:root[data-theme="dark"] #root {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+/* Global dark-mode safety net for routes with hard-coded light styles. */
+:root[data-theme="dark"] :where(
+  .admin-root,
+  .admin-layout,
+  .admin-main,
+  .admin-content,
+  .business-shell,
+  .business-layout,
+  .business-main,
+  .business-content
+) {
+  background: var(--color-background) !important;
+  color: var(--color-text-primary) !important;
+}
+
+:root[data-theme="dark"] :where(
+  section,
+  article,
+  aside,
+  nav,
+  header,
+  footer,
+  [class*="section"],
+  [class*="container"],
+  [class*="content"],
+  [class*="page"]
+) {
+  color: var(--color-text-primary);
+}
+
+:root[data-theme="dark"] :where(
+  .card,
+  [class*="card"],
+  [class*="panel"],
+  [class*="modal"],
+  [class*="dialog"],
+  [class*="drawer"],
+  [class*="dropdown"],
+  [class*="sheet"],
+  [class*="menu"],
+  [class*="list"],
+  [class*="table"],
+  table,
+  thead,
+  tbody,
+  tfoot,
+  tr,
+  th,
+  td
+) {
+  background-color: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border) !important;
+}
+
+:root[data-theme="dark"] :where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea
+) {
+  background: var(--color-input-bg) !important;
+  color: var(--color-input-text) !important;
+  border-color: var(--color-border) !important;
+}
+
+:root[data-theme="dark"] :where(input::placeholder, textarea::placeholder) {
+  color: var(--color-text-tertiary) !important;
+}
+
+:root[data-theme="dark"] :where(
+  button,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  .btn,
+  [class*="btn"],
+  [class*="button"]
+) {
+  border-color: var(--color-border) !important;
+}
+
+:root[data-theme="dark"] :where(
+  button:not(.btn-primary):not(.admin-btn--primary):not(.business-btn--primary):not([class*="primary"]),
+  [role="button"]:not([class*="primary"]),
+  input[type="button"]:not([class*="primary"]),
+  input[type="submit"]:not([class*="primary"]),
+  input[type="reset"]:not([class*="primary"]),
+  .btn-outline,
+  .admin-btn--secondary,
+  .admin-btn--ghost
+) {
+  background: var(--color-surface-variant) !important;
+  color: var(--color-text-primary) !important;
+}
+
+:root[data-theme="dark"] :where(a, [class*="link"]) {
+  color: var(--color-link);
+}
+
+:root[data-theme="dark"] :where(hr, [class*="divider"], [class*="separator"]) {
+  border-color: var(--color-border) !important;
+  background: var(--color-border) !important;
 }
 
 * { box-sizing: border-box; }
