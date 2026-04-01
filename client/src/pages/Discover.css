@@ -3528,3 +3528,184 @@ a.ig-reel-handle--link:hover {
     height: 4px;
   }
 }
+
+:root[data-theme="dark"] .ig-discover {
+  --ig-bg: #071116;
+  --ig-surface: #111b24;
+  --ig-border: #24303f;
+  --ig-text: #eef2ff;
+  --ig-muted: #94a3b8;
+  --ig-brand: #30c5b6;
+  --ig-brand-soft: rgba(48, 197, 182, 0.14);
+  --ig-brand-glow: rgba(48, 197, 182, 0.2);
+  background:
+    radial-gradient(circle at top, rgba(48, 197, 182, 0.1), transparent 28%),
+    linear-gradient(180deg, #0a141c 0%, #071116 100%);
+  color: var(--ig-text);
+}
+
+:root[data-theme="dark"] .ig-discover-top {
+  background: rgba(17, 27, 36, 0.88);
+  border-bottom-color: var(--ig-border);
+}
+
+:root[data-theme="dark"] .ig-discover-place-scope-card,
+:root[data-theme="dark"] .ig-skeleton-card,
+:root[data-theme="dark"] .ig-skeleton-offer-card,
+:root[data-theme="dark"] .ig-proposal-panel,
+:root[data-theme="dark"] .ig-proposal-my-messages,
+:root[data-theme="dark"] .ig-feed-post,
+:root[data-theme="dark"] .ig-feed-comments-panel,
+:root[data-theme="dark"] .ig-feed-comment-bubble,
+:root[data-theme="dark"] .ig-feed-comment-edit,
+:root[data-theme="dark"] .ig-empty-icon {
+  background: var(--ig-surface);
+  border-color: var(--ig-border);
+  color: var(--ig-text);
+}
+
+:root[data-theme="dark"] .ig-discover-error {
+  color: #fca5a5;
+  background: rgba(185, 28, 28, 0.14);
+  border-color: rgba(248, 113, 113, 0.2);
+}
+
+:root[data-theme="dark"] .ig-skeleton {
+  background: linear-gradient(90deg, #162431 0%, #1b2d3c 45%, #162431 90%);
+}
+
+:root[data-theme="dark"] .ig-skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+}
+
+:root[data-theme="dark"] .ig-discover-tab:hover,
+:root[data-theme="dark"] .ig-discover-tab--active,
+:root[data-theme="dark"] .ig-discover-business-cta,
+:root[data-theme="dark"] .ig-discover-place-scope-back,
+:root[data-theme="dark"] .ig-discover-place-scope-details,
+:root[data-theme="dark"] .ig-proposal-signin-link,
+:root[data-theme="dark"] .ig-proposal-thread-reply-label,
+:root[data-theme="dark"] .ig-proposal-step-title,
+:root[data-theme="dark"] .ig-proposal-selected-name,
+:root[data-theme="dark"] .ig-feed-comment-edit-title,
+:root[data-theme="dark"] .ig-feed-reply-banner {
+  color: var(--ig-brand);
+}
+
+:root[data-theme="dark"] .ig-empty-text,
+:root[data-theme="dark"] .ig-proposal-intro,
+:root[data-theme="dark"] .ig-proposal-signin-hint,
+:root[data-theme="dark"] .ig-proposal-my-messages-meta,
+:root[data-theme="dark"] .ig-proposal-my-messages-empty,
+:root[data-theme="dark"] .ig-proposal-thread-meta,
+:root[data-theme="dark"] .ig-proposal-thread-no-reply,
+:root[data-theme="dark"] .ig-proposal-search-meta,
+:root[data-theme="dark"] .ig-proposal-hint,
+:root[data-theme="dark"] .ig-feed-comments-loading,
+:root[data-theme="dark"] .ig-feed-comments-empty,
+:root[data-theme="dark"] .ig-feed-comment-meta,
+:root[data-theme="dark"] .ig-feed-signin-hint,
+:root[data-theme="dark"] .ig-feed-comment-like-count,
+:root[data-theme="dark"] .ig-feed-comment-edit-count {
+  color: var(--ig-muted);
+}
+
+:root[data-theme="dark"] .ig-proposal-thread-status {
+  background: #162431;
+  border-color: var(--ig-border);
+  color: var(--ig-muted);
+}
+
+:root[data-theme="dark"] .ig-proposal-thread,
+:root[data-theme="dark"] .ig-proposal-thread-reply,
+:root[data-theme="dark"] .ig-proposal-field input,
+:root[data-theme="dark"] .ig-proposal-field textarea,
+:root[data-theme="dark"] .ig-proposal-search,
+:root[data-theme="dark"] .ig-feed-comment-row,
+:root[data-theme="dark"] .ig-feed-comment-edit-input {
+  background: #0f1821;
+  border-color: var(--ig-border);
+  color: var(--ig-text);
+}
+
+:root[data-theme="dark"] .ig-proposal-field input::placeholder,
+:root[data-theme="dark"] .ig-proposal-field textarea::placeholder,
+:root[data-theme="dark"] .ig-proposal-search::placeholder,
+:root[data-theme="dark"] .ig-feed-comment-input::placeholder,
+:root[data-theme="dark"] .ig-feed-comment-edit-input::placeholder {
+  color: var(--ig-muted);
+}
+
+:root[data-theme="dark"] .ig-proposal-search-clear:hover,
+:root[data-theme="dark"] .ig-feed-reply-banner-cancel,
+:root[data-theme="dark"] .ig-feed-comment-action:hover,
+:root[data-theme="dark"] .ig-feed-comment-edit-btn {
+  background: #162431;
+  color: var(--ig-text);
+}
+
+:root[data-theme="dark"] .ig-feed-comment-form {
+  background: linear-gradient(180deg, rgba(22, 36, 49, 0.6) 0%, var(--ig-surface) 100%);
+}
+
+:root[data-theme="dark"] .ig-feed-comment-submit,
+:root[data-theme="dark"] .ig-empty-btn,
+:root[data-theme="dark"] .ig-proposal-submit,
+:root[data-theme="dark"] .ig-proposal-reply-btn,
+:root[data-theme="dark"] .ig-feed-comment-edit-btn--primary {
+  background: var(--ig-brand);
+  color: #071116;
+}
+
+:root[data-theme="dark"] .ig-empty-btn--ghost {
+  background: transparent;
+  color: var(--ig-brand);
+  border-color: var(--ig-brand);
+}
+
+:root[data-theme="dark"] .ig-proposal-submit:disabled,
+:root[data-theme="dark"] .ig-feed-comment-submit:disabled {
+  background: #24303f;
+  color: #94a3b8;
+}
+
+:root[data-theme="dark"] .ig-feed-comment-line,
+:root[data-theme="dark"] .ig-feed-comment-line strong,
+:root[data-theme="dark"] .ig-feed-comment-body,
+:root[data-theme="dark"] .ig-proposal-thread-place,
+:root[data-theme="dark"] .ig-proposal-thread-message,
+:root[data-theme="dark"] .ig-proposal-thread-reply-text,
+:root[data-theme="dark"] .ig-discover-place-scope-title,
+:root[data-theme="dark"] .ig-feed-comment-input {
+  color: var(--ig-text);
+}
+
+:root[data-theme="dark"] .ig-feed-comment-action,
+:root[data-theme="dark"] .ig-proposal-change,
+:root[data-theme="dark"] .ig-proposal-thread-refresh,
+:root[data-theme="dark"] .ig-proposal-messages-cta-link {
+  color: var(--ig-text);
+  border-color: var(--ig-border);
+  background: #162431;
+}
+
+:root[data-theme="dark"] .ig-proposal-messages-cta-link:hover,
+:root[data-theme="dark"] .ig-proposal-thread-refresh:hover:not(:disabled) {
+  border-color: var(--ig-brand);
+  color: var(--ig-brand);
+  background: rgba(48, 197, 182, 0.08);
+}
+
+:root[data-theme="dark"] .ig-feed-comment-action--danger,
+:root[data-theme="dark"] .ig-proposal-error {
+  color: #fca5a5;
+}
+
+:root[data-theme="dark"] .ig-proposal-success {
+  color: #86efac;
+}
+
+:root[data-theme="dark"] .ig-feed-reply-banner {
+  background: rgba(48, 197, 182, 0.12);
+  border-color: rgba(48, 197, 182, 0.24);
+}

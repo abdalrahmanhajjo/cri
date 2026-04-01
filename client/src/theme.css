@@ -383,6 +383,53 @@
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
 }
 
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-widget-title,
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-widget-value,
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-widget-detail-value,
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-widget-loading {
+  color: #eef2ff;
+}
+
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-widget-condition,
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-widget-detail-label {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-widget-unit {
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-widget-unit--active {
+  color: #ffffff;
+  background: rgba(48, 197, 182, 0.2);
+  border-color: rgba(48, 197, 182, 0.35);
+  text-decoration: none;
+}
+
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-tripoli-clock-icon {
+  background: rgba(48, 197, 182, 0.12);
+  border-color: rgba(48, 197, 182, 0.24);
+  color: #30c5b6;
+}
+
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-weather-cloudy {
+  background: #6b7280;
+  border-color: #94a3b8;
+}
+
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-weather-rain {
+  background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 100%);
+  border-color: #38bdf8;
+  opacity: 1;
+}
+
+:root[data-theme="dark"] .vd-home .vd-plan-card .vd-weather-storm {
+  background: #475569;
+  border-color: #334155;
+}
+
 :root[data-theme="dark"] .vd-home .vd-plan-text {
   color: rgba(255, 255, 255, 0.92);
 }
@@ -445,6 +492,24 @@
   background-color: var(--color-surface) !important;
   color: var(--color-text-primary) !important;
   border-color: var(--color-border) !important;
+}
+
+:root[data-theme="dark"] .gm-style :where(
+  [class*="card"],
+  [class*="content"],
+  [class*="page"],
+  table,
+  thead,
+  tbody,
+  tfoot,
+  tr,
+  th,
+  td
+) {
+  background-color: revert !important;
+  color: inherit !important;
+  border-color: revert !important;
+  box-shadow: none !important;
 }
 
 :root[data-theme="dark"] :where(

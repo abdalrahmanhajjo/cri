@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import Icon from '../components/Icon';
 import GlobalSearchBar from '../components/GlobalSearchBar';
 import { filterPlacesByQuery } from '../utils/searchFilter';
@@ -27,6 +28,24 @@ const TRAVEL_MODES = Object.freeze([
 
 const LIVE_ROUTE_MIN_INTERVAL_MS = 22000;
 const LIVE_ROUTE_MIN_MOVE_M = 48;
+const DARK_MAP_STYLES = [
+  { elementType: 'geometry', stylers: [{ color: '#0b1520' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0b1520' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#8ea3b8' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#2a3644' }] },
+  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#b7c7d8' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d6e2ee' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#8ea3b8' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#11261d' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#16212d' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1f2d3a' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#a8bbcd' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#1c3340' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#294654' }] },
+  { featureType: 'transit', elementType: 'labels.text.fill', stylers: [{ color: '#7d93a8' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#08111c' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#64829e' }] },
+];
 
 function haversineMeters(a, b) {
   if (!a || !b || a.lat == null || b.lat == null) return 0;
@@ -235,6 +254,7 @@ function escapeHtml(s) {
 
 export default function MapPage() {
   const { t, lang } = useLanguage();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -604,11 +624,11 @@ export default function MapPage() {
     map.setZoom(DETAIL_MAP_ZOOM);
     const markerEntry = markersByPlaceIdRef.current.get(place.id);
     if (markerEntry?.marker && infoWindow) {
-      const content = buildInfoContent(place, apiKey, infoWindowStrings);
+      const content = buildInfoContent(place, apiKey, infoWindowStrings, theme === 'dark');
       infoWindow.setContent(content);
       infoWindow.open(map, markerEntry.marker);
     }
-  }, [apiKey, infoWindowStrings]);
+  }, [apiKey, infoWindowStrings, theme]);
 
   const handlePlaceSelect = useCallback(
     (place) => {
@@ -723,7 +743,7 @@ export default function MapPage() {
           }
           setSelectedPlaceId(placeId);
           setListOpen(false);
-          infoWindow.setContent(buildInfoContent(p, apiKey, infoWindowStrings));
+          infoWindow.setContent(buildInfoContent(p, apiKey, infoWindowStrings, theme === 'dark'));
           infoWindow.open(map, marker);
         });
         const entry = { marker, placeId };
@@ -758,7 +778,8 @@ export default function MapPage() {
           fullscreenControl: false,
           zoomControl: false,
           scaleControl: false,
-          styles: [],
+          backgroundColor: theme === 'dark' ? '#071116' : '#e8eaed',
+          styles: theme === 'dark' ? DARK_MAP_STYLES : [],
         });
         mapInstanceRef.current = map;
         const infoWindow = new maps.InfoWindow();
@@ -777,7 +798,7 @@ export default function MapPage() {
       markersRef.current = [];
       markersByPlaceIdRef.current.clear();
     };
-  }, [apiKey, markersForMapList, mapDisplayPlaces, tripFilterName, infoWindowStrings, addingTripStop, commitAddStop]);
+  }, [apiKey, markersForMapList, mapDisplayPlaces, tripFilterName, infoWindowStrings, addingTripStop, commitAddStop, theme]);
 
   useEffect(() => {
     return () => {
@@ -1614,7 +1635,7 @@ export default function MapPage() {
   );
 }
 
-function buildInfoContent(p, apiKey = '', strings = {}) {
+function buildInfoContent(p, apiKey = '', strings = {}, isDark = false) {
   const s = {
     viewDetails: strings.viewDetails ?? 'View details →',
     directions: strings.directions ?? 'Directions →',
@@ -1642,21 +1663,21 @@ function buildInfoContent(p, apiKey = '', strings = {}) {
     const srcEsc = escapeHtml(src);
     const setEsc = srcSet ? escapeHtml(srcSet) : '';
     const szEsc = sizes ? escapeHtml(sizes) : '';
-    imgHtml = `<img src="${srcEsc}"${setEsc ? ` srcset="${setEsc}"` : ''}${szEsc ? ` sizes="${szEsc}"` : ''} alt="" loading="lazy" decoding="async" width="280" height="100" style="width:100%;height:100px;object-fit:cover;border-radius:8px 8px 0 0;margin:-8px -8px 8px -8px;" />`;
+    imgHtml = `<img src="${srcEsc}"${setEsc ? ` srcset="${setEsc}"` : ''}${szEsc ? ` sizes="${szEsc}"` : ''} alt="" loading="lazy" decoding="async" width="280" height="100" class="gm-info-image" />`;
   }
   const dirLink =
     placeId != null && String(placeId) !== ''
-      ? `<a href="#" class="map-info-directions" data-place-id="${escapeHtml(String(placeId))}" data-trip-name="${encodeURIComponent(name)}" style="display:inline-block;color:#1a73e8;font-weight:600;text-decoration:none;cursor:pointer;">${escapeHtml(s.directions)}</a>`
+      ? `<a href="#" class="map-info-directions" data-place-id="${escapeHtml(String(placeId))}" data-trip-name="${encodeURIComponent(name)}">${escapeHtml(s.directions)}</a>`
       : '';
   return `
-    <div class="gm-info-content" style="padding:0;min-width:220px;max-width:280px;font-size:14px;">
+    <div class="gm-info-content${isDark ? ' gm-info-content--dark' : ''}">
       ${imgHtml}
-      <strong style="display:block;margin-bottom:4px;font-size:15px;">${escapeHtml(name)}</strong>
-      ${address ? `<p style="margin:0 0 6px 0;color:#5f6368;font-size:13px;">${escapeHtml(address)}</p>` : ''}
-      ${rating != null ? `<p style="margin:0 0 4px 0;font-size:13px;">★ ${Number(rating).toFixed(1)}${reviews != null ? ` (${reviews} reviews)` : ''}</p>` : ''}
-      ${openNow !== null ? `<p style="margin:0 0 8px 0;font-size:12px;color:${openNow ? '#137333' : '#c5221f'};">${openNow ? 'Open now' : 'Closed'}</p>` : ''}
-      <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;line-height:1.35;">
-        <a href="/place/${encodeURIComponent(placeId)}" class="map-info-link" data-place-id="${escapeHtml(String(placeId))}" style="color:#1a73e8;font-weight:600;text-decoration:none;">${escapeHtml(s.viewDetails)}</a>
+      <strong class="gm-info-title">${escapeHtml(name)}</strong>
+      ${address ? `<p class="gm-info-address">${escapeHtml(address)}</p>` : ''}
+      ${rating != null ? `<p class="gm-info-rating">★ ${Number(rating).toFixed(1)}${reviews != null ? ` (${reviews} reviews)` : ''}</p>` : ''}
+      ${openNow !== null ? `<p class="gm-info-open ${openNow ? 'gm-info-open--yes' : 'gm-info-open--no'}">${openNow ? 'Open now' : 'Closed'}</p>` : ''}
+      <div class="gm-info-actions">
+        <a href="/place/${encodeURIComponent(placeId)}" class="map-info-link" data-place-id="${escapeHtml(String(placeId))}">${escapeHtml(s.viewDetails)}</a>
         ${dirLink}
       </div>
     </div>
