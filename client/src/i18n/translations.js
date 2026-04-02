@@ -4,8 +4,8 @@
 
 export const languages = [
   { code: 'en', label: 'English', dir: 'ltr' },
-  { code: 'ar', label: 'Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©', dir: 'rtl' },
-  { code: 'fr', label: 'FranÃ§ais', dir: 'ltr' },
+  { code: 'ar', label: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', dir: 'rtl' },
+  { code: 'fr', label: 'Fran\u00e7ais', dir: 'ltr' },
 ];
 
 export const translations = {
@@ -4137,5 +4137,6 @@ export function setStoredLanguage(code) {
     /* ignore */
   }
 }
+
 
 
