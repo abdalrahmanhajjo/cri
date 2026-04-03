@@ -2,8 +2,8 @@
 # Build: docker build -t tripoli-explorer .
 # Run:   docker run -p 3095:3095 --env-file server/.env -e SERVE_CLIENT_DIST=true tripoli-explorer
 # Platforms: Railway, Fly.io, Render, Google Cloud Run (set PORT from platform).
-# Build attempt: 2026-04-03-v2 (Breaking Docker cache)
-FROM node:22-alpine AS client-build
+# Build attempt: 2026-04-03-v3 (Switching to debian-slim to fix corrupted alpine cache)
+FROM node:22-bookworm-slim AS client-build
 WORKDIR /app/client
 COPY client/package.json client/package-lock.json* ./
 RUN npm ci
@@ -24,9 +24,9 @@ ARG VITE_SUPABASE_IMAGE_TRANSFORM=
 ENV VITE_SUPABASE_IMAGE_TRANSFORM=$VITE_SUPABASE_IMAGE_TRANSFORM
 RUN npm run build
 
-FROM node:22-alpine AS server-prod
-# Reel transcoding: @ffmpeg-installer/ffmpeg often ships a glibc-linked binary that won't run on Alpine (musl).
-RUN apk add --no-cache ffmpeg
+FROM node:22-bookworm-slim AS server-prod
+# Reel transcoding: ffmpeg is needed for reels.
+RUN apt-get update && apt-get install -y ffmpeg --no-install-recommends && rm -rf /var/lib/apt/lists/*
 WORKDIR /app/server
 COPY server/package.json server/package-lock.json* ./
 RUN npm ci --omit=dev
