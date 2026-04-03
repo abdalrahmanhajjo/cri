@@ -23,6 +23,18 @@ function formatTripRange(trip, locale) {
   return `${a.toLocaleDateString(locale, opts)} – ${b.toLocaleDateString(locale, opts)}`;
 }
 
+function isDiningPlace(place) {
+  const hay = [
+    place?.category,
+    place?.categoryId,
+    ...(Array.isArray(place?.tags) ? place.tags : place?.tags ? [place.tags] : []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return /(restaurant|food|dining|cafe|cafÃ©|coffee|bakery|sweet|dessert|cuisine|breakfast|lunch|dinner)/.test(hay);
+}
+
 function DiscoverCard({
   place,
   viewMode,
@@ -267,8 +279,15 @@ export default function PlaceDiscover() {
     return s;
   }, [sponsoredDiscover]);
 
+  const hiddenRestaurantIds = useMemo(() => {
+    const ids = settings?.discoverGuide?.hiddenRestaurantPlaceIds;
+    return new Set(Array.isArray(ids) ? ids.map(String) : []);
+  }, [settings]);
+
   const filteredPlaces = useMemo(() => {
-    let base = places;
+    let base = places.filter(
+      (p) => !(isDiningPlace(p) && hiddenRestaurantIds.has(String(p?.id)))
+    );
     if (categoryParam) {
       const id = String(categoryParam);
       base = base.filter((p) => String(p.categoryId ?? p.category_id) === id);
@@ -286,7 +305,7 @@ export default function PlaceDiscover() {
       if (sa !== sb) return sb - sa;
       return 0;
     });
-  }, [places, categoryParam, qParam, sortParam, sponsoredPlaceIdSet]);
+  }, [places, hiddenRestaurantIds, categoryParam, qParam, sortParam, sponsoredPlaceIdSet]);
 
   const setParam = useCallback(
     (key, value) => {

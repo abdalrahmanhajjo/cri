@@ -186,7 +186,7 @@ export async function callAICompleteReliable(body) {
 
 function extractJsonBlock(text) {
   const trimmed = text.trimStart();
-  const start = trimmed.search(/[\[{]/);
+  const start = trimmed.search(/[[{]/);
   if (start < 0) return null;
   const raw = trimmed.slice(start);
   const open = raw[0];
@@ -237,7 +237,80 @@ function normalizePlanPayload(parsed) {
   return null;
 }
 
-function parsePlanJson(rawText, placeIdSet) {
+function normalizePlaceLookupKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\u0600-\u06ff]+/gi, ' ')
+    .trim();
+}
+
+function buildPlaceResolver(places = []) {
+  const exact = new Map();
+  const normalized = new Map();
+  const catalog = [];
+
+  const addAlias = (value, id) => {
+    const raw = String(value || '').trim();
+    if (!raw) return;
+    if (!exact.has(raw)) exact.set(raw, String(id));
+    const key = normalizePlaceLookupKey(raw);
+    if (!key) return;
+    const prev = normalized.get(key);
+    if (!prev) normalized.set(key, String(id));
+    else if (prev !== String(id)) normalized.set(key, null);
+  };
+
+  for (const place of places || []) {
+    const id = String(place?.id || '').trim();
+    if (!id) continue;
+    const name = String(place?.name || '').trim();
+    addAlias(id, id);
+    addAlias(name, id);
+    if (place?.location) addAlias(place.location, id);
+    catalog.push({
+      id,
+      idNorm: normalizePlaceLookupKey(id),
+      nameNorm: normalizePlaceLookupKey(name),
+    });
+  }
+
+  return { exact, normalized, catalog };
+}
+
+function resolvePlaceId(rawValue, placeIdSet, resolver = null) {
+  const raw = String(rawValue || '').trim();
+  if (!raw) return null;
+  if (placeIdSet.has(raw)) return raw;
+  if (!resolver) return null;
+
+  const exactHit = resolver.exact.get(raw);
+  if (exactHit && placeIdSet.has(exactHit)) return exactHit;
+
+  const key = normalizePlaceLookupKey(raw);
+  if (!key) return null;
+
+  const normalizedHit = resolver.normalized.get(key);
+  if (normalizedHit && placeIdSet.has(normalizedHit)) return normalizedHit;
+
+  let fuzzyHit = null;
+  for (const row of resolver.catalog) {
+    const matches =
+      row.idNorm === key ||
+      row.nameNorm === key ||
+      row.idNorm.includes(key) ||
+      row.nameNorm.includes(key) ||
+      key.includes(row.idNorm) ||
+      key.includes(row.nameNorm);
+    if (!matches) continue;
+    if (fuzzyHit && fuzzyHit !== row.id) return null;
+    fuzzyHit = row.id;
+  }
+  return fuzzyHit && placeIdSet.has(fuzzyHit) ? fuzzyHit : null;
+}
+
+function parsePlanJson(rawText, placeIdSet, resolver = null) {
   const tryParse = (text, beforeText) => {
     const jsonBlock = extractJsonBlock(text);
     if (!jsonBlock) return null;
@@ -269,8 +342,8 @@ function parsePlanJson(rawText, placeIdSet) {
     for (const item of list) {
       if (!item || typeof item !== 'object') continue;
       const placeIdRaw = item.placeId ?? item.place_id;
-      const placeId = placeIdRaw != null ? String(placeIdRaw) : null;
-      if (!placeId || !placeIdSet.has(placeId)) continue;
+      const placeId = resolvePlaceId(placeIdRaw, placeIdSet, resolver);
+      if (!placeId) continue;
       const dayRaw = item.dayIndex ?? item.day_index;
       const dayIndex =
         typeof dayRaw === 'number'
@@ -289,7 +362,7 @@ function parsePlanJson(rawText, placeIdSet) {
       });
     }
     if (slots.length === 0) return null;
-    return { text: beforeText || 'Here’s a plan for you!', slots };
+    return { text: beforeText || "Here's a plan for you!", slots };
   };
 
   const planLabel = /[*_]*PLAN_JSON[*_]*\s*:?/i;
@@ -652,7 +725,7 @@ export function enforcePlacesPerDay(slots, durationDays, placesPerDay) {
  * After AI single-slot replace: keep all rows from previousSlots except replaceIndex
  * (placeId + reason taken from model output when valid).
  */
-export function mergeSingleReplaceFromRawPlan(rawText, previousSlots, replaceIndex, placeIdSet) {
+export function mergeSingleReplaceFromRawPlan(rawText, previousSlots, replaceIndex, placeIdSet, resolver = null) {
   if (
     !Array.isArray(previousSlots) ||
     previousSlots.length === 0 ||
@@ -667,8 +740,8 @@ export function mergeSingleReplaceFromRawPlan(rawText, previousSlots, replaceInd
   }
   const item = rawList[replaceIndex];
   const placeIdRaw = item?.placeId ?? item?.place_id;
-  const newPid = placeIdRaw != null ? String(placeIdRaw) : '';
-  if (!placeIdSet.has(newPid)) {
+  const newPid = resolvePlaceId(placeIdRaw, placeIdSet, resolver);
+  if (!newPid) {
     return { ok: false, slots: previousSlots.map(freezeSlotFromPrevious) };
   }
   const slots = previousSlots.map((s, i) => {
@@ -682,6 +755,17 @@ export function mergeSingleReplaceFromRawPlan(rawText, previousSlots, replaceInd
   });
   return { ok: true, slots };
 }
+
+function buildSingleReplaceFallbackText(lang) {
+  if (lang === 'ar') {
+    return 'I kept your itinerary the same because that stop could not be updated yet.';
+  }
+  if (lang === 'fr') {
+    return "Je n'ai pas pu mettre a jour cet arret pour l'instant, donc j'ai garde l'itineraire tel quel. Essayez avec un nom de lieu plus precis.";
+  }
+  return "I couldn't update that stop yet, so I kept your itinerary the same. Try using a clearer place name.";
+}
+
 
 /**
  * @param {object} params
@@ -783,6 +867,7 @@ export async function chatForTripPlan(params) {
     singleReplaceSlotIndex,
     learnedCategoryHints,
   });
+  const placeResolver = buildPlaceResolver(places);
 
   const lang = ['en', 'ar', 'fr'].includes(responseLanguage) ? responseLanguage : 'en';
   const languageInstruction =
@@ -995,21 +1080,14 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
       effSelectedDate = new Date(`${tripSettings.startDate}T12:00:00`);
     }
 
-    let { text, slots } = parsePlanJson(rawForPlan, placeIdSet);
+    let { text, slots } = parsePlanJson(rawForPlan, placeIdSet, placeResolver);
     const fallbackLead =
       lang === 'ar'
         ? 'Ø£Ø¹Ø¯Øª ØªØ±ØªÙŠØ¨ Ø§Ù„Ø®Ø·Ø© Ø¨Ø§Ø¹ØªÙ…Ø§Ø¯ Ø¹Ù„Ù‰ Ø£ÙØ¶Ù„ Ø§Ù„Ø£Ù…Ø§ÙƒÙ† Ø§Ù„Ù…Ù†Ø§Ø³Ø¨Ø© Ù„Ø·Ù„Ø¨Ùƒ Ù„Ù„Ø­ÙØ§Ø¸ Ø¹Ù„Ù‰ Ø®Ø·Ø© ÙˆØ§Ø¶Ø­Ø© ÙˆÙ…ÙˆØ«ÙˆÙ‚Ø©.'
         : lang === 'fr'
           ? 'Jâ€™ai reconstruit le plan Ã  partir des lieux les plus pertinents pour garder un itinÃ©raire clair et fiable.'
           : 'I rebuilt the plan from the strongest matching places to keep the itinerary clear and reliable.';
-    const outText = text || 'Here’s a plan for you!';
-
-    const pickFillTimes = (n) => {
-      const base = ['09:30', '11:00', '13:30', '15:00', '16:30', '18:00', '19:30', '21:00'];
-      const out = [];
-      for (let i = 0; i < n; i += 1) out.push(base[i % base.length]);
-      return out;
-    };
+    const outText = text || "Here's a plan for you!";
 
     const ensureExactSlotCount = (rawSlots) => {
       if (!Array.isArray(rawSlots) || rawSlots.length === 0) return rawSlots;
@@ -1020,37 +1098,48 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
       if (next.length >= target) return next;
 
       const counts = Array.from({ length: effDays }, () => 0);
+      const dayCategories = Array.from({ length: effDays }, () => new Set());
       const used = new Set();
       next.forEach((s) => {
         used.add(String(s.placeId));
         const d = Number.isFinite(Number(s.dayIndex)) ? Number(s.dayIndex) : 0;
         const di = Math.min(effDays - 1, Math.max(0, d));
         counts[di] += 1;
+        const place = (places || []).find((p) => String(p.id) === String(s.placeId));
+        const cat = String(place?.category || '').trim().toLowerCase();
+        if (cat) dayCategories[di].add(cat);
       });
 
       const candidates = (fallbackPlaceIds || []).filter((id) => placeIdSet.has(String(id)) && !used.has(String(id)));
-      const fillsNeeded = target - next.length;
-      const fillTimes = pickFillTimes(effPlacesPerDay);
+      const candidatePlaces = candidates
+        .map((id) => (places || []).find((p) => String(p.id) === String(id)))
+        .filter(Boolean);
 
-      for (let i = 0; i < fillsNeeded; i += 1) {
-        const pid = candidates[i];
-        if (!pid) break;
+      while (next.length < target && candidatePlaces.length > 0) {
         let dayIndex = counts.indexOf(Math.min(...counts));
         if (counts[dayIndex] >= effPlacesPerDay) {
-          // All full (shouldn't happen with fillsNeeded math), bail.
           break;
         }
-        const place = (places || []).find((p) => String(p.id) === String(pid));
-        const time = fillTimes[counts[dayIndex]] || '09:30';
-        next.push({
-          placeId: String(pid),
-          suggestedTime: time,
-          dayIndex,
-          reason: place?.category
-            ? `Added to complete your ${effPlacesPerDay} stops/day plan (${place.category}).`
-            : `Added to complete your ${effPlacesPerDay} stops/day plan.`,
+        let candidateIndex = candidatePlaces.findIndex((place) => {
+          const cat = String(place?.category || '').trim().toLowerCase();
+          return !cat || !dayCategories[dayIndex].has(cat);
         });
-        used.add(String(pid));
+        if (candidateIndex < 0) candidateIndex = 0;
+        const [place] = candidatePlaces.splice(candidateIndex, 1);
+        const pid = String(place.id);
+        next.push({
+          placeId: pid,
+          suggestedTime: fallbackTimeForIndex(counts[dayIndex], place.bestTime),
+          dayIndex,
+          reason: buildFallbackReason(place, {
+            userInterests,
+            budget,
+            slotIndex: counts[dayIndex],
+          }),
+        });
+        const cat = String(place?.category || '').trim().toLowerCase();
+        if (cat) dayCategories[dayIndex].add(cat);
+        used.add(pid);
         counts[dayIndex] += 1;
       }
 
@@ -1104,7 +1193,8 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
         rawForPlan,
         previousSlots,
         singleReplaceSlotIndex,
-        placeIdSet
+        placeIdSet,
+        placeResolver
       );
       if (ok) {
         return {
@@ -1114,14 +1204,8 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
         };
       }
       slots = merged;
-      const fail =
-        lang === 'ar'
-          ? '\n\nتعذّر تطبيق استبدال هذا الموقع فقط. جرّب طلبًا أوضح أو أعد المحاولة.'
-          : lang === 'fr'
-            ? '\n\nImpossible d’appliquer le remplacement pour cet arrêt seul. Reformulez ou réessayez.'
-            : '\n\nCould not apply a single-stop replacement. Try a clearer request or try again.';
       return {
-        text: `${outText}${fail}`,
+        text: buildSingleReplaceFallbackText(lang),
         slots: slots?.length ? await finalizeTripSlots(slots) : slots,
         tripSettings,
       };

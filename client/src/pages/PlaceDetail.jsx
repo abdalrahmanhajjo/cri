@@ -147,9 +147,38 @@ function normalizeDiningProfile(place) {
     menuNote: String(raw.menuNote || '').trim(),
     serviceModes: safeArray(raw.serviceModes).map(titleizeTokens),
     dietaryOptions: safeArray(raw.dietaryOptions).map(titleizeTokens),
+    contactPhone: String(raw.contactPhone || raw.phone || '').trim(),
+    contactEmail: String(raw.contactEmail || raw.email || '').trim(),
+    contactAddress: String(raw.contactAddress || raw.address || '').trim(),
+    contactNote: String(raw.contactNote || '').trim(),
     signatureDishes,
     menuSections,
   };
+}
+
+function translationOr(t, section, key, fallback) {
+  const value = t(section, key);
+  return value === key ? fallback : value;
+}
+
+function normalizeHoursEntries(hours) {
+  if (!hours || typeof hours !== 'object' || Array.isArray(hours)) return [];
+  const labels = {
+    mon: 'Mon',
+    tue: 'Tue',
+    wed: 'Wed',
+    thu: 'Thu',
+    fri: 'Fri',
+    sat: 'Sat',
+    sun: 'Sun',
+  };
+  return Object.entries(hours)
+    .map(([key, value]) => ({
+      key,
+      label: labels[key] || titleizeTokens(key),
+      value: String(value || '').trim(),
+    }))
+    .filter((item) => item.value);
 }
 
 function InfoRow({ icon, label, value }) {
@@ -659,9 +688,36 @@ export default function PlaceDetail() {
   const diningPlace = isDiningPlace(place);
   const diningSummary = buildDiningSummary(place);
   const diningProfile = normalizeDiningProfile(place);
+  const hoursEntries = normalizeHoursEntries(place.hours);
 
   const hours = place.hours;
-  const hoursStr = typeof hours === 'string' ? hours : Array.isArray(hours) ? hours.join(' · ') : hours;
+  const hoursStr =
+    typeof hours === 'string'
+      ? hours
+      : Array.isArray(hours)
+        ? hours.join(' - ')
+        : hoursEntries.slice(0, 3).map((entry) => `${entry.label} ${entry.value}`).join(' - ');
+  const diningGallery = galleryUrls.slice(0, 4);
+  const diningSignals = [
+    ...diningSummary.bestFor,
+    ...diningSummary.features,
+    ...diningProfile.serviceModes,
+    ...diningProfile.dietaryOptions,
+  ]
+    .filter((item, index, arr) => arr.findIndex((x) => String(x).toLowerCase() === String(item).toLowerCase()) === index)
+    .slice(0, 8);
+  const diningFacts = [
+    place.price ? { icon: 'payments', label: translationOr(t, 'detail', 'priceRange', 'Price range'), value: place.price } : null,
+    hoursStr ? { icon: 'schedule', label: translationOr(t, 'detail', 'openingHours', 'Opening hours'), value: hoursStr } : null,
+    place.location ? { icon: 'location_on', label: translationOr(t, 'detail', 'location', 'Location'), value: place.location } : null,
+    place.rating != null
+      ? {
+          icon: 'star',
+          label: translationOr(t, 'detail', 'reviewsCount', 'Reviews'),
+          value: `${Number(place.rating).toFixed(1)}${place.reviewCount ? ` - ${place.reviewCount}` : ''}`,
+        }
+      : null,
+  ].filter(Boolean);
   const diningTabs = [
     { id: 'overview', label: t('detail', 'diningTabOverview') },
     { id: 'menu', label: t('detail', 'diningTabMenu') },
@@ -951,22 +1007,73 @@ export default function PlaceDetail() {
           {diningPlace && (
             <section className="place-detail-section place-detail-dining" aria-labelledby="place-dining-heading">
               <div className="place-detail-dining-shell">
-              <div className="place-detail-dining-head">
-                <div className="place-detail-dining-head-copy">
-                  <span className="place-detail-dining-kicker">{t('detail', 'diningSectionEyebrow')}</span>
-                  <h2 id="place-dining-heading" className="place-detail-section-title">
-                    {t('detail', 'diningSectionTitle')}
-                  </h2>
-                  <p className="place-detail-dining-sub">{t('detail', 'diningSectionSub')}</p>
+                <div className="place-detail-dining-stage">
+                  <div className="place-detail-dining-stage-media">
+                    {heroUrl ? (
+                      <img
+                        alt={place.name || ''}
+                        loading="lazy"
+                        decoding="async"
+                        className="place-detail-dining-stage-image"
+                        {...getDeliveryImgProps(heroUrl, 'detailHero')}
+                      />
+                    ) : (
+                      <div className="place-detail-dining-stage-fallback">
+                        <Icon name="restaurant" size={34} />
+                      </div>
+                    )}
+                    <div className="place-detail-dining-stage-scrim" aria-hidden="true" />
+                    {diningGallery.length > 1 ? (
+                      <div className="place-detail-dining-stage-thumbs" aria-label={translationOr(t, 'detail', 'gallery', 'Gallery')}>
+                        {diningGallery.map((url, index) => (
+                          <button
+                            key={url}
+                            type="button"
+                            className={`place-detail-dining-stage-thumb ${galleryUrls[galleryIndex] === url ? 'place-detail-dining-stage-thumb--on' : ''}`}
+                            onClick={() => setGalleryIndex(index)}
+                            aria-label={`${translationOr(t, 'detail', 'preview', 'Preview')} ${index + 1}`}
+                          >
+                            <img alt="" loading="lazy" decoding="async" {...getDeliveryImgProps(url, 'thumb')} />
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="place-detail-dining-stage-panel">
+                    <div className="place-detail-dining-head">
+                      <div className="place-detail-dining-head-copy">
+                        <span className="place-detail-dining-kicker">{t('detail', 'diningSectionEyebrow')}</span>
+                        <h2 id="place-dining-heading" className="place-detail-section-title">
+                          {t('detail', 'diningSectionTitle')}
+                        </h2>
+                        <p className="place-detail-dining-sub">{t('detail', 'diningSectionSub')}</p>
+                      </div>
+                    </div>
+
+                    {diningFacts.length > 0 ? (
+                      <div className="place-detail-dining-stage-facts">
+                        {diningFacts.map((fact) => (
+                          <article key={`${fact.label}-${fact.value}`} className="place-detail-dining-stage-fact">
+                            <span className="place-detail-dining-stage-fact-icon" aria-hidden="true">
+                              <Icon name={fact.icon} size={18} />
+                            </span>
+                            <div>
+                              <span className="place-detail-dining-stage-fact-label">{fact.label}</span>
+                              <strong className="place-detail-dining-stage-fact-value">{fact.value}</strong>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <div className="place-detail-dining-hero-rail">
+                      {diningSignals.map((item) => (
+                        <span key={item} className="place-detail-dining-hero-pill">{item}</span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div className="place-detail-dining-hero-rail">
-                  {diningSummary.cuisines.slice(0, 3).map((item) => (
-                    <span key={item} className="place-detail-dining-hero-pill">{item}</span>
-                  ))}
-                  {place.price ? <span className="place-detail-dining-hero-pill">{place.price}</span> : null}
-                  {hoursStr ? <span className="place-detail-dining-hero-pill">{hoursStr}</span> : null}
-                </div>
-              </div>
 
               <div className="place-detail-dining-toolbar">
                 <div className="place-detail-dining-tabs" role="tablist" aria-label={t('detail', 'diningSectionTitle')}>
@@ -1106,42 +1213,31 @@ export default function PlaceDetail() {
               {diningTab === 'reviews' && reviewsContent}
 
               {diningTab === 'contact' && (
-                <div className="place-detail-dining-grid">
-                  <article className="place-detail-dining-card">
+                <div className="place-detail-dining-contact-layout">
+                  <article className="place-detail-dining-card place-detail-dining-card--contact-details">
                     <div className="place-detail-dining-card-icon" aria-hidden="true">
-                      <Icon name="schedule" size={22} />
+                      <Icon name="call" size={22} />
                     </div>
-                    <h3>{t('detail', 'openingHours')}</h3>
-                    <p>{hoursStr || t('detail', 'diningContactHoursFallback')}</p>
-                  </article>
-                  <article className="place-detail-dining-card">
-                    <div className="place-detail-dining-card-icon" aria-hidden="true">
-                      <Icon name="concierge" size={22} />
-                    </div>
-                    <h3>{t('detail', 'diningServicesTitle')}</h3>
-                    {diningProfile.serviceModes.length > 0 ? (
-                      <div className="place-detail-dining-chip-list">
-                        {diningProfile.serviceModes.map((item) => (
-                          <span key={item} className="place-detail-dining-chip">{item}</span>
-                        ))}
+                    <h3>{translationOr(t, 'detail', 'contactUs', 'Contact us details')}</h3>
+                    <div className="place-detail-dining-contact-list">
+                      <div className="place-detail-dining-contact-row">
+                        <Icon name="location_on" size={18} />
+                        <span>{diningProfile.contactAddress || place.location || translationOr(t, 'detail', 'location', 'Location')}</span>
                       </div>
-                    ) : (
-                      <p>{t('detail', 'diningServicesHint')}</p>
-                    )}
-                  </article>
-                  <article className="place-detail-dining-card">
-                    <div className="place-detail-dining-card-icon" aria-hidden="true">
-                      <Icon name="calendar_month" size={22} />
+                      {diningProfile.contactPhone ? (
+                        <div className="place-detail-dining-contact-row">
+                          <Icon name="call" size={18} />
+                          <a href={`tel:${diningProfile.contactPhone}`}>{diningProfile.contactPhone}</a>
+                        </div>
+                      ) : null}
+                      {diningProfile.contactEmail ? (
+                        <div className="place-detail-dining-contact-row">
+                          <Icon name="mail" size={18} />
+                          <a href={`mailto:${diningProfile.contactEmail}`}>{diningProfile.contactEmail}</a>
+                        </div>
+                      ) : null}
                     </div>
-                    <h3>{t('detail', 'diningReservationTitle')}</h3>
-                    <p>{diningProfile.reservationNotes || t('detail', 'diningReservationHint')}</p>
-                  </article>
-                  <article className="place-detail-dining-card place-detail-dining-card--contact">
-                    <div className="place-detail-dining-card-icon" aria-hidden="true">
-                      <Icon name="mail" size={22} />
-                    </div>
-                    <h3>{t('detail', 'engageContactTitle')}</h3>
-                    <p>{t('detail', 'diningContactLead')}</p>
+                    <p>{diningProfile.contactNote || t('detail', 'diningContactLead')}</p>
                     <div className="place-detail-dining-contact-actions">
                       <button
                         type="button"
@@ -1164,6 +1260,38 @@ export default function PlaceDetail() {
                       </button>
                     </div>
                   </article>
+
+                  <div className="place-detail-dining-grid">
+                    <article className="place-detail-dining-card">
+                    <div className="place-detail-dining-card-icon" aria-hidden="true">
+                      <Icon name="schedule" size={22} />
+                    </div>
+                    <h3>{t('detail', 'openingHours')}</h3>
+                    <p>{hoursStr || t('detail', 'diningContactHoursFallback')}</p>
+                    </article>
+                    <article className="place-detail-dining-card">
+                      <div className="place-detail-dining-card-icon" aria-hidden="true">
+                        <Icon name="concierge" size={22} />
+                      </div>
+                      <h3>{t('detail', 'diningServicesTitle')}</h3>
+                      {diningProfile.serviceModes.length > 0 ? (
+                        <div className="place-detail-dining-chip-list">
+                          {diningProfile.serviceModes.map((item) => (
+                            <span key={item} className="place-detail-dining-chip">{item}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p>{t('detail', 'diningServicesHint')}</p>
+                      )}
+                    </article>
+                    <article className="place-detail-dining-card">
+                      <div className="place-detail-dining-card-icon" aria-hidden="true">
+                        <Icon name="calendar_month" size={22} />
+                      </div>
+                      <h3>{t('detail', 'diningReservationTitle')}</h3>
+                      <p>{diningProfile.reservationNotes || t('detail', 'diningReservationHint')}</p>
+                    </article>
+                  </div>
                 </div>
               )}
               </div>

@@ -1,0 +1,136 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - link "Visit Tripoli Places, experiences & events" [ref=e7]:
+          - /url: /
+          - generic [ref=e10]: Visit Tripoli
+          - generic [ref=e11]: Places, experiences & events
+        - navigation [ref=e12]:
+          - link "Home" [ref=e13]:
+            - /url: /
+          - link "Discover" [ref=e14]:
+            - /url: /discover
+          - link "View map" [ref=e15]:
+            - /url: /map
+          - link "Community" [ref=e16]:
+            - /url: /community
+          - link "Activities & experiences" [ref=e17]:
+            - /url: /activities
+          - link "About Tripoli" [ref=e18]:
+            - /url: /about-tripoli
+          - link "Plan your visit" [ref=e19]:
+            - /url: /plan
+        - button "Language" [ref=e22] [cursor=pointer]:
+          - generic [ref=e23]: EN
+          - generic [ref=e24]: expand_more
+      - generic [ref=e25]:
+        - generic [ref=e28]:
+          - generic [ref=e29]: search
+          - searchbox "Search" [ref=e30]
+        - generic [ref=e31]:
+          - link "My saved places" [ref=e32]:
+            - /url: /favourites
+            - generic [ref=e33]: favorite
+          - link "Messages" [ref=e34]:
+            - /url: /messages
+          - link "Test User" [ref=e35]:
+            - /url: /profile
+          - button "Log out" [ref=e36] [cursor=pointer]
+  - banner [ref=e37]:
+    - paragraph [ref=e38]: Plan your Tripoli visit with AI — same assistant as in the app.
+    - generic [ref=e39]:
+      - link "Open AI planner" [ref=e40]:
+        - /url: /plan/ai
+      - button "Dismiss" [ref=e41] [cursor=pointer]:
+        - generic [ref=e42]: close
+  - link "Skip to main content" [ref=e43]:
+    - /url: "#main-content"
+  - main [active] [ref=e44]:
+    - main "Plan your visit" [ref=e45]:
+      - generic [ref=e47]:
+        - heading "Plan your visit" [level=1] [ref=e48]
+        - paragraph [ref=e49]: Official information on areas, transport, accommodation and practical advice for your stay.
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - heading "My Trips" [level=2] [ref=e53]
+          - link "Open AI planner" [ref=e55]:
+            - /url: /plan/ai
+            - generic [ref=e56]: auto_awesome
+            - text: Open AI planner
+        - generic [ref=e57]:
+          - heading "Create new trip" [level=3] [ref=e58]
+          - generic [ref=e59]:
+            - generic [ref=e60]: Trip name
+            - textbox "Trip name" [ref=e61]:
+              - /placeholder: e.g. Weekend in Tripoli
+          - generic [ref=e62]:
+            - generic [ref=e63]: Notes (optional)
+            - textbox "Notes (optional)" [ref=e64]:
+              - /placeholder: Details, reminders, or links…
+          - group "Quick dates" [ref=e65]:
+            - button "Today" [ref=e66] [cursor=pointer]
+            - button "This weekend" [ref=e67] [cursor=pointer]
+            - button "Next week" [ref=e68] [cursor=pointer]
+          - generic [ref=e69]:
+            - generic [ref=e70]:
+              - generic [ref=e71]: Start date
+              - textbox "Start date" [ref=e72]
+            - generic [ref=e73]:
+              - generic [ref=e74]: End date
+              - textbox "End date" [ref=e75]
+          - application "Choose date range" [ref=e77]:
+            - generic [ref=e78]:
+              - button "Previous month" [ref=e79] [cursor=pointer]:
+                - generic [ref=e80]: chevron_left
+              - heading "March 2026" [level=3] [ref=e81]
+              - button "Next month" [ref=e82] [cursor=pointer]:
+                - generic [ref=e83]: chevron_right
+            - generic [ref=e84]:
+              - generic [ref=e85]: Sun
+              - generic [ref=e86]: Mon
+              - generic [ref=e87]: Tue
+              - generic [ref=e88]: Wed
+              - generic [ref=e89]: Thu
+              - generic [ref=e90]: Fri
+              - generic [ref=e91]: Sat
+            - grid "March 2026" [ref=e92]:
+              - button "01/03/2026" [ref=e93] [cursor=pointer]: "1"
+              - button "02/03/2026" [ref=e94] [cursor=pointer]: "2"
+              - button "03/03/2026" [ref=e95] [cursor=pointer]: "3"
+              - button "04/03/2026" [ref=e96] [cursor=pointer]: "4"
+              - button "05/03/2026" [ref=e97] [cursor=pointer]: "5"
+              - button "06/03/2026" [ref=e98] [cursor=pointer]: "6"
+              - button "07/03/2026" [ref=e99] [cursor=pointer]: "7"
+              - button "08/03/2026" [ref=e100] [cursor=pointer]: "8"
+              - button "09/03/2026" [ref=e101] [cursor=pointer]: "9"
+              - button "10/03/2026" [ref=e102] [cursor=pointer]: "10"
+              - button "11/03/2026" [ref=e103] [cursor=pointer]: "11"
+              - button "12/03/2026" [ref=e104] [cursor=pointer]: "12"
+              - button "13/03/2026" [ref=e105] [cursor=pointer]: "13"
+              - button "14/03/2026" [ref=e106] [cursor=pointer]: "14"
+              - button "15/03/2026" [ref=e107] [cursor=pointer]: "15"
+              - button "16/03/2026" [ref=e108] [cursor=pointer]: "16"
+              - button "17/03/2026" [ref=e109] [cursor=pointer]: "17"
+              - button "18/03/2026" [ref=e110] [cursor=pointer]: "18"
+              - button "19/03/2026" [ref=e111] [cursor=pointer]: "19"
+              - button "20/03/2026" [ref=e112] [cursor=pointer]: "20"
+              - button "21/03/2026" [ref=e113] [cursor=pointer]: "21"
+              - button "22/03/2026" [ref=e114] [cursor=pointer]: "22"
+              - button "23/03/2026" [ref=e115] [cursor=pointer]: "23"
+              - button "24/03/2026" [ref=e116] [cursor=pointer]: "24"
+              - button "25/03/2026" [ref=e117] [cursor=pointer]: "25"
+              - button "26/03/2026" [ref=e118] [cursor=pointer]: "26"
+              - button "27/03/2026" [ref=e119] [cursor=pointer]: "27"
+              - button "28/03/2026" [ref=e120] [cursor=pointer]: "28"
+              - button "29/03/2026" [ref=e121] [cursor=pointer]: "29"
+              - button "30/03/2026" [ref=e122] [cursor=pointer]: "30"
+              - button "31/03/2026" [ref=e123] [cursor=pointer]: "31"
+            - paragraph [ref=e124]: Select start date
+          - generic [ref=e125]:
+            - button "Save" [ref=e126] [cursor=pointer]
+            - button "Cancel" [ref=e127] [cursor=pointer]
+```

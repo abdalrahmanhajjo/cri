@@ -1,0 +1,77 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - link "Visit Tripoli Places, experiences & events" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e10]: Visit Tripoli
+          - generic [ref=e11]: Places, experiences & events
+        - navigation [ref=e12]:
+          - link "Home" [ref=e13] [cursor=pointer]:
+            - /url: /
+          - link "Discover" [ref=e14] [cursor=pointer]:
+            - /url: /discover
+          - link "View map" [ref=e15] [cursor=pointer]:
+            - /url: /map
+          - link "Community" [ref=e16] [cursor=pointer]:
+            - /url: /community
+          - link "Activities & experiences" [ref=e17] [cursor=pointer]:
+            - /url: /activities
+          - link "About Tripoli" [ref=e18] [cursor=pointer]:
+            - /url: /about-tripoli
+          - link "Plan your visit" [ref=e19] [cursor=pointer]:
+            - /url: /plan
+        - button "Language" [ref=e22] [cursor=pointer]:
+          - generic [ref=e23]: EN
+          - generic [ref=e24]: expand_more
+      - generic [ref=e25]:
+        - generic [ref=e28]:
+          - generic [ref=e29]: search
+          - searchbox "Search" [ref=e30]
+        - generic [ref=e31]:
+          - link "My saved places" [ref=e32] [cursor=pointer]:
+            - /url: /favourites
+            - generic [ref=e33]: favorite
+          - link "Messages" [ref=e34] [cursor=pointer]:
+            - /url: /messages
+          - link "Test User" [ref=e35] [cursor=pointer]:
+            - /url: /profile
+          - button "Log out" [ref=e36] [cursor=pointer]
+  - banner [ref=e37]:
+    - paragraph [ref=e38]: Plan your Tripoli visit with AI — same assistant as in the app.
+    - generic [ref=e39]:
+      - link "Open AI planner" [ref=e40] [cursor=pointer]:
+        - /url: /plan/ai
+      - button "Dismiss" [ref=e41] [cursor=pointer]:
+        - generic [ref=e42]: close
+  - link "Skip to main content" [ref=e43] [cursor=pointer]:
+    - /url: "#main-content"
+  - main [ref=e44]:
+    - generic [ref=e45]:
+      - heading "Community" [level=1] [ref=e46]
+      - tablist "Community" [ref=e48]:
+        - tab "Feed" [selected] [ref=e49] [cursor=pointer]:
+          - generic [ref=e50]: dynamic_feed
+          - generic [ref=e51]: Feed
+        - tab "Reels" [ref=e52] [cursor=pointer]:
+          - generic [ref=e53]: movie
+          - generic [ref=e54]: Reels
+        - tab "Offers & coupons" [ref=e55] [cursor=pointer]:
+          - generic [ref=e56]: sell
+          - generic [ref=e57]: Offers & coupons
+        - tab "Proposals" [ref=e58] [cursor=pointer]:
+          - generic [ref=e59]: send
+          - generic [ref=e60]: Proposals
+      - main [ref=e61]:
+        - generic [ref=e62]:
+          - generic [ref=e64]: dynamic_feed
+          - paragraph [ref=e65]: No feed posts yet. Check back soon.
+          - generic [ref=e66]:
+            - link "Back to home" [ref=e67] [cursor=pointer]:
+              - /url: /
+            - link "Explore Tripoli" [ref=e68] [cursor=pointer]:
+              - /url: /discover
+```

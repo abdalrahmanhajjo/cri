@@ -32,7 +32,26 @@ const PRICE_OPTIONS = ['', 'Free', '0', '5', '10', '15', '20', '25', '30', '$', 
 const BEST_TIME_OPTIONS = ['', 'Morning (9 AM - 12 PM)', 'Afternoon (12 PM - 5 PM)', 'Evening (5 PM - 9 PM)', 'All Day', 'Morning to Afternoon', 'Between Prayer Times', 'Lunch (11 AM - 2 PM)'];
 const RATING_OPTIONS = ['', '0', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'];
 
-function PlaceFormModal({ place, onClose, onSaved }) {
+function isRestaurantPlace(place) {
+  const hay = [
+    place?.category,
+    place?.categoryId,
+    ...(Array.isArray(place?.tags) ? place.tags : place?.tags ? [place.tags] : []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return /(restaurant|food|dining|cafe|cafÃ©|coffee|bakery|sweet|dessert|cuisine|breakfast|lunch|dinner)/.test(hay);
+}
+
+function PlaceFormModal({
+  place,
+  onClose,
+  onSaved,
+  discoverHiddenRestaurantIds,
+  onToggleDiscoverRestaurantVisibility,
+  discoverVisibilitySaving,
+}) {
   const didHydrateImagesRef = useRef(false);
   const userTouchedImagesRef = useRef(false);
 
@@ -69,6 +88,8 @@ function PlaceFormModal({ place, onClose, onSaved }) {
   const [modReviews, setModReviews] = useState([]);
   const [modReviewsLoading, setModReviewsLoading] = useState(false);
   const [modReviewsErr, setModReviewsErr] = useState(null);
+  const restaurantPlace = isRestaurantPlace(place || form);
+  const isHiddenFromDiscover = place?.id ? discoverHiddenRestaurantIds?.has(String(place.id)) : false;
 
   const refreshModReviews = useCallback(async () => {
     if (!place?.id) return;
@@ -431,6 +452,43 @@ function PlaceFormModal({ place, onClose, onSaved }) {
                   ))}
                 </select>
               </div>
+              {place && restaurantPlace ? (
+                <div className="admin-form-group">
+                  <label>Discover visibility</label>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      padding: '14px 16px',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(148, 163, 184, 0.22)',
+                      background: 'rgba(15, 23, 42, 0.03)',
+                    }}
+                  >
+                    <div style={{ display: 'grid', gap: '4px' }}>
+                      <strong>{isHiddenFromDiscover ? 'Hidden from Discover' : 'Visible on Discover'}</strong>
+                      <span className="admin-form-hint" style={{ margin: 0 }}>
+                        This only affects the user-facing Discover page. Direct links and admin access still work normally.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--secondary"
+                      disabled={discoverVisibilitySaving}
+                      onClick={() => onToggleDiscoverRestaurantVisibility?.(place, !isHiddenFromDiscover)}
+                    >
+                      {discoverVisibilitySaving
+                        ? 'Saving...'
+                        : isHiddenFromDiscover
+                          ? 'Show on Discover'
+                          : 'Hide from Discover'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="admin-form-section">
@@ -611,12 +669,17 @@ export default function AdminPlaces() {
   const [modalPlace, setModalPlace] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
+  const [siteSettings, setSiteSettings] = useState({});
+  const [discoverVisibilitySavingId, setDiscoverVisibilitySavingId] = useState('');
 
   const fetchData = useCallback(() => {
-    api.places.list()
-      .then((r) => {
+    Promise.all([api.places.list(), api.admin.siteSettings.get()])
+      .then(([r, settingsRes]) => {
         const list = r.popular || r.locations || [];
         setData(Array.isArray(list) ? list : []);
+        setSiteSettings(
+          settingsRes?.settings && typeof settingsRes.settings === 'object' ? settingsRes.settings : {}
+        );
       })
       .catch((err) => setError(err.message || 'Failed to load places'))
       .finally(() => setLoading(false));
@@ -636,6 +699,50 @@ export default function AdminPlaces() {
       (p.category && p.category.toLowerCase().includes(q))
     );
   }, [data, search]);
+
+  const hiddenRestaurantIds = useMemo(() => {
+    const ids = siteSettings?.discoverGuide?.hiddenRestaurantPlaceIds;
+    return new Set(Array.isArray(ids) ? ids.map(String) : []);
+  }, [siteSettings]);
+
+  const handleToggleDiscoverRestaurantVisibility = useCallback(
+    async (place, shouldHide) => {
+      const placeId = place?.id != null ? String(place.id) : '';
+      if (!placeId) return;
+      setDiscoverVisibilitySavingId(placeId);
+      try {
+        const current = Array.isArray(siteSettings?.discoverGuide?.hiddenRestaurantPlaceIds)
+          ? siteSettings.discoverGuide.hiddenRestaurantPlaceIds.map(String)
+          : [];
+        const nextHidden = shouldHide
+          ? Array.from(new Set([...current, placeId]))
+          : current.filter((id) => id !== placeId);
+        const payload = {
+          ...siteSettings,
+          discoverGuide: {
+            ...(siteSettings?.discoverGuide && typeof siteSettings.discoverGuide === 'object'
+              ? siteSettings.discoverGuide
+              : {}),
+            hiddenRestaurantPlaceIds: nextHidden,
+          },
+        };
+        const res = await api.admin.siteSettings.save(payload);
+        const saved =
+          res?.settings && typeof res.settings === 'object' ? res.settings : payload;
+        setSiteSettings(saved);
+        window.dispatchEvent(new Event('tripoli-site-settings-saved'));
+        setToast({
+          type: 'success',
+          msg: shouldHide ? 'Restaurant hidden from Discover' : 'Restaurant shown on Discover',
+        });
+      } catch (e) {
+        setToast({ type: 'error', msg: e.message || 'Failed to update Discover visibility' });
+      } finally {
+        setDiscoverVisibilitySavingId('');
+      }
+    },
+    [siteSettings]
+  );
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -707,7 +814,16 @@ export default function AdminPlaces() {
             <tbody>
               {filtered.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.name || '—'}</td>
+                  <td>
+                    <div style={{ display: 'grid', gap: '4px' }}>
+                      <span>{p.name || '-'}</span>
+                      {isRestaurantPlace(p) && hiddenRestaurantIds.has(String(p.id)) ? (
+                        <span className="admin-form-hint" style={{ margin: 0 }}>
+                          Hidden from Discover
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
                   <td>{p.location || '—'}</td>
                   <td>{p.category || '—'}</td>
                   <td>{p.rating != null ? p.rating : '—'}</td>
@@ -732,6 +848,9 @@ export default function AdminPlaces() {
           place={modalPlace && Object.keys(modalPlace).length ? modalPlace : null}
           onClose={() => setModalPlace(null)}
           onSaved={() => { setToast({ type: 'success', msg: 'Place saved' }); fetchData(); }}
+          discoverHiddenRestaurantIds={hiddenRestaurantIds}
+          onToggleDiscoverRestaurantVisibility={handleToggleDiscoverRestaurantVisibility}
+          discoverVisibilitySaving={discoverVisibilitySavingId === String(modalPlace?.id || '')}
         />
       )}
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import api, { getPlaceImageUrl, getImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
@@ -8,7 +8,7 @@ import Icon from '../components/Icon';
 import GlobalSearchBar from '../components/GlobalSearchBar';
 import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { filterPlacesByQuery } from '../utils/searchFilter';
-import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
+import { placeQualityScore, searchMatchScore, sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import { getCategoriesForWay } from '../utils/findYourWayGrouping';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
@@ -21,12 +21,105 @@ function formatTripRange(trip, locale) {
   if (!a || Number.isNaN(a.getTime())) return '';
   const opts = { day: 'numeric', month: 'short', year: 'numeric' };
   if (!b || Number.isNaN(b.getTime())) return a.toLocaleDateString(locale, opts);
-  return `${a.toLocaleDateString(locale, opts)} – ${b.toLocaleDateString(locale, opts)}`;
+  return `${a.toLocaleDateString(locale, opts)} - ${b.toLocaleDateString(locale, opts)}`;
 }
 
-function BentoCard({ place, layout, onMapClick, onAddToTrip, viewDetailsLabel, mapAriaLabel, addToTripLabel }) {
+function uniqStrings(list) {
+  return [...new Set((Array.isArray(list) ? list : []).map((item) => String(item || '').trim()).filter(Boolean))];
+}
+
+function titleizeToken(value) {
+  return String(value || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+function diningSignals(place) {
+  const dp = place?.diningProfile && typeof place.diningProfile === 'object' ? place.diningProfile : {};
+  const cuisines = uniqStrings(dp.cuisines).map(titleizeToken);
+  const bestFor = uniqStrings(dp.bestFor).map(titleizeToken);
+  const serviceModes = uniqStrings([
+    ...(Array.isArray(dp.serviceModes) ? dp.serviceModes : []),
+    ...(dp.delivery ? ['delivery'] : []),
+    ...(dp.takeaway ? ['takeaway'] : []),
+    ...(dp.reservations ? ['reservations'] : []),
+    ...(dp.outdoorSeating ? ['outdoor seating'] : []),
+  ]).map(titleizeToken);
+  const dietaryOptions = uniqStrings(dp.dietaryOptions).map(titleizeToken);
+  const signatureDishes = uniqStrings(dp.signatureDishes).map(titleizeToken);
+  const menuSections = Array.isArray(dp.menuSections) ? dp.menuSections.filter(Boolean) : [];
+  return {
+    cuisines,
+    bestFor,
+    serviceModes,
+    dietaryOptions,
+    signatureDishes,
+    menuSections,
+    hasMenu: menuSections.length > 0 || signatureDishes.length > 0 || Boolean(String(dp.menuNote || '').trim()),
+    hasHours: Boolean(String(place?.hours || '').trim()),
+    hasContact:
+      Boolean(String(dp.contactPhone || '').trim()) ||
+      Boolean(String(dp.contactEmail || '').trim()) ||
+      Boolean(String(dp.contactAddress || '').trim()),
+    menuDepth: menuSections.reduce((sum, section) => sum + (Array.isArray(section?.items) ? section.items.length : 0), 0),
+  };
+}
+
+function diningSmartScore(place, { query = '', activeCategoryId = '', featuredIds = new Set() } = {}) {
+  const signals = diningSignals(place);
+  const reviews = Number(place?.reviewCount ?? place?.reviews_count ?? place?.reviewsCount ?? 0) || 0;
+  let score = placeQualityScore(place) * 2.4 + searchMatchScore(place, query) * 22;
+  score += featuredIds.has(String(place?.id)) ? 48 : 0;
+  score += signals.hasMenu ? 22 : 0;
+  score += Math.min(signals.menuDepth, 12) * 1.4;
+  score += Math.min(signals.signatureDishes.length, 4) * 5;
+  score += Math.min(signals.serviceModes.length, 4) * 4;
+  score += Math.min(signals.cuisines.length, 4) * 4;
+  score += Math.min(signals.bestFor.length, 3) * 3;
+  score += signals.hasHours ? 6 : 0;
+  score += signals.hasContact ? 4 : 0;
+  score += getPlaceImageUrl(place?.image || (place?.images && place.images[0])) ? 10 : 0;
+  score += reviews > 0 ? Math.log1p(reviews) * 5 : 0;
+  if (activeCategoryId && String(place?.categoryId ?? place?.category_id) === String(activeCategoryId)) score += 8;
+  return score;
+}
+
+function localDiningCopy(lang, t) {
+  const pick = (key, fallback) => {
+    const value = t('diningGuide', key);
+    return value && value !== key ? value : fallback;
+  };
+  return {
+    smartTitle: 'Smart dining picks',
+    smartSub: 'A stronger ranking blends place quality, menu richness, visuals, services, and search intent behind the scenes.',
+    guideBadge: 'Curated pick',
+    menuBadge: 'Menu-ready',
+    contactBadge: 'Contact available',
+    openNowBadge: 'Visit info',
+    cuisinesTitle: 'Browse by cuisine or mood',
+    cuisinesSub: 'We group places by cuisine, occasion, and visit style so first-time users can decide faster.',
+    browseCluster: 'Browse selection',
+    smartReasons: 'Why it stands out',
+    menuReady: 'Menu or signature dishes available',
+    menuSoon: 'Profile is ready for a full menu',
+    collectionTitle: 'All dining places',
+    collectionSub: 'A clearer restaurant directory with richer cards that help people decide faster.',
+    filtersTitle: 'Refine your dining search',
+    heroStatPlaces: 'Dining places',
+    heroStatCurated: 'Smart picks',
+    heroStatStyles: 'Styles & moods',
+    mapCta: pick('heroMapCta', 'Open map'),
+    discoverCta: pick('browseDiscover', 'Browse full guide'),
+  };
+}
+function BentoCard({ place, layout, onMapClick, onAddToTrip, viewDetailsLabel, mapAriaLabel, addToTripLabel, copy }) {
   const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
   const rating = place.rating != null ? Number(place.rating).toFixed(1) : null;
+  const signals = diningSignals(place);
+  const topFacts = [...signals.cuisines, ...signals.bestFor].slice(0, 3);
+  const serviceSummary = signals.serviceModes.slice(0, 2);
   return (
     <article className={`dg-bento-card dg-bento-card--${layout}`}>
       <Link to={`/place/${place.id}`} className="dg-bento-card__main">
@@ -48,6 +141,27 @@ function BentoCard({ place, layout, onMapClick, onAddToTrip, viewDetailsLabel, m
         <div className="dg-bento-card__body">
           <h3 className="dg-bento-card__title">{place.name}</h3>
           {place.location ? <p className="dg-bento-card__loc">{place.location}</p> : null}
+          {topFacts.length > 0 ? (
+            <div className="dg-bento-card__chips" aria-label={copy.smartReasons}>
+              {topFacts.map((item) => (
+                <span key={`${place.id}-${item}`} className="dg-bento-card__chip">
+                  {item}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          <div className="dg-bento-card__meta">
+            <span className="dg-bento-card__meta-item">
+              <Icon name="menu_book" size={14} aria-hidden />
+              <span>{signals.hasMenu ? copy.menuReady : copy.menuSoon}</span>
+            </span>
+            {serviceSummary.length > 0 ? (
+              <span className="dg-bento-card__meta-item">
+                <Icon name="room_service" size={14} aria-hidden />
+                <span>{serviceSummary.join(' · ')}</span>
+              </span>
+            ) : null}
+          </div>
           <span className="dg-bento-card__cta">
             <span>{viewDetailsLabel}</span>
             <Icon name="arrow_forward" size={18} aria-hidden />
@@ -97,6 +211,7 @@ export default function PlaceDining() {
   const toolbarRef = useRef(null);
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const locale = lang === 'ar' ? 'ar-LB' : lang === 'fr' ? 'fr-LB' : 'en-GB';
+  const copy = useMemo(() => localDiningCopy(lang, t), [lang, t]);
 
   const fcatParam = searchParams.get('fcat') || '';
   const sortParam = searchParams.get('sort') || 'recommended';
@@ -227,6 +342,10 @@ export default function PlaceDining() {
   );
 
   const diningPlaceIdSet = useMemo(() => new Set(diningPlacesAll.map((p) => String(p.id))), [diningPlacesAll]);
+  const featuredIdSet = useMemo(
+    () => new Set((diningGuide.featuredPlaceIds || []).map((id) => String(id))),
+    [diningGuide.featuredPlaceIds]
+  );
 
   const sponsoredDining = useMemo(() => {
     return sponsoredItems.filter((it) => {
@@ -273,6 +392,47 @@ export default function PlaceDining() {
     return [...fromFeatured, ...rest.slice(0, need)];
   }, [filteredForTopPicks, filteredTopPicksById, diningGuide.featuredPlaceIds]);
 
+  const rankedDiningPlaces = useMemo(
+    () =>
+      [...diningPlacesAll].sort(
+        (a, b) =>
+          diningSmartScore(b, { query: qParam, activeCategoryId: fcatParam, featuredIds: featuredIdSet }) -
+          diningSmartScore(a, { query: qParam, activeCategoryId: fcatParam, featuredIds: featuredIdSet })
+      ),
+    [diningPlacesAll, qParam, fcatParam, featuredIdSet]
+  );
+
+  const smartSpotlight = useMemo(() => rankedDiningPlaces.slice(0, 3), [rankedDiningPlaces]);
+
+  const smartCuisineClusters = useMemo(() => {
+    const clusterMap = new Map();
+    rankedDiningPlaces.forEach((place) => {
+      const signals = diningSignals(place);
+      const labels = [...signals.cuisines, ...signals.bestFor].slice(0, 4);
+      if (labels.length === 0 && place.category) labels.push(String(place.category));
+      labels.forEach((label) => {
+        const key = String(label || '').trim();
+        if (!key) return;
+        if (!clusterMap.has(key)) clusterMap.set(key, []);
+        const items = clusterMap.get(key);
+        if (items.length < 4) items.push(place);
+      });
+    });
+    return [...clusterMap.entries()]
+      .map(([label, items]) => ({
+        label,
+        items,
+        score: items.reduce(
+          (sum, item) =>
+            sum + diningSmartScore(item, { query: qParam, activeCategoryId: fcatParam, featuredIds: featuredIdSet }),
+          0
+        ),
+      }))
+      .filter((cluster) => cluster.items.length >= 2)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4);
+  }, [rankedDiningPlaces, qParam, fcatParam, featuredIdSet]);
+
   const mainListPlaces = useMemo(() => {
     let base = diningPlacesAll;
     if (fcatParam) {
@@ -285,7 +445,14 @@ export default function PlaceDining() {
       base = narrow.length > 0 ? narrow : base;
     }
     const sort = sortParam === 'rating' || sortParam === 'name' ? sortParam : 'recommended';
-    const sorted = sortDiscoverPlaces(base, { query: qParam, sort });
+    const sorted =
+      sort === 'recommended'
+        ? [...base].sort(
+            (a, b) =>
+              diningSmartScore(b, { query: qParam, activeCategoryId: fcatParam, featuredIds: featuredIdSet }) -
+              diningSmartScore(a, { query: qParam, activeCategoryId: fcatParam, featuredIds: featuredIdSet })
+          )
+        : sortDiscoverPlaces(base, { query: qParam, sort });
     const featuredIds = (diningGuide.featuredPlaceIds || []).map(String);
     const featuredSet = new Set(featuredIds);
     const orderedFeatured = [];
@@ -299,7 +466,7 @@ export default function PlaceDining() {
     }
     const rest = sorted.filter((p) => !featuredSet.has(String(p.id)));
     return [...orderedFeatured, ...rest];
-  }, [diningPlacesAll, diningGuide.featuredPlaceIds, fcatParam, qParam, sortParam]);
+  }, [diningPlacesAll, diningGuide.featuredPlaceIds, featuredIdSet, fcatParam, qParam, sortParam]);
 
   const placeMap = useMemo(() => {
     const m = {};
@@ -416,6 +583,11 @@ export default function PlaceDining() {
     '{count}',
     String(mainListPlaces.length)
   );
+  const cuisinesCount = useMemo(() => {
+    const set = new Set();
+    diningPlacesAll.forEach((place) => diningSignals(place).cuisines.forEach((item) => set.add(item)));
+    return set.size;
+  }, [diningPlacesAll]);
 
   if (siteSettingsLoading) {
     return (
@@ -501,13 +673,27 @@ export default function PlaceDining() {
             </h1>
             <p className="dg-hero__sub">{heroSubtitle}</p>
           </div>
+          <div className="dg-hero__stats" aria-label={copy.smartTitle}>
+            <div className="dg-hero-stat">
+              <span className="dg-hero-stat__value">{diningPlacesAll.length}</span>
+              <span className="dg-hero-stat__label">{copy.heroStatPlaces}</span>
+            </div>
+            <div className="dg-hero-stat">
+              <span className="dg-hero-stat__value">{smartSpotlight.length}</span>
+              <span className="dg-hero-stat__label">{copy.heroStatCurated}</span>
+            </div>
+            <div className="dg-hero-stat">
+              <span className="dg-hero-stat__value">{Math.max(cuisinesCount, foodCategories.length)}</span>
+              <span className="dg-hero-stat__label">{copy.heroStatStyles}</span>
+            </div>
+          </div>
           <div className="dg-hero__actions-top">
             <Link to="/map" className="dg-hero__link">
               <Icon name="map" size={20} aria-hidden />
-              <span>{t('diningGuide', 'heroMapCta')}</span>
+              <span>{copy.mapCta}</span>
             </Link>
             <Link to={PLACES_DISCOVER_PATH} className="dg-hero__link dg-hero__link--ghost">
-              <span>{t('diningGuide', 'browseDiscover')}</span>
+              <span>{copy.discoverCta}</span>
               <Icon name="arrow_forward" size={18} aria-hidden />
             </Link>
           </div>
@@ -579,7 +765,131 @@ export default function PlaceDining() {
           </section>
         ) : null}
 
+        {smartSpotlight.length > 0 ? (
+          <section className="dg-smart" aria-labelledby="dg-smart-title">
+            <div className="dg-section-head">
+              <h2 id="dg-smart-title" className="dg-section-title">
+                {copy.smartTitle}
+              </h2>
+              <p className="dg-section-sub">{copy.smartSub}</p>
+            </div>
+            <div className="dg-smart-grid">
+              {smartSpotlight.map((place, index) => {
+                const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
+                const signals = diningSignals(place);
+                const reasons = [...signals.cuisines, ...signals.bestFor, ...signals.serviceModes].slice(0, 4);
+                return (
+                  <Link
+                    key={place.id}
+                    to={`/place/${place.id}`}
+                    className={`dg-smart-card ${index === 0 ? 'dg-smart-card--lead' : ''}`}
+                  >
+                    <div className="dg-smart-card__media">
+                      {img ? (
+                        <DeliveryImg url={img} preset="discoverCard" alt="" />
+                      ) : (
+                        <span className="dg-smart-card__fallback">
+                          <Icon name="restaurant" size={36} />
+                        </span>
+                      )}
+                      <div className="dg-smart-card__scrim" aria-hidden />
+                      <div className="dg-smart-card__badges">
+                        <span className="dg-smart-card__badge">{copy.guideBadge}</span>
+                        {signals.hasMenu ? (
+                          <span className="dg-smart-card__badge dg-smart-card__badge--soft">{copy.menuBadge}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="dg-smart-card__body">
+                      <h3 className="dg-smart-card__title">{place.name}</h3>
+                      {place.location ? <p className="dg-smart-card__loc">{place.location}</p> : null}
+                      {reasons.length > 0 ? (
+                        <div className="dg-smart-card__facts">
+                          {reasons.map((item) => (
+                            <span key={`${place.id}-${item}`} className="dg-smart-card__fact">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                      <div className="dg-smart-card__meta">
+                        {place.rating != null ? (
+                          <span>
+                            <Icon name="star" size={14} aria-hidden /> {Number(place.rating).toFixed(1)}
+                          </span>
+                        ) : null}
+                        {signals.hasContact ? (
+                          <span>
+                            <Icon name="call" size={14} aria-hidden /> {copy.contactBadge}
+                          </span>
+                        ) : null}
+                        {signals.hasHours ? (
+                          <span>
+                            <Icon name="schedule" size={14} aria-hidden /> {copy.openNowBadge}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        {smartCuisineClusters.length > 0 ? (
+          <section className="dg-clusters" aria-labelledby="dg-clusters-title">
+            <div className="dg-section-head">
+              <h2 id="dg-clusters-title" className="dg-section-title">
+                {copy.cuisinesTitle}
+              </h2>
+              <p className="dg-section-sub">{copy.cuisinesSub}</p>
+            </div>
+            <div className="dg-clusters-grid">
+              {smartCuisineClusters.map((cluster) => (
+                <article key={cluster.label} className="dg-cluster-card">
+                  <div className="dg-cluster-card__head">
+                    <div>
+                      <h3 className="dg-cluster-card__title">{cluster.label}</h3>
+                      <p className="dg-cluster-card__count">
+                        {(t('placeDiscover', 'resultCount') || '{count} places').replace('{count}', String(cluster.items.length))}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="dg-cluster-card__cta"
+                      onClick={() => setQDraft(cluster.label)}
+                    >
+                      {copy.browseCluster}
+                    </button>
+                  </div>
+                  <div className="dg-cluster-card__stack">
+                    {cluster.items.slice(0, 3).map((place) => {
+                      const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
+                      return (
+                        <Link key={place.id} to={`/place/${place.id}`} className="dg-cluster-card__item">
+                          <span className="dg-cluster-card__thumb">
+                            {img ? <DeliveryImg url={img} preset="avatar" alt="" /> : <Icon name="restaurant" size={18} />}
+                          </span>
+                          <span className="dg-cluster-card__item-text">
+                            <strong>{place.name}</strong>
+                            <span>{place.location}</span>
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <section className="dg-panel" ref={toolbarRef} aria-label={t('diningGuide', 'openFilters')}>
+          <div className="dg-panel__heading">
+            <h2 className="dg-panel__title">{copy.filtersTitle}</h2>
+            <p className="dg-panel__intro">{copy.collectionSub}</p>
+          </div>
           <div className="dg-panel__row dg-panel__row--chips">
             <p className="dg-panel__label">{t('diningGuide', 'categoryFilterLabel')}</p>
             <div className="dg-chips" role="group">
@@ -643,6 +953,7 @@ export default function PlaceDining() {
                   viewDetailsLabel={t('home', 'viewDetails')}
                   mapAriaLabel={t('placeDiscover', 'viewOnMap')}
                   addToTripLabel={t('placeDiscover', 'addToTrip')}
+                  copy={copy}
                 />
             ))}
           </section>
@@ -736,3 +1047,6 @@ export default function PlaceDining() {
     </div>
   );
 }
+
+
+

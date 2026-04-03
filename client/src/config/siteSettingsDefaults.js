@@ -11,6 +11,10 @@ function emptyDiningSectionLabelsLocale() {
   return { topPicksTitle: '', sponsoredKicker: '', mainCollectionTitle: '' };
 }
 
+function emptyDiscoverGuide() {
+  return { hiddenRestaurantPlaceIds: [] };
+}
+
 /** Normalize `diningGuide` from API or admin form (partial objects safe). */
 export function mergeDiningGuide(raw) {
   const baseHero = {
@@ -78,11 +82,21 @@ export function mergeHotelsGuide(raw) {
   return mergeDiningGuide(raw);
 }
 
+export function mergeDiscoverGuide(raw) {
+  if (!raw || typeof raw !== 'object') return emptyDiscoverGuide();
+  return {
+    hiddenRestaurantPlaceIds: Array.isArray(raw.hiddenRestaurantPlaceIds)
+      ? raw.hiddenRestaurantPlaceIds.map((x) => String(x).trim()).filter(Boolean)
+      : [],
+  };
+}
+
 /** Deep-merge nested keys that need defaults when loading from PostgreSQL. */
 export function mergeWithSiteSettingsDefaults(serverSettings) {
   const s = serverSettings && typeof serverSettings === 'object' ? serverSettings : {};
   const diningGuide = mergeDiningGuide(s.diningGuide);
   const hotelsGuide = mergeHotelsGuide(s.hotelsGuide);
+  const discoverGuide = mergeDiscoverGuide(s.discoverGuide);
   const sponsoredPlacesEnabled = {
     ...siteSettingsDefaultsBase.sponsoredPlacesEnabled,
     ...(typeof s.sponsoredPlacesEnabled === 'object' && s.sponsoredPlacesEnabled !== null
@@ -94,6 +108,7 @@ export function mergeWithSiteSettingsDefaults(serverSettings) {
     ...s,
     diningGuide,
     hotelsGuide,
+    discoverGuide,
     sponsoredPlacesEnabled,
   };
 }
@@ -140,6 +155,8 @@ const siteSettingsDefaultsBase = {
   diningGuide: mergeDiningGuide({}),
   /** Editorial /hotels page — same shape as diningGuide */
   hotelsGuide: mergeHotelsGuide({}),
+  /** Discover page controls — currently used for hiding restaurant places from user-facing discover. */
+  discoverGuide: mergeDiscoverGuide({}),
   /** Self-serve paid sponsorship (Stripe). Requires server env + migration 029. */
   sponsorshipEnabled: false,
   sponsorshipDurationDays: 30,

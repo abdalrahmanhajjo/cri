@@ -119,6 +119,10 @@ function diningProfileToForm(dp) {
     diningServices: Array.isArray(profile.serviceModes) ? profile.serviceModes.join(', ') : '',
     diningAtmosphere: profile.atmosphere || '',
     diningReservationNotes: profile.reservationNotes || '',
+    diningContactAddress: profile.contactAddress || profile.address || '',
+    diningContactPhone: profile.contactPhone || profile.phone || '',
+    diningContactEmail: profile.contactEmail || profile.email || '',
+    diningContactNote: profile.contactNote || '',
     diningMenuNote: profile.menuNote || '',
     diningSignatureDishes: signatureLines,
     diningMenuJson: menuSectionsJson,
@@ -455,6 +459,10 @@ export default function BusinessPlaceEdit() {
         serviceModes: splitCommaList(form.diningServices),
         atmosphere: String(form.diningAtmosphere || '').trim(),
         reservationNotes: String(form.diningReservationNotes || '').trim(),
+        contactAddress: String(form.diningContactAddress || '').trim(),
+        contactPhone: String(form.diningContactPhone || '').trim(),
+        contactEmail: String(form.diningContactEmail || '').trim(),
+        contactNote: String(form.diningContactNote || '').trim(),
         menuNote: String(form.diningMenuNote || '').trim(),
         signatureDishes: parseSignatureDishLines(form.diningSignatureDishes),
         menuSections,
@@ -874,6 +882,46 @@ export default function BusinessPlaceEdit() {
                 onChange={setField('diningReservationNotes')}
                 placeholder="Booking windows, group sizes, walk-ins, special events, or table timing."
               />
+            </div>
+            <div className="business-field-row">
+              <div className="business-field">
+                <label>Contact address</label>
+                <input
+                  className="business-input"
+                  value={form.diningContactAddress || ''}
+                  onChange={setField('diningContactAddress')}
+                  placeholder="Tripoli Lebanon"
+                />
+              </div>
+              <div className="business-field">
+                <label>Contact phone</label>
+                <input
+                  className="business-input"
+                  value={form.diningContactPhone || ''}
+                  onChange={setField('diningContactPhone')}
+                  placeholder="+961 6 444 445 ext 1"
+                />
+              </div>
+            </div>
+            <div className="business-field-row">
+              <div className="business-field">
+                <label>Contact email</label>
+                <input
+                  className="business-input"
+                  value={form.diningContactEmail || ''}
+                  onChange={setField('diningContactEmail')}
+                  placeholder="callcenter@example.com"
+                />
+              </div>
+              <div className="business-field">
+                <label>Contact note</label>
+                <input
+                  className="business-input"
+                  value={form.diningContactNote || ''}
+                  onChange={setField('diningContactNote')}
+                  placeholder="Use this section for direct reservation details or guest support."
+                />
+              </div>
             </div>
             <div className="business-field">
               <label>Menu note</label>

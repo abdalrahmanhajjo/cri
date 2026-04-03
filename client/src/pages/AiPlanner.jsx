@@ -162,15 +162,11 @@ export default function AiPlanner() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
-  if (settings.aiPlannerEnabled === false) return <Navigate to="/plan" replace />;
+  const plannerDisabled = settings.aiPlannerEnabled === false;
   const storageUserId = user?.id != null ? String(user.id) : 'anon';
   const messagesEndRef = useRef(null);
   const messagesScrollRef = useRef(null);
   const chipsBarRef = useRef(null);
-  const composerRef = useRef(null);
-  /** Lifts composer above mobile on-screen keyboard (visualViewport gap). */
-  const [keyboardInsetPx, setKeyboardInsetPx] = useState(0);
-  const [composerHeight, setComposerHeight] = useState(76);
   const [planDockDayActive, setPlanDockDayActive] = useState(0);
   const [navFabVisible, setNavFabVisible] = useState(false);
 
@@ -208,13 +204,6 @@ export default function AiPlanner() {
   const [profilePlannerHints, setProfilePlannerHints] = useState({});
   const saveNoteTimeoutRef = useRef(null);
 
-  const greeting = useMemo(() => {
-    const h = new Date().getHours();
-    if (h < 12) return t('aiPlanner', 'greetingMorning');
-    if (h < 17) return t('aiPlanner', 'greetingAfternoon');
-    return t('aiPlanner', 'greetingEvening');
-  }, [t]);
-
   const moodCards = useMemo(
     () => [
       { icon: 'museum', label: t('aiPlanner', 'moodCulture'), prompt: t('aiPlanner', 'moodCulturePrompt') },
@@ -222,36 +211,6 @@ export default function AiPlanner() {
       { icon: 'mosque', label: t('aiPlanner', 'moodFaith'), prompt: t('aiPlanner', 'moodFaithPrompt') },
       { icon: 'storefront', label: t('aiPlanner', 'moodSouk'), prompt: t('aiPlanner', 'moodSoukPrompt') },
       { icon: 'auto_awesome', label: t('aiPlanner', 'moodSurprise'), prompt: t('aiPlanner', 'moodSurprisePrompt') },
-    ],
-    [t]
-  );
-
-  const quickStartSteps = useMemo(
-    () => [
-      {
-        number: '01',
-        title: t('aiPlanner', 'starterStepOneTitle'),
-        body: t('aiPlanner', 'starterStepOneBody'),
-      },
-      {
-        number: '02',
-        title: t('aiPlanner', 'starterStepTwoTitle'),
-        body: t('aiPlanner', 'starterStepTwoBody'),
-      },
-      {
-        number: '03',
-        title: t('aiPlanner', 'starterStepThreeTitle'),
-        body: t('aiPlanner', 'starterStepThreeBody'),
-      },
-    ],
-    [t]
-  );
-
-  const examplePrompts = useMemo(
-    () => [
-      t('aiPlanner', 'examplePromptOne'),
-      t('aiPlanner', 'examplePromptTwo'),
-      t('aiPlanner', 'examplePromptThree'),
     ],
     [t]
   );
@@ -264,37 +223,6 @@ export default function AiPlanner() {
     return m;
   }, [places]);
 
-  useEffect(() => {
-    let ro;
-    const raf = requestAnimationFrame(() => {
-      const el = composerRef.current;
-      if (!el || typeof ResizeObserver === 'undefined') return;
-      const measure = () => setComposerHeight(el.offsetHeight || 76);
-      measure();
-      ro = new ResizeObserver(measure);
-      ro.observe(el);
-    });
-    return () => {
-      cancelAnimationFrame(raf);
-      ro?.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return undefined;
-    const updateInset = () => {
-      const gap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      setKeyboardInsetPx(gap);
-    };
-    updateInset();
-    vv.addEventListener('resize', updateInset);
-    vv.addEventListener('scroll', updateInset);
-    return () => {
-      vv.removeEventListener('resize', updateInset);
-      vv.removeEventListener('scroll', updateInset);
-    };
-  }, []);
 
   useEffect(() => {
     const base = apiBase();
@@ -542,12 +470,62 @@ export default function AiPlanner() {
     return names;
   }, [interestsList, interestIds]);
 
+  const tripBriefSummary = useMemo(() => {
+    const parts = [];
+    parts.push(durationDays === 1 ? t('aiPlanner', 'oneDay') : `${durationDays} ${t('aiPlanner', 'days')}`);
+    parts.push(`${placesPerDay} ${t('aiPlanner', 'perDay')}`);
+    parts.push(
+      budget === 'low'
+        ? t('aiPlanner', 'budgetLow')
+        : budget === 'luxury'
+          ? t('aiPlanner', 'budgetLuxury')
+          : t('aiPlanner', 'budgetModerate')
+    );
+    parts.push(
+      selectedDate.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+      })
+    );
+    if (interestNames.length > 0) parts.push(interestNames.join(', '));
+    return parts.filter(Boolean);
+  }, [durationDays, placesPerDay, budget, selectedDate, interestNames, t]);
+
+  const buildGuidedPlannerPrompt = useCallback(
+    (intent = '') => {
+      const lines = [
+        `Build a Tripoli plan for ${durationDays} day(s) with ${placesPerDay} stops per day.`,
+        `Budget: ${budget}.`,
+        `Start date: ${formatYMD(selectedDate)}.`,
+        interestNames.length ? `Focus interests: ${interestNames.join(', ')}.` : 'Mix the best Tripoli highlights with a balanced pace.',
+        plannerMemory.personalNote ? `Traveler note: ${plannerMemory.personalNote}.` : '',
+        intent || 'Return the strongest itinerary with efficient routing, good pacing, and variety across the day.',
+      ].filter(Boolean);
+      return lines.join(' ');
+    },
+    [durationDays, placesPerDay, budget, selectedDate, interestNames, plannerMemory.personalNote]
+  );
+
   const lastPlanMessageIndex = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       const m = messages[i];
       if (m.role === 'assistant' && Array.isArray(m.slots)) return i;
     }
     return -1;
+  }, [messages]);
+
+  const latestUserMessage = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      if (messages[i]?.role === 'user') return messages[i];
+    }
+    return null;
+  }, [messages]);
+
+  const latestAssistantMessage = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      if (messages[i]?.role === 'assistant') return messages[i];
+    }
+    return null;
   }, [messages]);
 
   const planConflicts = useMemo(
@@ -1126,7 +1104,7 @@ export default function AiPlanner() {
     return () => obs.disconnect();
   }, [showPlanDayDock, durationDays, lastPlanMessageIndex, messages.length]);
 
-  const dockBottomOffset = keyboardInsetPx + composerHeight;
+  const dockBottomOffset = 0;
   /** Day-dock row (tabs + save) sits above composer; keep FAB fully above that band. */
   const AI_PLANNER_DAY_DOCK_STACK_PX = 88;
   const navFabBottomPx =
@@ -1150,13 +1128,15 @@ export default function AiPlanner() {
     }
   }, []);
 
+  if (plannerDisabled) return <Navigate to="/plan" replace />;
+
   return (
     <div className={`ai-planner${showPlanDayDock ? ' ai-planner--day-dock' : ''}`}>
-      <header className="ai-planner__top">
+      <header className="ai-planner__page-head">
         <Link to="/plan" className="ai-planner__back">
           <Icon name="arrow_back" size={22} /> {t('aiPlanner', 'back')}
         </Link>
-        <h1 className="ai-planner__title">{t('aiPlanner', 'title')}</h1>
+        <h1 className="ai-planner__page-title">{t('aiPlanner', 'title')}</h1>
         <button
           type="button"
           className="ai-planner__settings"
@@ -1177,73 +1157,18 @@ export default function AiPlanner() {
       )}
 
       <div className="ai-planner__hero">
-        <p className="ai-planner__eyebrow">{t('aiPlanner', 'heroEyebrow')}</p>
-        <h2 className="ai-planner__hero-title">{t('aiPlanner', 'heroTitle')}</h2>
-        <p className="ai-planner__greeting">{greeting}</p>
-        <p className="ai-planner__sub">{t('aiPlanner', 'heroSub')}</p>
-
-        <div className="ai-planner__starter">
-          <div className="ai-planner__starter-copy">
-            <h3 className="ai-planner__section-title">{t('aiPlanner', 'starterTitle')}</h3>
-            <p className="ai-planner__section-sub">{t('aiPlanner', 'starterLead')}</p>
-          </div>
-          <div className="ai-planner__steps" role="list" aria-label={t('aiPlanner', 'starterTitle')}>
-            {quickStartSteps.map((step) => (
-              <article key={step.number} className="ai-planner__step" role="listitem">
-                <span className="ai-planner__step-number">{step.number}</span>
-                <div>
-                  <h4>{step.title}</h4>
-                  <p>{step.body}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-
-        <div className="ai-planner__moods">
-          {moodCards.map((m) => (
-            <button
-              key={m.label}
-              type="button"
-              className="ai-planner__mood"
-              title={m.prompt}
-              disabled={sending || !aiConfigured || dataLoading}
-              onClick={() => sendMessage(m.prompt)}
-            >
-              <span className="ai-planner__mood-icon" aria-hidden>
-                <Icon name={m.icon} size={26} />
-              </span>
-              {m.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="ai-planner__examples" aria-label={t('aiPlanner', 'promptIdeasTitle')}>
-          <div className="ai-planner__examples-head">
-            <h3 className="ai-planner__section-title">{t('aiPlanner', 'promptIdeasTitle')}</h3>
-            <p className="ai-planner__section-sub">{t('aiPlanner', 'promptIdeasLead')}</p>
-          </div>
-          <div className="ai-planner__examples-list">
-            {examplePrompts.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                className="ai-planner__example-btn"
-                disabled={sending || !aiConfigured || dataLoading}
-                onClick={() => sendMessage(prompt)}
-              >
-                <Icon name="auto_awesome" size={18} aria-hidden />
-                <span>{prompt}</span>
-              </button>
-            ))}
-          </div>
+        <div className="ai-planner__flow" aria-label="Planner steps">
+          <span className="ai-planner__flow-step ai-planner__flow-step--active">1. Start</span>
+          <span className="ai-planner__flow-step">2. Set trip</span>
+          <span className="ai-planner__flow-step">3. Brief</span>
+          <span className="ai-planner__flow-step">4. Review</span>
         </div>
 
         <div className="ai-planner__chips-wrap" ref={chipsBarRef}>
           <div className="ai-planner__chips-head">
             <div>
+              <span className="ai-planner__section-step">Step 1</span>
               <h3 className="ai-planner__section-title">{t('aiPlanner', 'tripBriefTitle')}</h3>
-              <p className="ai-planner__section-sub">{t('aiPlanner', 'tripBriefHint')}</p>
             </div>
           </div>
           <div className="ai-planner__chips" role="toolbar" aria-label={t('aiPlanner', 'configure')}>
@@ -1360,101 +1285,169 @@ export default function AiPlanner() {
             </div>
           )}
         </div>
+
+        <div className="ai-planner__request-builder">
+          <div className="ai-planner__request-head">
+            <div>
+              <span className="ai-planner__section-step">Step 2</span>
+              <h3 className="ai-planner__section-title">Your brief</h3>
+              <p className="ai-planner__section-sub">Write one clear sentence about the kind of trip you want.</p>
+            </div>
+            {latestUserMessage?.content ? (
+              <span className="ai-planner__request-status">
+                Latest brief ready
+              </span>
+            ) : null}
+          </div>
+          <label className="ai-planner__sr-only" htmlFor="ai-planner-brief">
+            {t('aiPlanner', 'placeholder')}
+          </label>
+          <textarea
+            id="ai-planner-brief"
+            className="ai-planner__request-textarea"
+            rows={5}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={t('aiPlanner', 'placeholder')}
+            disabled={!aiConfigured || dataLoading || sending}
+          />
+          <div className="ai-planner__request-actions">
+            <button
+              type="button"
+              className="ai-planner__btn ai-planner__btn--primary"
+              disabled={!aiConfigured || dataLoading || sending || !input.trim()}
+              onClick={() => sendMessage(input)}
+            >
+              <Icon name="auto_awesome" size={18} />
+              Generate plan
+            </button>
+            <button
+              type="button"
+              className="ai-planner__btn ai-planner__btn--ghost"
+              disabled={sending || !aiConfigured || dataLoading || !lastSlots?.length}
+              onClick={() =>
+                sendMessage(
+                  buildGuidedPlannerPrompt(
+                    'Refine the current itinerary with the same brief, but improve flow, variety, and day balance.'
+                  )
+                )
+              }
+            >
+              <Icon name="refresh" size={18} />
+              Improve current plan
+            </button>
+          </div>
+        </div>
+
+        <div className="ai-planner__quick-row">
+          <div className="ai-planner__quick-head">
+            <span className="ai-planner__section-step">Optional</span>
+            <h3 className="ai-planner__section-title">Quick start</h3>
+          </div>
+          <div className="ai-planner__moods">
+            {moodCards.map((m) => (
+              <button
+                key={m.label}
+                type="button"
+                className="ai-planner__mood"
+                title={m.prompt}
+                disabled={sending || !aiConfigured || dataLoading}
+                onClick={() => sendMessage(m.prompt)}
+              >
+                <span className="ai-planner__mood-icon" aria-hidden>
+                  <Icon name={m.icon} size={26} />
+                </span>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="ai-planner__chat">
+        <div className="ai-planner__workspace-head">
+          <div>
+            <span className="ai-planner__section-step">Step 4</span>
+            <h3 className="ai-planner__section-title">Itinerary studio</h3>
+            <p className="ai-planner__section-sub">Check the result, adjust stops, then save the trip.</p>
+            <div className="ai-planner__brief-summary" aria-label="Trip brief summary">
+              {tripBriefSummary.map((item) => (
+                <span key={item} className="ai-planner__brief-pill">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+          {lastSlots?.length ? (
+            <button
+              type="button"
+              className="ai-planner__btn ai-planner__btn--ghost"
+              disabled={sending || !aiConfigured || dataLoading}
+              onClick={() =>
+                sendMessage(
+                  buildGuidedPlannerPrompt(
+                    'Refresh the itinerary using the current brief, but improve routing and overall trip quality.'
+                  )
+                )
+              }
+            >
+              <Icon name="refresh" size={18} />
+              Refresh plan
+            </button>
+          ) : null}
+        </div>
         <div ref={messagesScrollRef} className="ai-planner__messages">
           {dataLoading && (
             <div className="ai-planner__chat-loading" role="status" aria-live="polite">
               {t('aiPlanner', 'chatLoadingPlaces')}
             </div>
           )}
-          {!dataLoading && messages.length === 0 && (
-            <div className="ai-planner__chat-empty">
-              <div className="ai-planner__chat-empty-icon" aria-hidden>
-                <Icon name="travel_explore" size={24} />
+          {latestUserMessage?.content ? (
+            <section className="ai-planner__workspace-panel">
+              <div className="ai-planner__entry-label">Brief</div>
+              <div className="ai-planner__workspace-note">
+                {latestUserMessage.content}
               </div>
-              <h3>{t('aiPlanner', 'chatEmptyTitle')}</h3>
-              <p>{t('aiPlanner', 'chatEmptyHint')}</p>
-              <p className="ai-planner__chat-empty-tip">{t('aiPlanner', 'chatEmptyTip')}</p>
-              <div className="ai-planner__examples-list ai-planner__examples-list--empty">
-                {examplePrompts.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    className="ai-planner__example-btn ai-planner__example-btn--soft"
-                    disabled={sending || !aiConfigured || dataLoading}
-                    onClick={() => sendMessage(prompt)}
-                  >
-                    <Icon name="north_east" size={16} aria-hidden />
-                    <span>{prompt}</span>
-                  </button>
-                ))}
+            </section>
+          ) : null}
+
+          {latestAssistantMessage?.content ? (
+            <section className="ai-planner__workspace-panel">
+              <div className="ai-planner__entry-label">
+                {latestAssistantMessage.error ? 'Issue' : 'Summary'}
               </div>
-            </div>
-          )}
-          {messages.map((m, i) => (
-            <div key={i}>
               <div
-                className={`ai-planner__bubble ${
-                  m.role === 'user' ? 'ai-planner__bubble--user' : 'ai-planner__bubble--assistant'
-                }${m.error ? ' ai-planner__bubble--error' : ''}`}
+                className={`ai-planner__bubble ai-planner__bubble--assistant${
+                  latestAssistantMessage.error ? ' ai-planner__bubble--error' : ''
+                }`}
               >
-                {m.role === 'assistant' && !m.error && m.content
-                  ? m.content.split(/\n\n+/).map((para, pi) => (
-                      <p key={pi} className="ai-planner__bubble-para">
-                        {para}
-                      </p>
-                    ))
-                  : m.content}
-                {m.error && m.retryText && (
+                {latestAssistantMessage.content}
+                {latestAssistantMessage.error && latestAssistantMessage.retryText && (
                   <div className="ai-planner__plan-actions" style={{ marginTop: 10 }}>
                     <button
                       type="button"
                       className="ai-planner__btn ai-planner__btn--ghost"
-                      onClick={() => {
-                        setMessages((prev) => prev.filter((_, j) => j !== i));
-                        sendMessage(m.retryText);
-                      }}
+                      onClick={() => sendMessage(latestAssistantMessage.retryText)}
                     >
                       {t('aiPlanner', 'tryAgain')}
                     </button>
                   </div>
                 )}
-                {m.overlapRange && (
-                  <div className="ai-planner__overlap-actions">
-                    <p className="ai-planner__overlap-hint">{t('aiPlanner', 'overlapActionsHint')}</p>
-                    {(m.overlapTrips || []).map((trip) => (
-                      <button
-                        key={trip.id}
-                        type="button"
-                        className="ai-planner__overlap-btn ai-planner__overlap-btn--danger"
-                        onClick={() => handleDeleteOverlapTrip(trip.id, i)}
-                      >
-                        {t('aiPlanner', 'overlapDeleteTrip').replace(
-                          /\{name\}/g,
-                          (trip.name && String(trip.name).trim()) || t('aiPlanner', 'unnamedTrip')
-                        )}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      className="ai-planner__overlap-btn"
-                      onClick={() => handleShiftOverlapDates(i)}
-                    >
-                      {t('aiPlanner', 'overlapShiftDates')}
-                    </button>
-                  </div>
-                )}
               </div>
-              {Array.isArray(m.slots) && (() => {
-                const editable = i === lastPlanMessageIndex;
-                const conflictForMsg = editable ? getSlotConflictIndices(m.slots) : new Set();
-                return (
-                  <div
-                    className="ai-planner__plan"
-                    id={i === lastPlanMessageIndex ? `ai-planner-plan-${i}-anchor` : undefined}
-                  >
+            </section>
+          ) : null}
+
+          {lastPlanMessageIndex >= 0 && messages[lastPlanMessageIndex] && (() => {
+            const m = messages[lastPlanMessageIndex];
+            const i = lastPlanMessageIndex;
+            const editable = true;
+            const conflictForMsg = getSlotConflictIndices(m.slots || []);
+            return (
+              <div>
+                <div
+                  className="ai-planner__plan"
+                  id={`ai-planner-plan-${i}-anchor`}
+                >
                     <p className="ai-planner__plan-title">{t('aiPlanner', 'proposedPlan')}</p>
                     {editable && (
                       <>
@@ -1646,11 +1639,35 @@ export default function AiPlanner() {
                         </button>
                       </div>
                     )}
+                </div>
+                {latestAssistantMessage?.overlapRange && (
+                  <div className="ai-planner__overlap-actions">
+                    <p className="ai-planner__overlap-hint">{t('aiPlanner', 'overlapActionsHint')}</p>
+                    {(latestAssistantMessage.overlapTrips || []).map((trip) => (
+                      <button
+                        key={trip.id}
+                        type="button"
+                        className="ai-planner__overlap-btn ai-planner__overlap-btn--danger"
+                        onClick={() => handleDeleteOverlapTrip(trip.id, i)}
+                      >
+                        {t('aiPlanner', 'overlapDeleteTrip').replace(
+                          /\{name\}/g,
+                          (trip.name && String(trip.name).trim()) || t('aiPlanner', 'unnamedTrip')
+                        )}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className="ai-planner__overlap-btn"
+                      onClick={() => handleShiftOverlapDates(i)}
+                    >
+                      {t('aiPlanner', 'overlapShiftDates')}
+                    </button>
                   </div>
-                );
-              })()}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })()}
           {sending && (
             <div className="ai-planner__thinking" role="status" aria-live="polite" aria-busy="true">
               <span className="ai-planner__thinking-icon" aria-hidden>
@@ -1725,48 +1742,6 @@ export default function AiPlanner() {
           )}
         </div>
       )}
-
-      <div
-        ref={composerRef}
-        className="ai-planner__composer"
-        style={keyboardInsetPx > 0 ? { bottom: keyboardInsetPx } : undefined}
-      >
-        <div className="ai-planner__composer-inner">
-          <div className="ai-planner__composer-guide">
-            <span className="ai-planner__composer-guide-title">{t('aiPlanner', 'composerGuide')}</span>
-            <span className="ai-planner__composer-guide-text">{t('aiPlanner', 'composerTip')}</span>
-          </div>
-          <div className="ai-planner__composer-row">
-            <textarea
-              className="ai-planner__input"
-              rows={1}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage(input);
-                }
-              }}
-              placeholder={t('aiPlanner', 'placeholder')}
-              aria-label={t('aiPlanner', 'placeholder')}
-              disabled={!aiConfigured || dataLoading}
-              enterKeyHint="send"
-              autoComplete="off"
-            />
-            <button
-              type="button"
-              className="ai-planner__send"
-              disabled={!aiConfigured || dataLoading || sending || !input.trim()}
-              onClick={() => sendMessage(input)}
-              aria-label={t('aiPlanner', 'send')}
-            >
-              <Icon name="send" size={22} aria-hidden />
-              <span className="ai-planner__send-label">{t('aiPlanner', 'send')}</span>
-            </button>
-          </div>
-        </div>
-      </div>
 
       {settingsOpen && (
         <>
