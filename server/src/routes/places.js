@@ -12,7 +12,6 @@ const { isMessagingBlocked } = require('../utils/messagingBlocks');
 const { normalizeDbText } = require('../utils/normalizeDbText');
 const { cachePublicList } = require('../middleware/publicCache');
 const { listPlaces } = require('../repositories/publicContent');
-const { query } = require('../db');
 
 const MAX_VISITOR_FOLLOWUPS_PER_INQUIRY = 50;
 
@@ -414,46 +413,21 @@ router.get('/:id', async (req, res) => {
   try {
     const baseUrl = getUploadsBaseUrl(req);
     const lang = getRequestLang(req);
+    const places = await getCollection('places');
     
-    // Postgres query to find by ID or searchName or name matching slug
-    const sql = `
-      SELECT p.*,
-             tr.name as tr_name,
-             tr.description as tr_description,
-             tr.location as tr_location,
-             tr.category as tr_category,
-             tr.duration as tr_duration,
-             tr.price as tr_price,
-             tr.best_time as tr_best_time,
-             tr.tags as tr_tags
-      FROM places p
-      LEFT JOIN place_translations tr ON p.id = tr.place_id AND tr.lang = $1
-      WHERE p.id = $2
-         OR p.search_name = $2
-         OR lower(p.name) = lower($2)
-      LIMIT 1
-    `;
+    // Normalizing slug matching
+    const slugNorm = rawId.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
     
-    const { rows } = await query(sql, [lang, rawId]);
+    // MongoDB query to find by ID or searchName or name matching slug
+    const place = await places.findOne({
+      $or: [
+        { id: rawId },
+        { searchName: rawId },
+        { name: new RegExp('^' + rawId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+      ]
+    });
     
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Place not found' });
-    }
-    
-    const doc = rows[0];
-    const place = {
-      ...doc,
-      name: doc.tr_name || doc.name,
-      description: doc.tr_description || doc.description,
-      location: doc.tr_location || doc.location,
-      category: doc.tr_category || doc.category,
-      duration: doc.tr_duration || doc.duration,
-      price: doc.tr_price || doc.price,
-      bestTime: doc.tr_best_time || doc.best_time,
-      tags: doc.tr_tags || doc.tags,
-      searchName: doc.search_name
-    };
-
+    if (!place) return res.status(404).json({ error: 'Place not found' });
     res.json(docToPlace(place, baseUrl));
   } catch (err) {
     console.error(err);
