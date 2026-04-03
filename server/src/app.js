@@ -14,7 +14,7 @@ const metricsRoutes = require('./routes/metrics');
 const { logError, useJson: structuredLogs } = require('./utils/logger');
 const { captureException } = require('./instrumentSentry');
 const authRoutes = require('./routes/auth');
-const imagesRoutes = require('./routes/images');
+
 const placesRoutes = require('./routes/places');
 const toursRoutes = require('./routes/tours');
 const eventsRoutes = require('./routes/events');
@@ -238,7 +238,7 @@ app.use(
 );
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-app.use('/api/images', imagesRoutes);
+
 
 app.use('/api/public/weather', weatherPublicRoutes);
 
