@@ -1,7 +1,8 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware/auth');
-const { query } = require('../db');
+const { getCollection } = require('../mongo');
 const { parsePlaceId, parseTripId } = require('../utils/validate');
+const crypto = require('crypto');
 
 function generateTripId() {
   const t = Date.now();
@@ -20,16 +21,17 @@ function toYmdDb(val) {
 }
 
 async function findOverlappingTrips(userId, startYmd, endYmd, excludeTripId) {
-  const exclude = excludeTripId ?? null;
-  const result = await query(
-    `SELECT id, name FROM trips
-     WHERE user_id = $1
-       AND ($4::text IS NULL OR id <> $4)
-       AND start_date <= $3::date
-       AND end_date >= $2::date`,
-    [userId, startYmd, endYmd, exclude]
-  );
-  return result.rows;
+  const tripsColl = await getCollection('trips');
+  const queryObj = {
+    user_id: userId,
+    start_date: { $lte: endYmd },
+    end_date: { $gte: startYmd }
+  };
+  if (excludeTripId) {
+    queryObj.id = { $ne: excludeTripId };
+  }
+  const results = await tripsColl.find(queryObj).toArray();
+  return results;
 }
 
 function parseDays(val) {
@@ -50,7 +52,6 @@ function normalizeSlot(s) {
   return { placeId: String(placeId), startTime: st, endTime: en, notes };
 }
 
-/** Normalize days to TripDay-shaped JSON (Flutter parity) plus derived placeIds. */
 function normalizeDays(raw) {
   const arr = parseDays(raw);
   return arr.map((day) => {
@@ -77,11 +78,10 @@ function normalizeDays(raw) {
 router.get('/trips', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const result = await query(
-      'SELECT id, name, start_date, end_date, description, days, created_at FROM trips WHERE user_id = $1 ORDER BY start_date DESC',
-      [userId]
-    );
-    const trips = result.rows.map((row) => ({
+    const tripsColl = await getCollection('trips');
+    const rows = await tripsColl.find({ user_id: userId }).sort({ start_date: -1 }).toArray();
+    
+    const trips = rows.map((row) => ({
       id: row.id,
       name: row.name,
       startDate: row.start_date,
@@ -100,14 +100,11 @@ router.get('/trips', async (req, res) => {
 router.get('/trips/:id', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const idResult = parseTripId(req.params.id);
-    if (!idResult.valid) return res.status(400).json({ error: 'Invalid trip id' });
-    const result = await query(
-      'SELECT id, name, start_date, end_date, description, days, created_at FROM trips WHERE id = $1 AND user_id = $2',
-      [idResult.value, userId]
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Trip not found' });
-    const row = result.rows[0];
+    const tripId = req.params.id;
+    const tripsColl = await getCollection('trips');
+    const row = await tripsColl.findOne({ id: tripId, user_id: userId });
+    
+    if (!row) return res.status(404).json({ error: 'Trip not found' });
     res.json({
       id: row.id,
       name: row.name,
@@ -133,21 +130,16 @@ router.post('/trips', async (req, res) => {
     const t = req.body.description.trim();
     description = t.length ? t.slice(0, 10000) : null;
   }
-  if (!name || name.length > 200) return res.status(400).json({ error: 'Trip name required (max 200 chars)' });
-  if (!startDate || !endDate) return res.status(400).json({ error: 'startDate and endDate required' });
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-    return res.status(400).json({ error: 'Invalid dates (use YYYY-MM-DD)' });
+  
+  if (!name || name.length > 200) return res.status(400).json({ error: 'Trip name required' });
+  if (!startDate || !endDate) return res.status(400).json({ error: 'Dates required' });
+  if (startDate > endDate) return res.status(400).json({ error: 'Invalid range' });
+  
+  const overlaps = await findOverlappingTrips(userId, startDate, endDate, null);
+  if (overlaps.length > 0) {
+    return res.status(409).json({ error: 'Overlap detected', conflicts: overlaps.map(o => ({ id: o.id, name: o.name })) });
   }
-  if (startDate > endDate) return res.status(400).json({ error: 'startDate must be on or before endDate' });
-  const postOverlaps = await findOverlappingTrips(userId, startDate, endDate, null);
-  if (postOverlaps.length > 0) {
-    return res.status(409).json({
-      error:
-        'These dates overlap another trip. Delete or change the other trip, or pick different dates.',
-      code: 'TRIP_DATE_OVERLAP',
-      conflicts: postOverlaps.map((r) => ({ id: r.id, name: r.name })),
-    });
-  }
+  
   let initialDays = [];
   if (Array.isArray(req.body?.days)) {
     initialDays = normalizeDays(req.body.days).map((d) => {
@@ -156,24 +148,26 @@ router.post('/trips', async (req, res) => {
       return row;
     });
   }
+  
   const id = generateTripId();
   try {
-    const result = await query(
-      'INSERT INTO trips (id, user_id, name, start_date, end_date, description, days) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, start_date, end_date, description, days, created_at',
-      [id, userId, name, startDate, endDate, description, JSON.stringify(initialDays)]
-    );
-    const row = result.rows[0];
+    const tripsColl = await getCollection('trips');
+    const newTrip = {
+      id,
+      user_id: userId,
+      name,
+      start_date: startDate,
+      end_date: endDate,
+      description,
+      days: initialDays,
+      created_at: new Date()
+    };
+    await tripsColl.insertOne(newTrip);
     res.status(201).json({
-      id: row.id,
-      name: row.name,
-      startDate: row.start_date,
-      endDate: row.end_date,
-      description: row.description,
-      days: normalizeDays(row.days),
-      createdAt: row.created_at
+      ...newTrip,
+      days: normalizeDays(newTrip.days)
     });
   } catch (err) {
-    if (err.code === '42P01') return res.status(500).json({ error: 'Trips table not available' });
     console.error(err);
     res.status(500).json({ error: 'Failed to create trip' });
   }
@@ -181,139 +175,99 @@ router.post('/trips', async (req, res) => {
 
 router.patch('/trips/:id', async (req, res) => {
   const userId = req.user.userId;
-  const idResult = parseTripId(req.params.id);
-  if (!idResult.valid) return res.status(400).json({ error: 'Invalid trip id' });
+  const tripId = req.params.id;
   const { name, startDate, endDate, days, description } = req.body || {};
-  const updates = [];
-  const values = [];
-  let pos = 1;
-  if (typeof name === 'string' && name.trim()) {
-    updates.push(`name = $${pos++}`);
-    values.push(name.trim().slice(0, 200));
-  }
-  if (typeof description === 'string') {
-    const t = description.trim();
-    updates.push(`description = $${pos++}`);
-    values.push(t.length ? t.slice(0, 10000) : null);
-  }
-  if (startDate != null) {
-    updates.push(`start_date = $${pos++}`);
-    values.push(String(startDate).trim().slice(0, 10));
-  }
-  if (endDate != null) {
-    updates.push(`end_date = $${pos++}`);
-    values.push(String(endDate).trim().slice(0, 10));
-  }
-  if (Array.isArray(days)) {
-    const normalized = normalizeDays(days).map((d) => {
-      const row = { slots: d.slots };
-      if (d.date) row.date = d.date;
-      return row;
-    });
-    updates.push(`days = $${pos++}`);
-    values.push(JSON.stringify(normalized));
-  }
-  if (updates.length === 0) return res.status(400).json({ error: 'No updates provided' });
-  if (startDate != null || endDate != null) {
-    const cur = await query('SELECT start_date, end_date FROM trips WHERE id = $1 AND user_id = $2', [
-      idResult.value,
-      userId,
-    ]);
-    if (cur.rows.length === 0) return res.status(404).json({ error: 'Trip not found' });
-    const row = cur.rows[0];
-    const effStart = startDate != null ? String(startDate).trim().slice(0, 10) : toYmdDb(row.start_date);
-    const effEnd = endDate != null ? String(endDate).trim().slice(0, 10) : toYmdDb(row.end_date);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(effStart) || !/^\d{4}-\d{2}-\d{2}$/.test(effEnd)) {
-      return res.status(400).json({ error: 'Invalid dates (use YYYY-MM-DD)' });
-    }
-    if (effStart > effEnd) return res.status(400).json({ error: 'startDate must be on or before endDate' });
-    const overlaps = await findOverlappingTrips(userId, effStart, effEnd, idResult.value);
-    if (overlaps.length > 0) {
-      return res.status(409).json({
-        error:
-          'These dates overlap another trip. Delete or change the other trip, or pick different dates.',
-        code: 'TRIP_DATE_OVERLAP',
-        conflicts: overlaps.map((r) => ({ id: r.id, name: r.name })),
-      });
-    }
-  }
-  values.push(idResult.value, userId);
+  
   try {
-    const result = await query(
-      `UPDATE trips SET ${updates.join(', ')} WHERE id = $${pos} AND user_id = $${pos + 1} RETURNING id, name, start_date, end_date, description, days, created_at`,
-      values
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Trip not found' });
-    const row = result.rows[0];
+    const tripsColl = await getCollection('trips');
+    const trip = await tripsColl.findOne({ id: tripId, user_id: userId });
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+    
+    const setObj = {};
+    if (name !== undefined) setObj.name = name.trim().slice(0, 200);
+    if (description !== undefined) setObj.description = description ? description.trim().slice(0, 10000) : null;
+    if (startDate !== undefined) setObj.start_date = String(startDate).trim().slice(0, 10);
+    if (endDate !== undefined) setObj.end_date = String(endDate).trim().slice(0, 10);
+    if (Array.isArray(days)) {
+       setObj.days = normalizeDays(days).map(d => ({ slots: d.slots, date: d.date }));
+    }
+    
+    if (Object.keys(setObj).length === 0) return res.status(400).json({ error: 'No updates' });
+    
+    if (setObj.start_date || setObj.end_date) {
+      const s = setObj.start_date || trip.start_date;
+      const e = setObj.end_date || trip.end_date;
+      if (s > e) return res.status(400).json({ error: 'Invalid range' });
+      const overlaps = await findOverlappingTrips(userId, s, e, tripId);
+      if (overlaps.length > 0) {
+        return res.status(409).json({ error: 'Overlap', conflicts: overlaps.map(o => ({ id: o.id, name: o.name })) });
+      }
+    }
+    
+    await tripsColl.updateOne({ id: tripId }, { $set: setObj });
+    const updated = await tripsColl.findOne({ id: tripId });
     res.json({
-      id: row.id,
-      name: row.name,
-      startDate: row.start_date,
-      endDate: row.end_date,
-      description: row.description,
-      days: normalizeDays(row.days),
-      createdAt: row.created_at
+      ...updated,
+      days: normalizeDays(updated.days)
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to update trip' });
+    res.status(500).json({ error: 'Update failed' });
   }
 });
 
 router.delete('/trips/:id', async (req, res) => {
   const userId = req.user.userId;
-  const idResult = parseTripId(req.params.id);
-  if (!idResult.valid) return res.status(400).json({ error: 'Invalid trip id' });
+  const tripId = req.params.id;
   try {
-    const result = await query('DELETE FROM trips WHERE id = $1 AND user_id = $2 RETURNING id', [idResult.value, userId]);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Trip not found' });
+    const tripsColl = await getCollection('trips');
+    const result = await tripsColl.deleteOne({ id: tripId, user_id: userId });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Trip not found' });
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to delete trip' });
+    res.status(500).json({ error: 'Delete failed' });
   }
 });
 
-// Saved places – uses table: saved_places (user_id uuid, place_id varchar), composite primary key (user_id, place_id)
 router.get('/favourites', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const result = await query('SELECT place_id FROM saved_places WHERE user_id = $1', [userId]);
-    res.json({ placeIds: result.rows.map((r) => r.place_id) });
+    const favsColl = await getCollection('saved_places');
+    const rows = await favsColl.find({ user_id: userId }).toArray();
+    res.json({ placeIds: rows.map((r) => r.place_id) });
   } catch (err) {
-    if (err.code === '42P01') return res.json({ placeIds: [] });
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch favourites' });
+    res.json({ placeIds: [] });
   }
 });
 
 router.post('/favourites', async (req, res) => {
   const userId = req.user.userId;
-  const placeIdRaw = req.body && (req.body.placeId ?? req.body.place_id);
-  const placeIdResult = parsePlaceId(placeIdRaw);
-  if (!placeIdResult.valid) return res.status(400).json({ error: 'placeId required (string or number, max 255 chars)' });
+  const placeId = req.body && (req.body.placeId ?? req.body.place_id);
+  if (!placeId) return res.status(400).json({ error: 'placeId required' });
   try {
-    await query(
-      'INSERT INTO saved_places (user_id, place_id) VALUES ($1, $2) ON CONFLICT (user_id, place_id) DO NOTHING',
-      [userId, placeIdResult.value]
+    const favsColl = await getCollection('saved_places');
+    await favsColl.updateOne(
+      { user_id: userId, place_id: String(placeId) },
+      { $set: { user_id: userId, place_id: String(placeId), created_at: new Date() } },
+      { upsert: true }
     );
     res.json({ ok: true });
   } catch (err) {
-    if (err.code === '42P01') return res.json({ ok: true });
     console.error(err);
     res.status(500).json({ error: 'Failed to add favourite' });
   }
 });
 
 router.delete('/favourites/:placeId', async (req, res) => {
-  const placeIdResult = parsePlaceId(req.params.placeId);
-  if (!placeIdResult.valid) return res.status(400).json({ error: 'Invalid place id' });
   const userId = req.user.userId;
+  const placeId = req.params.placeId;
   try {
-    await query('DELETE FROM saved_places WHERE user_id = $1 AND place_id = $2', [userId, placeIdResult.value]);
+    const favsColl = await getCollection('saved_places');
+    await favsColl.deleteOne({ user_id: userId, place_id: String(placeId) });
     res.json({ ok: true });
   } catch (err) {
-    if (err.code === '42P01') return res.json({ ok: true });
     console.error(err);
     res.status(500).json({ error: 'Failed to remove favourite' });
   }

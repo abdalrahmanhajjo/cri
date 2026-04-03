@@ -1,4 +1,4 @@
-const { query } = require('../db');
+const { getCollection } = require('../mongo');
 const { parsePlaceId } = require('../utils/validate');
 
 /**
@@ -9,23 +9,24 @@ async function businessPortalMiddleware(req, res, next) {
   const userId = req.user?.userId;
   if (!userId) return res.status(401).json({ error: 'Authentication required' });
   try {
-    const { rows } = await query(
-      `SELECT COALESCE(u.is_business_owner, false) AS is_business_owner,
-              (SELECT COUNT(*)::int FROM place_owners po WHERE po.user_id = u.id) AS owned_places
-       FROM users u WHERE u.id = $1`,
-      [userId]
-    );
-    const row = rows[0];
-    if (!row) return res.status(403).json({ error: 'Forbidden' });
-    const ok = row.is_business_owner === true || (row.owned_places || 0) > 0;
+    const usersColl = await getCollection('users');
+    const poColl = await getCollection('place_owners');
+
+    const user = await usersColl.findOne({ id: userId });
+    if (!user) return res.status(403).json({ error: 'Forbidden' });
+
+    const ownedPlaces = await poColl.countDocuments({ user_id: userId });
+    
+    const ok = user.is_business_owner === true || ownedPlaces > 0;
     if (!ok) {
       return res.status(403).json({
         error: 'Business owner access required. Ask an admin to assign your place or enable the business owner role.',
       });
     }
+    
     req.businessPortal = {
-      isBusinessOwner: row.is_business_owner === true,
-      ownedPlaceCount: row.owned_places || 0,
+      isBusinessOwner: user.is_business_owner === true,
+      ownedPlaceCount: ownedPlaces,
     };
     return next();
   } catch (err) {
@@ -44,11 +45,9 @@ function requirePlaceOwnerParam(paramName = 'placeId') {
     if (!parsed.valid) return res.status(400).json({ error: 'Invalid place id' });
     const placeId = parsed.value;
     try {
-      const { rows } = await query(
-        'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
-        [userId, placeId]
-      );
-      if (!rows.length) {
+      const poColl = await getCollection('place_owners');
+      const owner = await poColl.findOne({ user_id: userId, place_id: placeId });
+      if (!owner) {
         return res.status(403).json({ error: 'You do not manage this place' });
       }
       req.ownsPlaceId = placeId;

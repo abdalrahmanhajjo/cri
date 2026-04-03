@@ -1,8 +1,8 @@
 /**
- * GET /api/site-settings — same payload as GET /api/admin/site-settings (alias for mobile app / CDNs).
+ * GET /api/site-settings — same payload as admin site-settings.
  */
 const express = require('express');
-const { query } = require('../db');
+const { getCollection } = require('../mongo');
 
 const router = express.Router();
 const ROW_ID = 'default';
@@ -16,13 +16,14 @@ function stripDeprecatedSiteSettings(obj) {
 
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await query('SELECT data, updated_at FROM site_settings WHERE id = $1', [ROW_ID]);
-    const data = rows[0]?.data;
+    const siteSettings = await getCollection('site_settings');
+    const row = await siteSettings.findOne({ id: ROW_ID });
+    
+    const data = row?.data;
     const settings = stripDeprecatedSiteSettings(data && typeof data === 'object' ? data : {});
-    res.json({ settings, updatedAt: rows[0]?.updated_at ?? null });
+    res.json({ settings, updatedAt: row?.updated_at ?? null });
   } catch (err) {
-    if (err.code === '42P01') return res.json({ settings: {}, updatedAt: null });
-    throw err;
+    res.json({ settings: {}, updatedAt: null });
   }
 });
 

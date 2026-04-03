@@ -1,23 +1,22 @@
 const express = require('express');
-const { query } = require('../db');
+const { getCollection } = require('../mongo');
 
 const router = express.Router();
 const ROW_ID = 'default';
 
 function normalizeSurface(raw) {
   const s = String(raw || '').trim().toLowerCase();
-  if (s === 'home' || s === 'discover' || s === 'feed' || s === 'dining' || s === 'hotels') return s;
-  return 'home';
+  const valid = ['home', 'discover', 'feed', 'dining', 'hotels'];
+  return valid.includes(s) ? s : 'home';
 }
 
 async function loadSiteSettings() {
   try {
-    const { rows } = await query('SELECT data FROM site_settings WHERE id = $1', [ROW_ID]);
-    const data = rows[0]?.data;
-    return data && typeof data === 'object' ? data : {};
+    const coll = await getCollection('site_settings');
+    const row = await coll.findOne({ id: ROW_ID });
+    return row?.data && typeof row.data === 'object' ? row.data : {};
   } catch (err) {
-    if (err.code === '42P01') return {};
-    throw err;
+    return {};
   }
 }
 
@@ -59,31 +58,55 @@ function rowToSponsored(r) {
 /** GET /api/sponsored-places?surface=home|discover|feed|dining|hotels */
 router.get('/', async (req, res) => {
   const surface = normalizeSurface(req.query.surface);
+  const now = new Date();
   try {
     const settings = await loadSiteSettings();
     if (!isSurfaceEnabled(settings, surface)) return res.json({ items: [], enabled: false });
 
-    const { rows } = await query(
-      `SELECT sp.id, sp.place_id, sp.surface, sp.rank, sp.enabled, sp.starts_at, sp.ends_at,
-              sp.badge_text, sp.title_override, sp.subtitle_override, sp.image_override_url, sp.cta_url,
-              p.name AS place_name, p.category AS place_category, p.location AS place_location, p.images AS place_images
-       FROM sponsored_places sp
-       INNER JOIN places p ON p.id = sp.place_id
-       WHERE sp.enabled = true
-         AND (sp.surface = $1 OR sp.surface = 'all')
-         AND (sp.starts_at IS NULL OR sp.starts_at <= NOW())
-         AND (sp.ends_at IS NULL OR sp.ends_at >= NOW())
-       ORDER BY sp.rank ASC, sp.created_at DESC
-       LIMIT 40`,
-      [surface]
-    );
-    res.json({ items: rows.map(rowToSponsored), enabled: true });
+    const sponsoredColl = await getCollection('sponsored_places');
+    const items = await sponsoredColl.aggregate([
+      { $match: {
+          enabled: true,
+          surface: { $in: [surface, 'all'] },
+          $or: [{ starts_at: null }, { starts_at: { $lte: now } }],
+          $or: [{ ends_at: null }, { ends_at: { $gte: now } }]
+      }},
+      { $lookup: {
+          from: 'places',
+          localField: 'place_id',
+          foreignField: 'id',
+          as: 'place'
+      }},
+      { $addFields: {
+          placeObj: { $arrayElemAt: ['$place', 0] }
+      }},
+      { $project: {
+          id: 1,
+          place_id: 1,
+          surface: 1,
+          rank: 1,
+          enabled: 1,
+          starts_at: 1,
+          ends_at: 1,
+          badge_text: 1,
+          title_override: 1,
+          subtitle_override: 1,
+          image_override_url: 1,
+          cta_url: 1,
+          place_name: '$placeObj.name',
+          place_category: '$placeObj.category',
+          place_location: '$placeObj.location',
+          place_images: '$placeObj.images'
+      }},
+      { $sort: { rank: 1, created_at: -1 } },
+      { $limit: 40 }
+    ]).toArray();
+
+    res.json({ items: items.map(rowToSponsored), enabled: true });
   } catch (err) {
-    if (err.code === '42P01') return res.json({ items: [], enabled: true });
     console.error(err);
-    res.status(500).json({ error: 'Failed to load sponsored places' });
+    res.json({ items: [], enabled: true });
   }
 });
 
 module.exports = router;
-

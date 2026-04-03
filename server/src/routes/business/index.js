@@ -1,7 +1,7 @@
 const express = require('express');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware } = require('../../middleware/placeOwner');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 
 const router = express.Router();
 
@@ -15,38 +15,36 @@ router.use(
 router.get('/me', authMiddleware, businessPortalMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { rows } = await query(
-      `SELECT p.id, p.name, p.location, p.category, p.images, p.rating, p.latitude, p.longitude
-       FROM places p
-       INNER JOIN place_owners po ON po.place_id = p.id AND po.user_id = $1
-       ORDER BY p.name`,
-      [userId]
-    );
-    function safeJson(val, fallback = []) {
-      if (Array.isArray(val)) return val;
-      if (typeof val === 'object' && val !== null) return val;
-      if (typeof val === 'string') {
-        try {
-          return JSON.parse(val);
-        } catch {
-          return fallback;
-        }
-      }
-      return fallback;
-    }
+    const poColl = await getCollection('place_owners');
+    
+    const ownedPlaces = await poColl.aggregate([
+      { $match: { user_id: userId } },
+      { $lookup: {
+          from: 'places',
+          localField: 'place_id',
+          foreignField: 'id',
+          as: 'place'
+      }},
+      { $unwind: '$place' },
+      { $sort: { 'place.name': 1 } }
+    ]).toArray();
+
     res.json({
       isBusinessOwner: req.businessPortal.isBusinessOwner,
       ownedPlaceCount: req.businessPortal.ownedPlaceCount,
-      places: rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        location: r.location,
-        category: r.category,
-        images: safeJson(r.images, []),
-        rating: r.rating,
-        latitude: r.latitude,
-        longitude: r.longitude,
-      })),
+      places: ownedPlaces.map((doc) => {
+        const r = doc.place;
+        return {
+          id: r.id,
+          name: r.name,
+          location: r.location,
+          category: r.category,
+          images: r.images || [],
+          rating: r.rating,
+          latitude: r.latitude,
+          longitude: r.longitude,
+        };
+      }),
     });
   } catch (err) {
     console.error(err);

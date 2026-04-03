@@ -4,10 +4,9 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
-const { createClient } = require('@supabase/supabase-js');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware } = require('../../middleware/placeOwner');
-const { query } = require('../../db');
+const { getCollection, getGridFSBucket } = require('../../mongo');
 const { parsePlaceId } = require('../../utils/validate');
 const {
   isLikelyVideoUpload,
@@ -20,47 +19,13 @@ const { getMulterFileSizeLimit } = require('../../utils/uploadLimits');
 const { prepareFeedVideoDiskPath } = require('../../utils/feedVideoUploadPrepare');
 
 const router = express.Router();
-const BUCKET = 'place-images';
-const LOCAL_PLACES = path.join(__dirname, '../../../uploads/places');
-const LOCAL_FEED_VIDEOS = path.join(__dirname, '../../../uploads/feed/videos');
-
 const MULTER_TMP = path.join(os.tmpdir(), 'visit-multer-uploads');
 
 try {
-  fs.mkdirSync(LOCAL_PLACES, { recursive: true });
-  fs.mkdirSync(LOCAL_FEED_VIDEOS, { recursive: true });
-  fs.mkdirSync(MULTER_TMP, { recursive: true });
+  if (!fs.existsSync(MULTER_TMP)) {
+    fs.mkdirSync(MULTER_TMP, { recursive: true });
+  }
 } catch (_) {}
-
-function getSupabase() {
-  const url = process.env.SUPABASE_URL?.trim();
-  const key = (process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)?.trim();
-  if (!url || !key) return null;
-  try {
-    return createClient(url, key);
-  } catch (e) {
-    console.error('Supabase client init error:', e.message);
-    return null;
-  }
-}
-
-async function ensureBucket(supabase) {
-  try {
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const exists = buckets?.some((b) => b.name === BUCKET);
-    if (exists) return true;
-    const { error } = await supabase.storage.createBucket(BUCKET, { public: true });
-    if (error) {
-      if (error.message?.includes('already exists') || error.message?.includes('duplicate')) return true;
-      console.error('Create bucket error:', error);
-      return false;
-    }
-    return true;
-  } catch (e) {
-    console.error('ensureBucket error:', e);
-    return false;
-  }
-}
 
 const multerFileLimits = getMulterFileSizeLimit();
 const uploadMw = multer({
@@ -94,11 +59,9 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
   if (!parsed.valid) return res.status(400).json({ error: 'placeId is required' });
   const placeId = parsed.value;
   try {
-    const { rows } = await query(
-      'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
-      [req.user.userId, placeId]
-    );
-    if (!rows.length) return res.status(403).json({ error: 'You do not manage this place' });
+    const poColl = await getCollection('place_owners');
+    const own = await poColl.findOne({ user_id: req.user.userId, place_id: placeId });
+    if (!own) return res.status(403).json({ error: 'You do not manage this place' });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to verify place' });
@@ -109,7 +72,6 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
   let uploadDiskPath = null;
   let contentType = req.file.mimetype;
   let safeExt;
-  let storagePrefix;
 
   try {
     if (isLikelyVideoUpload(req.file)) {
@@ -117,7 +79,6 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
       const ext = (rawExt.startsWith('.') ? rawExt : rawExt ? `.${rawExt}` : '').toLowerCase();
       const fromMime = VIDEO_MIME_TO_EXT[(req.file.mimetype || '').toLowerCase()] || '.mp4';
       safeExt = /^\.(mp4|webm|mov|m4v|3gp|3g2|mkv)$/i.test(ext) ? ext : fromMime;
-      storagePrefix = 'feed/videos';
       uploadDiskPath = multerPath;
       if (!contentType || contentType === 'application/octet-stream') {
         contentType = req.file.mimetype || 'application/octet-stream';
@@ -129,7 +90,6 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
       uploadBuffer = prep.buffer;
       contentType = prep.contentType;
       safeExt = pickImageExtension(contentType, req.file.originalname, prep.useExtension);
-      storagePrefix = 'places';
     }
   } catch (e) {
     if (e.code === 'HEIC_CONVERT_FAILED') {
@@ -140,115 +100,59 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
     throw e;
   }
 
-  let pathToCleanupAfterSuccess = multerPath;
+  let pathToCleanupAfterStored = multerPath;
   let transcoderCleanup = null;
-  if (uploadDiskPath && storagePrefix === 'feed/videos') {
+  if (uploadDiskPath) {
     const prep = await prepareFeedVideoDiskPath(multerPath, safeExt, req.file);
     uploadDiskPath = prep.diskPath;
-    pathToCleanupAfterSuccess = prep.cleanupPath;
+    pathToCleanupAfterStored = prep.cleanupPath;
     transcoderCleanup = prep.transcoderCleanup;
     if (prep.safeExt) safeExt = prep.safeExt;
     if (prep.contentType) contentType = prep.contentType;
   }
 
   const filename = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
-  const filePath = `${storagePrefix}/${filename}`;
 
-  const isProd = process.env.NODE_ENV === 'production';
-  const supabase = getSupabase();
-  if (!supabase && isProd) {
-    if (pathToCleanupAfterSuccess) await fs.promises.unlink(pathToCleanupAfterSuccess).catch(() => {});
-    if (transcoderCleanup) await transcoderCleanup().catch(() => {});
-    return res.status(503).json({
-      error: 'Uploads are not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on the server.',
-    });
-  }
-
-  async function cleanupAfterStored() {
-    if (pathToCleanupAfterSuccess) {
-      await fs.promises.unlink(pathToCleanupAfterSuccess).catch(() => {});
+  async function cleanup() {
+    if (pathToCleanupAfterStored) {
+      await fs.promises.unlink(pathToCleanupAfterStored).catch(() => {});
     }
     if (transcoderCleanup) {
       await transcoderCleanup().catch(() => {});
     }
   }
 
-  /** Supabase Node client is unreliable with fs ReadStream for large bodies; use a single buffer. */
-  let supabaseBody = uploadBuffer;
   try {
+    const bucket = getGridFSBucket();
+    if (!bucket) throw new Error('GridFS bucket not initialized');
+
+    const uploadStream = bucket.openUploadStream(filename, {
+      contentType: contentType || 'application/octet-stream',
+      metadata: { 
+        originalName: req.file.originalname,
+        uploadedBy: req.user.userId,
+        placeId: placeId,
+        source: 'business_upload'
+      }
+    });
+
     if (uploadDiskPath) {
-      supabaseBody = await fs.promises.readFile(uploadDiskPath);
-    }
-  } catch (readErr) {
-    console.error('Upload read failed:', readErr);
-    await cleanupAfterStored();
-    return res.status(500).json({ error: 'Could not read the uploaded file. Try a smaller video or another format.' });
-  }
-
-  const uploadContentType =
-    (contentType && String(contentType).trim()) ||
-    (storagePrefix === 'feed/videos' ? 'video/mp4' : 'application/octet-stream');
-
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.storage
-        .from(BUCKET)
-        .upload(filePath, supabaseBody, {
-          contentType: uploadContentType,
-          upsert: false,
-        });
-
-      if (!error) {
-        await cleanupAfterStored();
-        const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
-        return res.json({ url: urlData.publicUrl });
-      }
-      if (error.message?.includes('Bucket not found') || error.message?.includes('not found')) {
-        const bucketReady = await ensureBucket(supabase);
-        if (bucketReady) {
-          const retry = await supabase.storage.from(BUCKET).upload(filePath, supabaseBody, {
-            contentType: uploadContentType,
-            upsert: false,
-          });
-          if (!retry.error) {
-            await cleanupAfterStored();
-            const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(retry.data.path);
-            return res.json({ url: urlData.publicUrl });
-          }
-        }
-      }
-      console.error('Supabase storage upload error:', error);
-      if (isProd) {
-        await cleanupAfterStored();
-        return res.status(502).json({
-          error:
-            error.message ||
-            'Could not store the file. Check Storage bucket policies and file size limits.',
-        });
-      }
-    } catch (err) {
-      console.error('Supabase upload error:', err);
-      if (isProd) {
-        await cleanupAfterStored();
-        return res.status(502).json({ error: err?.message || 'Storage upload failed' });
-      }
-    }
-  }
-
-  try {
-    const localDir = storagePrefix === 'places' ? LOCAL_PLACES : LOCAL_FEED_VIDEOS;
-    const localPath = path.join(localDir, filename);
-    if (uploadDiskPath) {
-      await fs.promises.copyFile(uploadDiskPath, localPath);
+      const readStream = fs.createReadStream(uploadDiskPath);
+      readStream.pipe(uploadStream);
     } else {
-      await fs.promises.writeFile(localPath, uploadBuffer);
+      uploadStream.end(uploadBuffer);
     }
-    await cleanupAfterStored();
-    const publicPrefix = storagePrefix === 'places' ? '/uploads/places' : '/uploads/feed/videos';
-    res.json({ url: `${publicPrefix}/${filename}` });
+
+    await new Promise((resolve, reject) => {
+      uploadStream.on('finish', resolve);
+      uploadStream.on('error', reject);
+    });
+
+    await cleanup();
+    res.json({ url: `/api/images/${filename}` });
   } catch (err) {
-    console.error('Local upload error:', err);
-    await cleanupAfterStored();
+    console.error('GridFS upload error:', err);
+    await cleanup();
     res.status(500).json({ error: err?.message || 'Upload failed' });
   }
 });

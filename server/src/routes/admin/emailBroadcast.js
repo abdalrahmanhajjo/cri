@@ -1,6 +1,6 @@
 const express = require('express');
 const nodemailer = require('nodemailer');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { isSmtpConfigured } = require('../../services/emailService');
@@ -66,21 +66,23 @@ router.post('/', async (req, res) => {
       return res.status(503).json({ error: 'Could not create mail transport.' });
     }
 
-    let sql = `SELECT id, email, name FROM users
-       WHERE email IS NOT NULL AND TRIM(email) <> ''
-       AND COALESCE(is_blocked, false) = false`;
-    const params = [];
+    const query = {
+      email: { $ne: null, $not: /^\s*$/ },
+      is_blocked: { $ne: true }
+    };
     if (onlyVerified) {
-      sql += ' AND email_verified = true';
+      query.email_verified = true;
     }
-    sql += ' ORDER BY created_at ASC NULLS LAST';
 
-    const { rows } = await query(sql, params);
+    const usersColl = await getCollection('users');
+    const rows = await usersColl.find(query).sort({ created_at: 1 }).toArray();
+    
     let sent = 0;
     let failed = 0;
     const errors = [];
 
     for (const row of rows) {
+      if (!row.email) continue;
       try {
         await transport.sendMail({
           from,

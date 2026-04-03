@@ -1,8 +1,8 @@
 const express = require('express');
-const { query } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 const { sendDbAwareError } = require('../utils/dbHttpError');
 const { cachePublicList } = require('../middleware/publicCache');
+const { listCategories } = require('../repositories/publicContent');
 
 const router = express.Router();
 
@@ -21,18 +21,8 @@ function rowToCategory(row) {
 router.get('/', cachePublicList(120, 600), async (req, res) => {
   try {
     const lang = getRequestLang(req);
-    const result = await query(
-      `SELECT c.id, c.icon, c.color,
-              (SELECT COUNT(*)::int FROM places p WHERE p.category_id = c.id) AS count,
-              COALESCE(ct.name, c.name) AS name,
-              COALESCE(ct.description, c.description) AS description,
-              COALESCE(ct.tags, c.tags) AS tags
-       FROM categories c
-       LEFT JOIN category_translations ct ON ct.category_id = c.id AND ct.lang = $1
-       ORDER BY c.name`,
-      [lang]
-    );
-    res.json({ categories: result.rows.map(rowToCategory) });
+    const result = await listCategories(lang);
+    res.json({ categories: result.categories.map(rowToCategory) });
   } catch (err) {
     console.error(err);
     sendDbAwareError(res, err, 'Failed to fetch categories');

@@ -1,8 +1,8 @@
 const express = require('express');
-const { query } = require('../db');
 const { getRequestLang } = require('../utils/requestLang');
 
 const { cachePublicList } = require('../middleware/publicCache');
+const { listInterests } = require('../repositories/publicContent');
 
 const router = express.Router();
 
@@ -29,17 +29,8 @@ function rowToInterest(row) {
 router.get('/', cachePublicList(120, 600), async (req, res) => {
   try {
     const lang = getRequestLang(req);
-    const result = await query(
-      `SELECT i.id, i.icon, i.color, i.count, i.popularity,
-              COALESCE(it.name, i.name) AS name,
-              COALESCE(it.description, i.description) AS description,
-              COALESCE(it.tags, i.tags) AS tags
-       FROM interests i
-       LEFT JOIN interest_translations it ON it.interest_id = i.id AND it.lang = $1
-       ORDER BY i.popularity DESC NULLS LAST, i.name`,
-      [lang]
-    );
-    res.json({ interests: result.rows.map(rowToInterest) });
+    const result = await listInterests(lang);
+    res.json({ interests: result.interests.map(rowToInterest) });
   } catch (err) {
     if (err.code === '42P01') return res.json({ interests: [] });
     console.error(err);

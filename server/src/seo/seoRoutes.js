@@ -1,6 +1,6 @@
 const path = require('path');
 const express = require('express');
-const { query } = require('../db');
+const { getCollection } = require('../mongo');
 const { getRequestLang } = require('../utils/requestLang');
 const {
   clampText,
@@ -18,8 +18,6 @@ const LANGS = ['en', 'ar', 'fr'];
 
 function wantsHtml(req) {
   const accept = String(req.get('accept') || '');
-  // Do not treat image/font/etc. fetches as HTML. Favicon uses Accept: ... ,*/* ; matching * alone
-  // would wrongly return index.html and break the tab icon (generic globe in the address bar).
   if (accept.includes('text/html')) return true;
   if (accept.includes('*/*') && !accept.includes('image/') && !accept.includes('font/')) return true;
   return false;
@@ -35,14 +33,13 @@ function buildAlternates(baseUrl, pathname) {
     hreflang: code,
     href: `${safeUrlJoin(baseUrl, pathOnly)}?lang=${code}`,
   }));
-  // x-default should usually point to English.
   out.push({ hreflang: 'x-default', href: `${safeUrlJoin(baseUrl, pathOnly)}?lang=en` });
   return out;
 }
 
 function pickFirstImage(imagesJson) {
   try {
-    const arr = Array.isArray(imagesJson) ? imagesJson : typeof imagesJson === 'string' ? JSON.parse(imagesJson) : [];
+    const arr = Array.isArray(imagesJson) ? imagesJson : [];
     const u = arr.find((x) => typeof x === 'string' && x.trim());
     return u ? String(u).trim() : null;
   } catch {
@@ -129,7 +126,6 @@ function jsonLdPlace({ baseUrl, place, canonical, image }) {
       addressCountry: 'LB',
     },
   };
-  // Coordinates are optional but helpful.
   if (place?.latitude != null && place?.longitude != null) {
     const lat = Number(place.latitude);
     const lng = Number(place.longitude);
@@ -190,14 +186,11 @@ router.get('/sitemap.xml', async (req, res) => {
     }
 
     const urls = new Set();
-    const add = (p) => urls.add(safeUrlJoin('__BASE__', p)); // placeholder replaced on send
+    const add = (p) => urls.add(safeUrlJoin('__BASE__', p));
 
-    // Core pages
     add('/');
     add('/discover');
     add('/activities');
-
-    // SEO landing pages
     add('/things-to-do-in-tripoli-lebanon');
     add('/tripoli-old-city-guide');
     add('/tripoli-souks-guide');
@@ -206,18 +199,22 @@ router.get('/sitemap.xml', async (req, res) => {
     add('/about-tripoli');
     add('/partner-link-kit');
 
-    // Dynamic pages from DB
     try {
-      const [places, tours, events] = await Promise.all([
-        query('SELECT id FROM places ORDER BY id ASC'),
-        query('SELECT id FROM tours ORDER BY id ASC'),
-        query('SELECT id FROM events ORDER BY id ASC'),
+      const placesColl = await getCollection('places');
+      const toursColl = await getCollection('tours');
+      const eventsColl = await getCollection('events');
+
+      const [pDocs, tDocs, eDocs] = await Promise.all([
+        placesColl.find({}, { projection: { id: 1 } }).toArray(),
+        toursColl.find({}, { projection: { id: 1 } }).toArray(),
+        eventsColl.find({}, { projection: { id: 1 } }).toArray(),
       ]);
-      for (const r of places.rows || []) add(`/place/${encodeURIComponent(normalizeSlugSegment(String(r.id)))}`);
-      for (const r of tours.rows || []) add(`/tour/${encodeURIComponent(normalizeSlugSegment(String(r.id)))}`);
-      for (const r of events.rows || []) add(`/event/${encodeURIComponent(String(r.id))}`);
-    } catch {
-      // If DB is temporarily unavailable, still serve the static sitemap.
+
+      for (const r of pDocs) add(`/place/${encodeURIComponent(normalizeSlugSegment(String(r.id)))}`);
+      for (const r of tDocs) add(`/tour/${encodeURIComponent(normalizeSlugSegment(String(r.id)))}`);
+      for (const r of eDocs) add(`/event/${encodeURIComponent(String(r.id))}`);
+    } catch (e) {
+      console.error('[sitemap] DB fetch error:', e.message);
     }
 
     const xml =
@@ -231,7 +228,6 @@ router.get('/sitemap.xml', async (req, res) => {
     sitemapCache = { xml, ts: now };
     return res.type('application/xml').send(xml.replace(/__BASE__/g, baseUrl));
   } catch {
-    // Absolute fallback: never 500.
     const xml =
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
@@ -255,7 +251,6 @@ function makeSeoResponder({ clientDistPath }) {
 
       const indexHtml = loadClientIndexHtml(clientDistPath);
 
-      // Defaults
       let title = 'Visit Tripoli – Places, experiences & events';
       let description =
         'Discover Tripoli, Lebanon — places, experiences, tours, and events. Build your plan and explore the city.';
@@ -284,19 +279,16 @@ function makeSeoResponder({ clientDistPath }) {
       } else if (p.startsWith('/place/')) {
         const raw = decodeURIComponent(p.slice('/place/'.length));
         const id = normalizeSlugSegment(raw);
-        const { rows } = await query(
-          `SELECT p.id, p.latitude, p.longitude, p.images,
-                  p.search_name,
-                  COALESCE(pt.name, p.name) AS name,
-                  COALESCE(pt.description, p.description) AS description,
-                  COALESCE(pt.location, p.location) AS location
-           FROM places p
-           LEFT JOIN place_translations pt ON pt.place_id = p.id AND pt.lang = $2
-           WHERE LOWER(p.id::text) = $1 OR LOWER(COALESCE(p.search_name, '')) = $1
-           LIMIT 1`,
-          [String(id), lang]
-        );
-        const place = rows && rows[0];
+        const placesColl = await getCollection('places');
+        
+        const place = await placesColl.findOne({
+          $or: [
+            { id: id },
+            { searchName: id },
+            { name: new RegExp('^' + id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+          ]
+        });
+
         if (!place) {
           status = 404;
           robots = 'noindex,follow';
@@ -305,13 +297,13 @@ function makeSeoResponder({ clientDistPath }) {
           jsonLd = '';
           ogImage = safeUrlJoin(baseUrl, '/tripoli-hero-bg.png');
         } else {
-          const placeName = normalizeDbText(place.name || '');
-          const placeDesc = normalizeDbText(place.description || '');
-          const placeLoc = normalizeDbText(place.location || '');
-          place.name = placeName;
-          place.description = placeDesc;
-          place.location = placeLoc;
-          const canonicalId = normalizeSlugSegment(String(place.search_name || place.id));
+          const tr = place.translations ? place.translations[lang] : null;
+          const placeName = normalizeDbText(tr?.name || place.name || '');
+          const placeDesc = normalizeDbText(tr?.description || place.description || '');
+          const placeLoc = normalizeDbText(tr?.location || place.location || '');
+          
+          const metaPlace = { ...place, name: placeName, description: placeDesc, location: placeLoc };
+          const canonicalId = normalizeSlugSegment(String(place.searchName || place.id));
           title = `${placeName} | Visit Tripoli`;
           description = placeDesc || `Explore ${placeName} in Tripoli, Lebanon.`;
           canonical = safeUrlJoin(baseUrl, `/place/${encodeURIComponent(canonicalId)}`);
@@ -323,11 +315,11 @@ function makeSeoResponder({ clientDistPath }) {
             items: [
               { name: 'Home', path: '/' },
               { name: 'Discover', path: '/discover' },
-              { name: place.name, path: `/place/${encodeURIComponent(canonicalId)}` },
+              { name: placeName, path: `/place/${encodeURIComponent(canonicalId)}` },
             ],
           });
           jsonLd = JSON.stringify([
-            JSON.parse(jsonLdPlace({ baseUrl, place, canonical, image: ogImage })),
+            JSON.parse(jsonLdPlace({ baseUrl, place: metaPlace, canonical, image: ogImage })),
             crumbs,
             jsonLdOrg({ baseUrl }),
           ]);
@@ -335,18 +327,9 @@ function makeSeoResponder({ clientDistPath }) {
       } else if (p.startsWith('/tour/')) {
         const raw = decodeURIComponent(p.slice('/tour/'.length));
         const id = normalizeSlugSegment(raw);
-        const { rows } = await query(
-          `SELECT t.id, t.image,
-                  COALESCE(t.id::text, '') AS slug,
-                  COALESCE(tt.name, t.name) AS name,
-                  COALESCE(tt.description, t.description) AS description
-           FROM tours t
-           LEFT JOIN tour_translations tt ON tt.tour_id = t.id AND tt.lang = $2
-           WHERE LOWER(t.id::text) = $1
-           LIMIT 1`,
-          [String(id), lang]
-        );
-        const tour = rows && rows[0];
+        const toursColl = await getCollection('tours');
+        const tour = await toursColl.findOne({ id: id });
+
         if (!tour) {
           status = 404;
           robots = 'noindex,follow';
@@ -354,10 +337,11 @@ function makeSeoResponder({ clientDistPath }) {
           description = 'This tour could not be found.';
           jsonLd = '';
         } else {
-          const tourName = normalizeDbText(tour.name || '');
-          const tourDesc = normalizeDbText(tour.description || '');
-          tour.name = tourName;
-          tour.description = tourDesc;
+          const tr = tour.translations ? tour.translations[lang] : null;
+          const tourName = normalizeDbText(tr?.name || tour.name || '');
+          const tourDesc = normalizeDbText(tr?.description || tour.description || '');
+          const metaTour = { ...tour, name: tourName, description: tourDesc };
+          
           const canonicalId = normalizeSlugSegment(String(tour.id));
           title = `${tourName} | Tours in Tripoli`;
           description = tourDesc || `Tour: ${tourName}`;
@@ -369,30 +353,20 @@ function makeSeoResponder({ clientDistPath }) {
             items: [
               { name: 'Home', path: '/' },
               { name: 'Activities', path: '/activities' },
-              { name: tour.name, path: `/tour/${encodeURIComponent(canonicalId)}` },
+              { name: tourName, path: `/tour/${encodeURIComponent(canonicalId)}` },
             ],
           });
           jsonLd = JSON.stringify([
-            JSON.parse(jsonLdTour({ canonical, tour, image: ogImage })),
+            JSON.parse(jsonLdTour({ canonical, tour: metaTour, image: ogImage })),
             crumbs,
             jsonLdOrg({ baseUrl }),
           ]);
         }
       } else if (p.startsWith('/event/')) {
         const id = decodeURIComponent(p.slice('/event/'.length));
-        const { rows } = await query(
-          `SELECT e.id, e.start_date, e.end_date, e.image,
-                  COALESCE(et.name, e.name) AS name,
-                  COALESCE(et.description, e.description) AS description,
-                  COALESCE(et.location, e.location) AS location,
-                  COALESCE(et.status, e.status) AS status
-           FROM events e
-           LEFT JOIN event_translations et ON et.event_id = e.id AND et.lang = $2
-           WHERE e.id::text = $1
-           LIMIT 1`,
-          [String(id), lang]
-        );
-        const row = rows && rows[0];
+        const eventsColl = await getCollection('events');
+        const row = await eventsColl.findOne({ id: id });
+
         if (!row) {
           status = 404;
           robots = 'noindex,follow';
@@ -400,13 +374,14 @@ function makeSeoResponder({ clientDistPath }) {
           description = 'This event could not be found.';
           jsonLd = '';
         } else {
+          const tr = row.translations ? row.translations[lang] : null;
           const event = {
             id: row.id,
-            name: normalizeDbText(row.name || ''),
-            description: normalizeDbText(row.description || ''),
+            name: normalizeDbText(tr?.name || row.name || ''),
+            description: normalizeDbText(tr?.description || row.description || ''),
             startDate: row.start_date instanceof Date ? row.start_date.toISOString() : row.start_date,
             endDate: row.end_date instanceof Date ? row.end_date.toISOString() : row.end_date,
-            location: normalizeDbText(row.location || ''),
+            location: normalizeDbText(tr?.location || row.location || ''),
             status: row.status != null ? normalizeDbText(String(row.status)) : row.status,
           };
           title = `${event.name} | Events in Tripoli`;
@@ -519,10 +494,8 @@ function makeSeoResponder({ clientDistPath }) {
   };
 }
 
-/** Call after places/tours/events are deleted or merged so /sitemap.xml drops stale URLs immediately. */
 function invalidateSitemapCache() {
   sitemapCache = { xml: null, ts: 0 };
 }
 
 module.exports = { seoRouter: router, makeSeoResponder, invalidateSitemapCache };
-

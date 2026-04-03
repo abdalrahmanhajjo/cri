@@ -1,12 +1,12 @@
 const express = require('express');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 
 const router = express.Router();
 const ROW_ID = 'default';
 
-/** Remove deprecated keys so DB merges do not keep stale fields forever. */
+/** Remove deprecated keys. */
 function stripDeprecatedSiteSettings(obj) {
   if (!obj || typeof obj !== 'object') return obj;
   const next = { ...obj };
@@ -14,16 +14,17 @@ function stripDeprecatedSiteSettings(obj) {
   return next;
 }
 
-/** GET /api/admin/site-settings — public-ish payload for web (also used by app if you point it here) */
+/** GET /api/admin/site-settings */
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await query('SELECT data FROM site_settings WHERE id = $1', [ROW_ID]);
-    const data = rows[0]?.data;
+    const settingsColl = await getCollection('site_settings');
+    const doc = await settingsColl.findOne({ id: ROW_ID });
+    const data = doc?.data || {};
     const settings = stripDeprecatedSiteSettings(data && typeof data === 'object' ? data : {});
     res.json({ settings });
   } catch (err) {
-    if (err.code === '42P01') return res.json({ settings: {} });
-    throw err;
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load site settings' });
   }
 });
 
@@ -37,26 +38,21 @@ router.put('/', async (req, res) => {
   }
   const incoming = settings || {};
   try {
-    let existing = {};
-    try {
-      const prev = await query('SELECT data FROM site_settings WHERE id = $1', [ROW_ID]);
-      const row = prev.rows[0]?.data;
-      if (row && typeof row === 'object') existing = row;
-    } catch (_) {
-      /* ignore */
-    }
-    const data = stripDeprecatedSiteSettings({ ...existing, ...incoming });
-    await query(
-      `INSERT INTO site_settings (id, data, updated_at) VALUES ($1, $2::jsonb, NOW())
-       ON CONFLICT (id) DO UPDATE SET data = $2::jsonb, updated_at = NOW()`,
-      [ROW_ID, JSON.stringify(data)]
+    const settingsColl = await getCollection('site_settings');
+    const existingDoc = await settingsColl.findOne({ id: ROW_ID });
+    const existingData = existingDoc?.data || {};
+    
+    const newData = stripDeprecatedSiteSettings({ ...existingData, ...incoming });
+    
+    await settingsColl.updateOne(
+      { id: ROW_ID },
+      { $set: { data: newData, updated_at: new Date() } },
+      { upsert: true }
     );
-    res.json({ settings: data });
+    res.json({ settings: newData });
   } catch (err) {
-    if (err.code === '42P01') {
-      return res.status(503).json({ error: 'site_settings table missing. Run migration 005_site_settings.sql' });
-    }
-    throw err;
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update site settings' });
   }
 });
 

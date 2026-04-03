@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 
@@ -10,25 +10,35 @@ router.use(authMiddleware, adminMiddleware);
 router.get('/', async (req, res) => {
   const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '40'), 10) || 40));
   try {
-    const { rows } = await query(
-      `SELECT sp.id, sp.user_id, sp.place_id, sp.status, sp.stripe_checkout_session_id, sp.stripe_payment_intent_id,
-              sp.amount_cents, sp.currency, sp.duration_days, sp.surface, sp.starts_at, sp.ends_at,
-              sp.created_at, sp.updated_at, sp.sponsored_place_id,
-              p.name AS place_name, u.email AS user_email
-       FROM sponsorship_purchases sp
-       INNER JOIN places p ON p.id = sp.place_id
-       LEFT JOIN users u ON u.id = sp.user_id
-       ORDER BY sp.created_at DESC
-       LIMIT $1`,
-      [limit]
-    );
+    const spColl = await getCollection('sponsorship_purchases');
+    const rows = await spColl.aggregate([
+      { $lookup: {
+          from: 'places',
+          localField: 'place_id',
+          foreignField: 'id',
+          as: 'place'
+      }},
+      { $unwind: '$place' },
+      { $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: 'id',
+          as: 'user'
+      }},
+      { $addFields: {
+          user_email: { $arrayElemAt: ['$user.email', 0] }
+      }},
+      { $sort: { created_at: -1 } },
+      { $limit: limit }
+    ]).toArray();
+
     res.json({
       items: rows.map((r) => ({
         id: String(r.id),
         userId: String(r.user_id),
         userEmail: r.user_email || null,
         placeId: String(r.place_id),
-        placeName: r.place_name || '',
+        placeName: r.place.name || '',
         status: r.status,
         stripeCheckoutSessionId: r.stripe_checkout_session_id || null,
         stripePaymentIntentId: r.stripe_payment_intent_id || null,
@@ -44,7 +54,6 @@ router.get('/', async (req, res) => {
       })),
     });
   } catch (err) {
-    if (err.code === '42P01') return res.json({ items: [] });
     console.error(err);
     res.status(500).json({ error: 'Failed to load sponsorship purchases' });
   }

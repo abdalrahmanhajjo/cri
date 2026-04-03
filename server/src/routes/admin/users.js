@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 
@@ -19,56 +19,42 @@ router.get('/', async (req, res) => {
   const emailVerified = String(req.query.emailVerified || 'all').toLowerCase();
   const isBlocked = String(req.query.isBlocked || 'all').toLowerCase();
 
-  const where = [];
-  const params = [];
-
-  if (q) {
-    const idx = params.length + 1;
-    where.push(`(COALESCE(name, '') ILIKE $${idx} OR email ILIKE $${idx})`);
-    params.push(`%${q}%`);
-  }
-  if (provider === 'google') {
-    where.push(`auth_provider = 'google'`);
-  } else if (provider === 'email') {
-    where.push(`(auth_provider IS NULL OR auth_provider = '' OR auth_provider = 'email')`);
-  }
-  if (isAdmin === 'true') {
-    where.push('COALESCE(is_admin, false) = true');
-  } else if (isAdmin === 'false') {
-    where.push('COALESCE(is_admin, false) = false');
-  }
-  if (isBusinessOwner === 'true') {
-    where.push('COALESCE(is_business_owner, false) = true');
-  } else if (isBusinessOwner === 'false') {
-    where.push('COALESCE(is_business_owner, false) = false');
-  }
-  if (emailVerified === 'true') {
-    where.push('email_verified = true');
-  } else if (emailVerified === 'false') {
-    where.push('(email_verified IS NOT TRUE)');
-  }
-  if (isBlocked === 'true') {
-    where.push('COALESCE(is_blocked, false) = true');
-  } else if (isBlocked === 'false') {
-    where.push('COALESCE(is_blocked, false) = false');
-  }
-
-  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  const limIdx = params.length + 1;
-  const offIdx = params.length + 2;
   try {
-    const { rows } = await query(
-      `SELECT id, email, name, created_at, auth_provider, email_verified, phone_verified,
-              COALESCE(is_admin, false) AS is_admin, COALESCE(is_business_owner, false) AS is_business_owner,
-              COALESCE(is_blocked, false) AS is_blocked
-       FROM users
-       ${whereSql}
-       ORDER BY created_at DESC
-       LIMIT $${limIdx} OFFSET $${offIdx}`,
-      [...params, limit, offset]
-    );
-    const countRes = await query(`SELECT COUNT(*)::int AS c FROM users ${whereSql}`, params);
-    const total = countRes.rows[0]?.c ?? 0;
+    const usersColl = await getCollection('users');
+    const queryObj = {};
+
+    if (q) {
+      queryObj.$or = [
+        { name: { $regex: q, $options: 'i' } },
+        { email: { $regex: q, $options: 'i' } }
+      ];
+    }
+
+    if (provider === 'google') {
+      queryObj.auth_provider = 'google';
+    } else if (provider === 'email') {
+      queryObj.auth_provider = { $in: [null, '', 'email'] };
+    }
+
+    if (isAdmin === 'true') queryObj.is_admin = true;
+    else if (isAdmin === 'false') queryObj.is_admin = { $ne: true };
+
+    if (isBusinessOwner === 'true') queryObj.is_business_owner = true;
+    else if (isBusinessOwner === 'false') queryObj.is_business_owner = { $ne: true };
+
+    if (emailVerified === 'true') queryObj.email_verified = true;
+    else if (emailVerified === 'false') queryObj.email_verified = { $ne: true };
+
+    if (isBlocked === 'true') queryObj.is_blocked = true;
+    else if (isBlocked === 'false') queryObj.is_blocked = { $ne: true };
+
+    const total = await usersColl.countDocuments(queryObj);
+    const rows = await usersColl.find(queryObj)
+      .sort({ created_at: -1 })
+      .skip(offset)
+      .limit(limit)
+      .toArray();
+
     res.json({
       users: rows.map((r) => ({
         id: r.id,
@@ -95,43 +81,34 @@ router.patch('/:id', async (req, res) => {
   const id = req.params.id;
   if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid user id' });
   const { isAdmin, isBusinessOwner, isBlocked } = req.body || {};
-  const hasField =
-    typeof isAdmin === 'boolean' ||
-    typeof isBusinessOwner === 'boolean' ||
-    typeof isBlocked === 'boolean';
-  if (!hasField) {
+  
+  if (typeof isAdmin !== 'boolean' && typeof isBusinessOwner !== 'boolean' && typeof isBlocked !== 'boolean') {
     return res.status(400).json({ error: 'Provide isAdmin, isBusinessOwner, and/or isBlocked booleans' });
   }
+  
   const actorId = req.user.userId;
-  if (typeof isBlocked === 'boolean' && isBlocked === true && id === actorId) {
+  if (isBlocked === true && id === actorId) {
     return res.status(400).json({ error: 'You cannot block your own account' });
   }
-  if (typeof isAdmin === 'boolean' && id === actorId) {
+  if (isAdmin !== undefined && id === actorId) {
     return res.status(400).json({ error: 'You cannot change your own admin role here' });
   }
+
   try {
-    const updates = [];
-    const vals = [];
-    let p = 1;
-    if (typeof isAdmin === 'boolean') {
-      updates.push(`is_admin = $${p++}`);
-      vals.push(isAdmin);
-    }
-    if (typeof isBusinessOwner === 'boolean') {
-      updates.push(`is_business_owner = $${p++}`);
-      vals.push(isBusinessOwner);
-    }
-    if (typeof isBlocked === 'boolean') {
-      updates.push(`is_blocked = $${p++}`);
-      vals.push(isBlocked);
-    }
-    vals.push(id);
-    const result = await query(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = $${p} RETURNING id, email, name, is_admin, is_business_owner, COALESCE(is_blocked, false) AS is_blocked`,
-      vals
+    const setObj = {};
+    if (typeof isAdmin === 'boolean') setObj.is_admin = isAdmin;
+    if (typeof isBusinessOwner === 'boolean') setObj.is_business_owner = isBusinessOwner;
+    if (typeof isBlocked === 'boolean') setObj.is_blocked = isBlocked;
+
+    const usersColl = await getCollection('users');
+    const result = await usersColl.findOneAndUpdate(
+      { id: id },
+      { $set: setObj },
+      { returnDocument: 'after' }
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-    const r = result.rows[0];
+
+    if (!result) return res.status(404).json({ error: 'User not found' });
+    const r = result;
     res.json({
       id: r.id,
       email: r.email,
@@ -146,7 +123,7 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-/** DELETE /api/admin/users/:id — remove account (fails if FKs prevent it) */
+/** DELETE /api/admin/users/:id */
 router.delete('/:id', async (req, res) => {
   const id = req.params.id;
   if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid user id' });
@@ -154,16 +131,11 @@ router.delete('/:id', async (req, res) => {
     return res.status(400).json({ error: 'You cannot delete your own account from here' });
   }
   try {
-    const result = await query('DELETE FROM users WHERE id = $1', [id]);
-    if (result.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+    const usersColl = await getCollection('users');
+    const result = await usersColl.deleteOne({ id });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'User not found' });
     res.status(204).send();
   } catch (err) {
-    if (err.code === '23503') {
-      return res.status(409).json({
-        error:
-          'Cannot delete this user while related data exists (trips, favourites, feed posts, etc.). Remove or reassign those records first.',
-      });
-    }
     console.error(err);
     res.status(500).json({ error: 'Failed to delete user' });
   }

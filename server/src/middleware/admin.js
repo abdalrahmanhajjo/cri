@@ -1,9 +1,8 @@
-const { query } = require('../db');
+const { getCollection } = require('../mongo');
 
 /**
  * Requires authMiddleware first. Allows access if users.is_admin is true
  * or email is listed in ADMIN_EMAILS (comma-separated, for bootstrap).
- * Same DB as the mobile app — grant admin in Supabase: UPDATE users SET is_admin = true WHERE email = '...';
  */
 async function adminMiddleware(req, res, next) {
   const userId = req.user?.userId;
@@ -16,18 +15,17 @@ async function adminMiddleware(req, res, next) {
     .filter(Boolean);
 
   try {
-    const { rows } = await query(
-      'SELECT id, email, COALESCE(is_admin, false) AS is_admin FROM users WHERE id = $1',
-      [userId]
-    );
-    const row = rows[0];
-    if (!row) {
+    const usersColl = await getCollection('users');
+    const user = await usersColl.findOne({ id: userId });
+    
+    if (!user) {
       return res.status(403).json({ error: 'Forbidden' });
     }
-    const email = (row.email || '').toLowerCase();
+    const email = (user.email || '').toLowerCase();
     const onAllowList = allowEmails.length > 0 && allowEmails.includes(email);
-    if (row.is_admin === true || onAllowList) {
-      req.admin = { userId: row.id, email: row.email, viaAllowList: onAllowList && row.is_admin !== true };
+    
+    if (user.is_admin === true || onAllowList) {
+      req.admin = { userId: user.id, email: user.email, viaAllowList: onAllowList && user.is_admin !== true };
       return next();
     }
     return res.status(403).json({ error: 'Admin access required. Ask a database admin to set is_admin = true for your account, or add your email to ADMIN_EMAILS in development.' });

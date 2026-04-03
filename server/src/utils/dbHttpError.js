@@ -1,41 +1,34 @@
 /**
- * Map pg / pool errors to HTTP responses so public routes stay consistent.
+ * Map MongoDB errors to HTTP responses so public routes stay consistent.
  */
 function isDatabaseConnectivityError(err) {
   const msg = String(err?.message || err || '');
   return (
-    err?.code === 'XX000' ||
-    msg.includes('Circuit breaker') ||
-    msg.includes('Failed to retrieve database credentials') ||
-    msg.includes('Unable to establish connection to upstream') ||
-    msg.includes('upstream database') ||
-    msg.includes('Connection terminated') ||
+    // MongoDB
+    msg.includes('MONGODB_URI is not configured') ||
+    msg.includes('topology was destroyed') ||
+    msg.includes('server selection timeout') ||
+    msg.includes('failed to connect to server') ||
+    // Common
     msg.includes('ECONNREFUSED') ||
     msg.includes('ETIMEDOUT') ||
     msg.includes('ENOTFOUND')
   );
 }
 
-/** User-facing copy when DB is down (avoids blaming auth when upstream Postgres is unreachable). */
+/** User-facing copy when DB is down. */
 function userFacingDbUnavailableMessage(detailMsg) {
   const m = String(detailMsg || '');
-  if (m.includes('ENOTFOUND') && m.includes('db.') && m.includes('supabase.co')) {
-    return (
-      'DNS could not resolve the Supabase Direct host (db.*.supabase.co). Use the Session pooler URI in server/.env instead (Project Settings → Database), or fix DNS / IPv6 on your network.'
-    );
+  
+  if (m.includes('MONGODB_URI')) {
+    return 'Database configuration error: MONGODB_URI is missing or invalid.';
   }
-  if (
-    m.includes('Unable to establish connection to upstream') ||
-    m.includes('upstream database')
-  ) {
-    return (
-      'Database unavailable: Supabase could not reach Postgres (upstream). If the project was paused, open the dashboard and Restore, then wait 2–5 minutes. ' +
-      'Try the other connection mode in Project Settings → Database (Session pooler vs Direct). Check https://status.supabase.com for incidents.'
-    );
+
+  if (m.includes('server selection timeout') || m.includes('failed to connect to server')) {
+    return 'Cannot reach the MongoDB database. Ensure your cluster is active and your IP is whitelisted in MongoDB Atlas (if used).';
   }
-  return (
-    'Cannot reach the database. In Supabase: ensure the project is active (not paused), then set DATABASE_URL in server/.env to the Direct or Session pooler URI from Project Settings → Database (password URL-encoded).'
-  );
+
+  return 'The database is currently unavailable. Please try again in a few minutes.';
 }
 
 /**

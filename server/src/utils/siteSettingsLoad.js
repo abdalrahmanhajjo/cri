@@ -1,15 +1,16 @@
-const { query } = require('../db');
+const { getCollection } = require('../mongo');
 
 const ROW_ID = 'default';
 
 async function loadSiteSettings() {
   try {
-    const { rows } = await query('SELECT data FROM site_settings WHERE id = $1', [ROW_ID]);
-    const data = rows[0]?.data;
+    const coll = await getCollection('site_settings');
+    const doc = await coll.findOne({ id: ROW_ID });
+    const data = doc?.data;
     return data && typeof data === 'object' ? data : {};
   } catch (err) {
-    if (err.code === '42P01') return {};
-    throw err;
+    console.error('[siteSettingsLoad]', err);
+    return {};
   }
 }
 

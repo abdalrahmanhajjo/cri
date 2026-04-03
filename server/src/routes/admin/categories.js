@@ -1,11 +1,10 @@
 const express = require('express');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { validateCategoryCreate } = require('../../utils/validateAdminCategory');
 
 const router = express.Router();
-
 router.use(authMiddleware, adminMiddleware);
 
 function safeJson(val, fallback = []) {
@@ -24,23 +23,27 @@ router.post('/', async (req, res) => {
     if (!parsed.ok) {
       return res.status(400).json({ error: 'Validation failed', details: parsed.errors });
     }
-    const { id, name, icon, description, color, count } = parsed.value;
+    const v = parsed.value;
 
     const tags = safeJson(body.tags, []);
-    const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
+    const categoriesColl = await getCollection('categories');
+    
+    const doc = {
+      id: v.id,
+      name: v.name,
+      icon: v.icon,
+      description: v.description,
+      tags: Array.isArray(tags) ? tags : [],
+      count: v.count || 0,
+      color: v.color || '#666666',
+      updated_at: new Date()
+    };
 
-    await query(
-      `INSERT INTO categories (id, name, icon, description, tags, count, color)
-       VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
-       ON CONFLICT (id) DO UPDATE SET
-         name = EXCLUDED.name, icon = EXCLUDED.icon, description = EXCLUDED.description,
-         tags = EXCLUDED.tags, count = EXCLUDED.count, color = EXCLUDED.color`,
-      [id, name, icon, description, tagsJson, count, color]
-    );
-    res.status(201).json({ id, message: 'Category saved' });
+    await categoriesColl.replaceOne({ id: v.id }, doc, { upsert: true });
+    res.status(201).json({ id: v.id, message: 'Category saved' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to save category', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+    res.status(500).json({ error: 'Failed to save category' });
   }
 });
 
@@ -48,41 +51,38 @@ router.put('/:id', async (req, res) => {
   try {
     const id = req.params.id;
     const body = req.body || {};
-    const tags = body.tags !== undefined ? safeJson(body.tags, []) : null;
-    const tagsJson = tags !== null ? JSON.stringify(Array.isArray(tags) ? tags : []) : null;
+    
+    const setObj = {};
+    if (body.name !== undefined) setObj.name = String(body.name);
+    if (body.icon !== undefined) setObj.icon = String(body.icon);
+    if (body.description !== undefined) setObj.description = String(body.description);
+    if (body.tags !== undefined) setObj.tags = safeJson(body.tags, []);
+    if (body.count !== undefined) setObj.count = parseInt(body.count, 10);
+    if (body.color !== undefined) setObj.color = String(body.color);
+    
+    setObj.updated_at = new Date();
 
-    const result = await query(
-      `UPDATE categories SET
-         name = COALESCE($2, name), icon = COALESCE($3, icon), description = COALESCE($4, description),
-         tags = COALESCE($5::jsonb, tags), count = COALESCE($6, count), color = COALESCE($7, color)
-       WHERE id = $1`,
-      [
-        id,
-        body.name !== undefined ? String(body.name) : null,
-        body.icon !== undefined ? String(body.icon) : null,
-        body.description !== undefined ? String(body.description) : null,
-        tagsJson,
-        body.count !== undefined ? parseInt(body.count, 10) : null,
-        body.color !== undefined ? String(body.color) : null,
-      ]
-    );
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Category not found' });
+    const categoriesColl = await getCollection('categories');
+    const result = await categoriesColl.updateOne({ id }, { $set: setObj });
+    
+    if (result.matchedCount === 0) return res.status(404).json({ error: 'Category not found' });
     res.json({ id, message: 'Category updated' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to update category', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+    res.status(500).json({ error: 'Failed to update category' });
   }
 });
 
 router.delete('/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await query('DELETE FROM categories WHERE id = $1', [id]);
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Category not found' });
+    const categoriesColl = await getCollection('categories');
+    const result = await categoriesColl.deleteOne({ id });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Category not found' });
     res.json({ message: 'Category deleted' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to delete category', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+    res.status(500).json({ error: 'Failed to delete category' });
   }
 });
 

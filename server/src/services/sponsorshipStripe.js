@@ -1,4 +1,4 @@
-const { pool, query } = require('../db');
+const { getCollection, getDb } = require('../mongo');
 
 const PAID_RANK = (() => {
   const n = parseInt(process.env.SPONSORSHIP_PAID_DEFAULT_RANK || '500', 10);
@@ -26,13 +26,8 @@ function sponsorshipConfigFromSettings(settings) {
 }
 
 async function assertCanStartPaidCheckout(placeId, surface = 'all') {
-  const { rows } = await query(
-    `SELECT id, source, enabled, ends_at
-     FROM sponsored_places
-     WHERE place_id = $1 AND surface = $2`,
-    [placeId, surface]
-  );
-  const row = rows[0];
+  const spColl = await getCollection('sponsored_places');
+  const row = await spColl.findOne({ place_id: placeId, surface });
   if (!row) return { ok: true };
   if (row.source === 'admin') {
     return {
@@ -66,111 +61,99 @@ async function applyCheckoutSessionCompleted(session) {
   const amountTotal = typeof session.amount_total === 'number' ? session.amount_total : null;
   const currency = session.currency ? String(session.currency).toLowerCase() : 'usd';
 
-  const client = await pool.connect();
+  const db = await getDb();
+  const mongoSession = db.client.startSession();
+  
   try {
-    await client.query('BEGIN');
-    const { rows: purRows } = await client.query(
-      `SELECT id, user_id, place_id, surface, duration_days, status, sponsored_place_id
-       FROM sponsorship_purchases
-       WHERE id = $1
-       FOR UPDATE`,
-      [purchaseId]
-    );
-    const pur = purRows[0];
-    if (!pur) {
-      await client.query('ROLLBACK');
-      console.warn('[sponsorship] purchase not found', purchaseId);
-      return;
-    }
-    if (pur.status === 'active') {
-      await client.query('COMMIT');
-      return;
-    }
-    if (pur.status !== 'pending' && pur.status !== 'paid') {
-      await client.query('COMMIT');
-      return;
-    }
+    await mongoSession.withTransaction(async () => {
+      const spColl = db.collection('sponsored_places');
+      const purColl = db.collection('sponsorship_purchases');
 
-    const placeId = String(pur.place_id);
-    const surface = String(pur.surface || 'all');
-    const userId = pur.user_id;
-    const durationDays = Math.max(1, parseInt(String(pur.duration_days), 10) || 30);
+      const pur = await purColl.findOne({ id: purchaseId }, { session: mongoSession });
+      if (!pur) {
+        console.warn('[sponsorship] purchase not found', purchaseId);
+        return;
+      }
+      if (pur.status === 'active') return;
+      if (pur.status !== 'pending' && pur.status !== 'paid') return;
 
-    const starts = new Date();
-    const ends = new Date(starts);
-    ends.setUTCDate(ends.getUTCDate() + durationDays);
+      const placeId = String(pur.place_id);
+      const surface = String(pur.surface || 'all');
+      const userId = pur.user_id;
+      const durationDays = Math.max(1, parseInt(String(pur.duration_days), 10) || 30);
 
-    const { rows: upsertRows } = await client.query(
-      `INSERT INTO sponsored_places
-         (place_id, surface, rank, enabled, starts_at, ends_at, source, purchase_id, purchased_by_user_id,
-          created_at, updated_at)
-       VALUES ($1, $2, $3, true, $4::timestamptz, $5::timestamptz, 'paid', $6, $7, NOW(), NOW())
-       ON CONFLICT (place_id, surface) DO UPDATE SET
-         rank = EXCLUDED.rank,
-         enabled = true,
-         starts_at = EXCLUDED.starts_at,
-         ends_at = EXCLUDED.ends_at,
-         source = 'paid',
-         purchase_id = EXCLUDED.purchase_id,
-         purchased_by_user_id = EXCLUDED.purchased_by_user_id,
-         updated_at = NOW()
-       RETURNING id`,
-      [placeId, surface, PAID_RANK, starts.toISOString(), ends.toISOString(), purchaseId, userId]
-    );
+      const starts = new Date();
+      const ends = new Date(starts);
+      ends.setUTCDate(ends.getUTCDate() + durationDays);
 
-    const spId = upsertRows[0]?.id;
+      const spDoc = {
+        place_id: placeId,
+        surface: surface,
+        rank: PAID_RANK,
+        enabled: true,
+        starts_at: starts,
+        ends_at: ends,
+        source: 'paid',
+        purchase_id: purchaseId,
+        purchased_by_user_id: userId,
+        updated_at: new Date()
+      };
 
-    const amountParam = typeof amountTotal === 'number' && Number.isFinite(amountTotal) ? Math.round(amountTotal) : null;
+      const existingSP = await spColl.findOne({ place_id: placeId, surface: surface }, { session: mongoSession });
+      const spId = existingSP ? existingSP.id : require('crypto').randomUUID();
+      if (!existingSP) spDoc.id = spId;
+      if (!existingSP) spDoc.created_at = new Date();
 
-    await client.query(
-      `UPDATE sponsorship_purchases SET
-         status = 'active',
-         stripe_payment_intent_id = COALESCE($2::text, stripe_payment_intent_id),
-         amount_cents = COALESCE($3::int, amount_cents),
-         currency = COALESCE(NULLIF($4::text, ''), currency),
-         sponsored_place_id = $5,
-         starts_at = $6::timestamptz,
-         ends_at = $7::timestamptz,
-         updated_at = NOW()
-       WHERE id = $1`,
-      [purchaseId, stripePaymentIntentId, amountParam, currency || null, spId || null, starts.toISOString(), ends.toISOString()]
-    );
+      await spColl.replaceOne({ place_id: placeId, surface: surface }, spDoc, { upsert: true, session: mongoSession });
 
-    await client.query('COMMIT');
+      const amountParam = typeof amountTotal === 'number' && Number.isFinite(amountTotal) ? Math.round(amountTotal) : null;
+
+      await purColl.updateOne(
+        { id: purchaseId },
+        {
+          $set: {
+            status: 'active',
+            stripe_payment_intent_id: stripePaymentIntentId || pur.stripe_payment_intent_id,
+            amount_cents: amountParam || pur.amount_cents,
+            currency: currency || pur.currency,
+            sponsored_place_id: spId,
+            starts_at: starts,
+            ends_at: ends,
+            updated_at: new Date()
+          }
+        },
+        { session: mongoSession }
+      );
+    });
   } catch (e) {
-    try {
-      await client.query('ROLLBACK');
-    } catch (_) {
-      /* ignore */
-    }
+    console.error('[sponsorship] applyCheckoutSessionCompleted error:', e);
     throw e;
   } finally {
-    client.release();
+    await mongoSession.endSession();
   }
 }
 
 async function markCheckoutSessionExpired(sessionId) {
-  await query(
-    `UPDATE sponsorship_purchases SET status = 'canceled', updated_at = NOW()
-     WHERE stripe_checkout_session_id = $1 AND status = 'pending'`,
-    [sessionId]
+  const purColl = await getCollection('sponsorship_purchases');
+  await purColl.updateOne(
+    { stripe_checkout_session_id: sessionId, status: 'pending' },
+    { $set: { status: 'canceled', updated_at: new Date() } }
   );
 }
 
 async function markRefundedByPaymentIntent(paymentIntentId) {
   if (!paymentIntentId) return;
-  const { rows } = await query(
-    `UPDATE sponsorship_purchases SET status = 'refunded', updated_at = NOW()
-     WHERE stripe_payment_intent_id = $1 AND status NOT IN ('refunded', 'canceled')
-     RETURNING id`,
-    [String(paymentIntentId)]
-  );
+  const purColl = await getCollection('sponsorship_purchases');
+  const spColl = await getCollection('sponsored_places');
+
+  const rows = await purColl.find({
+    stripe_payment_intent_id: String(paymentIntentId),
+    status: { $nin: ['refunded', 'canceled'] }
+  }).toArray();
+
   for (const r of rows) {
-    await query(
-      `UPDATE sponsored_places SET enabled = false, updated_at = NOW()
-       WHERE purchase_id = $1`,
-      [r.id]
-    );
+    await purColl.updateOne({ id: r.id }, { $set: { status: 'refunded', updated_at: new Date() } });
+    await spColl.updateOne({ purchase_id: r.id }, { $set: { enabled: false, updated_at: new Date() } });
   }
 }
 

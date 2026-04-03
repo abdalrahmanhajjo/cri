@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware, requirePlaceOwnerParam } = require('../../middleware/placeOwner');
 const { parsePlaceId } = require('../../utils/validate');
@@ -52,28 +52,37 @@ function rowToEditorPlace(row) {
   };
 }
 
-/** List places this user manages (via place_owners). */
+/** List places this user manages. */
 router.get('/', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { rows } = await query(
-      `SELECT p.id, p.name, p.location, p.category, p.images, p.rating, p.latitude, p.longitude
-       FROM places p
-       INNER JOIN place_owners po ON po.place_id = p.id AND po.user_id = $1
-       ORDER BY p.name`,
-      [userId]
-    );
+    const poColl = await getCollection('place_owners');
+    const ownedPlaces = await poColl.aggregate([
+      { $match: { user_id: userId } },
+      { $lookup: {
+          from: 'places',
+          localField: 'place_id',
+          foreignField: 'id',
+          as: 'place'
+      }},
+      { $unwind: '$place' },
+      { $sort: { 'place.name': 1 } }
+    ]).toArray();
+
     res.json({
-      places: rows.map((r) => ({
-        id: r.id,
-        name: normalizeDbText(r.name || ''),
-        location: normalizeDbText(r.location || ''),
-        category: normalizeDbText(r.category || ''),
-        images: safeJson(r.images, []),
-        rating: r.rating,
-        latitude: r.latitude,
-        longitude: r.longitude,
-      })),
+      places: ownedPlaces.map((doc) => {
+        const r = doc.place;
+        return {
+          id: r.id,
+          name: normalizeDbText(r.name || ''),
+          location: normalizeDbText(r.location || ''),
+          category: normalizeDbText(r.category || ''),
+          images: r.images || [],
+          rating: r.rating,
+          latitude: r.latitude,
+          longitude: r.longitude,
+        };
+      }),
     });
   } catch (err) {
     console.error(err);
@@ -92,39 +101,27 @@ function displayReviewAuthorName(name, email) {
   return 'Member';
 }
 
-/** Member reviews for an owned place (including hidden). Must be before /:placeId/translations. */
+/** Member reviews for an owned place. */
 router.get('/:placeId/reviews', requirePlaceOwnerParam('placeId'), async (req, res) => {
   const placeId = req.ownsPlaceId || req.params.placeId;
   try {
-    let rows;
-    try {
-      ({ rows } = await query(
-        `SELECT r.id, r.rating, r.title, r.review, r.created_at, r.hidden_at,
-                u.name AS user_name, u.email AS user_email
-         FROM place_reviews r
-         INNER JOIN users u ON u.id = r.user_id
-         WHERE r.place_id = $1
-         ORDER BY r.created_at DESC
-         LIMIT 200`,
-        [placeId]
-      ));
-    } catch (err) {
-      if (err.code === '42P01') return res.json({ placeId, reviews: [] });
-      if (err.code === '42703' && String(err.message || '').includes('hidden_at')) {
-        ({ rows } = await query(
-          `SELECT r.id, r.rating, r.title, r.review, r.created_at, NULL::timestamptz AS hidden_at,
-                  u.name AS user_name, u.email AS user_email
-           FROM place_reviews r
-           INNER JOIN users u ON u.id = r.user_id
-           WHERE r.place_id = $1
-           ORDER BY r.created_at DESC
-           LIMIT 200`,
-          [placeId]
-        ));
-      } else {
-        throw err;
-      }
-    }
+    const reviewsColl = await getCollection('place_reviews');
+    const rows = await reviewsColl.aggregate([
+      { $match: { place_id: placeId } },
+      { $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: 'id',
+          as: 'user'
+      }},
+      { $addFields: {
+          user_name: { $arrayElemAt: ['$user.name', 0] },
+          user_email: { $arrayElemAt: ['$user.email', 0] }
+      }},
+      { $sort: { created_at: -1 } },
+      { $limit: 200 }
+    ]).toArray();
+
     const reviews = rows.map((r) => ({
       id: String(r.id),
       rating: r.rating,
@@ -139,17 +136,16 @@ router.get('/:placeId/reviews', requirePlaceOwnerParam('placeId'), async (req, r
     res.json({ placeId, reviews });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to load reviews', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+    res.status(500).json({ error: 'Failed to load reviews' });
   }
 });
 
-/** Per-language copy (must be registered before /:placeId). */
+/** Per-language copy. */
 router.get('/:placeId/translations', requirePlaceOwnerParam('placeId'), async (req, res) => {
+  const placeId = req.params.placeId;
   try {
-    const { rows } = await query(
-      'SELECT place_id, lang, name, description, location, category, duration, price, best_time, tags FROM place_translations WHERE place_id = $1 ORDER BY lang',
-      [req.params.placeId]
-    );
+    const transColl = await getCollection('place_translations');
+    const rows = await transColl.find({ place_id: placeId }).sort({ lang: 1 }).toArray();
     res.json({
       translations: rows.map((r) => ({
         lang: r.lang,
@@ -160,70 +156,80 @@ router.get('/:placeId/translations', requirePlaceOwnerParam('placeId'), async (r
         duration: r.duration,
         price: r.price,
         bestTime: r.best_time,
-        tags: safeJson(r.tags, []),
+        tags: r.tags || [],
       })),
     });
   } catch (err) {
-    if (err.code === '42P01') return res.json({ translations: [] });
     console.error(err);
     res.status(500).json({ error: 'Failed to load translations' });
   }
 });
 
-const LANG_RE = /^[a-z]{2}(-[a-z]{2})?$/i;
-
 router.put('/:placeId/translations/:lang', requirePlaceOwnerParam('placeId'), async (req, res) => {
   const lang = (req.params.lang || '').trim().toLowerCase();
-  if (!LANG_RE.test(lang)) return res.status(400).json({ error: 'Invalid language code' });
   const placeId = req.ownsPlaceId || req.params.placeId;
 
   const v = validateTranslationPut(req.body || {});
   if (!v.ok) return res.status(400).json({ error: v.error });
   const b = v.body;
-  const tagsJson = JSON.stringify(Array.isArray(b.tags) ? b.tags : []);
 
   try {
-    await query(
-      `INSERT INTO place_translations (place_id, lang, name, description, location, category, duration, price, best_time, tags)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
-       ON CONFLICT (lang, place_id) DO UPDATE SET
-         name = EXCLUDED.name, description = EXCLUDED.description, location = EXCLUDED.location,
-         category = EXCLUDED.category, duration = EXCLUDED.duration, price = EXCLUDED.price,
-         best_time = EXCLUDED.best_time, tags = EXCLUDED.tags`,
-      [
-        placeId,
-        lang,
-        b.name != null ? b.name : null,
-        b.description != null ? b.description : null,
-        b.location != null ? b.location : null,
-        b.category != null ? b.category : null,
-        b.duration != null ? b.duration : null,
-        b.price != null ? b.price : null,
-        b.bestTime != null ? b.bestTime : null,
-        tagsJson,
-      ]
+    const transColl = await getCollection('place_translations');
+    const transDoc = {
+      place_id: placeId,
+      lang,
+      name: b.name != null ? b.name : null,
+      description: b.description != null ? b.description : null,
+      location: b.location != null ? b.location : null,
+      category: b.category != null ? b.category : null,
+      duration: b.duration != null ? b.duration : null,
+      price: b.price != null ? b.price : null,
+      best_time: b.bestTime != null ? b.bestTime : null,
+      tags: Array.isArray(b.tags) ? b.tags : [],
+      updated_at: new Date()
+    };
+
+    await transColl.updateOne(
+      { place_id: placeId, lang: lang },
+      { $set: transDoc },
+      { upsert: true }
     );
+
+    // Also update embedded translations in the place document
+    const placesColl = await getCollection('places');
+    const place = await placesColl.findOne({ id: placeId });
+    if (place) {
+      const translations = place.translations || [];
+      const idx = translations.findIndex(t => t.lang === lang);
+      if (idx > -1) {
+        translations[idx] = transDoc;
+      } else {
+        translations.push(transDoc);
+      }
+      await placesColl.updateOne({ id: placeId }, { $set: { translations } });
+    }
+
     res.json({ placeId, lang, message: 'Translation saved' });
   } catch (err) {
-    if (err.code === '42P01') return res.status(503).json({ error: 'Translations table not available' });
     console.error(err);
     res.status(500).json({ error: 'Failed to save translation' });
   }
 });
 
-/** Full place row for editing (base language / catalogue fields). */
+/** Full place row for editing. */
 router.get('/:placeId', requirePlaceOwnerParam('placeId'), async (req, res) => {
   try {
-    const { rows } = await query('SELECT * FROM places WHERE id = $1', [req.params.placeId]);
-    if (!rows.length) return res.status(404).json({ error: 'Place not found' });
-    res.json(rowToEditorPlace(rows[0]));
+    const placesColl = await getCollection('places');
+    const place = await placesColl.findOne({ id: req.params.placeId });
+    if (!place) return res.status(404).json({ error: 'Place not found' });
+    res.json(rowToEditorPlace(place));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load place' });
   }
 });
 
-/** Same field set as admin PUT /api/admin/places/:id — only for owned places. */
+/** Update owned place. */
 router.put('/:placeId', requirePlaceOwnerParam('placeId'), async (req, res) => {
   try {
     const id = req.ownsPlaceId || req.params.placeId;
@@ -231,45 +237,35 @@ router.put('/:placeId', requirePlaceOwnerParam('placeId'), async (req, res) => {
     if (!v.ok) return res.status(400).json({ error: v.error });
     const s = v.body;
 
-    const imagesJson = s.images !== undefined ? JSON.stringify(s.images) : null;
-    const tagsJson = s.tags !== undefined ? JSON.stringify(s.tags) : null;
-    const diningProfileJson = s.diningProfile !== undefined ? JSON.stringify(s.diningProfile || {}) : null;
+    const setObj = {};
+    if (s.name !== undefined) setObj.name = s.name;
+    if (s.description !== undefined) setObj.description = s.description;
+    if (s.location !== undefined) setObj.location = s.location;
+    if (s.latitude !== undefined) setObj.latitude = s.latitude;
+    if (s.longitude !== undefined) setObj.longitude = s.longitude;
+    if (s.searchName !== undefined) setObj.search_name = s.searchName;
+    if (s.images !== undefined) setObj.images = s.images;
+    if (s.category !== undefined) setObj.category = s.category;
+    if (s.categoryId !== undefined) setObj.category_id = s.categoryId;
+    if (s.duration !== undefined) setObj.duration = s.duration;
+    if (s.price !== undefined) setObj.price = s.price;
+    if (s.bestTime !== undefined) setObj.best_time = s.bestTime;
+    if (s.rating !== undefined) setObj.rating = s.rating;
+    if (s.reviewCount !== undefined) setObj.review_count = s.reviewCount;
+    if (s.hours !== undefined) setObj.hours = s.hours;
+    if (s.tags !== undefined) setObj.tags = s.tags;
+    if (s.diningProfile !== undefined) setObj.dining_profile = s.diningProfile || {};
+    
+    setObj.updated_at = new Date();
 
-    const result = await query(
-      `UPDATE places SET
-         name = COALESCE($2, name), description = COALESCE($3, description), location = COALESCE($4, location),
-         latitude = COALESCE($5, latitude), longitude = COALESCE($6, longitude), search_name = COALESCE($7, search_name),
-         images = COALESCE($8::jsonb, images), category = COALESCE($9, category), category_id = COALESCE($10, category_id),
-         duration = COALESCE($11, duration), price = COALESCE($12, price), best_time = COALESCE($13, best_time),
-         rating = COALESCE($14, rating), review_count = COALESCE($15, review_count), hours = COALESCE($16::jsonb, hours), tags = COALESCE($17::jsonb, tags),
-         dining_profile = COALESCE($18::jsonb, dining_profile)
-       WHERE id = $1`,
-      [
-        id,
-        s.name !== undefined ? s.name : null,
-        s.description !== undefined ? s.description : null,
-        s.location !== undefined ? s.location : null,
-        s.latitude !== undefined ? s.latitude : null,
-        s.longitude !== undefined ? s.longitude : null,
-        s.searchName !== undefined ? s.searchName : null,
-        imagesJson,
-        s.category !== undefined ? s.category : null,
-        s.categoryId !== undefined ? s.categoryId : null,
-        s.duration !== undefined ? s.duration : null,
-        s.price !== undefined ? s.price : null,
-        s.bestTime !== undefined ? s.bestTime : null,
-        s.rating !== undefined ? s.rating : null,
-        s.reviewCount !== undefined ? s.reviewCount : null,
-        s.hours !== undefined ? JSON.stringify(s.hours) : null,
-        tagsJson,
-        diningProfileJson,
-      ]
-    );
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Place not found' });
+    const placesColl = await getCollection('places');
+    const result = await placesColl.updateOne({ id: id }, { $set: setObj });
+    
+    if (result.matchedCount === 0) return res.status(404).json({ error: 'Place not found' });
     res.json({ id, message: 'Place updated' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to update place', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+    res.status(500).json({ error: 'Failed to update place' });
   }
 });
 

@@ -1,72 +1,59 @@
 const express = require('express');
-const { query } = require('../db');
+const { getCollection } = require('../mongo');
 const { getRequestLang } = require('../utils/requestLang');
-const { parsePositiveInt } = require('../utils/validate');
 const { sendDbAwareError } = require('../utils/dbHttpError');
 const { normalizeDbText } = require('../utils/normalizeDbText');
 const { cachePublicList } = require('../middleware/publicCache');
 
 const router = express.Router();
 
-function rowToEvent(row) {
+function getTranslation(doc, lang) {
+  if (!doc || !doc.translations || typeof doc.translations !== 'object') return null;
+  const hit = doc.translations[lang];
+  return hit && typeof hit === 'object' ? hit : null;
+}
+
+function docToEvent(doc, lang) {
+  const tr = getTranslation(doc, lang);
   return {
-    id: row.id,
-    name: normalizeDbText(row.name),
-    description: normalizeDbText(row.description || ''),
-    startDate: row.start_date instanceof Date ? row.start_date.toISOString() : row.start_date,
-    endDate: row.end_date instanceof Date ? row.end_date.toISOString() : row.end_date,
-    location: normalizeDbText(row.location || ''),
-    image: row.image,
-    category: normalizeDbText(row.category || ''),
-    organizer: normalizeDbText(row.organizer || ''),
-    price: row.price,
-    priceDisplay: row.price_display != null ? normalizeDbText(String(row.price_display)) : row.price_display,
-    status: row.status != null ? normalizeDbText(String(row.status)) : row.status,
-    placeId: row.place_id
+    id: doc.id,
+    name: normalizeDbText(tr?.name || doc.name),
+    description: normalizeDbText(tr?.description || doc.description || ''),
+    startDate: doc.startDate instanceof Date ? doc.startDate.toISOString() : doc.startDate,
+    endDate: doc.endDate instanceof Date ? doc.endDate.toISOString() : doc.endDate,
+    location: normalizeDbText(tr?.location || doc.location || ''),
+    image: doc.image,
+    category: normalizeDbText(tr?.category || doc.category || ''),
+    organizer: normalizeDbText(tr?.organizer || doc.organizer || ''),
+    price: doc.price,
+    priceDisplay: normalizeDbText(String(tr?.priceDisplay || doc.priceDisplay || '')),
+    status: normalizeDbText(String(tr?.status || doc.status || '')),
+    placeId: doc.placeId
   };
 }
 
 router.get('/', cachePublicList(45, 240), async (req, res) => {
   try {
     const lang = getRequestLang(req);
-    const result = await query(
-      `SELECT e.id, e.start_date, e.end_date, e.image, e.price, e.place_id,
-              COALESCE(et.name, e.name) AS name, COALESCE(et.description, e.description) AS description,
-              COALESCE(et.location, e.location) AS location, COALESCE(et.category, e.category) AS category,
-              COALESCE(et.organizer, e.organizer) AS organizer,
-              COALESCE(et.price_display, e.price_display) AS price_display,
-              COALESCE(et.status, e.status) AS status
-       FROM events e
-       LEFT JOIN event_translations et ON et.event_id = e.id AND et.lang = $1
-       ORDER BY e.start_date DESC`,
-      [lang]
-    );
-    res.json({ events: result.rows.map(rowToEvent) });
+    const eventsColl = await getCollection('events');
+    const docs = await eventsColl.find({}).sort({ startDate: -1 }).toArray();
+    
+    res.json({ events: docs.map(doc => docToEvent(doc, lang)) });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch events', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+    res.status(500).json({ error: 'Failed to fetch events' });
   }
 });
 
 router.get('/:id', async (req, res) => {
-  const idResult = parsePositiveInt(req.params.id);
-  if (!idResult.valid) return res.status(400).json({ error: 'Invalid event id' });
+  const rawId = req.params.id;
   try {
     const lang = getRequestLang(req);
-    const result = await query(
-      `SELECT e.id, e.start_date, e.end_date, e.image, e.price, e.place_id,
-              COALESCE(et.name, e.name) AS name, COALESCE(et.description, e.description) AS description,
-              COALESCE(et.location, e.location) AS location, COALESCE(et.category, e.category) AS category,
-              COALESCE(et.organizer, e.organizer) AS organizer,
-              COALESCE(et.price_display, e.price_display) AS price_display,
-              COALESCE(et.status, e.status) AS status
-       FROM events e
-       LEFT JOIN event_translations et ON et.event_id = e.id AND et.lang = $1
-       WHERE e.id = $2`,
-      [lang, idResult.value]
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
-    res.json(rowToEvent(result.rows[0]));
+    const eventsColl = await getCollection('events');
+    const doc = await eventsColl.findOne({ id: rawId });
+    
+    if (!doc) return res.status(404).json({ error: 'Event not found' });
+    res.json(docToEvent(doc, lang));
   } catch (err) {
     console.error(err);
     sendDbAwareError(res, err, 'Failed to fetch event');

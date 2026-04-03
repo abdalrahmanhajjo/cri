@@ -11,8 +11,8 @@ if (fs.existsSync(rootEnvPath)) {
 const isProd = process.env.NODE_ENV === 'production';
 
 if (isProd) {
-  if (!process.env.DATABASE_URL?.trim()) {
-    console.error('Fatal: DATABASE_URL is required in production.');
+  if (!process.env.MONGODB_URI?.trim()) {
+    console.error('Fatal: MONGODB_URI is required in production.');
     process.exit(1);
   }
   if (!process.env.JWT_SECRET?.trim()) {
@@ -34,7 +34,13 @@ const { initSentry, isEnabled: sentryEnabled } = require('./instrumentSentry');
 initSentry();
 
 const app = require('./app');
-const { verifyDatabaseConnection, closePool } = require('./db');
+
+const {
+  hasMongoConfigured,
+  verifyMongoConnection,
+  closeMongoClient,
+  mongoDbName,
+} = require('./mongo');
 
 const basePort = parseInt(process.env.PORT, 10) || 3095;
 const listenHost = process.env.HOST?.trim() || '0.0.0.0';
@@ -54,8 +60,10 @@ const server = app.listen(basePort, listenHost, () => {
   console.log(
     `  AI planner: ${groqOk ? 'GROQ_API_KEY set' : n8nOk ? 'N8N_WEBHOOK_URL set' : 'not configured'}`
   );
+  console.log(`  MongoDB: ${hasMongoConfigured() ? `configured (${mongoDbName()})` : 'not configured'}`);
   console.log(`  Sentry: ${sentryEnabled() ? 'on' : 'off'}`);
-  void verifyDatabaseConnection();
+
+  if (hasMongoConfigured()) void verifyMongoConnection();
 });
 
 /** Long uploads + ffmpeg (reels). Host/proxy may still enforce a lower max (set same on the platform if possible). */
@@ -81,10 +89,11 @@ function shutdown(signal) {
   console.log(`Shutting down (${signal})…`);
   server.close((closeErr) => {
     if (closeErr) console.error('HTTP close error:', closeErr.message);
-    closePool()
+    const mongoClose = closeMongoClient();
+    mongoClose
       .then(() => process.exit(0))
       .catch((e) => {
-        console.error('Pool close error:', e.message);
+        console.error('MongoDB close error:', e.message);
         process.exit(1);
       });
   });

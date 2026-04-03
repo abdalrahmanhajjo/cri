@@ -10,12 +10,13 @@
     "export-sql": "node scripts/export-supabase-sql.js",
     "db:restore": "node scripts/restore-database.js",
     "db:migrate": "node scripts/run-migrations.js",
+    "db:mongo:sync:core": "node scripts/sync-core-content-to-mongo.js",
     "recompress-reels": "node scripts/recompress-feed-reel-videos.js"
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@sentry/node": "^8.55.1",
-    "@supabase/supabase-js": "^2.98.0",
+    "axios": "^1.14.0",
     "bcryptjs": "^2.4.3",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
@@ -26,9 +27,9 @@
     "heic-convert": "^2.1.0",
     "helmet": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.21.0",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.1",
-    "pg": "^8.11.3",
     "sharp": "^0.33.5",
     "stripe": "^17.7.0"
   },

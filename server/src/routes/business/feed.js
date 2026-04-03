@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware } = require('../../middleware/placeOwner');
 const { parsePlaceId, safeUrl } = require('../../utils/validate');
@@ -12,13 +12,14 @@ router.use(authMiddleware, businessPortalMiddleware);
 /** Resolve feed post id and ensure place is owned by this user. */
 async function loadOwnedPost(userId, postId) {
   if (!postId || String(postId).length > 64) return null;
-  const { rows } = await query(
-    `SELECT fp.* FROM feed_posts fp
-     INNER JOIN place_owners po ON po.place_id = fp.place_id AND po.user_id = $1
-     WHERE fp.id = $2`,
-    [userId, postId]
-  );
-  return rows[0] || null;
+  const postsColl = await getCollection('feed_posts');
+  const poColl = await getCollection('place_owners');
+  
+  const post = await postsColl.findOne({ id: postId });
+  if (!post) return null;
+  
+  const owner = await poColl.findOne({ place_id: post.place_id, user_id: userId });
+  return owner ? post : null;
 }
 
 /**
@@ -32,56 +33,38 @@ router.get('/', async (req, res) => {
     return res.status(400).json({ error: 'Invalid place id' });
   }
   const format = String(req.query.format || 'all').toLowerCase();
-  /** Video / reel = explicit type, or legacy video-only rows (no cover image). */
-  const reelLikeSql = `(
-    fp.type IN ('reel', 'video')
-    OR (
-      NULLIF(TRIM(COALESCE(fp.video_url, '')), '') IS NOT NULL
-      AND NULLIF(TRIM(COALESCE(fp.image_url, '')), '') IS NULL
-    )
-  )`;
-  const formatExtra =
-    format === 'reel'
-      ? ` AND ${reelLikeSql}`
-      : format === 'post'
-        ? ` AND NOT (${reelLikeSql})`
-        : '';
+
   try {
-    const params = [userId];
-    let extra = '';
+    const poColl = await getCollection('place_owners');
+    const ownedPlaceIds = (await poColl.find({ user_id: userId }).toArray()).map(o => o.place_id);
+    
+    if (!ownedPlaceIds.length) return res.json({ posts: [] });
+
+    const postsColl = await getCollection('feed_posts');
+    const queryObj = { place_id: { $in: ownedPlaceIds } };
+    
     if (placeFilter?.valid) {
-      params.push(placeFilter.value);
-      extra = ' AND fp.place_id = $2';
+      if (!ownedPlaceIds.includes(placeFilter.value)) {
+        return res.status(403).json({ error: 'You do not manage this place' });
+      }
+      queryObj.place_id = placeFilter.value;
     }
-    extra += formatExtra;
-    const { rows } = await query(
-      `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.image_urls, fp.video_url,
-              fp.type, fp.created_at, fp.author_role,
-              fp.moderation_status, fp.discoverable, fp.updated_at,
-              COALESCE(fp.hide_likes, false) AS hide_likes,
-              COALESCE(fp.comments_disabled, false) AS comments_disabled
-       FROM feed_posts fp
-       WHERE fp.place_id IN (SELECT place_id FROM place_owners WHERE user_id = $1)${extra}
-       ORDER BY fp.created_at DESC
-       LIMIT 200`,
-      params
-    );
+
+    if (format === 'reel') {
+      queryObj.type = { $in: ['reel', 'video'] };
+    } else if (format === 'post') {
+      queryObj.type = { $ne: 'video' };
+    }
+
+    const rows = await postsColl.find(queryObj).sort({ created_at: -1 }).limit(200).toArray();
     res.json({ posts: rows });
   } catch (err) {
-    if (err.code === '42703') {
-      return res.status(503).json({ error: 'Feed schema incomplete. Run migration 006_feed_moderation.sql' });
-    }
-    if (err.code === '42P01') return res.json({ posts: [] });
     console.error(err);
     res.status(500).json({ error: 'Failed to list posts' });
   }
 });
 
-/**
- * POST /api/business/feed
- * Body: { placeId, caption, image_url?, video_url?, type? } — type is `post`, `video`, or `reel` (reel alias → stored as video).
- * New posts: approved + discoverable so partner content can appear without admin bottleneck; admin can still moderate.
- */
+/** POST /api/business/feed */
 router.post('/', async (req, res) => {
   const userId = req.user.userId;
   const pid = parsePlaceId(req.body?.placeId);
@@ -99,88 +82,57 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const { rows: own } = await query(
-      'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
-      [userId, pid.value]
-    );
-    if (!own.length) return res.status(403).json({ error: 'You do not manage this place' });
+    const poColl = await getCollection('place_owners');
+    const own = await poColl.findOne({ user_id: userId, place_id: pid.value });
+    if (!own) return res.status(403).json({ error: 'You do not manage this place' });
 
-    const { rows: uRows } = await query('SELECT name, email FROM users WHERE id = $1', [userId]);
-    const u = uRows[0];
-    const authorName = (u?.name && String(u.name).trim()) || (u?.email && String(u.email).split('@')[0]) || 'Partner';
+    const usersColl = await getCollection('users');
+    const user = await usersColl.findOne({ id: userId });
+    const authorName = (user?.name && String(user.name).trim()) || (user?.email && String(user.email).split('@')[0]) || 'Partner';
     const authorShort = authorName.slice(0, 255);
 
     const id = crypto.randomUUID();
+    const postsColl = await getCollection('feed_posts');
+    const newPost = {
+      id,
+      user_id: userId,
+      author_name: authorShort,
+      place_id: pid.value,
+      caption,
+      image_url: imageUrl,
+      image_urls: imageUrlsArr || [],
+      video_url: videoUrl,
+      type,
+      author_role: 'business_owner',
+      moderation_status: 'approved',
+      discoverable: true,
+      created_at: new Date(),
+      updated_at: new Date()
+    };
 
-    await query(
-      `INSERT INTO feed_posts (
-         id, user_id, author_name, place_id, caption, image_url, image_urls, video_url, type, author_role,
-         moderation_status, discoverable
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, 'business_owner', 'approved', true)`,
-      [
-        id,
-        userId,
-        authorShort,
-        pid.value,
-        caption,
-        imageUrl,
-        imageUrlsArr ? JSON.stringify(imageUrlsArr) : null,
-        videoUrl,
-        type,
-      ]
-    );
-
-    const { rows } = await query('SELECT * FROM feed_posts WHERE id = $1', [id]);
-    res.status(201).json({ post: rows[0] });
+    await postsColl.insertOne(newPost);
+    res.status(201).json({ post: newPost });
   } catch (err) {
-    if (err.code === '42703') {
-      return res.status(503).json({ error: 'Run migration 006_feed_moderation.sql' });
-    }
     console.error(err);
     res.status(500).json({ error: 'Failed to create post' });
   }
 });
 
-/**
- * PATCH /api/business/feed/:id
- * Owners may edit content (not moderation_status or discoverable — admins control discovery).
- */
+/** PATCH /api/business/feed/:id */
 router.patch('/:id', async (req, res) => {
   const userId = req.user.userId;
   const existing = await loadOwnedPost(userId, req.params.id);
   if (!existing) return res.status(404).json({ error: 'Post not found' });
 
   const body = req.body || {};
-  const mergedType =
-    body.type !== undefined
-      ? ['reel', 'video'].includes(String(body.type).trim().toLowerCase())
-        ? 'video'
-        : 'post'
-      : ['reel', 'video'].includes(String(existing.type || '').toLowerCase())
-        ? 'video'
-        : 'post';
-  const mergedVideo =
-    body.video_url !== undefined
-      ? body.video_url
-        ? safeUrl(body.video_url)
-        : null
-      : existing.video_url
-        ? safeUrl(existing.video_url)
-        : null;
-  if (mergedType === 'video' && !mergedVideo) {
-    return res.status(400).json({ error: 'Video posts require a valid video URL' });
-  }
-
-  const updates = [];
-  const vals = [];
-  let n = 1;
+  const setObj = {};
 
   if (body.caption !== undefined) {
     const cap = String(body.caption).trim();
     if (!cap || cap.length > 8000) return res.status(400).json({ error: 'Invalid caption' });
-    updates.push(`caption = $${n++}`);
-    vals.push(cap);
+    setObj.caption = cap;
   }
+  
   const hasImageUrls = Object.prototype.hasOwnProperty.call(body, 'image_urls');
   const hasImageUrl = Object.prototype.hasOwnProperty.call(body, 'image_url');
   if (hasImageUrls || hasImageUrl) {
@@ -188,41 +140,31 @@ router.patch('/:id', async (req, res) => {
       image_url: hasImageUrl ? body.image_url : undefined,
       image_urls: hasImageUrls ? body.image_urls : undefined,
     });
-    updates.push(`image_url = $${n++}`);
-    vals.push(nextFirst);
-    updates.push(`image_urls = $${n++}::jsonb`);
-    vals.push(nextList ? JSON.stringify(nextList) : null);
+    setObj.image_url = nextFirst;
+    setObj.image_urls = nextList || [];
   }
   if (body.video_url !== undefined) {
-    updates.push(`video_url = $${n++}`);
-    vals.push(body.video_url ? safeUrl(body.video_url) : null);
+    setObj.video_url = body.video_url ? safeUrl(body.video_url) : null;
   }
   if (body.type !== undefined) {
     const raw = String(body.type).trim().toLowerCase();
-    const normalized = raw === 'reel' || raw === 'video' ? 'video' : 'post';
-    updates.push(`type = $${n++}`);
-    vals.push(normalized);
+    setObj.type = raw === 'reel' || raw === 'video' ? 'video' : 'post';
   }
-  if (body.hide_likes !== undefined) {
-    updates.push(`hide_likes = $${n++}`);
-    vals.push(Boolean(body.hide_likes));
-  }
-  if (body.comments_disabled !== undefined) {
-    updates.push(`comments_disabled = $${n++}`);
-    vals.push(Boolean(body.comments_disabled));
-  }
+  if (body.hide_likes !== undefined) setObj.hide_likes = Boolean(body.hide_likes);
+  if (body.comments_disabled !== undefined) setObj.comments_disabled = Boolean(body.comments_disabled);
 
-  if (updates.length === 0) return res.status(400).json({ error: 'No valid fields to update' });
-
-  updates.push(`updated_at = NOW()`);
-  vals.push(req.params.id);
+  if (Object.keys(setObj).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
+  setObj.updated_at = new Date();
 
   try {
-    const sql = `UPDATE feed_posts SET ${updates.join(', ')} WHERE id = $${n} RETURNING *`;
-    const result = await query(sql, vals);
-    res.json({ post: result.rows[0] });
+    const postsColl = await getCollection('feed_posts');
+    const result = await postsColl.findOneAndUpdate(
+      { id: req.params.id },
+      { $set: setObj },
+      { returnDocument: 'after' }
+    );
+    res.json({ post: result });
   } catch (err) {
-    if (err.code === '42703') return res.status(503).json({ error: 'Migration required for feed fields' });
     console.error(err);
     res.status(500).json({ error: 'Failed to update post' });
   }
@@ -236,14 +178,18 @@ router.delete('/:id', async (req, res) => {
 
   const id = req.params.id;
   try {
-    await query('DELETE FROM feed_comments WHERE post_id = $1', [id]);
-    await query('DELETE FROM feed_likes WHERE post_id = $1', [id]);
-    await query('DELETE FROM feed_saves WHERE post_id = $1', [id]);
-    const result = await query('DELETE FROM feed_posts WHERE id = $1', [id]);
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Post not found' });
+    const postsColl = await getCollection('feed_posts');
+    const commentsColl = await getCollection('feed_comments');
+    const likesColl = await getCollection('feed_likes');
+    const savesColl = await getCollection('feed_saves');
+
+    await commentsColl.deleteMany({ post_id: id });
+    await likesColl.deleteMany({ post_id: id });
+    await savesColl.deleteMany({ post_id: id });
+    await postsColl.deleteOne({ id: id });
+    
     res.json({ ok: true });
   } catch (err) {
-    if (err.code === '42P01') return res.status(404).json({ error: 'Feed not available' });
     console.error(err);
     res.status(500).json({ error: 'Failed to delete post' });
   }

@@ -1,29 +1,30 @@
 const express = require('express');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { parsePlaceId } = require('../../utils/validate');
+const crypto = require('crypto');
 
 const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function rowToCoupon(row) {
+function rowToCoupon(doc) {
   return {
-    id: row.id,
-    code: row.code,
-    discountType: row.discount_type,
-    discountValue: row.discount_value != null ? Number(row.discount_value) : null,
-    minPurchase: row.min_purchase != null ? Number(row.min_purchase) : 0,
-    validFrom: row.valid_from,
-    validUntil: row.valid_until,
-    usageLimit: row.usage_limit,
-    placeId: row.place_id,
-    placeName: row.place_name != null ? String(row.place_name) : '',
-    tourId: row.tour_id,
-    eventId: row.event_id,
-    createdAt: row.created_at,
+    id: doc.id,
+    code: doc.code,
+    discountType: doc.discount_type,
+    discountValue: doc.discount_value != null ? Number(doc.discount_value) : null,
+    minPurchase: doc.min_purchase != null ? Number(doc.min_purchase) : 0,
+    validFrom: doc.valid_from,
+    validUntil: doc.valid_until,
+    usageLimit: doc.usage_limit,
+    placeId: doc.place_id,
+    placeName: doc.place_name != null ? String(doc.place_name) : '',
+    tourId: doc.tour_id,
+    eventId: doc.event_id,
+    createdAt: doc.created_at,
   };
 }
 
@@ -43,27 +44,29 @@ function parseOptionalVarchar(value, maxLen) {
 router.get('/', async (req, res) => {
   const filterPlace = parsePlaceId(req.query.placeId);
   try {
-    const params = [];
-    let where = '';
+    const couponsColl = await getCollection('coupons');
+    const queryObj = {};
     if (filterPlace.valid) {
-      params.push(filterPlace.value);
-      where = 'WHERE c.place_id = $1';
+      queryObj.place_id = filterPlace.value;
     }
-    params.push(500);
-    const limIdx = params.length;
-    const { rows } = await query(
-      `SELECT c.id, c.code, c.discount_type, c.discount_value, c.min_purchase, c.valid_from, c.valid_until,
-              c.usage_limit, c.place_id, pl.name AS place_name, c.tour_id, c.event_id, c.created_at
-       FROM coupons c
-       LEFT JOIN places pl ON pl.id = c.place_id
-       ${where}
-       ORDER BY c.created_at DESC
-       LIMIT $${limIdx}`,
-      params
-    );
+
+    const rows = await couponsColl.aggregate([
+      { $match: queryObj },
+      { $lookup: {
+          from: 'places',
+          localField: 'place_id',
+          foreignField: 'id',
+          as: 'place'
+      }},
+      { $addFields: {
+          place_name: { $arrayElemAt: ['$place.name', 0] }
+      }},
+      { $sort: { created_at: -1 } },
+      { $limit: 500 }
+    ]).toArray();
+
     res.json({ coupons: rows.map(rowToCoupon) });
   } catch (err) {
-    if (err.code === '42P01') return res.json({ coupons: [] });
     console.error(err);
     res.status(500).json({ error: 'Failed to load coupons' });
   }
@@ -90,13 +93,13 @@ router.post('/', async (req, res) => {
   }
 
   const vfRaw = req.body?.validFrom ?? req.body?.valid_from;
-  const validFrom =
-    vfRaw != null && String(vfRaw).trim() !== '' ? String(vfRaw) : null;
+  const validFrom = vfRaw != null && String(vfRaw).trim() !== '' ? new Date(vfRaw) : new Date();
+  
   const validUntilRaw = req.body?.validUntil ?? req.body?.valid_until;
   if (validUntilRaw == null || String(validUntilRaw).trim() === '') {
     return res.status(400).json({ error: 'validUntil required' });
   }
-  const validUntil = String(validUntilRaw);
+  const validUntil = new Date(validUntilRaw);
 
   let usageLimit = null;
   if (req.body?.usageLimit != null && req.body.usageLimit !== '') {
@@ -107,9 +110,12 @@ router.post('/', async (req, res) => {
 
   const placeParsed = parseOptionalPlaceId(req.body?.placeId ?? req.body?.place_id);
   if (!placeParsed.valid) return res.status(400).json({ error: 'Invalid placeId' });
+  let placeName = '';
   if (placeParsed.value != null) {
-    const { rows: ex } = await query('SELECT 1 FROM places WHERE id = $1', [placeParsed.value]);
-    if (!ex.length) return res.status(400).json({ error: 'Place not found' });
+    const placesColl = await getCollection('places');
+    const place = await placesColl.findOne({ id: placeParsed.value });
+    if (!place) return res.status(400).json({ error: 'Place not found' });
+    placeName = place.name;
   }
 
   const tourParsed = parseOptionalVarchar(req.body?.tourId ?? req.body?.tour_id, 50);
@@ -117,34 +123,30 @@ router.post('/', async (req, res) => {
   if (!tourParsed.valid || !eventParsed.valid) return res.status(400).json({ error: 'Invalid tour or event id' });
 
   try {
-    const { rows } = await query(
-      `INSERT INTO coupons (code, discount_type, discount_value, min_purchase, valid_from, valid_until, usage_limit, place_id, tour_id, event_id)
-       VALUES ($1, $2, $3, $4, COALESCE($5::timestamptz, NOW()), $6::timestamptz, $7, $8, $9, $10)
-       RETURNING id, code, discount_type, discount_value, min_purchase, valid_from, valid_until, usage_limit, place_id, tour_id, event_id, created_at`,
-      [
-        code,
-        discountType,
-        dv,
-        minPurchase,
-        validFrom,
-        validUntil,
-        usageLimit,
-        placeParsed.value,
-        tourParsed.value,
-        eventParsed.value,
-      ]
-    );
-    const r0 = rows[0];
-    let placeName = '';
-    if (r0.place_id) {
-      const { rows: pn } = await query('SELECT name FROM places WHERE id = $1', [r0.place_id]);
-      placeName = pn[0]?.name || '';
-    }
-    res.status(201).json({ coupon: rowToCoupon({ ...r0, place_name: placeName }) });
+    const couponsColl = await getCollection('coupons');
+    // Check for duplicate code
+    const existing = await couponsColl.findOne({ code });
+    if (existing) return res.status(400).json({ error: 'A coupon with this code already exists.' });
+
+    const newId = crypto.randomUUID();
+    const newCoupon = {
+      id: newId,
+      code,
+      discount_type: discountType,
+      discount_value: dv,
+      min_purchase: minPurchase,
+      valid_from: validFrom,
+      valid_until: validUntil,
+      usage_limit: usageLimit,
+      place_id: placeParsed.value,
+      tour_id: tourParsed.value,
+      event_id: eventParsed.value,
+      created_at: new Date()
+    };
+
+    await couponsColl.insertOne(newCoupon);
+    res.status(201).json({ coupon: rowToCoupon({ ...newCoupon, place_name: placeName }) });
   } catch (err) {
-    if (err.code === '23505') {
-      return res.status(400).json({ error: 'A coupon with this code already exists.' });
-    }
     console.error(err);
     res.status(500).json({ error: 'Failed to create coupon' });
   }
@@ -156,56 +158,50 @@ router.patch('/:id', async (req, res) => {
   if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid coupon id' });
 
   try {
-    const cur = await query('SELECT id FROM coupons WHERE id = $1::uuid', [id]);
-    if (!cur.rows.length) return res.status(404).json({ error: 'Coupon not found' });
+    const couponsColl = await getCollection('coupons');
+    const existing = await couponsColl.findOne({ id });
+    if (!existing) return res.status(404).json({ error: 'Coupon not found' });
 
-    const fields = [];
-    const vals = [];
-    let n = 1;
+    const setObj = {};
     const b = req.body || {};
 
     if (typeof b.code === 'string') {
-      fields.push(`code = $${n++}`);
-      vals.push(b.code.trim().slice(0, 32));
+      const code = b.code.trim().slice(0, 32);
+      const dup = await couponsColl.findOne({ code, id: { $ne: id } });
+      if (dup) return res.status(400).json({ error: 'A coupon with this code already exists.' });
+      setObj.code = code;
     }
     if (b.discountType !== undefined || b.discount_type !== undefined) {
       const dt = String(b.discountType ?? b.discount_type).toLowerCase();
       if (dt !== 'percent' && dt !== 'fixed') return res.status(400).json({ error: 'discountType must be percent or fixed' });
-      fields.push(`discount_type = $${n++}`);
-      vals.push(dt);
+      setObj.discount_type = dt;
     }
     if (b.discountValue !== undefined || b.discount_value !== undefined) {
       const dv = Number(b.discountValue ?? b.discount_value);
       if (!Number.isFinite(dv) || dv < 0) return res.status(400).json({ error: 'Invalid discountValue' });
-      fields.push(`discount_value = $${n++}`);
-      vals.push(dv);
+      setObj.discount_value = dv;
     }
     if (b.minPurchase !== undefined || b.min_purchase !== undefined) {
       const mp = Number(b.minPurchase ?? b.min_purchase);
       if (!Number.isFinite(mp) || mp < 0) return res.status(400).json({ error: 'Invalid minPurchase' });
-      fields.push(`min_purchase = $${n++}`);
-      vals.push(mp);
+      setObj.min_purchase = mp;
     }
     if (b.validFrom !== undefined || b.valid_from !== undefined) {
       const v = b.validFrom ?? b.valid_from;
-      fields.push(`valid_from = $${n++}`);
-      vals.push(v ? String(v) : null);
+      setObj.valid_from = v ? new Date(v) : null;
     }
     if (b.validUntil !== undefined || b.valid_until !== undefined) {
       const v = b.validUntil ?? b.valid_until;
       if (v == null || String(v).trim() === '') return res.status(400).json({ error: 'validUntil cannot be empty' });
-      fields.push(`valid_until = $${n++}`);
-      vals.push(String(v));
+      setObj.valid_until = new Date(v);
     }
     if (b.usageLimit !== undefined) {
       if (b.usageLimit === null || b.usageLimit === '') {
-        fields.push(`usage_limit = $${n++}`);
-        vals.push(null);
+        setObj.usage_limit = null;
       } else {
         const u = parseInt(String(b.usageLimit), 10);
         if (!Number.isInteger(u) || u < 1) return res.status(400).json({ error: 'Invalid usageLimit' });
-        fields.push(`usage_limit = $${n++}`);
-        vals.push(u);
+        setObj.usage_limit = u;
       }
     }
     if (b.placeId !== undefined || b.place_id !== undefined) {
@@ -213,47 +209,39 @@ router.patch('/:id', async (req, res) => {
       const p = parseOptionalPlaceId(raw);
       if (!p.valid) return res.status(400).json({ error: 'Invalid placeId' });
       if (p.value != null) {
-        const { rows: ex } = await query('SELECT 1 FROM places WHERE id = $1', [p.value]);
-        if (!ex.length) return res.status(400).json({ error: 'Place not found' });
+        const placesColl = await getCollection('places');
+        const place = await placesColl.findOne({ id: p.value });
+        if (!place) return res.status(400).json({ error: 'Place not found' });
       }
-      fields.push(`place_id = $${n++}`);
-      vals.push(p.value);
+      setObj.place_id = p.value;
     }
     if (b.tourId !== undefined || b.tour_id !== undefined) {
       const t = parseOptionalVarchar(b.tourId ?? b.tour_id, 50);
       if (!t.valid) return res.status(400).json({ error: 'Invalid tourId' });
-      fields.push(`tour_id = $${n++}`);
-      vals.push(t.value);
+      setObj.tour_id = t.value;
     }
     if (b.eventId !== undefined || b.event_id !== undefined) {
       const e = parseOptionalVarchar(b.eventId ?? b.event_id, 50);
       if (!e.valid) return res.status(400).json({ error: 'Invalid eventId' });
-      fields.push(`event_id = $${n++}`);
-      vals.push(e.value);
+      setObj.event_id = e.value;
     }
 
-    if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
+    if (!Object.keys(setObj).length) return res.status(400).json({ error: 'No fields to update' });
 
-    vals.push(id);
-    const idParam = n;
-
-    const { rows } = await query(
-      `UPDATE coupons SET ${fields.join(', ')}
-       WHERE id = $${idParam}::uuid
-       RETURNING id, code, discount_type, discount_value, min_purchase, valid_from, valid_until, usage_limit, place_id, tour_id, event_id, created_at`,
-      vals
+    const result = await couponsColl.findOneAndUpdate(
+      { id: id },
+      { $set: setObj },
+      { returnDocument: 'after' }
     );
-    const r0 = rows[0];
+
     let placeName = '';
-    if (r0.place_id) {
-      const { rows: pn } = await query('SELECT name FROM places WHERE id = $1', [r0.place_id]);
-      placeName = pn[0]?.name || '';
+    if (result.place_id) {
+      const placesCollLookup = await getCollection('places');
+      const updatedPlace = await placesCollLookup.findOne({ id: result.place_id });
+      placeName = updatedPlace?.name || '';
     }
-    res.json({ coupon: rowToCoupon({ ...r0, place_name: placeName }) });
+    res.json({ coupon: rowToCoupon({ ...result, place_name: placeName }) });
   } catch (err) {
-    if (err.code === '23505') {
-      return res.status(400).json({ error: 'A coupon with this code already exists.' });
-    }
     console.error(err);
     res.status(500).json({ error: 'Failed to update coupon' });
   }
@@ -264,8 +252,9 @@ router.delete('/:id', async (req, res) => {
   const id = String(req.params.id || '').trim();
   if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid coupon id' });
   try {
-    const { rowCount } = await query('DELETE FROM coupons WHERE id = $1::uuid', [id]);
-    if (!rowCount) return res.status(404).json({ error: 'Coupon not found' });
+    const couponsColl = await getCollection('coupons');
+    const result = await couponsColl.deleteOne({ id });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Coupon not found' });
     res.json({ ok: true });
   } catch (err) {
     console.error(err);

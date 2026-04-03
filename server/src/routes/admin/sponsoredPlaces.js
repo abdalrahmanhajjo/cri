@@ -1,7 +1,8 @@
 const express = require('express');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
+const crypto = require('crypto');
 
 const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
@@ -23,7 +24,7 @@ function parseMaybeDate(raw) {
   if (raw == null || raw === '') return null;
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
+  return d;
 }
 
 function sanitizeInput(body) {
@@ -51,20 +52,29 @@ function sanitizeInput(body) {
 /** GET /api/admin/sponsored-places */
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await query(
-      `SELECT sp.id, sp.place_id, sp.surface, sp.rank, sp.enabled, sp.starts_at, sp.ends_at,
-              sp.badge_text, sp.title_override, sp.subtitle_override, sp.image_override_url, sp.cta_url,
-              sp.created_at, sp.updated_at, sp.source, sp.purchase_id, sp.purchased_by_user_id,
-              pur.stripe_checkout_session_id, pur.stripe_payment_intent_id, pur.status AS purchase_status,
-              pur.amount_cents AS purchase_amount_cents, pur.currency AS purchase_currency,
-              p.name AS place_name, p.category AS place_category, p.location AS place_location, p.images AS place_images
-       FROM sponsored_places sp
-       INNER JOIN places p ON p.id = sp.place_id
-       LEFT JOIN sponsorship_purchases pur ON pur.id = sp.purchase_id
-       ORDER BY sp.rank ASC, sp.created_at DESC`
-    );
-    const items = rows.map((r) => ({
-      id: String(r.id),
+    const spColl = await getCollection('sponsored_places');
+    const items = await spColl.aggregate([
+      { $lookup: {
+          from: 'places',
+          localField: 'place_id',
+          foreignField: 'id',
+          as: 'place'
+      }},
+      { $unwind: '$place' },
+      { $lookup: {
+          from: 'sponsorship_purchases',
+          localField: 'purchase_id',
+          foreignField: 'id',
+          as: 'purchase'
+      }},
+      { $addFields: {
+          purchaseObj: { $arrayElemAt: ['$purchase', 0] }
+      }},
+      { $sort: { rank: 1, created_at: -1 } }
+    ]).toArray();
+
+    const result = items.map((r) => ({
+      id: String(r.id || r._id),
       placeId: String(r.place_id),
       surface: r.surface || 'all',
       rank: Number(r.rank) || 0,
@@ -81,22 +91,21 @@ router.get('/', async (req, res) => {
       source: r.source || 'admin',
       purchaseId: r.purchase_id ? String(r.purchase_id) : null,
       purchasedByUserId: r.purchased_by_user_id ? String(r.purchased_by_user_id) : null,
-      stripeCheckoutSessionId: r.stripe_checkout_session_id || null,
-      stripePaymentIntentId: r.stripe_payment_intent_id || null,
-      purchaseStatus: r.purchase_status || null,
-      purchaseAmountCents: r.purchase_amount_cents != null ? Number(r.purchase_amount_cents) : null,
-      purchaseCurrency: r.purchase_currency || null,
+      stripeCheckoutSessionId: r.purchaseObj?.stripe_checkout_session_id || null,
+      stripePaymentIntentId: r.purchaseObj?.stripe_payment_intent_id || null,
+      purchaseStatus: r.purchaseObj?.status || null,
+      purchaseAmountCents: r.purchaseObj?.amount_cents != null ? Number(r.purchaseObj.amount_cents) : null,
+      purchaseCurrency: r.purchaseObj?.currency || null,
       place: {
         id: String(r.place_id),
-        name: r.place_name || '',
-        category: r.place_category || '',
-        location: r.place_location || '',
-        images: r.place_images || [],
+        name: r.place.name || '',
+        category: r.place.category || '',
+        location: r.place.location || '',
+        images: r.place.images || [],
       },
     }));
-    res.json({ items });
+    res.json({ items: result });
   } catch (err) {
-    if (err.code === '42P01') return res.json({ items: [] });
     console.error(err);
     res.status(500).json({ error: 'Failed to load sponsored places' });
   }
@@ -107,40 +116,38 @@ router.post('/', async (req, res) => {
   const v = sanitizeInput(req.body);
   if (!v.placeId) return res.status(400).json({ error: 'placeId is required' });
   try {
-    const { rows: placeRows } = await query('SELECT id FROM places WHERE id = $1', [v.placeId]);
-    if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
-    const { rows } = await query(
-      `INSERT INTO sponsored_places
-         (place_id, surface, rank, enabled, starts_at, ends_at, badge_text, title_override, subtitle_override, image_override_url, cta_url,
-          source, purchase_id, purchased_by_user_id, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5::timestamptz, $6::timestamptz, $7, $8, $9, $10, $11, 'admin', NULL, NULL, NOW(), NOW())
-       ON CONFLICT (place_id, surface) DO UPDATE SET
-         rank = EXCLUDED.rank,
-         enabled = EXCLUDED.enabled,
-         starts_at = EXCLUDED.starts_at,
-         ends_at = EXCLUDED.ends_at,
-         badge_text = EXCLUDED.badge_text,
-         title_override = EXCLUDED.title_override,
-         subtitle_override = EXCLUDED.subtitle_override,
-         image_override_url = EXCLUDED.image_override_url,
-         cta_url = EXCLUDED.cta_url,
-         updated_at = NOW()
-       RETURNING id`,
-      [
-        v.placeId,
-        v.surface || 'all',
-        v.rank ?? 0,
-        v.enabled ?? true,
-        v.startsAt,
-        v.endsAt,
-        v.badgeText ?? null,
-        v.titleOverride ?? null,
-        v.subtitleOverride ?? null,
-        v.imageOverrideUrl ?? null,
-        v.ctaUrl ?? null,
-      ]
-    );
-    res.status(201).json({ id: String(rows[0]?.id), ok: true });
+    const placesColl = await getCollection('places');
+    const place = await placesColl.findOne({ id: v.placeId });
+    if (!place) return res.status(404).json({ error: 'Place not found' });
+
+    const spColl = await getCollection('sponsored_places');
+    const surface = v.surface || 'all';
+    
+    const existing = await spColl.findOne({ place_id: v.placeId, surface: surface });
+    const id = existing ? existing.id : crypto.randomUUID();
+
+    const doc = {
+      id,
+      place_id: v.placeId,
+      surface,
+      rank: v.rank ?? 0,
+      enabled: v.enabled ?? true,
+      starts_at: v.startsAt,
+      ends_at: v.endsAt,
+      badge_text: v.badgeText ?? null,
+      title_override: v.titleOverride ?? null,
+      subtitle_override: v.subtitleOverride ?? null,
+      image_override_url: v.imageOverrideUrl ?? null,
+      cta_url: v.ctaUrl ?? null,
+      source: existing ? existing.source : 'admin',
+      purchase_id: existing ? existing.purchase_id : null,
+      purchased_by_user_id: existing ? existing.purchased_by_user_id : null,
+      created_at: existing ? existing.created_at : new Date(),
+      updated_at: new Date()
+    };
+
+    await spColl.replaceOne({ place_id: v.placeId, surface: surface }, doc, { upsert: true });
+    res.status(201).json({ id: String(id), ok: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create sponsored place' });
@@ -152,36 +159,26 @@ router.patch('/:id', async (req, res) => {
   const id = req.params.id;
   const v = sanitizeInput(req.body);
   try {
-    const { rowCount } = await query(
-      `UPDATE sponsored_places SET
-         rank = COALESCE($2, rank),
-         enabled = COALESCE($3, enabled),
-         starts_at = $4::timestamptz,
-         ends_at = $5::timestamptz,
-         badge_text = COALESCE($6, badge_text),
-         title_override = COALESCE($7, title_override),
-         subtitle_override = COALESCE($8, subtitle_override),
-         image_override_url = COALESCE($9, image_override_url),
-         cta_url = COALESCE($10, cta_url),
-         updated_at = NOW()
-       WHERE id = $1`,
-      [
-        id,
-        v.rank !== undefined ? v.rank : null,
-        v.enabled !== undefined ? v.enabled : null,
-        v.startsAt,
-        v.endsAt,
-        v.badgeText !== undefined ? v.badgeText : null,
-        v.titleOverride !== undefined ? v.titleOverride : null,
-        v.subtitleOverride !== undefined ? v.subtitleOverride : null,
-        v.imageOverrideUrl !== undefined ? v.imageOverrideUrl : null,
-        v.ctaUrl !== undefined ? v.ctaUrl : null,
-      ]
-    );
-    if (rowCount === 0) return res.status(404).json({ error: 'Not found' });
+    const setObj = {};
+    if (v.rank !== undefined) setObj.rank = v.rank;
+    if (v.enabled !== undefined) setObj.enabled = v.enabled;
+    if (v.startsAt !== undefined) setObj.starts_at = v.startsAt;
+    if (v.endsAt !== undefined) setObj.ends_at = v.endsAt;
+    if (v.badgeText !== undefined) setObj.badge_text = v.badgeText;
+    if (v.titleOverride !== undefined) setObj.title_override = v.titleOverride;
+    if (v.subtitleOverride !== undefined) setObj.subtitle_override = v.subtitleOverride;
+    if (v.imageOverrideUrl !== undefined) setObj.image_override_url = v.imageOverrideUrl;
+    if (v.ctaUrl !== undefined) setObj.cta_url = v.ctaUrl;
+    
+    if (Object.keys(setObj).length === 0) return res.status(400).json({ error: 'No fields to update' });
+    setObj.updated_at = new Date();
+
+    const spColl = await getCollection('sponsored_places');
+    const result = await spColl.updateOne({ id: id }, { $set: setObj });
+    
+    if (result.matchedCount === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ ok: true });
   } catch (err) {
-    if (err.code === '22P02') return res.status(400).json({ error: 'Invalid id or timestamp' });
     console.error(err);
     res.status(500).json({ error: 'Failed to update sponsored place' });
   }
@@ -191,8 +188,9 @@ router.patch('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const id = req.params.id;
   try {
-    const { rowCount } = await query('DELETE FROM sponsored_places WHERE id = $1', [id]);
-    if (rowCount === 0) return res.status(404).json({ error: 'Not found' });
+    const spColl = await getCollection('sponsored_places');
+    const result = await spColl.deleteOne({ id: id });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -201,4 +199,3 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
-

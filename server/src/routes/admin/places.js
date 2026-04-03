@@ -1,14 +1,12 @@
 const express = require('express');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
-
 const { normalizeDbText } = require('../../utils/normalizeDbText');
 const { validateAdminPlaceUpsert } = require('../../utils/validateAdminPlace');
 const { invalidateSitemapCache } = require('../../seo/seoRoutes');
 
 const router = express.Router();
-
 router.use(authMiddleware, adminMiddleware);
 
 function safeJson(val, fallback = []) {
@@ -20,37 +18,35 @@ function safeJson(val, fallback = []) {
   return fallback;
 }
 
-/** GET /api/admin/places?q=&limit= — search places for admin pickers (id, name, location) */
+/** GET /api/admin/places?q=&limit= — search places for admin pickers */
 router.get('/', async (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 40, 1), 500);
   const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 120) : '';
-  const params = [];
-  let whereSql = '';
-  if (q) {
-    const idx = params.length + 1;
-    params.push(`%${q}%`);
-    whereSql = `WHERE (id ILIKE $${idx} OR name ILIKE $${idx} OR COALESCE(location, '') ILIKE $${idx})`;
-  }
-  const limIdx = params.length + 1;
-  params.push(limit);
+  
   try {
-    const { rows } = await query(
-      `SELECT id, name, COALESCE(location, '') AS location
-       FROM places
-       ${whereSql}
-       ORDER BY name ASC
-       LIMIT $${limIdx}`,
-      params
-    );
+    const placesColl = await getCollection('places');
+    const queryObj = {};
+    if (q) {
+      queryObj.$or = [
+        { id: { $regex: q, $options: 'i' } },
+        { name: { $regex: q, $options: 'i' } },
+        { location: { $regex: q, $options: 'i' } }
+      ];
+    }
+    
+    const docs = await placesColl.find(queryObj)
+      .sort({ name: 1 })
+      .limit(limit)
+      .toArray();
+
     res.json({
-      places: rows.map((r) => ({
+      places: docs.map((r) => ({
         id: r.id,
         name: normalizeDbText(r.name || ''),
         location: normalizeDbText(r.location || ''),
       })),
     });
   } catch (err) {
-    if (err.code === '42P01') return res.json({ places: [] });
     console.error(err);
     res.status(500).json({ error: 'Failed to search places' });
   }
@@ -67,42 +63,35 @@ router.post('/', async (req, res) => {
 
     const images = safeJson(body.images, []);
     const tags = safeJson(body.tags, []);
-    const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
-    const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
 
-    await query(
-      `INSERT INTO places (id, name, description, location, latitude, longitude, search_name, images, category, category_id, duration, price, best_time, rating, review_count, hours, tags)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, $13, $14, $15, $16::jsonb, $17::jsonb)
-       ON CONFLICT (id) DO UPDATE SET
-         name = EXCLUDED.name, description = EXCLUDED.description, location = EXCLUDED.location,
-         latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude, search_name = EXCLUDED.search_name,
-         images = EXCLUDED.images, category = EXCLUDED.category, category_id = EXCLUDED.category_id,
-         duration = EXCLUDED.duration, price = EXCLUDED.price, best_time = EXCLUDED.best_time,
-         rating = EXCLUDED.rating, review_count = EXCLUDED.review_count, hours = EXCLUDED.hours, tags = EXCLUDED.tags`,
-      [
-        v.id,
-        v.name,
-        v.description,
-        v.location,
-        v.latitude,
-        v.longitude,
-        v.searchName,
-        imagesJson,
-        v.category,
-        v.categoryId,
-        v.duration,
-        v.price,
-        v.bestTime,
-        v.rating,
-        v.reviewCount,
-        body.hours ? JSON.stringify(body.hours) : null,
-        tagsJson,
-      ]
-    );
+    const placesColl = await getCollection('places');
+    const doc = {
+      id: v.id,
+      name: v.name,
+      description: v.description,
+      location: v.location,
+      latitude: v.latitude,
+      longitude: v.longitude,
+      search_name: v.searchName,
+      images: Array.isArray(images) ? images : [],
+      category: v.category,
+      category_id: v.categoryId,
+      duration: v.duration,
+      price: v.price,
+      best_time: v.bestTime,
+      rating: v.rating,
+      review_count: v.reviewCount,
+      hours: body.hours || null,
+      tags: Array.isArray(tags) ? tags : [],
+      updated_at: new Date()
+    };
+
+    await placesColl.replaceOne({ id: v.id }, doc, { upsert: true });
+    invalidateSitemapCache();
     res.status(201).json({ id: v.id, message: 'Place saved' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to save place', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+    res.status(500).json({ error: 'Failed to save place' });
   }
 });
 
@@ -121,53 +110,37 @@ function displayReviewAuthorName(name, email) {
 router.get('/:id/reviews', async (req, res) => {
   const placeId = req.params.id;
   try {
-    const { rows: placeRows } = await query('SELECT id FROM places WHERE id = $1', [placeId]);
-    if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
-    const pid = placeRows[0].id;
-    let rows;
-    try {
-      ({ rows } = await query(
-        `SELECT r.id, r.rating, r.title, r.review, r.created_at, r.hidden_at,
-                u.name AS user_name, u.email AS user_email
-         FROM place_reviews r
-         INNER JOIN users u ON u.id = r.user_id
-         WHERE r.place_id = $1
-         ORDER BY r.created_at DESC
-         LIMIT 200`,
-        [pid]
-      ));
-    } catch (err) {
-      if (err.code === '42P01') return res.json({ placeId: pid, reviews: [] });
-      if (err.code === '42703' && String(err.message || '').includes('hidden_at')) {
-        ({ rows } = await query(
-          `SELECT r.id, r.rating, r.title, r.review, r.created_at, NULL::timestamptz AS hidden_at,
-                  u.name AS user_name, u.email AS user_email
-           FROM place_reviews r
-           INNER JOIN users u ON u.id = r.user_id
-           WHERE r.place_id = $1
-           ORDER BY r.created_at DESC
-           LIMIT 200`,
-          [pid]
-        ));
-      } else {
-        throw err;
-      }
-    }
+    const reviewsColl = await getCollection('place_reviews');
+    const rows = await reviewsColl.aggregate([
+      { $match: { place_id: placeId } },
+      { $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: 'id',
+          as: 'user'
+      }},
+      { $addFields: {
+          userObj: { $arrayElemAt: ['$user', 0] }
+      }},
+      { $sort: { created_at: -1 } },
+      { $limit: 200 }
+    ]).toArray();
+
     const reviews = rows.map((r) => ({
-      id: String(r.id),
+      id: String(r.id || r._id),
       rating: r.rating,
       title: r.title || null,
       review: r.review || null,
       createdAt: r.created_at,
-      authorName: displayReviewAuthorName(r.user_name, r.user_email),
-      authorEmail: (r.user_email && String(r.user_email).trim()) || null,
+      authorName: displayReviewAuthorName(r.userObj?.name, r.userObj?.email),
+      authorEmail: (r.userObj?.email && String(r.userObj.email).trim()) || null,
       hidden: r.hidden_at != null,
       hiddenAt: r.hidden_at || null,
     }));
-    res.json({ placeId: pid, reviews });
+    res.json({ placeId, reviews });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to load reviews', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+    res.status(500).json({ error: 'Failed to load reviews' });
   }
 });
 
@@ -175,57 +148,50 @@ router.put('/:id', async (req, res) => {
   try {
     const id = req.params.id;
     const body = req.body || {};
-    const images = safeJson(body.images, []);
-    const tags = safeJson(body.tags, []);
-    const imagesJson = JSON.stringify(Array.isArray(images) ? images : []);
-    const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
+    
+    const setObj = {};
+    if (body.name !== undefined) setObj.name = String(body.name);
+    if (body.description !== undefined) setObj.description = String(body.description);
+    if (body.location !== undefined) setObj.location = String(body.location);
+    if (body.latitude !== undefined) setObj.latitude = body.latitude == null ? null : parseFloat(body.latitude);
+    if (body.longitude !== undefined) setObj.longitude = body.longitude == null ? null : parseFloat(body.longitude);
+    if (body.searchName !== undefined) setObj.search_name = String(body.searchName);
+    if (body.images !== undefined) setObj.images = safeJson(body.images, []);
+    if (body.category !== undefined) setObj.category = String(body.category);
+    if (body.categoryId !== undefined) setObj.category_id = String(body.categoryId);
+    if (body.duration !== undefined) setObj.duration = String(body.duration);
+    if (body.price !== undefined) setObj.price = String(body.price);
+    if (body.bestTime !== undefined) setObj.best_time = String(body.bestTime);
+    if (body.rating !== undefined) setObj.rating = body.rating == null ? null : parseFloat(body.rating);
+    if (body.reviewCount !== undefined) setObj.review_count = parseInt(body.reviewCount, 10);
+    if (body.hours !== undefined) setObj.hours = body.hours;
+    if (body.tags !== undefined) setObj.tags = safeJson(body.tags, []);
+    
+    setObj.updated_at = new Date();
 
-    const result = await query(
-      `UPDATE places SET
-         name = COALESCE($2, name), description = COALESCE($3, description), location = COALESCE($4, location),
-         latitude = COALESCE($5, latitude), longitude = COALESCE($6, longitude), search_name = COALESCE($7, search_name),
-         images = COALESCE($8::jsonb, images), category = COALESCE($9, category), category_id = COALESCE($10, category_id),
-         duration = COALESCE($11, duration), price = COALESCE($12, price), best_time = COALESCE($13, best_time),
-         rating = COALESCE($14, rating), review_count = COALESCE($15, review_count), hours = COALESCE($16::jsonb, hours), tags = COALESCE($17::jsonb, tags)
-       WHERE id = $1`,
-      [
-        id,
-        body.name !== undefined ? String(body.name) : null,
-        body.description !== undefined ? String(body.description) : null,
-        body.location !== undefined ? String(body.location) : null,
-        body.latitude !== undefined ? (body.latitude == null ? null : parseFloat(body.latitude)) : null,
-        body.longitude !== undefined ? (body.longitude == null ? null : parseFloat(body.longitude)) : null,
-        body.searchName !== undefined || body.search_name !== undefined ? String(body.searchName ?? body.search_name ?? '') : null,
-        body.images !== undefined ? imagesJson : null,
-        body.category !== undefined ? String(body.category) : null,
-        body.categoryId !== undefined || body.category_id !== undefined ? String(body.categoryId ?? body.category_id ?? '') : null,
-        body.duration !== undefined ? String(body.duration) : null,
-        body.price !== undefined ? String(body.price) : null,
-        body.bestTime !== undefined || body.best_time !== undefined ? String(body.bestTime ?? body.best_time ?? '') : null,
-        body.rating !== undefined ? (body.rating == null ? null : parseFloat(body.rating)) : null,
-        body.reviewCount !== undefined || body.review_count !== undefined ? (body.reviewCount ?? body.review_count) : null,
-        body.hours !== undefined ? JSON.stringify(body.hours) : null,
-        body.tags !== undefined ? tagsJson : null,
-      ]
-    );
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Place not found' });
+    const placesColl = await getCollection('places');
+    const result = await placesColl.updateOne({ id }, { $set: setObj });
+    
+    if (result.matchedCount === 0) return res.status(404).json({ error: 'Place not found' });
+    invalidateSitemapCache();
     res.json({ id, message: 'Place updated' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to update place', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+    res.status(500).json({ error: 'Failed to update place' });
   }
 });
 
 router.delete('/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await query('DELETE FROM places WHERE id = $1', [id]);
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Place not found' });
+    const placesColl = await getCollection('places');
+    const result = await placesColl.deleteOne({ id });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Place not found' });
     invalidateSitemapCache();
     res.json({ message: 'Place deleted' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to delete place', detail: process.env.NODE_ENV !== 'production' ? err.message : undefined });
+    res.status(500).json({ error: 'Failed to delete place' });
   }
 });
 

@@ -1,12 +1,13 @@
 const express = require('express');
 const Stripe = require('stripe');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { parsePlaceId } = require('../../utils/validate');
 const { loadSiteSettings } = require('../../utils/siteSettingsLoad');
 const {
   sponsorshipConfigFromSettings,
   assertCanStartPaidCheckout,
 } = require('../../services/sponsorshipStripe');
+const crypto = require('crypto');
 
 const router = express.Router();
 
@@ -55,11 +56,9 @@ router.post('/checkout-session', async (req, res) => {
     const placeId = placeParsed.value;
 
     const userId = req.user.userId;
-    const { rows: own } = await query(
-      'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
-      [userId, placeId]
-    );
-    if (!own.length) return res.status(403).json({ error: 'You do not manage this place.' });
+    const poColl = await getCollection('place_owners');
+    const own = await poColl.findOne({ user_id: userId, place_id: placeId });
+    if (!own) return res.status(403).json({ error: 'You do not manage this place.' });
 
     const gate = await assertCanStartPaidCheckout(placeId, 'all');
     if (!gate.ok) return res.status(409).json({ error: gate.error });
@@ -73,13 +72,21 @@ router.post('/checkout-session', async (req, res) => {
     const stripe = new Stripe(sk);
     const priceId = process.env.STRIPE_PRICE_ID?.trim();
 
-    const { rows } = await query(
-      `INSERT INTO sponsorship_purchases (user_id, place_id, status, amount_cents, currency, duration_days, surface)
-       VALUES ($1, $2, 'pending', $3, $4, $5, 'all')
-       RETURNING id`,
-      [userId, placeId, cfg.sponsorshipAmountCents, cfg.sponsorshipCurrency, cfg.sponsorshipDurationDays]
-    );
-    const purchaseId = rows[0].id;
+    const purColl = await getCollection('sponsorship_purchases');
+    const purchaseId = crypto.randomUUID();
+    const newPurchase = {
+      id: purchaseId,
+      user_id: userId,
+      place_id: placeId,
+      status: 'pending',
+      amount_cents: cfg.sponsorshipAmountCents,
+      currency: cfg.sponsorshipCurrency,
+      duration_days: cfg.sponsorshipDurationDays,
+      surface: 'all',
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+    await purColl.insertOne(newPurchase);
 
     const lineItems = priceId
       ? [{ price: priceId, quantity: 1 }]
@@ -90,7 +97,7 @@ router.post('/checkout-session', async (req, res) => {
               unit_amount: cfg.sponsorshipAmountCents,
               product_data: {
                 name: 'Sponsored placement — all surfaces',
-                description: `${cfg.sponsorshipDurationDays} days on Home / Discover / Community feed (subject to site settings).`,
+                description: `${cfg.sponsorshipDurationDays} days on Home / Discover / Community feed.`,
               },
             },
             quantity: 1,
@@ -111,20 +118,16 @@ router.post('/checkout-session', async (req, res) => {
         },
       });
 
-      await query(`UPDATE sponsorship_purchases SET stripe_checkout_session_id = $1 WHERE id = $2`, [
-        session.id,
-        purchaseId,
-      ]);
+      await purColl.updateOne({ id: purchaseId }, { $set: { stripe_checkout_session_id: session.id } });
 
       return res.status(201).json({ url: session.url, purchaseId: String(purchaseId) });
     } catch (stripeErr) {
-      await query(`DELETE FROM sponsorship_purchases WHERE id = $1 AND status = 'pending'`, [purchaseId]);
+      await purColl.deleteOne({ id: purchaseId, status: 'pending' });
       console.error(stripeErr);
       return res.status(502).json({ error: stripeErr.message || 'Could not start checkout.' });
     }
   } catch (err) {
     console.error(err);
-    if (err.code === '42P01') return res.status(503).json({ error: 'Database migration may be pending.' });
     return res.status(500).json({ error: 'Failed to create checkout session.' });
   }
 });
@@ -136,13 +139,19 @@ router.get('/session-status', async (req, res) => {
 
   try {
     const userId = req.user.userId;
-    const { rows } = await query(
-      `SELECT sp.id, sp.status, sp.ends_at, sp.place_id, sp.starts_at, p.name AS place_name
-       FROM sponsorship_purchases sp
-       INNER JOIN places p ON p.id = sp.place_id
-       WHERE sp.stripe_checkout_session_id = $1 AND sp.user_id = $2`,
-      [sessionId, userId]
-    );
+    const purColl = await getCollection('sponsorship_purchases');
+    
+    const rows = await purColl.aggregate([
+      { $match: { stripe_checkout_session_id: sessionId, user_id: userId } },
+      { $lookup: {
+          from: 'places',
+          localField: 'place_id',
+          foreignField: 'id',
+          as: 'place'
+      }},
+      { $unwind: '$place' }
+    ]).toArray();
+
     if (!rows.length) return res.status(404).json({ error: 'Session not found.' });
     const r = rows[0];
     res.json({
@@ -150,7 +159,7 @@ router.get('/session-status', async (req, res) => {
       startsAt: r.starts_at || null,
       endsAt: r.ends_at || null,
       placeId: r.place_id,
-      placeName: r.place_name || '',
+      placeName: r.place.name || '',
     });
   } catch (err) {
     console.error(err);

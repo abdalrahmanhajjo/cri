@@ -1,9 +1,9 @@
 /**
  * Auth abuse counters: login/forgot/reset windows + verification email cooldown.
- * Uses Postgres when DATABASE_URL is set and AUTH_ABUSE_STORE is not "memory".
- * Falls back to in-memory Maps for local dev without DB or when AUTH_ABUSE_STORE=memory.
+ * Uses MongoDB when AUTH_ABUSE_STORE is not "memory".
+ * Falls back to in-memory Maps for local dev when AUTH_ABUSE_STORE=memory.
  */
-const { pool } = require('../db');
+const { getCollection } = require('../mongo');
 
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_LOGIN = 5;
@@ -17,10 +17,7 @@ const KIND_RESET = 'reset_key';
 const KIND_VERIF = 'verification_email';
 
 function useMemory() {
-  return (
-    process.env.AUTH_ABUSE_STORE === 'memory' ||
-    !process.env.DATABASE_URL?.trim()
-  );
+  return process.env.AUTH_ABUSE_STORE === 'memory';
 }
 
 function normKey(k) {
@@ -29,7 +26,7 @@ function normKey(k) {
   return s.length > 500 ? s.slice(0, 500) : s;
 }
 
-/* ---------- in-memory fallback (same semantics as before) ---------- */
+/* ---------- in-memory fallback ---------- */
 const memLogin = new Map();
 const memForgot = new Map();
 const memReset = new Map();
@@ -57,58 +54,50 @@ function memRecord(map, ip) {
   else map.set(ip, { count: 1, firstAttempt: now });
 }
 
-async function txRecordWindowed(kind, bucketKey) {
+/* ---------- MongoDB storage ---------- */
+
+async function mongoRecordWindowed(kind, bucketKey) {
   const key = normKey(bucketKey);
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const r = await client.query(
-      `SELECT hit_count, window_start FROM auth_abuse_tracking WHERE bucket_key = $1 AND kind = $2 FOR UPDATE`,
-      [key, kind]
-    );
-    const now = Date.now();
-    if (!r.rows.length) {
-      await client.query(
-        `INSERT INTO auth_abuse_tracking (bucket_key, kind, window_start, hit_count) VALUES ($1, $2, NOW(), 1)`,
-        [key, kind]
+  const coll = await getCollection('auth_abuse_tracking');
+  const now = new Date();
+  
+  // Find current state
+  const doc = await coll.findOne({ bucket_key: key, kind: kind });
+  
+  if (!doc) {
+    await coll.insertOne({
+      bucket_key: key,
+      kind: kind,
+      window_start: now,
+      hit_count: 1
+    });
+  } else {
+    const ws = new Date(doc.window_start).getTime();
+    if (Date.now() - ws > WINDOW_MS) {
+      await coll.updateOne(
+        { _id: doc._id },
+        { $set: { window_start: now, hit_count: 1 } }
       );
     } else {
-      const ws = new Date(r.rows[0].window_start).getTime();
-      if (now - ws > WINDOW_MS) {
-        await client.query(
-          `UPDATE auth_abuse_tracking SET window_start = NOW(), hit_count = 1 WHERE bucket_key = $1 AND kind = $2`,
-          [key, kind]
-        );
-      } else {
-        await client.query(
-          `UPDATE auth_abuse_tracking SET hit_count = hit_count + 1 WHERE bucket_key = $1 AND kind = $2`,
-          [key, kind]
-        );
-      }
+      await coll.updateOne(
+        { _id: doc._id },
+        { $inc: { hit_count: 1 } }
+      );
     }
-    await client.query('COMMIT');
-  } catch (e) {
-    try {
-      await client.query('ROLLBACK');
-    } catch (_) {
-      /* ignore */
-    }
-    throw e;
-  } finally {
-    client.release();
   }
 }
 
-async function dbCheckWindowed(kind, bucketKey, max) {
+async function mongoCheckWindowed(kind, bucketKey, max) {
   const key = normKey(bucketKey);
-  const { rows } = await pool.query(
-    `SELECT hit_count, window_start FROM auth_abuse_tracking WHERE bucket_key = $1 AND kind = $2`,
-    [key, kind]
-  );
-  if (!rows.length) return { ok: true };
-  const hitCount = Number(rows[0].hit_count) || 0;
-  const start = new Date(rows[0].window_start).getTime();
+  const coll = await getCollection('auth_abuse_tracking');
+  const doc = await coll.findOne({ bucket_key: key, kind: kind });
+  
+  if (!doc) return { ok: true };
+  
+  const hitCount = Number(doc.hit_count) || 0;
+  const start = new Date(doc.window_start).getTime();
   const now = Date.now();
+  
   if (now - start > WINDOW_MS) return { ok: true };
   if (hitCount >= max) {
     return { ok: false, retryAfter: Math.ceil((start + WINDOW_MS - now) / 1000) };
@@ -119,7 +108,7 @@ async function dbCheckWindowed(kind, bucketKey, max) {
 async function checkLoginRateLimit(ip) {
   if (useMemory()) return memCheck(memLogin, ip, MAX_LOGIN);
   try {
-    return await dbCheckWindowed(KIND_LOGIN, ip, MAX_LOGIN);
+    return await mongoCheckWindowed(KIND_LOGIN, ip, MAX_LOGIN);
   } catch (e) {
     console.error('[authAbuse] checkLoginRateLimit:', e.message);
     return { ok: true };
@@ -132,7 +121,7 @@ async function recordFailedLoginAttempt(ip) {
     return;
   }
   try {
-    await txRecordWindowed(KIND_LOGIN, ip);
+    await mongoRecordWindowed(KIND_LOGIN, ip);
   } catch (e) {
     console.error('[authAbuse] recordFailedLoginAttempt:', e.message);
   }
@@ -141,7 +130,7 @@ async function recordFailedLoginAttempt(ip) {
 async function checkForgotRateLimit(ip) {
   if (useMemory()) return memCheck(memForgot, ip, MAX_FORGOT);
   try {
-    return await dbCheckWindowed(KIND_FORGOT, ip, MAX_FORGOT);
+    return await mongoCheckWindowed(KIND_FORGOT, ip, MAX_FORGOT);
   } catch (e) {
     console.error('[authAbuse] checkForgotRateLimit:', e.message);
     return { ok: true };
@@ -154,7 +143,7 @@ async function recordForgotPasswordAttempt(ip) {
     return;
   }
   try {
-    await txRecordWindowed(KIND_FORGOT, ip);
+    await mongoRecordWindowed(KIND_FORGOT, ip);
   } catch (e) {
     console.error('[authAbuse] recordForgotPasswordAttempt:', e.message);
   }
@@ -163,7 +152,7 @@ async function recordForgotPasswordAttempt(ip) {
 async function checkResetRateLimit(resetKey) {
   if (useMemory()) return memCheck(memReset, resetKey, MAX_RESET);
   try {
-    return await dbCheckWindowed(KIND_RESET, resetKey, MAX_RESET);
+    return await mongoCheckWindowed(KIND_RESET, resetKey, MAX_RESET);
   } catch (e) {
     console.error('[authAbuse] checkResetRateLimit:', e.message);
     return { ok: true };
@@ -176,22 +165,21 @@ async function recordResetPasswordAttempt(resetKey) {
     return;
   }
   try {
-    await txRecordWindowed(KIND_RESET, resetKey);
+    await mongoRecordWindowed(KIND_RESET, resetKey);
   } catch (e) {
     console.error('[authAbuse] recordResetPasswordAttempt:', e.message);
   }
 }
 
 async function clearResetPasswordAttempts(resetKey) {
+  const key = normKey(resetKey);
   if (useMemory()) {
-    memReset.delete(resetKey);
+    memReset.delete(key);
     return;
   }
   try {
-    await pool.query('DELETE FROM auth_abuse_tracking WHERE bucket_key = $1 AND kind = $2', [
-      normKey(resetKey),
-      KIND_RESET,
-    ]);
+    const coll = await getCollection('auth_abuse_tracking');
+    await coll.deleteOne({ bucket_key: key, kind: KIND_RESET });
   } catch (e) {
     console.error('[authAbuse] clearResetPasswordAttempts:', e.message);
   }
@@ -205,12 +193,10 @@ async function canSendVerificationEmailNow(email) {
     return true;
   }
   try {
-    const { rows } = await pool.query(
-      `SELECT window_start FROM auth_abuse_tracking WHERE bucket_key = $1 AND kind = $2`,
-      [k, KIND_VERIF]
-    );
-    if (!rows.length) return true;
-    const last = new Date(rows[0].window_start).getTime();
+    const coll = await getCollection('auth_abuse_tracking');
+    const doc = await coll.findOne({ bucket_key: k, kind: KIND_VERIF });
+    if (!doc) return true;
+    const last = new Date(doc.window_start).getTime();
     return Date.now() - last >= VERIFICATION_RESEND_MS;
   } catch (e) {
     console.error('[authAbuse] canSendVerificationEmailNow:', e.message);
@@ -225,11 +211,11 @@ async function markVerificationEmailSent(email) {
     return;
   }
   try {
-    await pool.query(
-      `INSERT INTO auth_abuse_tracking (bucket_key, kind, window_start, hit_count)
-       VALUES ($1, $2, NOW(), 1)
-       ON CONFLICT (bucket_key, kind) DO UPDATE SET window_start = NOW(), hit_count = 1`,
-      [k, KIND_VERIF]
+    const coll = await getCollection('auth_abuse_tracking');
+    await coll.updateOne(
+      { bucket_key: k, kind: KIND_VERIF },
+      { $set: { window_start: new Date(), hit_count: 1 } },
+      { upsert: true }
     );
   } catch (e) {
     console.error('[authAbuse] markVerificationEmailSent:', e.message);

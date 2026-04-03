@@ -1,8 +1,7 @@
 const express = require('express');
-const { query } = require('../db');
+const { getCollection } = require('../mongo');
 const { authMiddleware } = require('../middleware/auth');
 const { sendDbAwareError } = require('../utils/dbHttpError');
-const { COUPON_ACTIVE, PLACE_PROMOTION_ACTIVE } = require('../utils/activeOfferFilters');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -11,7 +10,6 @@ function normalizeCode(s) {
   return String(s ?? '').trim().toUpperCase();
 }
 
-/** @returns {{ ok: true, kind: 'coupon', uuid: string } | { ok: true, kind: 'promo', promoId: number } | { ok: false, error: string }} */
 function parseRedeemPromotionId(promotionId) {
   const raw = String(promotionId ?? '').trim();
   if (raw.startsWith('coupon-')) {
@@ -22,44 +20,23 @@ function parseRedeemPromotionId(promotionId) {
     return { ok: true, kind: 'coupon', uuid };
   }
   if (raw.startsWith('promo-')) {
-    const idStr = raw.slice('promo-'.length);
-    if (!/^\d+$/.test(idStr)) {
-      return { ok: false, error: 'Invalid offer.' };
-    }
-    const promoId = Number.parseInt(idStr, 10);
-    if (!Number.isFinite(promoId) || promoId < 1) {
-      return { ok: false, error: 'Invalid offer.' };
-    }
-    return { ok: true, kind: 'promo', promoId };
+    const id = raw.slice('promo-'.length);
+    if (!id) return { ok: false, error: 'Invalid offer.' };
+    return { ok: true, kind: 'promo', promoId: id };
   }
   return { ok: false, error: 'Unsupported offer type.' };
 }
 
-/** GET /api/coupons/redeemed — coupon UUIDs + place promotion ids (for OfferCard badges). */
 router.get('/redeemed', async (req, res) => {
   const userId = req.user.userId;
   try {
-    let couponIds = [];
-    try {
-      const { rows } = await query(
-        'SELECT coupon_id::text AS id FROM coupon_redemptions WHERE user_id = $1',
-        [userId]
-      );
-      couponIds = rows.map((r) => r.id);
-    } catch (err) {
-      if (err.code !== '42P01') throw err;
-    }
+    const couponRedemptions = await getCollection('coupon_redemptions');
+    const cRows = await couponRedemptions.find({ user_id: userId }).toArray();
+    const couponIds = cRows.map((r) => r.coupon_id);
 
-    let placePromotionIds = [];
-    try {
-      const { rows } = await query(
-        'SELECT promotion_id::text AS id FROM place_promotion_redemptions WHERE user_id = $1',
-        [userId]
-      );
-      placePromotionIds = rows.map((r) => r.id);
-    } catch (err) {
-      if (err.code !== '42P01') throw err;
-    }
+    const promoRedemptions = await getCollection('place_promotion_redemptions');
+    const pRows = await promoRedemptions.find({ user_id: userId }).toArray();
+    const placePromotionIds = pRows.map((r) => r.promotion_id);
 
     res.json({ couponIds, placePromotionIds });
   } catch (err) {
@@ -68,114 +45,92 @@ router.get('/redeemed', async (req, res) => {
 });
 
 async function redeemCoupon(userId, uuid, code) {
-  const existing = await query(
-    'SELECT redeemed_at FROM coupon_redemptions WHERE user_id = $1 AND coupon_id = $2::uuid',
-    [userId, uuid]
-  );
-  if (existing.rows.length) {
+  const couponRedemptions = await getCollection('coupon_redemptions');
+  const existing = await couponRedemptions.findOne({ user_id: userId, coupon_id: uuid });
+  if (existing) {
     return {
       status: 200,
-      body: {
-        ok: true,
-        alreadyRedeemed: true,
-        redeemedAt: existing.rows[0].redeemed_at,
-      },
+      body: { ok: true, alreadyRedeemed: true, redeemedAt: existing.created_at },
     };
   }
 
-  const active = await query(
-    `SELECT c.id, c.code FROM coupons c
-     WHERE c.id = $1::uuid AND (${COUPON_ACTIVE})`,
-    [uuid]
-  );
+  const coupons = await getCollection('coupons');
+  const now = new Date();
+  const active = await coupons.findOne({
+    id: uuid,
+    $or: [
+        { expires_at: null },
+        { expires_at: { $gt: now } }
+    ],
+    starts_at: { $lte: now }
+  });
 
-  if (!active.rows.length) {
-    const exists = await query('SELECT 1 FROM coupons WHERE id = $1::uuid', [uuid]);
-    if (!exists.rows.length) {
-      return { status: 404, body: { error: 'Coupon not found.', code: 'NOT_FOUND' } };
-    }
+  if (!active) {
+    const exists = await coupons.findOne({ id: uuid });
+    if (!exists) return { status: 404, body: { error: 'Coupon not found.', code: 'NOT_FOUND' } };
     return { status: 400, body: { error: 'This coupon is no longer active.', code: 'INACTIVE' } };
   }
 
-  const row = active.rows[0];
-  if (normalizeCode(row.code) !== code) {
+  if (normalizeCode(active.code) !== code) {
     return { status: 400, body: { error: 'Code does not match.', code: 'INVALID_CODE' } };
   }
 
-  const ins = await query(
-    `INSERT INTO coupon_redemptions (user_id, coupon_id) VALUES ($1, $2::uuid)
-     RETURNING id, redeemed_at`,
-    [userId, uuid]
-  );
+  const result = await couponRedemptions.insertOne({
+    user_id: userId,
+    coupon_id: uuid,
+    created_at: new Date()
+  });
 
   return {
     status: 201,
-    body: {
-      ok: true,
-      alreadyRedeemed: false,
-      redeemedAt: ins.rows[0].redeemed_at,
-    },
+    body: { ok: true, alreadyRedeemed: false, redeemedAt: new Date() },
   };
 }
 
 async function redeemPlacePromotion(userId, promoId, code) {
-  const existing = await query(
-    'SELECT redeemed_at FROM place_promotion_redemptions WHERE user_id = $1 AND promotion_id = $2',
-    [userId, promoId]
-  );
-  if (existing.rows.length) {
+  const promoRedemptions = await getCollection('place_promotion_redemptions');
+  const existing = await promoRedemptions.findOne({ user_id: userId, promotion_id: promoId });
+  if (existing) {
     return {
       status: 200,
-      body: {
-        ok: true,
-        alreadyRedeemed: true,
-        redeemedAt: existing.rows[0].redeemed_at,
-      },
+      body: { ok: true, alreadyRedeemed: true, redeemedAt: existing.created_at },
     };
   }
 
-  const active = await query(
-    `SELECT pr.id, pr.code FROM place_promotions pr
-     WHERE pr.id = $1
-       AND pr.code IS NOT NULL
-       AND LENGTH(TRIM(pr.code)) > 0
-       AND (${PLACE_PROMOTION_ACTIVE})`,
-    [promoId]
-  );
+  const promos = await getCollection('place_promotions');
+  const now = new Date();
+  const active = await promos.findOne({
+    id: promoId,
+    code: { $ne: null, $not: /^\s*$/ },
+    $or: [
+        { ends_at: null },
+        { ends_at: { $gt: now } }
+    ],
+    starts_at: { $lte: now }
+  });
 
-  if (!active.rows.length) {
-    const exists = await query('SELECT 1 FROM place_promotions WHERE id = $1', [promoId]);
-    if (!exists.rows.length) {
-      return { status: 404, body: { error: 'Offer not found.', code: 'NOT_FOUND' } };
-    }
+  if (!active) {
+    const exists = await promos.findOne({ id: promoId });
+    if (!exists) return { status: 404, body: { error: 'Offer not found.', code: 'NOT_FOUND' } };
     return { status: 400, body: { error: 'This offer is no longer active.', code: 'INACTIVE' } };
   }
 
-  const row = active.rows[0];
-  if (normalizeCode(row.code) !== code) {
+  if (normalizeCode(active.code) !== code) {
     return { status: 400, body: { error: 'Code does not match.', code: 'INVALID_CODE' } };
   }
 
-  const ins = await query(
-    `INSERT INTO place_promotion_redemptions (user_id, promotion_id) VALUES ($1, $2)
-     RETURNING id, redeemed_at`,
-    [userId, promoId]
-  );
+  await promoRedemptions.insertOne({
+    user_id: userId,
+    promotion_id: promoId,
+    created_at: new Date()
+  });
 
   return {
     status: 201,
-    body: {
-      ok: true,
-      alreadyRedeemed: false,
-      redeemedAt: ins.rows[0].redeemed_at,
-    },
+    body: { ok: true, alreadyRedeemed: false, redeemedAt: new Date() },
   };
 }
 
-/**
- * POST /api/coupons/redeem
- * Body: { promotionId: "coupon-<uuid>" | "promo-<id>", code: "<user-entered code>" }
- */
 router.post('/redeem', async (req, res) => {
   const userId = req.user.userId;
   const parsed = parseRedeemPromotionId(req.body?.promotionId);
@@ -190,55 +145,14 @@ router.post('/redeem', async (req, res) => {
 
   try {
     if (parsed.kind === 'coupon') {
-      const { uuid } = parsed;
-      try {
-        const out = await redeemCoupon(userId, uuid, code);
-        return res.status(out.status).json(out.body);
-      } catch (err) {
-        if (err.code === '23505') {
-          const again = await query(
-            'SELECT redeemed_at FROM coupon_redemptions WHERE user_id = $1 AND coupon_id = $2::uuid',
-            [userId, uuid]
-          );
-          if (again.rows.length) {
-            return res.status(200).json({
-              ok: true,
-              alreadyRedeemed: true,
-              redeemedAt: again.rows[0].redeemed_at,
-            });
-          }
-        }
-        throw err;
-      }
-    }
-
-    const { promoId } = parsed;
-    try {
-      const out = await redeemPlacePromotion(userId, promoId, code);
+      const out = await redeemCoupon(userId, parsed.uuid, code);
       return res.status(out.status).json(out.body);
-    } catch (err) {
-      if (err.code === '23505') {
-        const again = await query(
-          'SELECT redeemed_at FROM place_promotion_redemptions WHERE user_id = $1 AND promotion_id = $2',
-          [userId, promoId]
-        );
-        if (again.rows.length) {
-          return res.status(200).json({
-            ok: true,
-            alreadyRedeemed: true,
-            redeemedAt: again.rows[0].redeemed_at,
-          });
-        }
-      }
-      if (err.code === '42P01') {
-        return res.status(503).json({ error: 'Offer redemption is not available yet.', code: 'TABLE_MISSING' });
-      }
-      throw err;
+    } else {
+      const out = await redeemPlacePromotion(userId, parsed.promoId, code);
+      return res.status(out.status).json(out.body);
     }
   } catch (err) {
-    if (err.code === '42P01') {
-      return res.status(503).json({ error: 'Coupon redemption is not available.', code: 'TABLE_MISSING' });
-    }
+    console.error(err);
     sendDbAwareError(res, err, 'Redeem failed');
   }
 });

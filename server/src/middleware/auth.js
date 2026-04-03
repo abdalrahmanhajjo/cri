@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { query } = require('../db');
+const { getCollection } = require('../mongo');
 
 const isProd = process.env.NODE_ENV === 'production';
 const JWT_SECRET = process.env.JWT_SECRET || (isProd ? '' : 'fallback-dev-only');
@@ -19,24 +19,21 @@ const JWT_OPTIONS = {
 async function assertUserCanUseApi(userId, res, opts = {}) {
   const optional = opts.optional === true;
   try {
-    const { rows } = await query(
-      `SELECT COALESCE(is_blocked, false) AS is_blocked,
-              COALESCE(email_verified, false) AS email_verified,
-              LOWER(TRIM(COALESCE(auth_provider, 'email'))) AS auth_provider
-       FROM users WHERE id = $1`,
-      [userId]
-    );
-    if (!rows.length) {
+    const usersColl = await getCollection('users');
+    const user = await usersColl.findOne({ id: userId });
+    
+    if (!user) {
       if (optional) return false;
       res.status(401).json({ error: 'Invalid token' });
       return false;
     }
-    const row = rows[0];
-    if (row.is_blocked === true) {
+
+    if (user.is_blocked === true) {
       res.status(403).json({ error: 'Account disabled', code: 'ACCOUNT_BLOCKED' });
       return false;
     }
-    if (row.auth_provider === 'email' && row.email_verified !== true) {
+
+    if (user.auth_provider === 'email' && user.email_verified !== true) {
       if (optional) return false;
       res.status(403).json({
         error:
@@ -47,9 +44,6 @@ async function assertUserCanUseApi(userId, res, opts = {}) {
     }
     return true;
   } catch (err) {
-    if (err.code === '42703') {
-      return true;
-    }
     console.error(err);
     if (!optional) {
       res.status(500).json({ error: 'Auth check failed' });

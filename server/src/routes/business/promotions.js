@@ -1,34 +1,33 @@
 const express = require('express');
+const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { businessPortalMiddleware } = require('../../middleware/placeOwner');
-const { query } = require('../../db');
 const { parsePlaceId } = require('../../utils/validate');
+const crypto = require('crypto');
 
 const router = express.Router();
 router.use(authMiddleware, businessPortalMiddleware);
 
 async function assertOwnsPlace(userId, placeId) {
-  const { rows } = await query(
-    'SELECT 1 FROM place_owners WHERE user_id = $1 AND place_id = $2',
-    [userId, placeId]
-  );
-  return rows.length > 0;
+  const poColl = await getCollection('place_owners');
+  const owner = await poColl.findOne({ user_id: userId, place_id: placeId });
+  return !!owner;
 }
 
-function rowToPromotion(row) {
+function rowToPromotion(doc) {
   return {
-    id: row.id,
-    placeId: row.place_id,
-    title: row.title,
-    subtitle: row.subtitle || '',
-    code: row.code || '',
-    discountLabel: row.discount_label || '',
-    terms: row.terms || '',
-    startsAt: row.starts_at,
-    endsAt: row.ends_at,
-    active: row.active,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id: doc.id,
+    placeId: doc.place_id,
+    title: doc.title,
+    subtitle: doc.subtitle || '',
+    code: doc.code || '',
+    discountLabel: doc.discount_label || '',
+    terms: doc.terms || '',
+    startsAt: doc.starts_at,
+    endsAt: doc.ends_at,
+    active: doc.active,
+    createdAt: doc.created_at,
+    updatedAt: doc.updated_at,
   };
 }
 
@@ -41,23 +40,11 @@ router.get('/', async (req, res) => {
     return res.status(403).json({ error: 'You do not manage this place' });
   }
   try {
-    const { rows } = await query(
-      `SELECT id, place_id, title, subtitle, code, discount_label, terms, starts_at, ends_at, active, created_at, updated_at
-       FROM place_promotions
-       WHERE place_id = $1
-       ORDER BY created_at DESC`,
-      [placeId]
-    );
+    const promoColl = await getCollection('place_promotions');
+    const rows = await promoColl.find({ place_id: placeId }).sort({ created_at: -1 }).toArray();
     res.json({ placeId, promotions: rows.map(rowToPromotion) });
   } catch (err) {
     console.error(err);
-    if (err.code === '42P01') {
-      return res.json({
-        placeId,
-        promotions: [],
-        _warning: 'place_promotions table missing — run server/migrations/007_business_engagement.sql',
-      });
-    }
     res.status(500).json({ error: 'Failed to load promotions' });
   }
 });
@@ -77,18 +64,29 @@ router.post('/', async (req, res) => {
   const code = typeof req.body?.code === 'string' ? req.body.code.trim().slice(0, 64) : null;
   const discountLabel = typeof req.body?.discountLabel === 'string' ? req.body.discountLabel.trim().slice(0, 120) : null;
   const terms = typeof req.body?.terms === 'string' ? req.body.terms.trim().slice(0, 2000) : null;
-  const startsAt = req.body?.startsAt ? String(req.body.startsAt) : null;
-  const endsAt = req.body?.endsAt ? String(req.body.endsAt) : null;
+  const startsAt = req.body?.startsAt ? new Date(req.body.startsAt) : null;
+  const endsAt = req.body?.endsAt ? new Date(req.body.endsAt) : null;
   const active = req.body?.active !== false;
 
   try {
-    const { rows } = await query(
-      `INSERT INTO place_promotions (place_id, title, subtitle, code, discount_label, terms, starts_at, ends_at, active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8::timestamptz, $9)
-       RETURNING id, place_id, title, subtitle, code, discount_label, terms, starts_at, ends_at, active, created_at, updated_at`,
-      [placeId, title, subtitle, code, discountLabel, terms, startsAt || null, endsAt || null, active]
-    );
-    res.status(201).json({ promotion: rowToPromotion(rows[0]) });
+    const promoColl = await getCollection('place_promotions');
+    const newId = crypto.randomUUID();
+    const newPromo = {
+      id: newId,
+      place_id: placeId,
+      title,
+      subtitle,
+      code,
+      discount_label: discountLabel,
+      terms,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      active,
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+    await promoColl.insertOne(newPromo);
+    res.status(201).json({ promotion: rowToPromotion(newPromo) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create promotion' });
@@ -97,66 +95,37 @@ router.post('/', async (req, res) => {
 
 /** PATCH /api/business/promotions/:id */
 router.patch('/:id', async (req, res) => {
-  const id = parseInt(String(req.params.id), 10);
-  if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Invalid id' });
+  const id = req.params.id;
 
   try {
-    const own = await query(
-      `SELECT p.id FROM place_promotions p
-       INNER JOIN place_owners po ON po.place_id = p.place_id AND po.user_id = $2
-       WHERE p.id = $1`,
-      [id, req.user.userId]
-    );
-    if (!own.rows.length) return res.status(404).json({ error: 'Promotion not found' });
+    const promoColl = await getCollection('place_promotions');
+    const existing = await promoColl.findOne({ id });
+    if (!existing) return res.status(404).json({ error: 'Promotion not found' });
 
-    const fields = [];
-    const vals = [];
-    let n = 1;
+    if (!(await assertOwnsPlace(req.user.userId, existing.place_id))) {
+      return res.status(403).json({ error: 'You do not manage the place for this promotion' });
+    }
+
+    const setObj = {};
     const b = req.body || {};
-    if (typeof b.title === 'string') {
-      fields.push(`title = $${n++}`);
-      vals.push(b.title.trim().slice(0, 200));
-    }
-    if (typeof b.subtitle === 'string') {
-      fields.push(`subtitle = $${n++}`);
-      vals.push(b.subtitle.trim().slice(0, 500));
-    }
-    if (typeof b.code === 'string') {
-      fields.push(`code = $${n++}`);
-      vals.push(b.code.trim().slice(0, 64));
-    }
-    if (typeof b.discountLabel === 'string') {
-      fields.push(`discount_label = $${n++}`);
-      vals.push(b.discountLabel.trim().slice(0, 120));
-    }
-    if (typeof b.terms === 'string') {
-      fields.push(`terms = $${n++}`);
-      vals.push(b.terms.trim().slice(0, 2000));
-    }
-    if (b.startsAt !== undefined) {
-      fields.push(`starts_at = $${n++}`);
-      vals.push(b.startsAt ? String(b.startsAt) : null);
-    }
-    if (b.endsAt !== undefined) {
-      fields.push(`ends_at = $${n++}`);
-      vals.push(b.endsAt ? String(b.endsAt) : null);
-    }
-    if (typeof b.active === 'boolean') {
-      fields.push(`active = $${n++}`);
-      vals.push(b.active);
-    }
-    if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
+    if (typeof b.title === 'string') setObj.title = b.title.trim().slice(0, 200);
+    if (typeof b.subtitle === 'string') setObj.subtitle = b.subtitle.trim().slice(0, 500);
+    if (typeof b.code === 'string') setObj.code = b.code.trim().slice(0, 64);
+    if (typeof b.discountLabel === 'string') setObj.discount_label = b.discountLabel.trim().slice(0, 120);
+    if (typeof b.terms === 'string') setObj.terms = b.terms.trim().slice(0, 2000);
+    if (b.startsAt !== undefined) setObj.starts_at = b.startsAt ? new Date(b.startsAt) : null;
+    if (b.endsAt !== undefined) setObj.ends_at = b.endsAt ? new Date(b.endsAt) : null;
+    if (typeof b.active === 'boolean') setObj.active = b.active;
 
-    vals.push(id);
-    const idParam = n;
+    if (Object.keys(setObj).length === 0) return res.status(400).json({ error: 'No fields to update' });
+    setObj.updated_at = new Date();
 
-    const { rows } = await query(
-      `UPDATE place_promotions SET ${fields.join(', ')}, updated_at = NOW()
-       WHERE id = $${idParam}
-       RETURNING id, place_id, title, subtitle, code, discount_label, terms, starts_at, ends_at, active, created_at, updated_at`,
-      vals
+    const result = await promoColl.findOneAndUpdate(
+      { id },
+      { $set: setObj },
+      { returnDocument: 'after' }
     );
-    res.json({ promotion: rowToPromotion(rows[0]) });
+    res.json({ promotion: rowToPromotion(result) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update promotion' });
@@ -165,16 +134,17 @@ router.patch('/:id', async (req, res) => {
 
 /** DELETE /api/business/promotions/:id */
 router.delete('/:id', async (req, res) => {
-  const id = parseInt(String(req.params.id), 10);
-  if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Invalid id' });
+  const id = req.params.id;
   try {
-    const { rowCount } = await query(
-      `DELETE FROM place_promotions p
-       USING place_owners po
-       WHERE p.id = $1 AND po.place_id = p.place_id AND po.user_id = $2`,
-      [id, req.user.userId]
-    );
-    if (!rowCount) return res.status(404).json({ error: 'Promotion not found' });
+    const promoColl = await getCollection('place_promotions');
+    const promo = await promoColl.findOne({ id });
+    if (!promo) return res.status(404).json({ error: 'Promotion not found' });
+
+    if (!(await assertOwnsPlace(req.user.userId, promo.place_id))) {
+      return res.status(403).json({ error: 'You do not manage the place for this promotion' });
+    }
+
+    await promoColl.deleteOne({ id });
     res.json({ ok: true });
   } catch (err) {
     console.error(err);

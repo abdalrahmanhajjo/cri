@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { parsePlaceId, safeUrl } = require('../../utils/validate');
@@ -11,43 +11,35 @@ router.use(authMiddleware, adminMiddleware);
 
 const MODERATION = new Set(['pending', 'approved', 'rejected']);
 
-function buildListWhere(status, discoverable, q, format) {
-  const parts = [];
-  const params = [];
-  let i = 1;
+function buildListMatch(status, discoverable, q, format) {
+  const match = {};
 
   if (status && status !== 'all') {
-    parts.push(`fp.moderation_status = $${i++}`);
-    params.push(status);
+    match.moderation_status = status;
   }
   if (discoverable === 'true') {
-    parts.push(`fp.discoverable = true`);
+    match.discoverable = true;
   } else if (discoverable === 'false') {
-    parts.push(`fp.discoverable = false`);
-  }
-  const reelLikeSql = `(
-    fp.type IN ('reel', 'video')
-    OR (
-      NULLIF(TRIM(COALESCE(fp.video_url, '')), '') IS NOT NULL
-      AND NULLIF(TRIM(COALESCE(fp.image_url, '')), '') IS NULL
-    )
-  )`;
-  if (format === 'reel') {
-    parts.push(reelLikeSql);
-  } else if (format === 'post') {
-    parts.push(`NOT (${reelLikeSql})`);
-  }
-  if (q && q.trim()) {
-    const like = `%${q.trim().slice(0, 120)}%`;
-    parts.push(
-      `(fp.caption ILIKE $${i} OR fp.author_name ILIKE $${i} OR fp.place_id ILIKE $${i} OR u.email ILIKE $${i})`
-    );
-    params.push(like);
-    i++;
+    match.discoverable = { $ne: true };
   }
 
-  const where = parts.length ? `WHERE ${parts.join(' AND ')}` : '';
-  return { where, params };
+  if (format === 'reel') {
+    match.type = { $in: ['reel', 'video'] };
+  } else if (format === 'post') {
+    match.type = { $ne: 'video' }; // Assuming 'video' includes reels in this logic
+  }
+
+  if (q && q.trim()) {
+    const regex = { $regex: q.trim(), $options: 'i' };
+    match.$or = [
+      { caption: regex },
+      { author_name: regex },
+      { place_id: regex },
+      { 'user.email': regex }
+    ];
+  }
+
+  return match;
 }
 
 /** GET /api/admin/feed */
@@ -60,54 +52,53 @@ router.get('/', async (req, res) => {
   const format = String(req.query.format || 'all').toLowerCase();
   const formatKey = format === 'reel' || format === 'post' ? format : 'all';
 
-  const { where, params } = buildListWhere(status, discoverable, q, formatKey === 'all' ? null : formatKey);
-  const allParams = [...params, limit, offset];
-
   try {
-    const { rows } = await query(
-      `SELECT fp.id, fp.user_id, fp.author_name, fp.place_id, fp.caption, fp.image_url, fp.image_urls, fp.video_url,
-              fp.type, fp.created_at, fp.author_role, fp.moderation_status, fp.discoverable, fp.admin_notes, fp.updated_at,
-              u.email AS user_email,
-              (SELECT COUNT(*)::int FROM feed_likes fl WHERE fl.post_id = fp.id) AS likes_count,
-              (SELECT COUNT(*)::int FROM feed_comments fc WHERE fc.post_id = fp.id) AS comments_count
-       FROM feed_posts fp
-       LEFT JOIN users u ON u.id = fp.user_id
-       ${where}
-       ORDER BY fp.created_at DESC
-       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-      allParams
-    );
+    const postsColl = await getCollection('feed_posts');
+    
+    const pipeline = [
+      { $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: 'id',
+          as: 'user'
+      }},
+      { $addFields: {
+          user_email: { $arrayElemAt: ['$user.email', 0] }
+      }},
+      { $match: buildListMatch(status, discoverable, q, formatKey === 'all' ? null : formatKey) },
+      { $lookup: {
+          from: 'feed_likes',
+          localField: 'id',
+          foreignField: 'post_id',
+          as: 'likes'
+      }},
+      { $lookup: {
+          from: 'feed_comments',
+          localField: 'id',
+          foreignField: 'post_id',
+          as: 'comments'
+      }},
+      { $addFields: {
+          likes_count: { $size: '$likes' },
+          comments_count: { $size: '$comments' }
+      }},
+      { $project: { user: 0, likes: 0, comments: 0 } },
+      { $sort: { created_at: -1 } },
+      { $skip: offset },
+      { $limit: limit }
+    ];
 
-    let pendingCount = 0;
-    try {
-      const pc = await query(
-        `SELECT COUNT(*)::int AS n FROM feed_posts WHERE moderation_status = 'pending'`
-      );
-      pendingCount = pc.rows[0]?.n ?? 0;
-    } catch (_) {
-      /* column missing until migration */
-    }
+    const rows = await postsColl.aggregate(pipeline).toArray();
+    const pendingCount = await postsColl.countDocuments({ moderation_status: 'pending' });
 
     res.json({ posts: rows, pendingCount });
   } catch (err) {
-    if (err.code === '42703') {
-      return res.status(503).json({
-        error: 'Feed schema outdated. Run server/migrations/006_feed_moderation.sql',
-        code: 'MIGRATION_REQUIRED',
-      });
-    }
-    if (err.code === '42P01') return res.json({ posts: [], pendingCount: 0 });
     console.error(err);
     res.status(500).json({ error: 'Failed to list feed posts' });
   }
 });
 
-/**
- * POST /api/admin/feed
- * Create a feed post or reel for any place (admin).
- * Body: { placeId, caption, image_url?, video_url?, type? ('post' | 'video' | 'reel'),
- *         moderation_status?, discoverable? }
- */
+/** POST /api/admin/feed */
 router.post('/', async (req, res) => {
   const userId = req.user.userId;
   const pid = parsePlaceId(req.body?.placeId);
@@ -136,64 +127,63 @@ router.post('/', async (req, res) => {
   if (body.discoverable !== undefined) discoverable = Boolean(body.discoverable);
 
   try {
-    const { rows: placeRows } = await query('SELECT id FROM places WHERE id = $1 LIMIT 1', [pid.value]);
-    if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
+    const placesColl = await getCollection('places');
+    const place = await placesColl.findOne({ id: pid.value });
+    if (!place) return res.status(404).json({ error: 'Place not found' });
 
-    const { rows: uRows } = await query('SELECT name, email FROM users WHERE id = $1', [userId]);
-    const u = uRows[0];
-    const authorName = (u?.name && String(u.name).trim()) || (u?.email && String(u.email).split('@')[0]) || 'Admin';
+    const usersColl = await getCollection('users');
+    const user = await usersColl.findOne({ id: userId });
+    const authorName = (user?.name && String(user.name).trim()) || (user?.email && String(user.email).split('@')[0]) || 'Admin';
     const authorShort = authorName.slice(0, 255);
 
     const id = crypto.randomUUID();
+    const postsColl = await getCollection('feed_posts');
+    const newPost = {
+      id,
+      user_id: userId,
+      author_name: authorShort,
+      place_id: pid.value,
+      caption,
+      image_url: imageUrl,
+      image_urls: imageUrlsArr || [],
+      video_url: videoUrl,
+      type,
+      author_role: 'admin',
+      moderation_status,
+      discoverable,
+      created_at: new Date(),
+      updated_at: new Date()
+    };
 
-    await query(
-      `INSERT INTO feed_posts (
-         id, user_id, author_name, place_id, caption, image_url, image_urls, video_url, type, author_role,
-         moderation_status, discoverable
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, 'admin', $10, $11)`,
-      [
-        id,
-        userId,
-        authorShort,
-        pid.value,
-        caption,
-        imageUrl,
-        imageUrlsArr ? JSON.stringify(imageUrlsArr) : null,
-        videoUrl,
-        type,
-        moderation_status,
-        discoverable,
-      ]
-    );
-
-    const { rows } = await query('SELECT * FROM feed_posts WHERE id = $1', [id]);
-    res.status(201).json({ post: rows[0] });
+    await postsColl.insertOne(newPost);
+    res.status(201).json({ post: newPost });
   } catch (err) {
-    if (err.code === '42703') {
-      return res.status(503).json({ error: 'Run migration 006_feed_moderation.sql' });
-    }
-    if (err.code === '42P01') return res.status(503).json({ error: 'Feed not available' });
     console.error(err);
     res.status(500).json({ error: 'Failed to create post' });
   }
 });
 
-/** GET /api/admin/feed/:id/comments — list comments for a post */
+/** GET /api/admin/feed/:id/comments */
 router.get('/:id/comments', async (req, res) => {
   const postId = req.params.id;
-  if (!postId || postId.length > 64) return res.status(400).json({ error: 'Invalid post id' });
   try {
-    const { rows } = await query(
-      `SELECT fc.id, fc.post_id, fc.user_id, fc.author_name, fc.body, fc.created_at, u.email AS user_email
-       FROM feed_comments fc
-       LEFT JOIN users u ON u.id = fc.user_id
-       WHERE fc.post_id = $1
-       ORDER BY fc.created_at ASC`,
-      [postId]
-    );
+    const commentsColl = await getCollection('feed_comments');
+    const rows = await commentsColl.aggregate([
+      { $match: { post_id: postId } },
+      { $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: 'id',
+          as: 'user'
+      }},
+      { $addFields: {
+          user_email: { $arrayElemAt: ['$user.email', 0] }
+      }},
+      { $project: { user: 0 } },
+      { $sort: { created_at: 1 } }
+    ]).toArray();
     res.json({ comments: rows });
   } catch (err) {
-    if (err.code === '42P01') return res.json({ comments: [] });
     console.error(err);
     res.status(500).json({ error: 'Failed to load comments' });
   }
@@ -202,61 +192,37 @@ router.get('/:id/comments', async (req, res) => {
 /** DELETE /api/admin/feed/comments/:commentId */
 router.delete('/comments/:commentId', async (req, res) => {
   const commentId = req.params.commentId;
-  if (!commentId || commentId.length > 64) return res.status(400).json({ error: 'Invalid comment id' });
   try {
-    const result = await query('DELETE FROM feed_comments WHERE id = $1', [commentId]);
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Comment not found' });
+    const commentsColl = await getCollection('feed_comments');
+    const result = await commentsColl.deleteOne({ id: commentId });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Comment not found' });
     res.json({ ok: true });
   } catch (err) {
-    if (err.code === '42P01') return res.status(404).json({ error: 'Comments not available' });
     console.error(err);
     res.status(500).json({ error: 'Failed to delete comment' });
   }
 });
 
-/** PATCH /api/admin/feed/:id — moderate / edit */
+/** PATCH /api/admin/feed/:id */
 router.patch('/:id', async (req, res) => {
   const id = req.params.id;
-  if (!id || id.length > 64) return res.status(400).json({ error: 'Invalid post id' });
-
   const body = req.body || {};
-  const updates = [];
-  const vals = [];
-  let n = 1;
+  const setObj = {};
 
   if (body.moderation_status !== undefined) {
-    const s = String(body.moderation_status);
-    if (!MODERATION.has(s)) return res.status(400).json({ error: 'Invalid moderation_status' });
-    updates.push(`moderation_status = $${n++}`);
-    vals.push(s);
+    if (!MODERATION.has(body.moderation_status)) return res.status(400).json({ error: 'Invalid moderation_status' });
+    setObj.moderation_status = body.moderation_status;
   }
-  if (body.discoverable !== undefined) {
-    updates.push(`discoverable = $${n++}`);
-    vals.push(Boolean(body.discoverable));
-  }
-  if (body.caption !== undefined) {
-    const cap = String(body.caption).slice(0, 8000);
-    updates.push(`caption = $${n++}`);
-    vals.push(cap);
-  }
+  if (body.discoverable !== undefined) setObj.discoverable = Boolean(body.discoverable);
+  if (body.caption !== undefined) setObj.caption = String(body.caption).slice(0, 8000);
+  
   if (body.placeId !== undefined || body.place_id !== undefined) {
     const pid = parsePlaceId(body.placeId ?? body.place_id);
     if (!pid.valid) return res.status(400).json({ error: 'Valid placeId is required' });
-    try {
-      const { rows: placeRows } = await query('SELECT id FROM places WHERE id = $1 LIMIT 1', [pid.value]);
-      if (!placeRows.length) return res.status(404).json({ error: 'Place not found' });
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Failed to validate place' });
-    }
-    updates.push(`place_id = $${n++}`);
-    vals.push(pid.value);
+    setObj.place_id = pid.value;
   }
-  if (body.type !== undefined) {
-    const t = String(body.type).slice(0, 40);
-    updates.push(`type = $${n++}`);
-    vals.push(t);
-  }
+  if (body.type !== undefined) setObj.type = String(body.type).slice(0, 40);
+  
   const hasImageUrls = Object.prototype.hasOwnProperty.call(body, 'image_urls');
   const hasImageUrl = Object.prototype.hasOwnProperty.call(body, 'image_url');
   if (hasImageUrls || hasImageUrl) {
@@ -264,57 +230,68 @@ router.patch('/:id', async (req, res) => {
       image_url: hasImageUrl ? body.image_url : undefined,
       image_urls: hasImageUrls ? body.image_urls : undefined,
     });
-    updates.push(`image_url = $${n++}`);
-    vals.push(nextFirst);
-    updates.push(`image_urls = $${n++}::jsonb`);
-    vals.push(nextList ? JSON.stringify(nextList) : null);
+    setObj.image_url = nextFirst;
+    setObj.image_urls = nextList || [];
   }
-  if (body.video_url !== undefined) {
-    updates.push(`video_url = $${n++}`);
-    vals.push(body.video_url ? String(body.video_url).slice(0, 500) : null);
-  }
-  if (body.admin_notes !== undefined) {
-    updates.push(`admin_notes = $${n++}`);
-    vals.push(body.admin_notes ? String(body.admin_notes).slice(0, 4000) : null);
-  }
+  if (body.video_url !== undefined) setObj.video_url = body.video_url ? String(body.video_url).slice(0, 500) : null;
+  if (body.admin_notes !== undefined) setObj.admin_notes = body.admin_notes ? String(body.admin_notes).slice(0, 4000) : null;
 
-  if (updates.length === 0) return res.status(400).json({ error: 'No fields to update' });
-
-  updates.push(`updated_at = NOW()`);
-  vals.push(id);
+  if (Object.keys(setObj).length === 0) return res.status(400).json({ error: 'No fields to update' });
+  setObj.updated_at = new Date();
 
   try {
-    const sql = `UPDATE feed_posts SET ${updates.join(', ')} WHERE id = $${n} RETURNING *`;
-    const result = await query(sql, vals);
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Post not found' });
-    res.json({ post: result.rows[0] });
+    const postsColl = await getCollection('feed_posts');
+    const result = await postsColl.findOneAndUpdate(
+      { id: id },
+      { $set: setObj },
+      { returnDocument: 'after' }
+    );
+    if (!result) return res.status(404).json({ error: 'Post not found' });
+    res.json({ post: result });
   } catch (err) {
-    if (err.code === '42703') {
-      return res.status(503).json({ error: 'Run migration 006_feed_moderation.sql for moderation fields.' });
-    }
     console.error(err);
     res.status(500).json({ error: 'Failed to update post' });
   }
 });
 
-/** GET /api/admin/feed/:id — single post */
+/** GET /api/admin/feed/:id */
 router.get('/:id', async (req, res) => {
   const id = req.params.id;
-  if (!id || id.length > 64) return res.status(400).json({ error: 'Invalid post id' });
   try {
-    const { rows } = await query(
-      `SELECT fp.*, u.email AS user_email,
-              (SELECT COUNT(*)::int FROM feed_likes fl WHERE fl.post_id = fp.id) AS likes_count,
-              (SELECT COUNT(*)::int FROM feed_comments fc WHERE fc.post_id = fp.id) AS comments_count
-       FROM feed_posts fp
-       LEFT JOIN users u ON u.id = fp.user_id
-       WHERE fp.id = $1`,
-      [id]
-    );
+    const postsColl = await getCollection('feed_posts');
+    const rows = await postsColl.aggregate([
+      { $match: { id: id } },
+      { $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: 'id',
+          as: 'user'
+      }},
+      { $addFields: {
+          user_email: { $arrayElemAt: ['$user.email', 0] }
+      }},
+      { $lookup: {
+          from: 'feed_likes',
+          localField: 'id',
+          foreignField: 'post_id',
+          as: 'likes'
+      }},
+      { $lookup: {
+          from: 'feed_comments',
+          localField: 'id',
+          foreignField: 'post_id',
+          as: 'comments'
+      }},
+      { $addFields: {
+          likes_count: { $size: '$likes' },
+          comments_count: { $size: '$comments' }
+      }},
+      { $project: { user: 0, likes: 0, comments: 0 } }
+    ]).toArray();
+
     if (!rows.length) return res.status(404).json({ error: 'Post not found' });
     res.json({ post: rows[0] });
   } catch (err) {
-    if (err.code === '42P01') return res.status(404).json({ error: 'Feed not available' });
     console.error(err);
     res.status(500).json({ error: 'Failed to load post' });
   }
@@ -323,16 +300,20 @@ router.get('/:id', async (req, res) => {
 /** DELETE /api/admin/feed/:id */
 router.delete('/:id', async (req, res) => {
   const id = req.params.id;
-  if (!id || id.length > 64) return res.status(400).json({ error: 'Invalid post id' });
   try {
-    await query('DELETE FROM feed_comments WHERE post_id = $1', [id]);
-    await query('DELETE FROM feed_likes WHERE post_id = $1', [id]);
-    await query('DELETE FROM feed_saves WHERE post_id = $1', [id]);
-    const result = await query('DELETE FROM feed_posts WHERE id = $1', [id]);
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Post not found' });
+    const postsColl = await getCollection('feed_posts');
+    const commentsColl = await getCollection('feed_comments');
+    const likesColl = await getCollection('feed_likes');
+    const savesColl = await getCollection('feed_saves');
+
+    await commentsColl.deleteMany({ post_id: id });
+    await likesColl.deleteMany({ post_id: id });
+    await savesColl.deleteMany({ post_id: id });
+    const result = await postsColl.deleteOne({ id: id });
+    
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Post not found' });
     res.json({ ok: true });
   } catch (err) {
-    if (err.code === '42P01') return res.status(404).json({ error: 'Feed not available' });
     console.error(err);
     res.status(500).json({ error: 'Failed to delete post' });
   }

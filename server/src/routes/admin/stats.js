@@ -1,78 +1,46 @@
 const express = require('express');
-const { query } = require('../../db');
+const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
-const { assertAllowedTableName } = require('../../utils/sqlIdentifiers');
 
 const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
 
-/** Only these tables may be counted (defense in depth — names are not user-controlled today). */
-const STATS_COUNT_TABLES = new Set([
-  'users',
-  'places',
-  'categories',
-  'tours',
-  'events',
-  'trips',
-  'feed_posts',
-  'interests',
-  'saved_places',
-  'place_promotions',
-  'coupons',
-]);
+const STATS_COLLECTIONS = [
+  { key: 'users', coll: 'users' },
+  { key: 'places', coll: 'places' },
+  { key: 'categories', coll: 'categories' },
+  { key: 'tours', coll: 'tours' },
+  { key: 'events', coll: 'events' },
+  { key: 'trips', coll: 'trips' },
+  { key: 'feedPosts', coll: 'feed_posts' },
+  { key: 'interests', coll: 'interests' },
+  { key: 'savedPlaces', coll: 'saved_places' },
+  { key: 'placePromotions', coll: 'place_promotions' },
+  { key: 'coupons', coll: 'coupons' },
+];
 
-async function countTable(name) {
+async function countColl(name) {
   try {
-    const safe = assertAllowedTableName(name, STATS_COUNT_TABLES);
-    const { rows } = await query(`SELECT COUNT(*)::int AS c FROM ${safe}`);
-    return rows[0]?.c ?? 0;
-  } catch {
+    const coll = await getCollection(name);
+    return await coll.countDocuments();
+  } catch (err) {
     return 0;
   }
 }
 
-/** GET /api/admin/stats — dashboard aggregates (shared DB: app + web) */
+/** GET /api/admin/stats — dashboard aggregates */
 router.get('/', async (req, res) => {
   try {
-    const [
-      users,
-      places,
-      categories,
-      tours,
-      events,
-      trips,
-      feedPosts,
-      interests,
-      savedPlaces,
-      placePromotions,
-      coupons,
-    ] = await Promise.all([
-      countTable('users'),
-      countTable('places'),
-      countTable('categories'),
-      countTable('tours'),
-      countTable('events'),
-      countTable('trips'),
-      countTable('feed_posts'),
-      countTable('interests'),
-      countTable('saved_places'),
-      countTable('place_promotions'),
-      countTable('coupons'),
-    ]);
-    res.json({
-      users,
-      places,
-      categories,
-      tours,
-      events,
-      trips,
-      feedPosts,
-      interests,
-      savedPlaces,
-      placePromotions,
-      coupons,
-    });
+    const counts = await Promise.all(
+      STATS_COLLECTIONS.map(async (item) => {
+        const count = await countColl(item.coll);
+        return { [item.key]: count };
+      })
+    );
+    
+    const result = Object.assign({}, ...counts);
+    res.json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load stats' });
