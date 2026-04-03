@@ -4,9 +4,54 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
+const { authMiddleware } = require('../../middleware/auth');
+const { businessPortalMiddleware } = require('../../middleware/placeOwner');
+const { getCollection } = require('../../mongo');
+const { parsePlaceId } = require('../../utils/validate');
+const {
+  isLikelyVideoUpload,
+  multerFileAllowed,
+  prepareUploadedImage,
+  pickImageExtension,
+  VIDEO_MIME_TO_EXT,
+} = require('../../utils/imageUpload');
+const { getMulterFileSizeLimit } = require('../../utils/uploadLimits');
+const { prepareFeedVideoDiskPath } = require('../../utils/feedVideoUploadPrepare');
 const { getImageKit } = require('../../utils/imagekit');
 
-// ... (Multer config remains the same) ...
+const router = express.Router();
+const MULTER_TMP = path.join(os.tmpdir(), 'visit-multer-uploads');
+
+try {
+  if (!fs.existsSync(MULTER_TMP)) {
+    fs.mkdirSync(MULTER_TMP, { recursive: true });
+  }
+} catch (_) {}
+
+const multerFileLimits = getMulterFileSizeLimit();
+const uploadMw = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, MULTER_TMP),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || '') || '';
+      cb(null, `${crypto.randomBytes(16).toString('hex')}${ext}`);
+    },
+  }),
+  ...(multerFileLimits ? { limits: multerFileLimits } : {}),
+  fileFilter: (req, file, cb) => {
+    const ok = multerFileAllowed(file);
+    cb(
+      ok
+        ? null
+        : new Error(
+            'Only images (JPEG, PNG, GIF, WebP, HEIC/HEIF — HEIC is saved as JPEG) or videos (MP4, WebM, MOV) allowed'
+          ),
+      ok
+    );
+  },
+});
+
+router.use(authMiddleware, businessPortalMiddleware);
 
 /** POST /api/business/upload — FormData: file, placeId (must be a place you own). */
 router.post('/', uploadMw.single('file'), async (req, res) => {
