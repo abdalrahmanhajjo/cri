@@ -1,11 +1,10 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
-const { MongoClient, ServerApiVersion, GridFSBucket } = require('mongodb');
+const { MongoClient, ServerApiVersion } = require('mongodb');
 
 let clientPromise = null;
 let cachedClient = null;
-let cachedBucket = null;
 
 function mongoUri() {
   const uri = (process.env.MONGODB_URI || '').trim();
@@ -83,15 +82,7 @@ async function getMongoDb() {
   return client.db(mongoDbName());
 }
 
-/**
- * Gets the GridFS bucket for file storage
- */
-async function getGridFSBucket() {
-  if (cachedBucket) return cachedBucket;
-  const db = await getMongoDb();
-  cachedBucket = new GridFSBucket(db, { bucketName: 'uploads' });
-  return cachedBucket;
-}
+
 
 /**
  * Helper to get a collection from the primary database
@@ -129,7 +120,6 @@ module.exports = {
   getMongoClient,
   getMongoDb,
   getCollection,
-  getGridFSBucket,
   hasMongoConfigured,
   mongoDbName,
   verifyMongoConnection,
