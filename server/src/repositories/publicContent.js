@@ -1,60 +1,76 @@
-const { getMongoDb, getCollection } = require('../mongo');
+const { query } = require('../db');
 
-function getTranslation(doc, lang) {
-  if (!doc || !doc.translations || typeof doc.translations !== 'object') return null;
-  const hit = doc.translations[lang];
-  return hit && typeof hit === 'object' ? hit : null;
+function getTranslation(row, prefix = 'tr_') {
+  // If we joined a translation table and the translated name is there, it's the hit.
+  // The PostgreSQL schema uses a separate table (e.g. place_translations) for each lang.
+  // When we join, pt.name as tr_name, etc.
+  // If tr_name is NULL, we fall back to the base row.name.
+  return {
+    name: row[`${prefix}name`],
+    description: row[`${prefix}description`],
+    location: row[`${prefix}location`],
+    category: row[`${prefix}category`],
+    duration: row[`${prefix}duration`],
+    price: row[`${prefix}price`],
+    best_time: row[`${prefix}best_time`],
+    tags: row[`${prefix}tags`],
+  };
 }
 
 /**
  * List all categories with their place counts.
  */
 async function listCategories(lang) {
-  const collection = await getCollection('categories');
-  const docs = await collection.find({}).toArray();
-  
-  const db = await getMongoDb();
-  const placeCounts = await db.collection('places').aggregate([
-    { $group: { _id: '$categoryId', count: { $sum: 1 } } },
-  ]).toArray();
-  
-  const countMap = new Map(placeCounts.map((row) => [String(row._id || ''), Number(row.count || 0)]));
+  // Join categories with translations for the specific lang
+  const { rows: categoriesRows } = await query(`
+    SELECT c.*, ct.name as tr_name, ct.description as tr_description, ct.tags as tr_tags
+    FROM categories c
+    LEFT JOIN category_translations ct ON ct.category_id = c.id AND ct.lang = $1
+  `, [lang]);
 
-  const categories = docs.map((doc) => {
-    const tr = getTranslation(doc, lang);
+  // Aggregate counts from places
+  const { rows: countRows } = await query(`
+    SELECT category_id, COUNT(*) as count FROM places GROUP BY category_id
+  `, []);
+  
+  const countMap = new Map(countRows.map((row) => [String(row.category_id || ''), Number(row.count || 0)]));
+
+  const categories = categoriesRows.map((row) => {
     return {
-      id: doc.id,
-      name: tr?.name || doc.name,
-      icon: doc.icon,
-      description: tr?.description || doc.description || '',
-      tags: Array.isArray(tr?.tags) ? tr.tags : Array.isArray(doc.tags) ? doc.tags : [],
-      count: countMap.get(String(doc.id)) ?? Number(doc.count || 0),
-      color: doc.color || '#666666',
+      id: row.id,
+      name: row.tr_name || row.name,
+      icon: row.icon,
+      description: row.tr_description || row.description || '',
+      tags: Array.isArray(row.tr_tags) ? row.tr_tags : Array.isArray(row.tags) ? row.tags : [],
+      count: countMap.get(String(row.id)) ?? Number(row.count || 0),
+      color: row.color || '#666666',
     };
   });
   
   categories.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
-  return { source: 'mongo', categories };
+  return { source: 'postgres', categories };
 }
 
 /**
  * List all interests.
  */
 async function listInterests(lang) {
-  const collection = await getCollection('interests');
-  const docs = await collection.find({}).toArray();
+  const { rows: interestRows } = await query(`
+    SELECT i.*, it.name as tr_name, it.description as tr_description, it.tags as tr_tags
+    FROM interests i
+    LEFT JOIN interest_translations it ON it.interest_id = i.id AND it.lang = $1
+  `, [lang]);
   
-  const interests = docs.map((doc) => {
-    const tr = getTranslation(doc, lang);
+  const interests = interestRows.map((row) => {
     return {
-      id: doc.id,
-      name: tr?.name || doc.name,
-      icon: doc.icon,
-      description: tr?.description || doc.description || '',
-      color: doc.color || '#666666',
-      count: Number(doc.count || 0),
-      popularity: Number(doc.popularity || 0),
-      tags: Array.isArray(tr?.tags) ? tr.tags : Array.isArray(doc.tags) ? doc.tags : [],
+      id: row.id,
+      name: row.tr_name || row.name,
+      icon: row.icon,
+      description: row.tr_description || row.description || '',
+      color: row.color || '#666666',
+      count: Number(row.count || 0),
+      popularity: Number(row.popularity || 0),
+      tags: Array.isArray(row.tr_tags) ? row.tr_tags : Array.isArray(row.tags) ? row.tags : [],
     };
   });
   
@@ -63,56 +79,58 @@ async function listInterests(lang) {
     return String(a.name || '').localeCompare(String(b.name || ''));
   });
   
-  return { source: 'mongo', interests };
+  return { source: 'postgres', interests };
 }
 
 /**
  * List places with optional pagination.
  */
 async function listPlaces(lang, { limit, offset, usePagination } = {}) {
-  const collection = await getCollection('places');
+  // Join places with translations
+  const { rows: docs } = await query(`
+    SELECT p.*, pt.name as tr_name, pt.description as tr_description, pt.location as tr_location, 
+           pt.category as tr_category, pt.duration as tr_duration, pt.price as tr_price, 
+           pt.best_time as tr_best_time, pt.tags as tr_tags
+    FROM places p
+    LEFT JOIN place_translations pt ON pt.place_id = p.id AND pt.lang = $1
+  `, [lang]);
   
-  // For now, we list all and paginate in memory to keep behavior consistent with current listPlaces logic
-  // but eventually this should be done in DB if the dataset is large.
-  const docs = await collection.find({}).toArray();
-  
-  const places = docs.map((doc) => {
-    const tr = getTranslation(doc, lang);
+  const places = docs.map((row) => {
     return {
-      id: doc.id,
-      name: tr?.name || doc.name,
-      description: tr?.description || doc.description || '',
-      location: tr?.location || doc.location || '',
-      latitude: doc.latitude ?? null,
-      longitude: doc.longitude ?? null,
-      images: Array.isArray(doc.images) ? doc.images : [],
-      category: tr?.category || doc.category || '',
-      category_id: doc.categoryId || null,
-      duration: tr?.duration || doc.duration || null,
-      price: tr?.price || doc.price || null,
-      best_time: tr?.best_time || tr?.bestTime || doc.bestTime || null,
-      rating: doc.rating ?? null,
-      review_count: doc.reviewCount ?? null,
-      hours: doc.hours || null,
-      tags: Array.isArray(tr?.tags) ? tr.tags : Array.isArray(doc.tags) ? doc.tags : [],
-      search_name: doc.searchName || null,
-      dining_profile: doc.diningProfile || {},
-      app_avg_rating: doc.app_avg_rating ?? null,
-      app_review_count: doc.app_review_count ?? 0,
+      id: row.id,
+      name: row.tr_name || row.name,
+      description: row.tr_description || row.description || '',
+      location: row.tr_location || row.location || '',
+      latitude: row.latitude ?? null,
+      longitude: row.longitude ?? null,
+      images: Array.isArray(row.images) ? row.images : [],
+      category: row.tr_category || row.category || '',
+      category_id: row.category_id || null,
+      duration: row.tr_duration || row.duration || null,
+      price: row.tr_price || row.price || null,
+      best_time: row.tr_best_time || row.best_time || null,
+      rating: row.rating ?? null,
+      review_count: row.review_count ?? null,
+      hours: row.hours || null,
+      tags: Array.isArray(row.tr_tags) ? row.tr_tags : Array.isArray(row.tags) ? row.tags : [],
+      search_name: row.search_name || null,
+      dining_profile: row.dining_profile || {},
+      app_avg_rating: row.app_avg_rating ?? null,
+      app_review_count: row.app_review_count ?? 0,
     };
   });
   
   places.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   
   if (!usePagination) {
-    return { source: 'mongo', places, total: places.length };
+    return { source: 'postgres', places, total: places.length };
   }
   
   const safeOffset = Number(offset || 0);
   const safeLimit = Number(limit || 24);
   
   return {
-    source: 'mongo',
+    source: 'postgres',
     places: places.slice(safeOffset, safeOffset + safeLimit),
     total: places.length,
   };
