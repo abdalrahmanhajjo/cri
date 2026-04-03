@@ -2,7 +2,7 @@
 # Build: docker build -t tripoli-explorer .
 # Run:   docker run -p 3095:3095 --env-file server/.env -e SERVE_CLIENT_DIST=true tripoli-explorer
 # Platforms: Railway, Fly.io, Render, Google Cloud Run (set PORT from platform).
-
+# Build attempt: 2026-04-03-v2 (Breaking Docker cache)
 FROM node:22-alpine AS client-build
 WORKDIR /app/client
 COPY client/package.json client/package-lock.json* ./
