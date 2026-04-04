@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Translations for Visit Tripoli â€“ English, Arabic, French
  */
 
@@ -2470,6 +2470,12 @@ export const translations = {
       officialInfo: 'Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø±Ø³Ù…ÙŠØ© Ù„Ù„Ø²ÙˆØ§Ø±',
       discoverTripoli: 'Ù…Ø¬ØªÙ…Ø¹ Ø·Ø±Ø§Ø¨Ù„Ø³',
       openingHours: 'Ø³Ø§Ø¹Ø§Øª Ø§Ù„Ø¹Ù…Ù„',
+      getDirections: 'Ø§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ø§Ù„Ø§ØªØ¬Ø§Ù‡Ø§Øª',
+      openNow: 'Ù…Ù ØªÙˆØ­ Ø§Ù„Ø¢Ù†',
+      closedNow: 'Ù…ØºÙ„Ù‚',
+      openingSoon: 'ÙŠÙ ØªØ­ Ù‚Ø±ÙŠØ¨Ø§Ù‹',
+      closingSoon: 'ÙŠØºÙ„Ù‚ Ù‚Ø±ÙŠØ¨Ø§Ù‹',
+      today: 'Ø§Ù„ÙŠÙˆÙ…',
       location: 'Ø§Ù„Ù…ÙˆÙ‚Ø¹',
       diningSectionEyebrow: 'ملف المطعم',
       diningSectionTitle: 'دليل المطعم',
@@ -3818,6 +3824,12 @@ export const translations = {
       emptyCtaHome: 'Accueil',
     },
     detail: {
+      getDirections: 'Obtenir l'itinÃ©raire',
+      openNow: 'Ouvert maintenant',
+      closedNow: 'FermÃ©',
+      openingSoon: 'Ouvre bientÃ´t',
+      closingSoon: 'Ferme bientÃ´t',
+      today: 'Aujourd'hui',
       backToExplore: "Retour Ã  l'exploration",
       officialInfo: 'Information officielle aux visiteurs',
       discoverTripoli: 'CommunautÃ© Tripoli',

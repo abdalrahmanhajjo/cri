@@ -209,6 +209,26 @@ export default function PlaceDetail() {
   const [diningTab, setDiningTab] = useState('overview');
   const [activeImageUrl, setActiveImageUrl] = useState(null);
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    const revealElements = document.querySelectorAll('.place-detail-reveal');
+    revealElements.forEach((el) => observer.observe(el));
+
+    return () => {
+      revealElements.forEach((el) => observer.unobserve(el));
+    };
+  }, [place, diningTab]);
+
   const myReview = useMemo(() => placeReviews.find((r) => r.isYours), [placeReviews]);
 
   useEffect(() => {
@@ -440,24 +460,41 @@ export default function PlaceDetail() {
               </section>
             )}
             
-            <section className="place-detail-app-section hours-section">
-              <h3>{t('detail', 'openingHours') || 'Opening Hours'}</h3>
-              <div className="place-detail-app-hours">
-                {Object.entries(place.hours || {}).map(([day, time]) => (
-                  <div key={day} className="place-detail-app-hour-row">
-                    <span className="day">{day}</span>
-                    <span className="time">{time}</span>
-                  </div>
-                ))}
+            <section className="place-detail-app-section place-detail-reveal delay-2">
+              <h3>{t('detail', 'hours') || 'Opening Hours'}</h3>
+              <div className="place-detail-app-hours-card">
+                <div className="place-detail-app-hours-header">
+                  <span className="current-day">
+                    <Icon name="clock" size={16} /> {new Date().toLocaleDateString('en-US', { weekday: 'long' })}
+                  </span>
+                </div>
+                <div className="place-detail-app-hours-list">
+                  {Object.entries(place.hours || {}).map(([day, time]) => {
+                    const isToday = new Date().toLocaleDateString('en-US', { weekday: 'long' }) === day;
+                    return (
+                      <div key={day} className={`place-detail-app-hour-row ${isToday ? 'is-today' : ''}`}>
+                        <span className="day">{day}</span>
+                        <span className="time">{time}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </section>
 
-            <section className="place-detail-app-section">
+            <section className="place-detail-app-section place-detail-reveal delay-3">
               <h3>{t('detail', 'location') || 'Location'}</h3>
-              <p className="place-detail-app-address">{place.location}</p>
-              <button className="place-detail-app-map-btn" onClick={openPlaceOnMap}>
-                <Icon name="directions" size={18} /> {t('detail', 'viewOnMap') || 'View on Map'}
-              </button>
+              <div className="place-detail-app-location-card">
+                <div className="place-detail-app-location-info">
+                  <div className="place-detail-app-address-text">
+                    <Icon name="location" size={20} style={{ marginRight: '8px', verticalAlign: 'middle', color: '#27ae60' }} />
+                    {place.location}
+                  </div>
+                  <button className="place-detail-app-map-btn" onClick={openPlaceOnMap}>
+                    <Icon name="directions" size={22} /> {t('detail', 'getDirections') || 'Get Directions'}
+                  </button>
+                </div>
+              </div>
             </section>
           </div>
         )}
