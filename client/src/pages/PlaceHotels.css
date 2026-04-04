@@ -11,7 +11,7 @@
   --hg-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --hg-sans: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   min-height: 100vh;
-  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   background: linear-gradient(180deg, var(--hg-ice) 0%, #e8edf5 55%, #dfe7f2 100%);
   color: var(--hg-night);
   font-family: var(--hg-sans);
@@ -553,58 +553,6 @@
   border-inline-end: 1px solid rgba(30, 41, 59, 0.08);
 }
 
-/* Dock */
-.hg-dock {
-  position: fixed;
-  inset-inline: 0;
-  bottom: 0;
-  z-index: 40;
-  display: flex;
-  align-items: stretch;
-  justify-content: space-around;
-  gap: 4px;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: rgba(248, 250, 252, 0.94);
-  border-top: 1px solid rgba(30, 41, 59, 0.12);
-  box-shadow: 0 -10px 36px rgba(11, 18, 36, 0.12);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.hg-dock__btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-height: 48px;
-  min-width: 0;
-  padding: 8px 6px;
-  border: 0;
-  border-radius: 14px;
-  background: transparent;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--hg-slate);
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.hg-dock__btn:hover {
-  background: rgba(201, 162, 39, 0.12);
-  color: var(--hg-night);
-  text-decoration: none;
-}
-
-.hg-dock__txt {
-  line-height: 1.15;
-  text-align: center;
-  word-break: break-word;
-}
-
 /* Trip sheet */
 .hg-sheet-bg {
   position: fixed;
@@ -794,7 +742,7 @@
 
 .hg-snack {
   position: fixed;
-  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 110;

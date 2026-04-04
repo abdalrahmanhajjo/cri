@@ -192,18 +192,6 @@
   border-inline-end-color: rgba(196, 92, 62, 0.12);
 }
 
-/* Dock */
-.hg-page--dining .hg-dock {
-  background: rgba(255, 251, 248, 0.96);
-  border-top-color: rgba(196, 92, 62, 0.15);
-  box-shadow: 0 -10px 32px rgba(58, 22, 16, 0.1);
-}
-
-.hg-page--dining .hg-dock__btn:hover {
-  background: rgba(232, 168, 73, 0.14);
-  color: var(--hg-night);
-}
-
 /* Trip sheet */
 .hg-page--dining .hg-sheet-bg {
   background: rgba(35, 12, 10, 0.5);

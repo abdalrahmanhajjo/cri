@@ -270,57 +270,6 @@
   font-weight: 700;
 }
 
-.pd-app-dock {
-  position: fixed;
-  inset-inline: 0;
-  bottom: 0;
-  z-index: 40;
-  display: flex;
-  align-items: stretch;
-  justify-content: space-around;
-  gap: 4px;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: rgba(255, 255, 255, 0.94);
-  border-top: 1px solid rgba(28, 25, 23, 0.1);
-  box-shadow: 0 -8px 32px rgba(12, 44, 40, 0.12);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.pd-app-dock__item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-height: 48px;
-  min-width: 0;
-  padding: 8px 6px;
-  border: 0;
-  border-radius: 14px;
-  background: transparent;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.pd-app-dock__item:hover {
-  background: rgba(15, 118, 110, 0.08);
-  color: var(--pd-teal);
-  text-decoration: none;
-}
-
-.pd-app-dock__label {
-  line-height: 1.15;
-  text-align: center;
-  word-break: break-word;
-}
-
 .pd-filters-card {
   margin-bottom: 28px;
   padding: 22px 22px 18px;
@@ -567,7 +516,7 @@
 
 .pd-toast {
   position: fixed;
-  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 110;
@@ -1137,15 +1086,11 @@
   .pd-category-strip {
     flex-wrap: wrap;
   }
-
-  .pd-app-dock {
-    display: none;
-  }
 }
 
 @media (max-width: 768px) {
   .pd-page {
-    padding-bottom: calc(24px + 58px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   }
 
   .pd-hero {
@@ -1431,11 +1376,6 @@
 
 :root[data-theme="dark"] .pd-card-actions-row {
   background: var(--color-surface-variant);
-  border-top-color: var(--color-border);
-}
-
-:root[data-theme="dark"] .pd-app-dock {
-  background: rgba(7, 17, 22, 0.92);
   border-top-color: var(--color-border);
 }
 

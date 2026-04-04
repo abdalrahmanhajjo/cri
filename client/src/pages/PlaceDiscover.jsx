@@ -10,7 +10,7 @@ import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
-import { COMMUNITY_PATH, DINING_PATH, HOTELS_PATH } from '../utils/discoverPaths';
+import { DINING_PATH, HOTELS_PATH } from '../utils/discoverPaths';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import './PlaceDiscover.css';
 
@@ -668,21 +668,6 @@ export default function PlaceDiscover() {
           </section>
         )}
       </div>
-
-      <nav className="pd-app-dock" aria-label={t('placeDiscover', 'dockLabel')}>
-        <Link to="/map" className="pd-app-dock__item">
-          <Icon name="map" size={22} aria-hidden />
-          <span className="pd-app-dock__label">{t('home', 'viewMap')}</span>
-        </Link>
-        <Link to={COMMUNITY_PATH} className="pd-app-dock__item">
-          <Icon name="dynamic_feed" size={22} aria-hidden />
-          <span className="pd-app-dock__label">{t('nav', 'communityFeed')}</span>
-        </Link>
-        <button type="button" className="pd-app-dock__item" onClick={scrollToFilters}>
-          <Icon name="tune" size={22} aria-hidden />
-          <span className="pd-app-dock__label">{t('placeDiscover', 'openFilters')}</span>
-        </button>
-      </nav>
 
       {tripPickPlace && (
         <div className="pd-modal-backdrop" role="presentation" onClick={closeTripModal}>

@@ -11,7 +11,7 @@ import { filterPlacesByQuery } from '../utils/searchFilter';
 import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import { getCategoriesForWay } from '../utils/findYourWayGrouping';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
-import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
+import { PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import './PlaceHotels.css';
 
@@ -635,21 +635,6 @@ export default function PlaceHotels() {
           </section>
         )}
       </div>
-
-      <nav className="hg-dock" aria-label={t('hotelGuide', 'dockLabel')}>
-        <Link to="/map" className="hg-dock__btn">
-          <Icon name="map" size={22} aria-hidden />
-          <span className="hg-dock__txt">{t('home', 'viewMap')}</span>
-        </Link>
-        <Link to={COMMUNITY_PATH} className="hg-dock__btn">
-          <Icon name="dynamic_feed" size={22} aria-hidden />
-          <span className="hg-dock__txt">{t('nav', 'communityFeed')}</span>
-        </Link>
-        <button type="button" className="hg-dock__btn" onClick={scrollToFilters}>
-          <Icon name="tune" size={22} aria-hidden />
-          <span className="hg-dock__txt">{t('hotelGuide', 'openFilters')}</span>
-        </button>
-      </nav>
 
       {tripPickPlace && (
         <div className="hg-sheet-bg" role="presentation" onClick={closeTripModal}>

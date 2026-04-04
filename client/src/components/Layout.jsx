@@ -6,7 +6,6 @@ import { useToast } from '../context/ToastContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { useTheme } from '../context/ThemeContext';
 import Icon from './Icon';
-import BackToTop from './BackToTop';
 import GlobalSearchBar from './GlobalSearchBar';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH, DINING_PATH } from '../utils/discoverPaths';
 import './Layout.css';
@@ -49,7 +48,6 @@ export default function Layout() {
   const isDiningPage = location.pathname === DINING_PATH;
   const isHotelsPage = location.pathname === '/hotels';
   const isAboutTripoliPage = location.pathname === '/about-tripoli';
-  const isAiPlannerPage = location.pathname === '/plan/ai';
   const diningGuideEnabled = settings?.diningGuide?.enabled !== false;
   const handleLogout = () => {
     logout();
@@ -499,7 +497,6 @@ export default function Layout() {
       >
         <Outlet />
       </main>
-      {!isAiPlannerPage && <BackToTop />}
     </div>
   );
 }
