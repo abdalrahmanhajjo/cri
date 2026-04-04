@@ -111,35 +111,26 @@ function buildDiningSummary(place) {
 
 function normalizeDiningProfile(place) {
   const raw = place?.diningProfile && typeof place.diningProfile === 'object' ? place.diningProfile : {};
-  const safeArray = (value) => (Array.isArray(value) ? value.filter(Boolean) : []);
-  const signatureDishes = safeArray(raw.signatureDishes).map((item) =>
-    typeof item === 'string'
-      ? { name: item }
-      : {
-          name: String(item?.name || '').trim(),
-          description: String(item?.description || '').trim(),
-          price: String(item?.price || '').trim(),
-          badge: String(item?.badge || '').trim(),
-        }
-  ).filter((item) => item.name);
-  const menuSections = safeArray(raw.menuSections)
-    .map((section) => ({
-      title: String(section?.title || '').trim(),
-      note: String(section?.note || '').trim(),
-      items: safeArray(section?.items)
-        .map((item) =>
-          typeof item === 'string'
-            ? { name: item }
-            : {
-                name: String(item?.name || '').trim(),
-                description: String(item?.description || '').trim(),
-                price: String(item?.price || '').trim(),
-                badge: String(item?.badge || '').trim(),
-              }
-        )
-        .filter((item) => item.name),
-    }))
-    .filter((section) => section.title || section.items.length > 0);
+  const safeArray = (arr) => (Array.isArray(arr) ? arr : []);
+  const titleizeTokens = (s) => (s && typeof s === 'string' ? s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ') : s);
+
+  const signatureDishes = safeArray(raw.signatureDishes).map((d) => ({
+    name: String(d.name || ''),
+    price: String(d.price || ''),
+    description: String(d.description || ''),
+    badge: String(d.badge || ''),
+  })).filter(d => d.name);
+
+  const menuSections = safeArray(raw.menuSections).map((s) => ({
+    title: String(s.title || ''),
+    note: String(s.note || ''),
+    items: safeArray(s.items).map((it) => ({
+      name: String(it.name || ''),
+      price: String(it.price || ''),
+      description: String(it.description || ''),
+      badge: String(it.badge || ''),
+    })).filter(it => it.name),
+  })).filter(s => s.title || s.items.length > 0);
 
   return {
     atmosphere: String(raw.atmosphere || '').trim(),
@@ -151,9 +142,50 @@ function normalizeDiningProfile(place) {
     contactEmail: String(raw.contactEmail || raw.email || '').trim(),
     contactAddress: String(raw.contactAddress || raw.address || '').trim(),
     contactNote: String(raw.contactNote || '').trim(),
+    socialMedia: {
+      instagram: String(raw.instagram || raw.social_instagram || '').trim(),
+      facebook: String(raw.facebook || raw.social_facebook || '').trim(),
+      website: String(raw.website || raw.link || '').trim(),
+    },
     signatureDishes,
     menuSections,
   };
+}
+
+function LiveStatus({ hours, t }) {
+  if (!hours || typeof hours !== 'object' || Array.isArray(hours)) return null;
+
+  const now = new Date();
+  const dayName = now.toLocaleString('en-US', { weekday: 'long' });
+  const todayHours = hours[dayName];
+
+  if (!todayHours) return <span className="place-status place-status--unknown">{translationOr(t, 'detail', 'statusUnknown', 'Hours N/A')}</span>;
+
+  try {
+    const [startStr, endStr] = todayHours.split('–').map(s => s.trim());
+    if (startStr && endStr) {
+      const [startH, startM] = startStr.split(':').map(Number);
+      const [endH, endM] = endStr.split(':').map(Number);
+      
+      const currentH = now.getHours();
+      const currentM = now.getMinutes();
+      
+      const startTotal = startH * 60 + startM;
+      const endTotal = endH * 60 + endM;
+      const currentTotal = currentH * 60 + currentM;
+      
+      const isOpen = currentTotal >= startTotal && currentTotal < endTotal;
+      
+      return (
+        <span className={`place-status ${isOpen ? 'place-status--open' : 'place-status--closed'}`}>
+          {isOpen ? t('detail', 'openNow') : t('detail', 'closedNow')}
+        </span>
+      );
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
 }
 
 function translationOr(t, section, key, fallback) {
@@ -1114,48 +1146,99 @@ export default function PlaceDetail() {
               </div>
 
               {diningTab === 'overview' && (
-                <div className="place-detail-dining-grid">
-                  <article className="place-detail-dining-card">
-                    <div className="place-detail-dining-card-icon" aria-hidden="true">
-                      <Icon name="menu_book" size={22} />
-                    </div>
-                    <h3>{t('detail', 'diningMenuTitle')}</h3>
-                    <p>{diningProfile.menuNote || t('detail', 'diningMenuHint')}</p>
-                    {diningSummary.cuisines.length > 0 && (
-                      <div className="place-detail-dining-chip-list">
+                <div className="place-detail-dining-overview">
+                  <div className="place-detail-dining-ov-main">
+                    <section className="place-detail-ov-section">
+                      <h3 className="place-detail-ov-title">
+                        <Icon name="restaurant" size={20} /> {t('detail', 'diningSectionTitle')}
+                      </h3>
+                      <p className="place-detail-ov-desc">
+                        {place.description || t('detail', 'diningSectionSub')}
+                      </p>
+                      <div className="place-detail-ov-chips">
                         {diningSummary.cuisines.map((item) => (
-                          <span key={item} className="place-detail-dining-chip">{item}</span>
+                          <span key={item} className="place-detail-ov-chip">{item}</span>
                         ))}
-                      </div>
-                    )}
-                  </article>
-
-                  <article className="place-detail-dining-card">
-                    <div className="place-detail-dining-card-icon" aria-hidden="true">
-                      <Icon name="event_available" size={22} />
-                    </div>
-                    <h3>{t('detail', 'diningBookingTitle')}</h3>
-                    <p>{place.price ? `${t('detail', 'priceRange')}: ${place.price}` : t('detail', 'diningBookingHint')}</p>
-                    <div className="place-detail-dining-meta-list">
-                      {hoursStr ? <span>{hoursStr}</span> : null}
-                      {place.location ? <span>{place.location}</span> : null}
-                    </div>
-                  </article>
-
-                  <article className="place-detail-dining-card">
-                    <div className="place-detail-dining-card-icon" aria-hidden="true">
-                      <Icon name="local_dining" size={22} />
-                    </div>
-                    <h3>{t('detail', 'diningBestForTitle')}</h3>
-                    <p>{diningProfile.atmosphere || t('detail', 'diningBestForHint')}</p>
-                    {([...diningSummary.bestFor, ...diningSummary.features, ...diningProfile.dietaryOptions].length > 0) && (
-                      <div className="place-detail-dining-chip-list">
                         {[...diningSummary.bestFor, ...diningSummary.features, ...diningProfile.dietaryOptions].slice(0, 8).map((item) => (
-                          <span key={item} className="place-detail-dining-chip">{item}</span>
+                          <span key={item} className="place-detail-ov-chip place-detail-ov-chip--alt">{item}</span>
                         ))}
                       </div>
+                    </section>
+
+                    {diningProfile.signatureDishes.length > 0 && (
+                      <section className="place-detail-ov-section">
+                        <h3 className="place-detail-ov-title">
+                          <Icon name="stars" size={20} /> {t('detail', 'diningSignatureTitle')}
+                        </h3>
+                        <div className="place-detail-ov-signatures">
+                          {diningProfile.signatureDishes.slice(0, 3).map((dish) => (
+                            <div key={dish.name} className="place-detail-ov-dish">
+                              <strong>{dish.name}</strong>
+                              <span>{dish.description}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
                     )}
-                  </article>
+                  </div>
+
+                  <aside className="place-detail-dining-ov-sidebar">
+                    <section className="place-detail-ov-section place-detail-ov-section--practical">
+                      <div className="place-detail-ov-header-row">
+                        <h3 className="place-detail-ov-title">{t('detail', 'openingHours')}</h3>
+                        <LiveStatus hours={place.hours} t={t} />
+                      </div>
+                      <div className="place-detail-ov-hours">
+                        {place.hours && typeof place.hours === 'object' ? (
+                          Object.entries(place.hours).map(([day, time]) => (
+                            <div key={day} className="place-detail-ov-hour-row">
+                              <span className="place-detail-ov-day">{day}</span>
+                              <span className="place-detail-ov-time">{time}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <p>{hoursStr || t('detail', 'diningContactHoursFallback')}</p>
+                        )}
+                      </div>
+                    </section>
+
+                    <section className="place-detail-ov-section place-detail-ov-section--practical">
+                      <h3 className="place-detail-ov-title">{t('detail', 'location')}</h3>
+                      <p className="place-detail-ov-address">
+                        <Icon name="location_on" size={18} />
+                        {diningProfile.contactAddress || place.location}
+                      </p>
+                      <button type="button" className="place-detail-ov-map-link" onClick={openPlaceOnMap}>
+                        <Icon name="directions" size={18} /> {t('detail', 'viewOnMap')}
+                      </button>
+                    </section>
+
+                    <section className="place-detail-ov-section place-detail-ov-section--practical">
+                      <h3 className="place-detail-ov-title">{t('detail', 'connectTitle') || 'Connect'}</h3>
+                      <div className="place-detail-ov-socials">
+                        {diningProfile.socialMedia.instagram && (
+                          <a href={diningProfile.socialMedia.instagram} target="_blank" rel="noopener noreferrer" className="place-detail-ov-social-btn">
+                            <Icon name="instagram" size={20} />
+                          </a>
+                        )}
+                        {diningProfile.socialMedia.facebook && (
+                          <a href={diningProfile.socialMedia.facebook} target="_blank" rel="noopener noreferrer" className="place-detail-ov-social-btn">
+                            <Icon name="facebook" size={20} />
+                          </a>
+                        )}
+                        {diningProfile.socialMedia.website && (
+                          <a href={diningProfile.socialMedia.website} target="_blank" rel="noopener noreferrer" className="place-detail-ov-social-btn">
+                            <Icon name="language" size={20} />
+                          </a>
+                        )}
+                        {diningProfile.contactPhone && (
+                          <a href={`tel:${diningProfile.contactPhone}`} className="place-detail-ov-social-btn">
+                            <Icon name="call" size={20} />
+                          </a>
+                        )}
+                      </div>
+                    </section>
+                  </aside>
                 </div>
               )}
 

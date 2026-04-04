@@ -7,9 +7,9 @@
 }
 
 .place-detail-container {
-  max-width: 840px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 clamp(12px, 4vw, 32px);
+  padding: 0 clamp(16px, 5vw, 40px);
 }
 
 @media (min-width: 1280px) {
@@ -797,6 +797,243 @@
   color: #fff;
   border-color: var(--color-primary);
   box-shadow: 0 12px 28px rgba(15, 118, 110, 0.22);
+}
+
+/* New Professional Dining Overview */
+.place-detail-dining-overview {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 40px;
+  padding: 32px 0;
+  align-items: start;
+}
+
+.place-detail-dining-ov-main {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.place-detail-ov-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.place-detail-ov-section--practical {
+  padding: 24px;
+  background: var(--color-surface-elevated, #fcfcfc);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.place-detail-ov-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-serif, serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.place-detail-ov-desc {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.place-detail-ov-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.place-detail-ov-chip {
+  padding: 8px 16px;
+  background: var(--color-primary-light, rgba(15, 118, 110, 0.08));
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 99px;
+  border: 1px solid transparent;
+}
+
+.place-detail-ov-chip--alt {
+  background: var(--color-surface-variant);
+  color: var(--color-text-secondary);
+}
+
+.place-detail-ov-signatures {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.place-detail-ov-dish {
+  padding: 16px;
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-surface-variant);
+  border-radius: 0 12px 12px 0;
+}
+
+.place-detail-ov-dish strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+  color: var(--color-text-primary);
+}
+
+.place-detail-ov-dish span {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+/* Sidebar & Practicalities */
+.place-detail-dining-ov-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: sticky;
+  top: 24px;
+}
+
+.place-detail-ov-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.place-status {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.place-status--open {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.place-status--closed {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.place-detail-ov-hours {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.place-detail-ov-hour-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.place-detail-ov-day {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.place-detail-ov-time {
+  color: var(--color-text-secondary);
+}
+
+.place-detail-ov-address {
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.place-detail-ov-map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 16px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.place-detail-ov-map-link:hover {
+  opacity: 0.9;
+}
+
+.place-detail-ov-socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.place-detail-ov-social-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-text-primary);
+  transition: all 0.2s;
+}
+
+.place-detail-ov-social-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Adaptive Layout */
+@media (max-width: 1100px) {
+  .place-detail-dining-overview {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  
+  .place-detail-dining-ov-sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .place-detail-dining-ov-sidebar {
+    grid-template-columns: 1fr;
+  }
+  
+  .place-detail-ov-section--practical {
+    padding: 20px;
+  }
+  
+  .place-detail-ov-signatures {
+    grid-template-columns: 1fr;
+  }
 }
 
 .place-detail-dining-sub {
