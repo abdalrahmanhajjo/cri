@@ -8,6 +8,7 @@ import Icon from '../components/Icon';
 import GlobalSearchBar from '../components/GlobalSearchBar';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { asyncPool } from '../utils/asyncPool';
+import { loadGoogleMapsScript } from '../utils/mapGoogleLoader';
 import { placeIdsFromDay, getDateForDayIndex } from '../utils/tripPlannerHelpers';
 import './Map.css';
 import './Explore.css';
@@ -210,39 +211,6 @@ function getPlaceDetails(placeId, apiKey) {
 function placePhotoUrl(photoReference, apiKey, maxWidth = 320) {
   if (!photoReference || !apiKey) return '';
   return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${encodeURIComponent(photoReference)}&key=${encodeURIComponent(apiKey)}`;
-}
-
-function loadGoogleMapsScript(apiKey, onAuthError) {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined') {
-      reject(new Error('No window'));
-      return;
-    }
-    if (window.google?.maps) {
-      resolve(window.google.maps);
-      return;
-    }
-    const existing = document.querySelector('script[src*="maps.googleapis.com"]');
-    const hasOurKey = apiKey && existing && existing.src && existing.src.includes(encodeURIComponent(apiKey));
-    if (existing && hasOurKey) {
-      const check = () => (window.google?.maps ? resolve(window.google.maps) : setTimeout(check, 50));
-      check();
-      return;
-    }
-    if (onAuthError && typeof window !== 'undefined') {
-      window.gm_authFailure = () => {
-        window.gm_authFailure = null;
-        onAuthError(new Error('Google Maps rejected the API key. Enable Maps JavaScript API, enable billing, and check key restrictions.'));
-      };
-    }
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve(window.google?.maps || reject(new Error('Maps not loaded')));
-    script.onerror = () => reject(new Error('Failed to load Google Maps'));
-    document.head.appendChild(script);
-  });
 }
 
 function escapeHtml(s) {

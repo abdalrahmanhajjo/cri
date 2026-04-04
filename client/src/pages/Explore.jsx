@@ -8,6 +8,7 @@ import { useToast } from '../context/ToastContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import Icon from '../components/Icon';
 import { CommunityFeedStrip } from '../components/CommunityFeed';
+import FindYourWayMap from '../components/FindYourWayMap';
 import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { trackEvent } from '../utils/analytics';
 import { homeBentoDefaults, resolveHomeBentoVisuals, resolveBentoAvatarSlots, bentoCssUrl } from '../config/homeBentoVisuals';
@@ -26,7 +27,6 @@ import {
   HOTELS_PATH,
   discoverSearchUrl,
 } from '../utils/discoverPaths';
-import { PLAN_TRIP_AREA_NAV, PLAN_TRIP_AREA_I18N_KEYS, mapSearchUrl } from '../config/planTripAreas';
 import { applyHomeSeoFromSettings } from '../utils/siteSeo';
 import { getApiOrigin } from '../utils/apiOrigin';
 import {
@@ -653,8 +653,8 @@ function BrowseMapByThemeSection({
   );
 }
 
-/** Areas, transport/stay/tips — below featured picks and community on the home page. */
-function FindYourWayPracticalSection({ t, showMap = true, showTips = true }) {
+/** Areas map + transport/stay/tips — below featured picks and community on the home page. */
+function FindYourWayPracticalSection({ t, places = [], showMap = true, showTips = true }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   return (
     <section
@@ -677,31 +677,10 @@ function FindYourWayPracticalSection({ t, showMap = true, showTips = true }) {
 
         <div className="vd-find-your-way-main-grid">
           <div className="vd-find-your-way-areas-panel">
-            <div id="areas" className="vd-plan-trip-block vd-find-your-way-areas-card">
+            <div id="areas" className="vd-plan-trip-block vd-find-your-way-areas-card vd-find-your-way-areas-card--map">
               <h3 className="vd-plan-trip-block-title">{safeT('home', 'areasTitle')}</h3>
-              <p className="vd-plan-trip-block-desc">{safeT('home', 'areasSub')}</p>
-              <div className="vd-plan-trip-areas vd-find-your-way-areas-list">
-                {PLAN_TRIP_AREA_NAV.map((nav) => {
-                  const keys = PLAN_TRIP_AREA_I18N_KEYS[nav.key];
-                  if (!keys) return null;
-                  const mapTo = mapSearchUrl(nav.discoverQ);
-                  const areaName = safeT('home', keys.name);
-                  return (
-                    <Link
-                      key={nav.key}
-                      to={mapTo}
-                      className="vd-plan-trip-area vd-plan-trip-area--link"
-                      aria-label={safeT('home', 'planTripAreaExploreAria').replace(/\{name\}/g, areaName)}
-                    >
-                      <span className="vd-plan-trip-area-main">
-                        <span className="vd-plan-trip-area-name">{areaName}</span>
-                        <span className="vd-plan-trip-area-desc">{safeT('home', keys.desc)}</span>
-                      </span>
-                      <Icon name="arrow_forward" size={18} className="vd-plan-trip-area-chevron" aria-hidden />
-                    </Link>
-                  );
-                })}
-              </div>
+              <p className="vd-plan-trip-block-desc">{safeT('home', 'areasMapSub')}</p>
+              <FindYourWayMap places={places} t={t} />
             </div>
           </div>
           <div className="vd-find-your-way-side-stack">
@@ -1218,6 +1197,7 @@ export default function Explore() {
 
       <FindYourWayPracticalSection
         t={t}
+        places={placesList}
         showMap={showMap}
         showTips={user?.showTips !== false}
       />
