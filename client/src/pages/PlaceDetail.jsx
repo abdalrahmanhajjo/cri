@@ -885,82 +885,51 @@ export default function PlaceDetail() {
     </div>
   );
 
-              const contactContent = (
-                <div className="place-detail-dining-contact-layout">
-                  <article className="place-detail-dining-card place-detail-dining-card--contact-details" style={{ border: '2px solid rgba(0,0,0,0.05)', backgroundColor: 'transparent' }}>
-                    <div className="place-detail-dining-card-icon" aria-hidden="true" style={{ backgroundColor: 'var(--te-primary)', color: '#fff' }}>
-                      <Icon name="event_seat" size={24} />
-                    </div>
-                    <h3>{t('detail', 'diningBookingTitle') || 'Reservation & Booking'}</h3>
-                    <p style={{ marginBottom: '24px' }}>{diningProfile.reservationNotes || t('detail', 'diningContactLead')}</p>
-                    
-                    <form className="place-detail-contact-form" onSubmit={submitInquiry} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {!user && (
-                        <>
-                          <label className="place-detail-review-field">
-                            <span>{t('detail', 'inquiryName') || 'Your Name'}</span>
-                            <input type="text" required value={guestName} onChange={e => setGuestName(e.target.value)} />
-                          </label>
-                          <label className="place-detail-review-field">
-                            <span>{t('detail', 'inquiryEmail') || 'Email'}</span>
-                            <input type="email" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} />
-                          </label>
-                        </>
-                      )}
-                      <label className="place-detail-review-field">
-                        <span>{t('detail', 'inquiryPhone') || 'Phone'}</span>
-                        <input type="tel" required value={guestPhone} onChange={e => setGuestPhone(e.target.value)} />
-                      </label>
-                      <label className="place-detail-review-field">
-                        <span>{t('detail', 'inquiryMessage') || 'Special Requests / Notes'}</span>
-                        <textarea required value={inqMessage} onChange={e => setInqMessage(e.target.value)} rows={3} />
-                      </label>
-                      <button type="submit" className="place-detail-btn place-detail-btn--primary" disabled={inqSending} style={{ marginTop: '8px' }}>
-                        <Icon name="send" size={20} />
-                        {inqSending ? t('detail', 'inquirySending') || 'Sending...' : t('detail', 'inquirySubmit') || 'Request Booking'}
-                      </button>
-                      {inqStatus === 'sent' && <p className="place-detail-toast-inline">{t('detail', 'inquirySent') || 'Your request was sent successfully!'}</p>}
-                    </form>
-                  </article>
 
-                  <div className="place-detail-dining-grid">
-                    <article className="place-detail-dining-card">
-                      <div className="place-detail-dining-contact-list">
-                        <div className="place-detail-dining-contact-row">
-                          <Icon name="location_on" size={18} />
-                          <span>{diningProfile.contactAddress || place.location || translationOr(t, 'detail', 'location', 'Location')}</span>
-                        </div>
-                        {diningProfile.contactPhone ? (
-                          <div className="place-detail-dining-contact-row">
-                            <Icon name="call" size={18} />
-                            <a href={`tel:${diningProfile.contactPhone}`}>{diningProfile.contactPhone}</a>
-                          </div>
-                        ) : null}
-                        {diningProfile.contactEmail ? (
-                          <div className="place-detail-dining-contact-row">
-                            <Icon name="mail" size={18} />
-                            <a href={`mailto:${diningProfile.contactEmail}`}>{diningProfile.contactEmail}</a>
-                          </div>
-                        ) : null}
-                      </div>
-                      <div className="place-detail-dining-contact-actions" style={{ marginTop: '24px' }}>
-                        <button type="button" className="place-detail-btn place-detail-btn--secondary" onClick={openPlaceOnMap} style={{ width: '100%', justifyContent: 'center' }}>
-                          <Icon name="map" size={18} />
-                          {t('detail', 'diningMapCta')}
-                        </button>
-                      </div>
-                    </article>
-                    
-                    <article className="place-detail-dining-card">
-                      <div className="place-detail-dining-card-icon" aria-hidden="true">
-                        <Icon name="schedule" size={22} />
-                      </div>
-                      <h3>{t('detail', 'openingHours')}</h3>
-                      <p>{hoursStr || t('detail', 'diningContactHoursFallback')}</p>
-                    </article>
-                  </div>
-                </div>
-              );
+  const contactContent = (
+    <div className="place-detail-app-contact-blocks">
+      <div className="place-detail-app-contact-group">
+        {diningProfile.contactPhone && (
+          <a href={`tel:${diningProfile.contactPhone}`} className="place-detail-app-action-row">
+            <div className="action-icon call"><Icon name="call" size={24} /></div>
+            <div className="action-text">
+              <h4>{t('detail', 'callUs') || 'Call Restaurant'}</h4>
+              <span>{diningProfile.contactPhone}</span>
+            </div>
+            <Icon name="chevron_right" size={24} className="action-chevron" />
+          </a>
+        )}
+        <button type="button" onClick={openPlaceOnMap} className="place-detail-app-action-row">
+          <div className="action-icon map"><Icon name="directions" size={24} /></div>
+          <div className="action-text">
+            <h4>{t('detail', 'getDirections') || 'Get Directions'}</h4>
+            <span>{diningProfile.contactAddress || place.location || 'View on Map'}</span>
+          </div>
+          <Icon name="chevron_right" size={24} className="action-chevron" />
+        </button>
+        {diningProfile.socialMedia?.website && (
+          <a href={diningProfile.socialMedia.website} target="_blank" rel="noreferrer" className="place-detail-app-action-row">
+            <div className="action-icon web"><Icon name="language" size={24} /></div>
+            <div className="action-text">
+              <h4>{t('detail', 'website') || 'Website'}</h4>
+              <span>{t('detail', 'visitWebsite') || 'Visit Link'}</span>
+            </div>
+            <Icon name="chevron_right" size={24} className="action-chevron" />
+          </a>
+        )}
+        {diningProfile.socialMedia?.instagram && (
+          <a href={diningProfile.socialMedia.instagram} target="_blank" rel="noreferrer" className="place-detail-app-action-row">
+            <div className="action-icon insta"><Icon name="photo_camera" size={24} /></div>
+            <div className="action-text">
+              <h4>Instagram</h4>
+              <span>{t('detail', 'viewProfile') || 'View Profile'}</span>
+            </div>
+            <Icon name="chevron_right" size={24} className="action-chevron" />
+          </a>
+        )}
+      </div>
+    </div>
+  );
 
   if (isDining) {
     const totersHeroUrl = galleryUrls[0] || null;
