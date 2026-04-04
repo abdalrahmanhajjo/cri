@@ -2552,16 +2552,28 @@
   max-height: 550px;
   overflow: hidden;
 }
+.place-detail-app-hero-blur {
+  position: absolute;
+  inset: -20px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(24px) saturate(1.15);
+  transform: scale(1.08);
+  opacity: 0.55;
+}
 .place-detail-app-hero-img {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   display: block;
 }
 .place-detail-app-hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.7) 100%);
+  background: linear-gradient(to bottom, rgba(0,0,0,0.26) 0%, rgba(0,0,0,0.08) 45%, rgba(0,0,0,0.78) 100%);
 }
 .place-detail-app-hero-nav {
   position: absolute;
@@ -3023,6 +3035,60 @@
 .place-detail-app-contact-blocks {
   padding: 16px;
 }
+.place-detail-app-map-card {
+  background: #fff;
+  border: 1px solid #ece9e2;
+  border-radius: 22px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.06);
+}
+.place-detail-app-map-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.place-detail-app-map-card__head h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+.place-detail-app-map-card__head p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.place-detail-app-map-card__cta {
+  flex: 0 0 auto;
+  min-height: 42px;
+  border: 1px solid #dbe7ff;
+  border-radius: 14px;
+  background: #f4f8ff;
+  color: #2459c3;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.place-detail-app-map-card__frame {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid #ece9e2;
+  background: #f5f5f5;
+  height: 240px;
+}
+.place-detail-app-map-card__frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
 .place-detail-app-contact-group {
   display: flex;
   flex-direction: column;
@@ -3106,6 +3172,10 @@
   padding: 20px;
   box-shadow: 0 -20px 50px rgba(0,0,0,0.22);
 }
+.place-detail-app-modal--booking {
+  max-height: 92vh;
+  overflow-y: auto;
+}
 .place-detail-app-modal-header {
   display: flex;
   align-items: center;
@@ -3155,6 +3225,48 @@
   text-decoration: none;
   font-weight: 700;
 }
+.place-detail-app-booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.place-detail-app-booking-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.place-detail-app-booking-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.place-detail-app-booking-field span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #444;
+}
+.place-detail-app-booking-field input,
+.place-detail-app-booking-field textarea {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px 14px;
+  font: inherit;
+  color: #1a1a1a;
+}
+.place-detail-app-booking-field textarea {
+  resize: vertical;
+}
+.place-detail-app-booking-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+.place-detail-app-booking-actions .place-detail-app-primary-btn {
+  min-width: 180px;
+  text-decoration: none;
+}
 .place-detail-app-trip-list {
   display: flex;
   flex-direction: column;
@@ -3192,5 +3304,16 @@
 
   .place-detail-app-hero-nav {
     display: none;
+  }
+
+  .place-detail-app-map-card__head,
+  .place-detail-app-booking-actions,
+  .place-detail-app-booking-grid {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .place-detail-app-booking-actions .place-detail-app-primary-btn {
+    width: 100%;
   }
 }

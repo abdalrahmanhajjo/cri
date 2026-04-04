@@ -45,12 +45,31 @@ function formatReviewDate(iso, lang) {
 }
 
 function placeHasGpsForCheckin(place) {
-  const c =
-    place?.coordinates ||
+  const c = getPlaceCoordinates(place);
+  return !!(c && Number.isFinite(c.lat) && Number.isFinite(c.lng));
+}
+
+function getPlaceCoordinates(place) {
+  return place?.coordinates ||
     (place?.latitude != null && place?.longitude != null
       ? { lat: Number(place.latitude), lng: Number(place.longitude) }
       : null);
-  return !!(c && Number.isFinite(c.lat) && Number.isFinite(c.lng));
+}
+
+function getOpenStreetMapEmbedUrl(place) {
+  const coords = getPlaceCoordinates(place);
+  if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return '';
+  const lat = Number(coords.lat);
+  const lng = Number(coords.lng);
+  const delta = 0.008;
+  const bbox = [
+    (lng - delta).toFixed(6),
+    (lat - delta).toFixed(6),
+    (lng + delta).toFixed(6),
+    (lat + delta).toFixed(6),
+  ].join('%2C');
+  const marker = `${lat.toFixed(6)}%2C${lng.toFixed(6)}`;
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${marker}`;
 }
 
 function isDiningPlace(place) {
@@ -317,6 +336,13 @@ export default function PlaceDetail() {
   const [tripModalTrips, setTripModalTrips] = useState([]);
   const [tripModalLoading, setTripModalLoading] = useState(false);
   const [tripAddSaving, setTripAddSaving] = useState(false);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [bookingDate, setBookingDate] = useState('');
+  const [bookingTime, setBookingTime] = useState('');
+  const [bookingGuests, setBookingGuests] = useState('2');
+  const [bookingNotes, setBookingNotes] = useState('');
+  const [bookingSending, setBookingSending] = useState(false);
+  const [bookingStatus, setBookingStatus] = useState(null);
   const heroTouchStartX = useRef(null);
 
   const myReview = useMemo(() => placeReviews.find((r) => r.isYours), [placeReviews]);
@@ -336,6 +362,12 @@ export default function PlaceDetail() {
   useEffect(() => {
     setReviewsOpen(false);
     setDiningTab('overview');
+    setBookingModalOpen(false);
+    setBookingDate('');
+    setBookingTime('');
+    setBookingGuests('2');
+    setBookingNotes('');
+    setBookingStatus(null);
   }, [id]);
 
   useEffect(() => {
@@ -824,22 +856,10 @@ export default function PlaceDetail() {
   }, [tripPickPlace, closeTripModal]);
 
   const handleBookingAction = useCallback(() => {
-    const phone =
-      place?.diningProfile && typeof place.diningProfile === 'object'
-        ? String(place.diningProfile.contactPhone || place.diningProfile.phone || '').trim()
-        : '';
     setInquiryIntent('booking');
-    setDiningTab('contact');
-    const scrollToProposal = () => {
-      const el = document.getElementById('place-proposal');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-    if (phone) {
-      window.location.href = `tel:${phone}`;
-      return;
-    }
-    requestAnimationFrame(scrollToProposal);
-  }, [place]);
+    setBookingStatus(null);
+    setBookingModalOpen(true);
+  }, []);
 
   const handleHeroTouchStart = useCallback((e) => {
     heroTouchStartX.current = e.touches?.[0]?.clientX ?? null;
@@ -859,11 +879,7 @@ export default function PlaceDetail() {
   );
 
   const openExternalDirections = useCallback(() => {
-    const coords =
-      place?.coordinates ||
-      (place?.latitude != null && place?.longitude != null
-        ? { lat: Number(place.latitude), lng: Number(place.longitude) }
-        : null);
+    const coords = getPlaceCoordinates(place);
     const address =
       place?.diningProfile && typeof place.diningProfile === 'object'
         ? String(place.diningProfile.contactAddress || place.diningProfile.address || '').trim()
@@ -875,6 +891,72 @@ export default function PlaceDetail() {
         : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   }, [place]);
+
+  const closeBookingModal = useCallback(() => {
+    if (bookingSending) return;
+    setBookingModalOpen(false);
+  }, [bookingSending]);
+
+  const submitBookingRequest = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (!place || bookingSending) return;
+      const phone = guestPhone.trim();
+      if ((phone.match(/\d/g) || []).length < 8) {
+        setBookingStatus({ type: 'err', text: t('detail', 'bookingPhoneRequired') || 'Please enter a valid phone number.' });
+        return;
+      }
+      const lines = [
+        `Booking request for ${place.name}`,
+        bookingDate ? `Date: ${bookingDate}` : '',
+        bookingTime ? `Time: ${bookingTime}` : '',
+        bookingGuests ? `Guests: ${bookingGuests}` : '',
+        bookingNotes.trim() ? `Notes: ${bookingNotes.trim()}` : '',
+      ].filter(Boolean);
+      const body = user
+        ? {
+            message: lines.join('\n'),
+            intent: 'booking',
+            guestEmail: guestEmail.trim(),
+            guestPhone: phone,
+          }
+        : {
+            message: lines.join('\n'),
+            intent: 'booking',
+            guestName: guestName.trim(),
+            guestEmail: guestEmail.trim(),
+            guestPhone: phone,
+          };
+
+      setBookingSending(true);
+      setBookingStatus(null);
+      try {
+        await api.places.inquiry(place.id, body);
+        setBookingStatus({ type: 'ok', text: t('detail', 'bookingRequestSent') || 'Booking request sent.' });
+        showToast(t('feedback', 'inquirySent'), 'success');
+        setBookingNotes('');
+        setBookingDate('');
+        setBookingTime('');
+        setBookingGuests('2');
+      } catch (err) {
+        const msg = err?.message || t('detail', 'reviewSubmitFailed') || 'Failed to send booking request.';
+        setBookingStatus({ type: 'err', text: msg });
+        showToast(t('feedback', 'actionFailed'), 'error');
+      } finally {
+        setBookingSending(false);
+      }
+    },
+    [place, bookingSending, guestPhone, bookingDate, bookingTime, bookingGuests, bookingNotes, user, guestEmail, guestName, showToast, t]
+  );
+
+  useEffect(() => {
+    if (!bookingModalOpen) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') closeBookingModal();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [bookingModalOpen, closeBookingModal]);
 
   if (loading) {
     return (
@@ -944,6 +1026,7 @@ export default function PlaceDetail() {
     { id: 'reviews', label: t('detail', 'diningTabReviews') },
     { id: 'contact', label: t('detail', 'diningTabContact') },
   ];
+  const mapEmbedUrl = getOpenStreetMapEmbedUrl(place);
 
   const isDining = isDiningPlace(place);
 
@@ -1162,6 +1245,13 @@ export default function PlaceDetail() {
             onTouchEnd={handleHeroTouchEnd}
           >
             {totersHeroUrl ? (
+              <div
+                className="place-detail-app-hero-blur"
+                style={{ backgroundImage: `url(${totersHeroUrl})` }}
+                aria-hidden="true"
+              />
+            ) : null}
+            {totersHeroUrl ? (
               <img src={totersHeroUrl} alt={place.name} className="place-detail-app-hero-img" {...getDeliveryImgProps(totersHeroUrl, 'detailHero')} />
             ) : (
               <div className="place-detail-app-hero-fallback"><Icon name="restaurant" size={40} /></div>
@@ -1353,6 +1443,28 @@ export default function PlaceDetail() {
           {diningTab === 'reviews' && reviewsContent}
           {diningTab === 'contact' && (
             <div className="place-detail-app-contact-blocks">
+              {mapEmbedUrl && (
+                <section className="place-detail-app-map-card">
+                  <div className="place-detail-app-map-card__head">
+                    <div>
+                      <h3>{t('detail', 'viewOnMap') || 'View on map'}</h3>
+                      <p>{diningProfile.contactAddress || place.location || place.name}</p>
+                    </div>
+                    <button type="button" className="place-detail-app-map-card__cta" onClick={openExternalDirections}>
+                      <Icon name="directions" size={18} />
+                      <span>{t('detail', 'getDirections') || 'Get Directions'}</span>
+                    </button>
+                  </div>
+                  <div className="place-detail-app-map-card__frame">
+                    <iframe
+                      title={`${place.name} map`}
+                      src={mapEmbedUrl}
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                  </div>
+                </section>
+              )}
               <div className="place-detail-app-contact-group">
                 {(diningProfile.contactAddress || place.location) && (
                   <button type="button" onClick={openPlaceOnMap} className="place-detail-app-action-row">
@@ -1489,6 +1601,83 @@ export default function PlaceDetail() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {bookingModalOpen && (
+          <div className="place-detail-app-modal-backdrop" role="presentation" onClick={closeBookingModal}>
+            <div
+              className="place-detail-app-modal place-detail-app-modal--booking"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="place-detail-booking-modal-title"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="place-detail-app-modal-header">
+                <h2 id="place-detail-booking-modal-title" className="place-detail-app-modal-title">
+                  {t('detail', 'intentBooking') || 'Booking / reservation'}
+                </h2>
+                <button
+                  type="button"
+                  className="place-detail-app-modal-close"
+                  onClick={closeBookingModal}
+                  aria-label={t('placeDiscover', 'modalClose') || 'Close'}
+                >
+                  <Icon name="close" size={22} />
+                </button>
+              </div>
+              <p className="place-detail-app-modal-place">{place.name}</p>
+              <form className="place-detail-app-booking-form" onSubmit={submitBookingRequest}>
+                {!user && (
+                  <label className="place-detail-app-booking-field">
+                    <span>{t('detail', 'name') || 'Name'}</span>
+                    <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} required />
+                  </label>
+                )}
+                <div className="place-detail-app-booking-grid">
+                  <label className="place-detail-app-booking-field">
+                    <span>{t('detail', 'date') || 'Date'}</span>
+                    <input type="date" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} required />
+                  </label>
+                  <label className="place-detail-app-booking-field">
+                    <span>{t('detail', 'time') || 'Time'}</span>
+                    <input type="time" value={bookingTime} onChange={(e) => setBookingTime(e.target.value)} required />
+                  </label>
+                </div>
+                <div className="place-detail-app-booking-grid">
+                  <label className="place-detail-app-booking-field">
+                    <span>{t('detail', 'guests') || 'Guests'}</span>
+                    <input type="number" min="1" max="30" value={bookingGuests} onChange={(e) => setBookingGuests(e.target.value)} required />
+                  </label>
+                  <label className="place-detail-app-booking-field">
+                    <span>{t('detail', 'mobilePhone') !== 'mobilePhone' ? t('detail', 'mobilePhone') : 'Mobile phone'}</span>
+                    <input type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} required />
+                  </label>
+                </div>
+                <label className="place-detail-app-booking-field">
+                  <span>{t('detail', 'email') || 'Email'}</span>
+                  <input type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} />
+                </label>
+                <label className="place-detail-app-booking-field">
+                  <span>{t('detail', 'note') || 'Notes'}</span>
+                  <textarea rows={4} value={bookingNotes} onChange={(e) => setBookingNotes(e.target.value)} placeholder={t('detail', 'inquiryBookingLead') || 'Any seating, timing, or celebration details'} />
+                </label>
+                {bookingStatus?.type === 'ok' ? <p className="place-detail-toast-inline" role="status">{bookingStatus.text}</p> : null}
+                {bookingStatus?.type === 'err' ? <p className="place-detail-error-inline" role="alert">{bookingStatus.text}</p> : null}
+                <div className="place-detail-app-booking-actions">
+                  {diningProfile.contactPhone ? (
+                    <a href={`tel:${diningProfile.contactPhone}`} className="place-detail-app-primary-btn place-detail-app-primary-btn--ghost">
+                      <Icon name="call" size={18} />
+                      <span>{t('detail', 'callUs') || 'Call Restaurant'}</span>
+                    </a>
+                  ) : null}
+                  <button type="submit" className="place-detail-app-primary-btn place-detail-app-primary-btn--booking" disabled={bookingSending}>
+                    <Icon name="event_available" size={18} />
+                    <span>{bookingSending ? (t('detail', 'loading') || 'Sending') : (t('detail', 'intentBooking') || 'Booking / reservation')}</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
