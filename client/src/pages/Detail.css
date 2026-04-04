@@ -2915,3 +2915,67 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Toters Custom Action Rows for Contact Tab */
+.place-detail-app-contact-blocks {
+  padding: 16px;
+}
+.place-detail-app-contact-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.place-detail-app-action-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background-color: var(--te-bg);
+  border-radius: 16px;
+  text-decoration: none;
+  color: var(--te-text);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid rgba(0,0,0,0.03);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.place-detail-app-action-row:active {
+  transform: scale(0.98);
+}
+.place-detail-app-action-row .action-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+.place-detail-app-action-row .action-icon.call { background: #34C759; }
+.place-detail-app-action-row .action-icon.map { background: #007AFF; }
+.place-detail-app-action-row .action-icon.web { background: #FF9500; }
+.place-detail-app-action-row .action-icon.insta { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+
+.place-detail-app-action-row .action-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.place-detail-app-action-row .action-text h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--te-text);
+}
+.place-detail-app-action-row .action-text span {
+  font-size: 0.85rem;
+  color: var(--te-text-muted);
+}
+.place-detail-app-action-row .action-chevron {
+  color: var(--te-text-muted);
+  opacity: 0.6;
+}

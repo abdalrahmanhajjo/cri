@@ -1068,7 +1068,50 @@ export default function PlaceDetail() {
           )}
 
           {diningTab === 'reviews' && reviewsContent}
-          {diningTab === 'contact' && contactContent}
+          {diningTab === 'contact' && (
+            <div className="place-detail-app-contact-blocks">
+              <div className="place-detail-app-contact-group">
+                {diningProfile.contactPhone && (
+                  <a href={`tel:${diningProfile.contactPhone}`} className="place-detail-app-action-row">
+                    <div className="action-icon call"><Icon name="call" size={24} /></div>
+                    <div className="action-text">
+                      <h4>{t('detail', 'callUs') || 'Call Restaurant'}</h4>
+                      <span>{diningProfile.contactPhone}</span>
+                    </div>
+                    <Icon name="chevron_right" size={24} className="action-chevron" />
+                  </a>
+                )}
+                <button type="button" onClick={openPlaceOnMap} className="place-detail-app-action-row">
+                  <div className="action-icon map"><Icon name="directions" size={24} /></div>
+                  <div className="action-text">
+                    <h4>{t('detail', 'getDirections') || 'Get Directions'}</h4>
+                    <span>{diningProfile.contactAddress || place.location || 'View on Map'}</span>
+                  </div>
+                  <Icon name="chevron_right" size={24} className="action-chevron" />
+                </button>
+                {diningProfile.socialMedia?.website && (
+                  <a href={diningProfile.socialMedia.website} target="_blank" rel="noreferrer" className="place-detail-app-action-row">
+                    <div className="action-icon web"><Icon name="language" size={24} /></div>
+                    <div className="action-text">
+                      <h4>{t('detail', 'website') || 'Website'}</h4>
+                      <span>{t('detail', 'visitWebsite') || 'Visit Link'}</span>
+                    </div>
+                    <Icon name="chevron_right" size={24} className="action-chevron" />
+                  </a>
+                )}
+                {diningProfile.socialMedia?.instagram && (
+                  <a href={diningProfile.socialMedia.instagram} target="_blank" rel="noreferrer" className="place-detail-app-action-row">
+                    <div className="action-icon insta"><Icon name="photo_camera" size={24} /></div>
+                    <div className="action-text">
+                      <h4>Instagram</h4>
+                      <span>{t('detail', 'viewProfile') || 'View Profile'}</span>
+                    </div>
+                    <Icon name="chevron_right" size={24} className="action-chevron" />
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
         </main>
       </div>
     );
