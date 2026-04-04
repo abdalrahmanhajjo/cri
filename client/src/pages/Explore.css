@@ -7338,6 +7338,151 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   transform: translateX(3px);
 }
 
+/* Community — phones: hide duplicate venue line, larger type, full-width CTA, tighter showcase */
+@media (max-width: 767px) {
+  .vd-community-feed-card:has(.vd-community-feed-place-row) .vd-community-feed-author {
+    display: none;
+  }
+
+  .vd-community-feed-place-row {
+    min-height: 44px;
+    padding: 4px 6px;
+    margin: 0 0 6px;
+    border-radius: 10px;
+  }
+
+  .vd-community-feed-place-avatar,
+  .vd-community-feed-place-avatar--icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .vd-community-feed-place-name {
+    font-size: 15px;
+  }
+
+  .vd-community-feed-card-body {
+    padding: 14px 14px 16px;
+    gap: 8px;
+  }
+
+  .vd-community-feed-caption {
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-line-clamp: 3;
+  }
+
+  .vd-community-feed-meta {
+    gap: 8px 10px;
+  }
+
+  .vd-community-feed-cta {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+    margin-top: 6px;
+    padding: 10px 16px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    background: rgba(15, 118, 110, 0.09);
+    border: 1px solid rgba(15, 118, 110, 0.22);
+    font-size: 14px;
+  }
+
+  .vd-community-feed-cta:hover {
+    background: rgba(15, 118, 110, 0.14);
+    border-color: rgba(15, 118, 110, 0.32);
+  }
+
+  .vd-community-feed-scroll {
+    gap: 14px;
+    padding-inline: max(2px, env(safe-area-inset-left, 0px)) max(2px, env(safe-area-inset-right, 0px));
+    scroll-padding-inline: max(var(--page-padding), env(safe-area-inset-left, 0px));
+  }
+
+  .vd-community-feed-scroll > .vd-community-feed-card {
+    flex: 0 0 min(300px, calc(100vw - max(28px, env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px)) - 24px));
+  }
+
+  .vd-home > .vd-section.vd-community-feed--showcase {
+    padding-top: clamp(14px, 4vw, 22px);
+    padding-bottom: clamp(18px, 5vw, 28px);
+  }
+
+  .vd-community-feed-header--showcase .vd-community-feed-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .vd-community-feed-intro {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px 18px;
+  }
+
+  .vd-community-feed-intro .vd-community-feed-more--pill {
+    margin-inline-start: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .vd-community-feed-more--pill {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .vd-community-feed-bento-shell.vd-community-feed-grid--bento {
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  .vd-community-feed-mosaic-cell {
+    width: 54px;
+    height: 54px;
+    margin-inline-start: -14px;
+    border-width: 2px;
+    box-shadow: 0 4px 14px rgba(28, 25, 23, 0.14);
+  }
+
+  .vd-community-feed-header--showcase .vd-community-feed-showcase-title.vd-top-picks-title {
+    font-size: clamp(1.28rem, 5.2vw, 1.5rem);
+    margin-bottom: 8px;
+  }
+
+  .vd-community-feed-showcase-tagline {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .vd-community-feed-bento-shell.vd-community-feed-grid--trio {
+    padding: 12px 10px 14px !important;
+    gap: 14px !important;
+    border-radius: clamp(16px, 4vw, 22px);
+  }
+
+  .vd-community-feed--showcase .vd-community-feed-card-media {
+    aspect-ratio: 5 / 4;
+  }
+
+  .vd-community-feed--showcase .vd-community-feed-card-body {
+    padding: 12px 12px 14px;
+    gap: 6px;
+  }
+
+  .vd-community-feed--showcase .vd-community-feed-caption {
+    -webkit-line-clamp: 3;
+    font-size: 14px;
+  }
+
+  .vd-community-feed--showcase .vd-community-feed-meta {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .vd-community-feed-scroll {
     scroll-snap-type: none;
@@ -7729,35 +7874,6 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 
 .vd-community-feed--showcase .vd-community-feed-stat .icon {
   color: var(--color-primary);
-}
-
-@media (max-width: 639px) {
-  .vd-community-feed-header--showcase .vd-community-feed-header-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-  }
-
-  .vd-community-feed-intro {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .vd-community-feed-intro .vd-community-feed-more--pill {
-    margin-inline-start: 0;
-    width: 100%;
-    justify-content: center;
-  }
-
-  .vd-community-feed-more--pill {
-    justify-content: center;
-    width: 100%;
-  }
-
-  .vd-community-feed-bento-shell.vd-community-feed-grid--bento {
-    padding: 12px;
-    border-radius: 20px;
-  }
 }
 
 .vd-home .vd-experience-tripoli {
