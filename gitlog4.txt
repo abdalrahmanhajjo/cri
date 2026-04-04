@@ -1,0 +1,8 @@
+7923d70 feat: universal professional profile redesign with gallery picker, quick-stats, and grouped amenities
+caf9c61 feat: implement premium Toters-style restaurant profile with immersive hero and sticky nav
+514fbd0 chore: cleanup migration diagnostic scripts and unify workspace
+1d80d15 Improve AI planner UX and reliability
+f678803 Revert "feat: restaurant-first place detail and improved dining admin UX"
+7cb0a07 Revert "Discover hides dining flagship category; restaurants i18n; crafts/food split"
+b685746 Discover hides dining flagship category; restaurants i18n; crafts/food split
+fd9c625 feat: restaurant-first place detail and improved dining admin UX
