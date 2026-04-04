@@ -67,6 +67,20 @@ function diningSignals(place) {
   };
 }
 
+function isLikelyDiningPlace(place, foodCategoryIds) {
+  const categoryId = String(place?.categoryId ?? place?.category_id ?? '').trim();
+  if (categoryId && foodCategoryIds.has(categoryId)) return true;
+  const hay = [
+    place?.category,
+    categoryId,
+    ...(Array.isArray(place?.tags) ? place.tags : place?.tags ? [place.tags] : []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return /(restaurant|food|dining|cafe|café|coffee|bakery|sweet|dessert|cuisine|breakfast|lunch|dinner)/.test(hay);
+}
+
 function diningSmartScore(place, { query = '', activeCategoryId = '', featuredIds = new Set() } = {}) {
   const signals = diningSignals(place);
   const reviews = Number(place?.reviewCount ?? place?.reviews_count ?? place?.reviewsCount ?? 0) || 0;
@@ -249,7 +263,7 @@ export default function PlaceDining() {
   const diningPlacesAll = useMemo(
     () =>
       places.filter(
-        (p) => foodCategoryIds.has(String(p.categoryId ?? p.category_id)) && !hiddenPlaceIdSet.has(String(p.id))
+        (p) => isLikelyDiningPlace(p, foodCategoryIds) && !hiddenPlaceIdSet.has(String(p.id))
       ),
     [places, foodCategoryIds, hiddenPlaceIdSet]
   );

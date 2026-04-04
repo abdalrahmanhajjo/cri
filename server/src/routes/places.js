@@ -82,16 +82,33 @@ function normalizeTags(tags) {
 function docToPlace(doc, baseUrl) {
   let images = Array.isArray(doc.images) ? doc.images : [];
   images = resolveImageUrls(images, baseUrl);
-  const diningProfile = doc.diningProfile || {};
-  const appN = doc.app_review_count != null ? Number(doc.app_review_count) : 0;
-  const appAvg = doc.app_avg_rating != null ? Number(doc.app_avg_rating) : null;
+  const diningProfile =
+    doc.diningProfile && typeof doc.diningProfile === 'object'
+      ? doc.diningProfile
+      : doc.dining_profile && typeof doc.dining_profile === 'object'
+        ? doc.dining_profile
+        : {};
+  const appN =
+    doc.app_review_count != null
+      ? Number(doc.app_review_count)
+      : doc.appReviewCount != null
+        ? Number(doc.appReviewCount)
+        : 0;
+  const appAvg =
+    doc.app_avg_rating != null
+      ? Number(doc.app_avg_rating)
+      : doc.appAvgRating != null
+        ? Number(doc.appAvgRating)
+        : null;
   const useAppReviews = appN > 0 && appAvg != null && Number.isFinite(appAvg);
   const rating = useAppReviews ? appAvg : doc.rating != null ? Number(doc.rating) : null;
   const reviewCount = useAppReviews
     ? appN
     : doc.reviewCount != null
       ? Number(doc.reviewCount)
-      : null;
+      : doc.review_count != null
+        ? Number(doc.review_count)
+        : null;
       
   const result = {
     id: doc.id,
@@ -102,10 +119,15 @@ function docToPlace(doc, baseUrl) {
     longitude: doc.longitude ?? null,
     images,
     category: normalizeDbText(doc.category || ''),
-    categoryId: doc.categoryId,
+    categoryId: doc.categoryId ?? doc.category_id ?? null,
     duration: doc.duration != null ? normalizeDbText(String(doc.duration)) : doc.duration,
     price: doc.price != null ? normalizeDbText(String(doc.price)) : doc.price,
-    bestTime: doc.bestTime != null ? normalizeDbText(String(doc.bestTime)) : doc.bestTime,
+    bestTime:
+      doc.bestTime != null
+        ? normalizeDbText(String(doc.bestTime))
+        : doc.best_time != null
+          ? normalizeDbText(String(doc.best_time))
+          : doc.bestTime,
     rating: rating != null && Number.isFinite(rating) ? rating : null,
     reviewCount:
       reviewCount != null && Number.isFinite(reviewCount) ? Math.round(reviewCount) : null,
