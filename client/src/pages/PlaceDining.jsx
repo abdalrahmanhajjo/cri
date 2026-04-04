@@ -515,6 +515,17 @@ export default function PlaceDining() {
     diningPlacesAll.forEach((place) => diningSignals(place).cuisines.forEach((item) => set.add(item)));
     return set.size;
   }, [diningPlacesAll]);
+  const quickFilterItems = useMemo(() => {
+    const icons = ['restaurant', 'local_cafe', 'bakery_dining', 'icecream', 'brunch_dining', 'ramen_dining'];
+    return [
+      { id: '', label: t('diningGuide', 'allStyles'), icon: 'apps' },
+      ...foodCategories.slice(0, 7).map((c, index) => ({
+        id: String(c.id),
+        label: c.name,
+        icon: icons[index % icons.length],
+      })),
+    ];
+  }, [foodCategories, t]);
 
   if (siteSettingsLoading) {
     return (
@@ -601,6 +612,14 @@ export default function PlaceDining() {
               </h1>
               <p className="dg-hero__sub">{heroSubtitle}</p>
             </div>
+            <div className="dg-hero__search">
+              <GlobalSearchBar
+                className="global-search-bar--full dg-global-search dg-global-search--hero"
+                idPrefix="place-dining-hero"
+                queryValue={qDraft}
+                onQueryChange={setQDraft}
+              />
+            </div>
             <div className="dg-hero__stats" aria-label={copy.smartTitle}>
               <div className="dg-hero-stat">
                 <span className="dg-hero-stat__value">{diningPlacesAll.length}</span>
@@ -626,10 +645,66 @@ export default function PlaceDining() {
               </Link>
             </div>
           </div>
+          <div className="dg-hero-shortcuts" aria-label={t('diningGuide', 'categoryFilterLabel')}>
+            {quickFilterItems.map((item) => (
+              <button
+                key={item.id || 'all'}
+                type="button"
+                className={`dg-hero-shortcut ${String(fcatParam) === String(item.id) || (!fcatParam && !item.id) ? 'dg-hero-shortcut--on' : ''}`}
+                onClick={() => setParam('fcat', item.id)}
+              >
+                <span className="dg-hero-shortcut__icon">
+                  <Icon name={item.icon} size={18} aria-hidden />
+                </span>
+                <span className="dg-hero-shortcut__label">{item.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
       <div className="dg-container dg-body">
+        <section className="dg-toolbar-shell" ref={toolbarRef} aria-label={t('diningGuide', 'openFilters')}>
+          <div className="dg-toolbar-shell__top">
+            <div>
+              <h2 className="dg-toolbar-shell__title">{copy.collectionTitle}</h2>
+              <p className="dg-toolbar-shell__sub">{copy.collectionSub}</p>
+            </div>
+            <span className="dg-count" aria-live="polite">
+              {countLabel}
+            </span>
+          </div>
+          <div className="dg-toolbar-shell__row">
+            <div className="dg-chips" role="group">
+              {quickFilterItems.map((item) => (
+                <button
+                  key={`toolbar-${item.id || 'all'}`}
+                  type="button"
+                  className={`dg-chip ${String(fcatParam) === String(item.id) || (!fcatParam && !item.id) ? 'dg-chip--on' : ''}`}
+                  onClick={() => setParam('fcat', item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <div className="dg-sort-wrap">
+              <label className="dg-sr-only" htmlFor="dg-sort">
+                {t('diningGuide', 'sortLabel')}
+              </label>
+              <select
+                id="dg-sort"
+                className="dg-select"
+                value={sortParam}
+                onChange={(e) => setParam('sort', e.target.value)}
+              >
+                <option value="recommended">{t('placeDiscover', 'sortRecommended')}</option>
+                <option value="rating">{t('home', 'spotsSortRating')}</option>
+                <option value="name">{t('home', 'spotsSortName')}</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
         {sponsoredDining.length > 0 ? (
           <section className="dg-sponsored" aria-label={sponsoredKicker}>
             <div className="dg-section-head">
@@ -673,10 +748,17 @@ export default function PlaceDining() {
                             <Icon name="star" size={12} /> {rating}
                           </span>
                         ) : null}
+                        <span className="dg-rail-card__badge">
+                          {featuredIdSet.has(String(place.id)) ? copy.guideBadge : copy.menuBadge}
+                        </span>
                       </div>
                       <div className="dg-rail-card__body">
                         <h3 className="dg-rail-card__title">{place.name}</h3>
                         {place.location ? <p className="dg-rail-card__loc">{place.location}</p> : null}
+                        <div className="dg-rail-card__footer">
+                          <span>{t('home', 'viewDetails')}</span>
+                          <Icon name="arrow_forward" size={16} aria-hidden />
+                        </div>
                       </div>
                     </Link>
                   </div>
@@ -806,65 +888,6 @@ export default function PlaceDining() {
           </section>
         ) : null}
 
-        <section className="dg-panel" ref={toolbarRef} aria-label={t('diningGuide', 'openFilters')}>
-          <div className="dg-panel__heading">
-            <h2 className="dg-panel__title">{copy.filtersTitle}</h2>
-            <p className="dg-panel__intro">{copy.collectionSub}</p>
-          </div>
-          <div className="dg-panel__row dg-panel__row--search">
-            <GlobalSearchBar
-              className="global-search-bar--full dg-global-search dg-global-search--panel"
-              idPrefix="place-dining"
-              queryValue={qDraft}
-              onQueryChange={setQDraft}
-            />
-          </div>
-          <div className="dg-panel__row dg-panel__row--chips">
-            <p className="dg-panel__label">{t('diningGuide', 'categoryFilterLabel')}</p>
-            <div className="dg-chips" role="group">
-              <button
-                type="button"
-                className={`dg-chip ${!fcatParam ? 'dg-chip--on' : ''}`}
-                onClick={() => setParam('fcat', '')}
-              >
-                {t('diningGuide', 'allStyles')}
-              </button>
-              {foodCategories.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`dg-chip ${String(fcatParam) === String(c.id) ? 'dg-chip--on' : ''}`}
-                  onClick={() =>
-                    setParam('fcat', String(fcatParam) === String(c.id) ? '' : String(c.id))
-                  }
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="dg-panel__row dg-panel__row--sort">
-            <span className="dg-count" aria-live="polite">
-              {countLabel}
-            </span>
-            <div className="dg-sort-wrap">
-              <label className="dg-sr-only" htmlFor="dg-sort">
-                {t('diningGuide', 'sortLabel')}
-              </label>
-              <select
-                id="dg-sort"
-                className="dg-select"
-                value={sortParam}
-                onChange={(e) => setParam('sort', e.target.value)}
-              >
-                <option value="recommended">{t('placeDiscover', 'sortRecommended')}</option>
-                <option value="rating">{t('home', 'spotsSortRating')}</option>
-                <option value="name">{t('home', 'spotsSortName')}</option>
-              </select>
-            </div>
-          </div>
-        </section>
-
         <h2 id="dg-collection-title" className="dg-sr-only">
           {mainCollectionTitleSr}
         </h2>
@@ -877,6 +900,7 @@ export default function PlaceDining() {
               const rating = place.rating != null ? Number(place.rating).toFixed(1) : null;
               const signals = diningSignals(place);
               const chips = [...signals.cuisines, ...signals.bestFor].slice(0, 3);
+              const facts = [...signals.serviceModes, ...signals.dietaryOptions].slice(0, 2);
               return (
                 <article key={place.id} className="dg-place-row">
                   <Link to={`/place/${place.id}`} className="dg-place-row__link">
@@ -891,9 +915,15 @@ export default function PlaceDining() {
                           <Icon name="star" size={12} /> {rating}
                         </span>
                       )}
+                      {featuredIdSet.has(String(place.id)) ? (
+                        <span className="dg-place-row__badge">{copy.guideBadge}</span>
+                      ) : null}
                     </div>
                     <div className="dg-place-row__body">
-                      <h3 className="dg-place-row__name">{place.name}</h3>
+                      <div className="dg-place-row__head">
+                        <h3 className="dg-place-row__name">{place.name}</h3>
+                        {place.price ? <span className="dg-place-row__price">{place.price}</span> : null}
+                      </div>
                       {place.location && (
                         <p className="dg-place-row__loc">
                           <Icon name="location_on" size={12} />
@@ -906,7 +936,7 @@ export default function PlaceDining() {
                         </div>
                       )}
                       <div className="dg-place-row__meta">
-                        {signals.serviceModes.slice(0, 2).map(mode => (
+                        {facts.map(mode => (
                           <span key={mode}>
                             <Icon name="room_service" size={12} /> {mode}
                           </span>
@@ -916,6 +946,12 @@ export default function PlaceDining() {
                             <Icon name="menu_book" size={12} /> {copy.menuReady}
                           </span>
                         )}
+                      </div>
+                      <div className="dg-place-row__footer">
+                        <span className="dg-place-row__cta">
+                          {t('home', 'viewDetails')}
+                          <Icon name="arrow_forward" size={16} aria-hidden />
+                        </span>
                       </div>
                     </div>
                   </Link>
@@ -928,6 +964,7 @@ export default function PlaceDining() {
                         aria-label={t('placeDiscover', 'addToTrip')}
                       >
                         <Icon name="event_note" size={20} />
+                        <span>{t('placeDiscover', 'addToTrip')}</span>
                       </button>
                     )}
                     <button
@@ -937,6 +974,7 @@ export default function PlaceDining() {
                       aria-label={t('placeDiscover', 'viewOnMap')}
                     >
                       <Icon name="map" size={20} />
+                      <span>{t('placeDiscover', 'viewOnMap')}</span>
                     </button>
                   </div>
                 </article>
