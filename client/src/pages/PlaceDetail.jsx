@@ -1245,13 +1245,6 @@ export default function PlaceDetail() {
             onTouchEnd={handleHeroTouchEnd}
           >
             {totersHeroUrl ? (
-              <div
-                className="place-detail-app-hero-blur"
-                style={{ backgroundImage: `url(${totersHeroUrl})` }}
-                aria-hidden="true"
-              />
-            ) : null}
-            {totersHeroUrl ? (
               <img src={totersHeroUrl} alt={place.name} className="place-detail-app-hero-img" {...getDeliveryImgProps(totersHeroUrl, 'detailHero')} />
             ) : (
               <div className="place-detail-app-hero-fallback"><Icon name="restaurant" size={40} /></div>

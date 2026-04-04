@@ -2543,7 +2543,8 @@
 }
 .place-detail-app-hero {
   position: relative;
-  background: #000;
+  /* Neutral letterboxing behind `object-fit: contain` — no blurred filler */
+  background: #e8eaed;
 }
 .place-detail-app-hero-media {
   position: relative;
@@ -2551,15 +2552,7 @@
   min-height: 320px;
   max-height: 550px;
   overflow: hidden;
-}
-.place-detail-app-hero-blur {
-  position: absolute;
-  inset: -20px;
-  background-size: cover;
-  background-position: center;
-  filter: blur(24px) saturate(1.15);
-  transform: scale(1.08);
-  opacity: 0.55;
+  background: #e8eaed;
 }
 .place-detail-app-hero-img {
   position: relative;
@@ -2570,10 +2563,31 @@
   object-position: center;
   display: block;
 }
+.place-detail-app-hero-fallback {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  height: 100%;
+  color: #9ca3af;
+  background: #e8eaed;
+}
 .place-detail-app-hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.26) 0%, rgba(0,0,0,0.08) 45%, rgba(0,0,0,0.78) 100%);
+  z-index: 2;
+  pointer-events: none;
+  /* Stronger only at top (chrome) and bottom (gallery controls) — middle stays clear */
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.22) 0%,
+    rgba(0, 0, 0, 0) 22%,
+    rgba(0, 0, 0, 0) 58%,
+    rgba(0, 0, 0, 0.45) 85%,
+    rgba(0, 0, 0, 0.62) 100%
+  );
 }
 .place-detail-app-hero-nav {
   position: absolute;
