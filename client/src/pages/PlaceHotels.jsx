@@ -24,11 +24,11 @@ function formatTripRange(trip, locale) {
   return `${a.toLocaleDateString(locale, opts)} – ${b.toLocaleDateString(locale, opts)}`;
 }
 
-function StayCard({ place, layout, onMapClick, onAddToTrip, viewDetailsLabel, mapAriaLabel, addToTripLabel }) {
+function StayCard({ place, onMapClick, onAddToTrip, viewDetailsLabel, mapAriaLabel, addToTripLabel }) {
   const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
   const rating = place.rating != null ? Number(place.rating).toFixed(1) : null;
   return (
-    <article className={`hg-stay-card hg-stay-card--${layout}`}>
+    <article className="hg-stay-card">
       <Link to={`/place/${place.id}`} className="hg-stay-card__main">
         <div className="hg-stay-card__media">
           {img ? (
@@ -78,14 +78,6 @@ function StayCard({ place, layout, onMapClick, onAddToTrip, viewDetailsLabel, ma
       </div>
     </article>
   );
-}
-
-function stayLayoutForIndex(i) {
-  const r = i % 5;
-  if (r === 0) return 'feature';
-  if (r === 1) return 'wide';
-  if (r === 2) return 'tall';
-  return 'base';
 }
 
 export default function PlaceHotels() {
@@ -629,11 +621,10 @@ export default function PlaceHotels() {
           <p className="hg-empty">{t('home', 'noSpots')}</p>
         ) : (
           <section className="hg-stays" aria-labelledby="hg-grid-label">
-            {mainListPlaces.map((p, i) => (
+            {mainListPlaces.map((p) => (
               <StayCard
                 key={p.id}
                 place={p}
-                layout={stayLayoutForIndex(i)}
                 onMapClick={handleViewOnMap}
                 onAddToTrip={openAddToTrip}
                 viewDetailsLabel={t('home', 'viewDetails')}
