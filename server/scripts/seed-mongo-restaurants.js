@@ -38,15 +38,37 @@ const mockPlaces = [
         {
           title: 'Signature Dishes',
           items: [
-            { name: 'Hummus with Meat', price: '$8.00', description: 'Creamy chickpeas topped with sautéed lamb and pine nuts.' },
-            { name: 'Fatteh', price: '$7.50', description: 'Chickpeas, toasted bread, and warm yogurt sauce.' }
+            { 
+              name: 'Hummus with Meat', 
+              price: '$8.00', 
+              description: 'Creamy chickpeas topped with sautéed lamb and pine nuts.',
+              image: 'https://images.unsplash.com/photo-1541518763669-27fef04b14ea?auto=format&fit=crop&w=300&q=80',
+              badge: 'Popular'
+            },
+            { 
+              name: 'Fatteh', 
+              price: '$7.50', 
+              description: 'Chickpeas, toasted bread, and warm yogurt sauce.',
+              image: 'https://images.unsplash.com/photo-1565299585323-38d6b0865efd?auto=format&fit=crop&w=300&q=80',
+              badge: 'Chef Choice'
+            }
           ]
         },
         {
           title: 'Cold Mezza',
           items: [
-            { name: 'Labneh', price: '$4.00', description: 'Strained yogurt with olive oil.' },
-            { name: 'Fresh Vegetables', price: '$3.00', description: 'Seasonal local vegetables.' }
+            { 
+              name: 'Labneh', 
+              price: '$4.00', 
+              description: 'Strained yogurt with olive oil.',
+              image: 'https://images.unsplash.com/photo-1574484284002-952d9215676f?auto=format&fit=crop&w=300&q=80'
+            },
+            { 
+              name: 'Fresh Vegetables', 
+              price: '$3.00', 
+              description: 'Seasonal local vegetables.',
+              image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=300&q=80'
+            }
           ]
         }
       ],
@@ -54,6 +76,17 @@ const mockPlaces = [
       socialMedia: {
         instagram: 'https://instagram.com/akra_tripoli',
         facebook: 'https://facebook.com/akratripoli'
+      },
+      coupons: [
+        { id: 'AKRA10', code: 'AKRA10', description: '10% off on your first breakfast', expiry: '2026-12-31' },
+        { id: 'FREECOFFEE', code: 'FREECOFFEE', description: 'Free Lebanese coffee with every Fatteh', expiry: '2026-06-30' }
+      ],
+      ratingDistribution: {
+        5: 850,
+        4: 300,
+        3: 80,
+        2: 15,
+        1: 5
       }
     }
   },
@@ -92,8 +125,20 @@ const mockPlaces = [
         {
           title: 'Historic Specialties',
           items: [
-            { name: 'Knefe', price: '$5.00', description: 'Warm cheese pastry with sugar syrup.' },
-            { name: 'Baklava Box', price: '$25.00', description: 'A selection of our finest handmade baklava.' }
+            { 
+              name: 'Knefe', 
+              price: '$5.00', 
+              description: 'Warm cheese pastry with sugar syrup.',
+              image: 'https://images.unsplash.com/photo-1514516348920-f5d8958d51c0?auto=format&fit=crop&w=300&q=80',
+              badge: 'Must Try'
+            },
+            { 
+              name: 'Baklava Box', 
+              price: '$25.00', 
+              description: 'A selection of our finest handmade baklava.',
+              image: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=300&q=80',
+              badge: 'Gift'
+            }
           ]
         }
       ],
@@ -101,6 +146,16 @@ const mockPlaces = [
       socialMedia: {
         instagram: 'https://instagram.com/hallab1881',
         website: 'https://hallab.com.lb'
+      },
+      coupons: [
+        { id: 'SWEET5', code: 'SWEET5', description: '$5 off on orders above $50', expiry: '2026-05-15' }
+      ],
+      ratingDistribution: {
+        5: 2800,
+        4: 350,
+        3: 40,
+        2: 5,
+        1: 5
       }
     }
   }
@@ -120,7 +175,7 @@ async function seed() {
       );
     }
     
-    console.log(`Successfully seeded ${mockPlaces.length} mock restaurants.`);
+    console.log(`Successfully seeded ${mockPlaces.length} mock restaurants with rich data.`);
     
   } catch (err) {
     console.error('Seeding failed:', err);
