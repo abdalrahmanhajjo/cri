@@ -3773,6 +3773,160 @@
   border-color: currentColor;
 }
 
+/* Professional Gallery Picker */
+.place-detail-app-hero-gallery {
+  position: absolute;
+  bottom: 80px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px;
+  scrollbar-width: none;
+  z-index: 10;
+}
+.place-detail-app-hero-gallery::-webkit-scrollbar { display: none; }
+
+.place-detail-app-hero-thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.2s, border-color 0.2s;
+  background: #eee;
+}
+.place-detail-app-hero-thumb.active {
+  border-color: #008489;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.place-detail-app-hero-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Quick Stats Bar */
+.place-detail-app-quick-stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+.place-detail-app-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.place-detail-app-stat-item i,
+.place-detail-app-stat-item span {
+  color: #666;
+  font-size: 0.85rem;
+}
+.place-detail-app-stat-item .icon {
+  color: #008489;
+}
+
+/* Grouped Amenities Grid */
+.place-detail-app-amenities-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+.place-detail-app-amenity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+.place-detail-app-amenity:hover {
+  background: #f0f2f5;
+}
+.place-detail-app-amenity .icon {
+  color: #008489;
+  background: rgba(0, 132, 137, 0.1);
+  padding: 6px;
+  border-radius: 8px;
+}
+.place-detail-app-amenity span {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Insider Tip Box */
+.place-detail-app-insider-tip {
+  margin-top: 24px;
+  padding: 16px;
+  background: linear-gradient(135deg, #fff9e6 0%, #fff4cc 100%);
+  border-radius: 16px;
+  border-left: 4px solid #ffcc00;
+  display: flex;
+  gap: 12px;
+}
+.place-detail-app-insider-tip .icon {
+  color: #b38f00;
+}
+.place-detail-app-insider-tip .content h4 {
+  margin: 0 0 4px 0;
+  font-size: 0.95rem;
+  color: #665200;
+}
+.place-detail-app-insider-tip .content p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: #806600;
+}
+
+/* Distribution Bars 2.0 */
+.place-detail-app-rating-summary {
+  display: flex;
+  gap: 32px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+.distribution-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dist-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.star-label {
+  font-size: 0.8rem;
+  color: #666;
+  width: 12px;
+}
+.bar-bg {
+  flex: 1;
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: #ffb400;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.1, 0.42, 0.41, 1);
+}
+
 @media (max-width: 600px) {
   .place-detail-app-rating-summary {
     flex-direction: column;

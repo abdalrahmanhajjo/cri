@@ -206,8 +206,8 @@ export default function PlaceDetail() {
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewBody, setReviewBody] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [reviewMsg, setReviewMsg] = useState(null);
   const [diningTab, setDiningTab] = useState('overview');
+  const [activeImageUrl, setActiveImageUrl] = useState(null);
 
   const myReview = useMemo(() => placeReviews.find((r) => r.isYours), [placeReviews]);
 
@@ -238,6 +238,8 @@ export default function PlaceDetail() {
         if (!cancelled) {
           setPlace(p);
           if (p?.name) document.title = `${p.name} | Visit Tripoli`;
+          if (p?.images?.length > 0) setActiveImageUrl(p.images[0]);
+          else if (p?.image) setActiveImageUrl(p.image);
         }
       })
       .catch((e) => { if (!cancelled) setError(e.message); })
@@ -286,20 +288,6 @@ export default function PlaceDetail() {
     }
   }, [place, showToast, t]);
 
-  const submitSiteReview = useCallback(async (e) => {
-    e.preventDefault();
-    if (!user || !place) return;
-    setReviewSubmitting(true);
-    try {
-      await api.places.submitReview(place.id, { rating: reviewRating, title: reviewTitle.trim(), review: reviewBody.trim() });
-      const revRes = await api.places.reviews(place.id);
-      setPlaceReviews(Array.isArray(revRes.reviews) ? revRes.reviews : []);
-      showToast(t('feedback', 'reviewSaved'), 'success');
-    } catch (err) {
-      showToast(t('feedback', 'reviewFailed'), 'error');
-    } finally { setReviewSubmitting(false); }
-  }, [user, place, reviewRating, reviewTitle, reviewBody, t, showToast]);
-
   const openPlaceOnMap = useCallback(() => {
     if (!place?.id) return;
     if (!user) { navigate('/login', { state: { from: location.pathname } }); return; }
@@ -310,10 +298,10 @@ export default function PlaceDetail() {
   if (loading) return <div className="place-detail-app-loading"><div className="spinner" /></div>;
   if (error || !place) return <div className="place-detail-app-error">Place not found</div>;
 
-  const heroUrl = galleryUrls[0] || null;
+  const isDining = isDiningPlace(place);
   const diningTabs = [
     { id: 'overview', label: t('detail', 'diningTabOverview') || 'Overview' },
-    { id: 'menu', label: t('detail', 'diningTabMenu') || 'Menu' },
+    { id: 'menu', label: isDining ? (t('detail', 'diningTabMenu') || 'Menu') : (t('detail', 'guide') || 'Guide') },
     { id: 'reviews', label: t('detail', 'diningTabReviews') || 'Reviews' },
     { id: 'contact', label: t('detail', 'diningTabContact') || 'Contact' },
   ];
@@ -322,10 +310,10 @@ export default function PlaceDetail() {
     <div className="place-detail-app">
       <header className="place-detail-app-hero">
         <div className="place-detail-app-hero-media">
-          {heroUrl ? (
-            <img src={heroUrl} alt={place.name} className="place-detail-app-hero-img" {...getDeliveryImgProps(heroUrl, 'detailHero')} />
+          {activeImageUrl ? (
+            <img src={activeImageUrl} alt={place.name} className="place-detail-app-hero-img" {...getDeliveryImgProps(activeImageUrl, 'detailHero')} />
           ) : (
-            <div className="place-detail-app-hero-fallback"><Icon name="restaurant" size={40} /></div>
+            <div className="place-detail-app-hero-fallback"><Icon name="camera" size={40} /></div>
           )}
           <div className="place-detail-app-hero-overlay" />
           <Link to="/" className="place-detail-app-back-btn"><Icon name="arrow_back" size={24} /></Link>
@@ -335,6 +323,20 @@ export default function PlaceDetail() {
             </button>
             <button type="button" className="place-detail-app-hero-action" onClick={handleShare}><Icon name="share" size={24} /></button>
           </div>
+
+          {galleryUrls.length > 1 && (
+            <div className="place-detail-app-hero-gallery">
+              {galleryUrls.map((url, i) => (
+                <div 
+                  key={i} 
+                  className={`place-detail-app-hero-thumb ${activeImageUrl === url ? 'active' : ''}`}
+                  onClick={() => setActiveImageUrl(url)}
+                >
+                  <img src={url} alt={`${place.name} ${i + 1}`} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         
         <div className="place-detail-app-info-card">
@@ -345,8 +347,33 @@ export default function PlaceDetail() {
           <div className="place-detail-app-meta">
             {place.rating > 0 && <div className="place-detail-app-rating"><Icon name="star" size={16} /><span>{place.rating}</span></div>}
             <div className="place-detail-app-dot" />
-            <span className="place-detail-app-cuisines">{diningSummary.cuisines.slice(0, 2).join(', ')}</span>
+            <span className="place-detail-app-cuisines">
+              {isDining 
+                ? diningSummary.cuisines.slice(0, 2).join(', ') 
+                : (place.category || t('detail', 'landmark'))}
+            </span>
             {place.price && <><div className="place-detail-app-dot" /><span className="place-detail-app-price">{place.price}</span></>}
+          </div>
+
+          <div className="place-detail-app-quick-stats">
+            {place.bestTime && (
+              <div className="place-detail-app-stat-item">
+                <Icon name="schedule" size={16} />
+                <span>{place.bestTime}</span>
+              </div>
+            )}
+            {place.duration && (
+              <div className="place-detail-app-stat-item">
+                <Icon name="timer" size={16} />
+                <span>{place.duration}</span>
+              </div>
+            )}
+            {!isDining && (
+              <div className="place-detail-app-stat-item">
+                <Icon name="payments" size={16} />
+                <span>{place.price || t('detail', 'freeEntry')}</span>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -364,12 +391,27 @@ export default function PlaceDetail() {
       <main className="place-detail-app-main-content">
         {diningTab === 'overview' && (
           <div className="place-detail-app-overview">
+            {place.insiderTip && (
+              <div className="place-detail-app-insider-tip">
+                <Icon name="lightbulb" size={24} />
+                <div className="content">
+                  <h4>{t('detail', 'insiderTip') || 'Insider Tip'}</h4>
+                  <p>{place.insiderTip}</p>
+                </div>
+              </div>
+            )}
+
             <section className="place-detail-app-section">
               <h3>{t('detail', 'description') || 'About'}</h3>
               <p>{place.description}</p>
-              <div className="place-detail-app-tags">
-                {diningSummary.cuisines.map(c => <span key={c} className="place-detail-app-tag">{c}</span>)}
-                {diningSummary.features.map(f => <span key={f} className="place-detail-app-tag alt">{f}</span>)}
+              
+              <div className="place-detail-app-amenities-grid">
+                {(place.features?.amenities || diningSummary.features).slice(0, 6).map(f => (
+                  <div key={f} className="place-detail-app-amenity">
+                    <Icon name={f.toLowerCase().includes('wifi') ? 'wifi' : f.toLowerCase().includes('parking') ? 'local_parking' : 'check_circle'} size={18} />
+                    <span>{f}</span>
+                  </div>
+                ))}
               </div>
             </section>
 
@@ -422,35 +464,49 @@ export default function PlaceDetail() {
 
         {diningTab === 'menu' && (
           <div className="place-detail-app-menu">
-            {diningProfile.menuSections?.length > 0 ? (
-              diningProfile.menuSections.map(section => (
-                <section key={section.title} className="place-detail-app-menu-section">
-                  <h4>{section.title}</h4>
-                  <div className="place-detail-app-menu-items">
-                    {section.items.map(item => (
-                      <div key={item.name} className="place-detail-app-menu-item">
-                        {item.image && (
-                          <div className="item-media">
-                            <img src={item.image} alt={item.name} />
-                            {item.badge && <span className="item-badge">{item.badge}</span>}
+            {isDining ? (
+              diningProfile.menuSections?.length > 0 ? (
+                diningProfile.menuSections.map(section => (
+                  <section key={section.title} className="place-detail-app-menu-section">
+                    <h4>{section.title}</h4>
+                    <div className="place-detail-app-menu-items">
+                      {section.items.map(item => (
+                        <div key={item.name} className="place-detail-app-menu-item">
+                          {item.image && (
+                            <div className="item-media">
+                              <img src={item.image} alt={item.name} />
+                              {item.badge && <span className="item-badge">{item.badge}</span>}
+                            </div>
+                          )}
+                          <div className="info">
+                            <div className="name-row">
+                              <span className="name">{item.name}</span>
+                              {!item.image && item.badge && <span className="item-badge-inline">{item.badge}</span>}
+                            </div>
+                            <span className="desc">{item.description}</span>
+                            <span className="price">{item.price}</span>
                           </div>
-                        )}
-                        <div className="info">
-                          <div className="name-row">
-                            <span className="name">{item.name}</span>
-                            {!item.image && item.badge && <span className="item-badge-inline">{item.badge}</span>}
-                          </div>
-                          <span className="desc">{item.description}</span>
-                          <span className="price">{item.price}</span>
+                          <button className="place-detail-app-add-btn"><Icon name="add" size={20} /></button>
                         </div>
-                        <button className="place-detail-app-add-btn"><Icon name="add" size={20} /></button>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              ))
+                      ))}
+                    </div>
+                  </section>
+                ))
+              ) : (
+                <div className="place-detail-app-empty">{t('detail', 'menuEmpty') || 'Menu not available yet'}</div>
+              )
             ) : (
-              <div className="place-detail-app-empty">{t('detail', 'menuEmpty') || 'Menu not available yet'}</div>
+              <div className="place-detail-app-overview">
+                 <section className="place-detail-app-section">
+                    <h3>{t('detail', 'visitorGuide') || 'Visitor Guide'}</h3>
+                    <p>{place.description}</p>
+                    {place.tags && (
+                      <div className="place-detail-app-tags" style={{ marginTop: '12px' }}>
+                        {place.tags.map(tag => <span key={tag} className="place-detail-app-tag">{tag}</span>)}
+                      </div>
+                    )}
+                 </section>
+              </div>
             )}
           </div>
         )}
@@ -462,7 +518,7 @@ export default function PlaceDetail() {
               <button className="write-review-btn" onClick={() => user ? null : navigate('/login')}>{t('detail', 'writeReview') || 'Write a Review'}</button>
             </div>
 
-            {diningProfile.ratingDistribution && (
+            {(place.ratingDistribution || diningProfile.ratingDistribution) && (
               <div className="place-detail-app-rating-summary">
                 <div className="total-rating">
                   <span className="big-num">{place.rating?.toFixed(1) || '0.0'}</span>
@@ -473,7 +529,8 @@ export default function PlaceDetail() {
                 </div>
                 <div className="distribution-bars">
                   {[5, 4, 3, 2, 1].map(stars => {
-                    const count = diningProfile.ratingDistribution[stars] || 0;
+                    const dist = place.ratingDistribution || diningProfile.ratingDistribution || {};
+                    const count = dist[stars] || 0;
                     const pct = place.reviewCount > 0 ? (count / place.reviewCount) * 100 : 0;
                     return (
                       <div key={stars} className="dist-row">
@@ -508,10 +565,12 @@ export default function PlaceDetail() {
         {diningTab === 'contact' && (
           <div className="place-detail-app-contact">
             <div className="contact-ctas">
-              <a href={`tel:${diningProfile.contactPhone}`} className="contact-cta-btn primary">
-                <Icon name="call" size={22} />
-                <span>{t('detail', 'callNow') || 'Call Now'}</span>
-              </a>
+              {(isDining || diningProfile.contactPhone) && (
+                <a href={`tel:${diningProfile.contactPhone || ''}`} className="contact-cta-btn primary">
+                  <Icon name="call" size={22} />
+                  <span>{t('detail', 'callNow') || 'Call Now'}</span>
+                </a>
+              )}
               <button className="contact-cta-btn secondary" onClick={openPlaceOnMap}>
                 <Icon name="directions" size={22} />
                 <span>{t('detail', 'getDirections') || 'Get Directions'}</span>
@@ -526,13 +585,15 @@ export default function PlaceDetail() {
               </div>
             </div>
 
-            <div className="contact-card">
-              <Icon name="language" size={24} />
-              <div>
-                <h4>{t('detail', 'website')}</h4>
-                <p>{diningProfile.socialMedia?.website || 'N/A'}</p>
+            {diningProfile.socialMedia?.website && (
+              <div className="contact-card">
+                <Icon name="language" size={24} />
+                <div>
+                  <h4>{t('detail', 'website')}</h4>
+                  <p>{diningProfile.socialMedia.website}</p>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="contact-socials-grid">
               {diningProfile.socialMedia?.instagram && (

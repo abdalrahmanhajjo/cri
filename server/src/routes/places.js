@@ -13,6 +13,21 @@ const { normalizeDbText } = require('../utils/normalizeDbText');
 const { cachePublicList } = require('../middleware/publicCache');
 const { listPlaces } = require('../repositories/publicContent');
 
+function pickDiningTags(tags, matcher, limit = 4) {
+  const list = Array.isArray(tags) ? tags : tags ? [tags] : [];
+  const seen = new Set();
+  return list
+    .map((tag) => (typeof tag === 'string' ? tag.trim() : ''))
+    .filter(Boolean)
+    .filter((tag) => {
+      const key = tag.toLowerCase();
+      if (!matcher.test(key) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, limit);
+}
+
 const MAX_VISITOR_FOLLOWUPS_PER_INQUIRY = 50;
 
 async function userIsAdmin(userId) {
@@ -93,6 +108,13 @@ function docToPlace(doc, baseUrl) {
       ? Number(doc.reviewCount)
       : null;
       
+  // Universal Features & Amenities (Grouped)
+  const features = {
+    vibe: pickDiningTags(doc.tags, /(traditional|historic|modern|luxury|cozy|lively|quiet|hidden|iconic)/i, 3),
+    amenities: pickDiningTags(doc.tags, /(wifi|parking|accessible|family|photography|credit card|outdoor|scenic)/i, 4),
+    specialties: pickDiningTags(doc.tags, /(sweets|knefe|baklava|coffee|view|crafts|textiles)/i, 3)
+  };
+
   const result = {
     id: doc.id,
     name: normalizeDbText(doc.name),
@@ -111,6 +133,9 @@ function docToPlace(doc, baseUrl) {
       reviewCount != null && Number.isFinite(reviewCount) ? Math.round(reviewCount) : null,
     hours: typeof doc.hours === 'string' ? normalizeDbText(doc.hours) : doc.hours,
     diningProfile,
+    ratingDistribution: doc.ratingDistribution || diningProfile.ratingDistribution || null,
+    features,
+    insiderTip: doc.insiderTip || null,
     tags: normalizeTags(doc.tags),
     searchName: doc.searchName != null ? normalizeDbText(String(doc.searchName)) : doc.searchName
   };
