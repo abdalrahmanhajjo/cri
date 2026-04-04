@@ -160,15 +160,6 @@ export default function Layout() {
               >
                 {t('nav', 'discoverPlaces')}
               </Link>
-              {diningGuideEnabled && (
-                <Link
-                  to={DINING_PATH}
-                  className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
-                  onClick={closeMenu}
-                >
-                  {t('nav', 'diningNav')}
-                </Link>
-              )}
               {hotelsGuideEnabled && (
                 <Link
                   to={HOTELS_PATH}
@@ -316,15 +307,6 @@ export default function Layout() {
             >
               {t('nav', 'discoverPlaces')}
             </Link>
-            {diningGuideEnabled && (
-              <Link
-                to={DINING_PATH}
-                className={`nav-link ${isDiningPage ? 'nav-link--active' : ''}`}
-                onClick={closeMenu}
-              >
-                {t('nav', 'diningNav')}
-              </Link>
-            )}
             {hotelsGuideEnabled && (
               <Link
                 to={HOTELS_PATH}

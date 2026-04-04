@@ -12,6 +12,7 @@ import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
 import { COMMUNITY_PATH } from '../utils/discoverPaths';
 import { useSiteSettings } from '../context/SiteSettingsContext';
+import { DINING_PATH } from '../utils/discoverPaths';
 import './PlaceDiscover.css';
 
 function formatTripRange(trip, locale) {
@@ -161,6 +162,7 @@ export default function PlaceDiscover() {
   }, []);
 
   const sponsoredDiscoverEnabled = settings?.sponsoredPlacesEnabled?.discover !== false;
+  const diningGuideEnabled = settings?.diningGuide?.enabled !== false;
 
   useEffect(() => {
     setQDraft(qParam);
@@ -512,6 +514,24 @@ export default function PlaceDiscover() {
               onQueryChange={setQDraft}
             />
           </div>
+          {diningGuideEnabled && (
+            <Link to={DINING_PATH} className="pd-dining-highlight" aria-label={t('nav', 'diningNav')}>
+              <span className="pd-dining-highlight__badge">{t('placeDiscover', 'eyebrow') || 'Discover'}</span>
+              <span className="pd-dining-highlight__main">
+                <span className="pd-dining-highlight__icon">
+                  <Icon name="restaurant" size={22} aria-hidden />
+                </span>
+                <span className="pd-dining-highlight__copy">
+                  <strong>{t('nav', 'diningNav')}</strong>
+                  <span>{t('placeDiscover', 'exploreDining') || 'Explore dining options'}</span>
+                </span>
+              </span>
+              <span className="pd-dining-highlight__cta">
+                <span>{t('home', 'viewDetails')}</span>
+                <Icon name="arrow_forward" size={18} aria-hidden />
+              </span>
+            </Link>
+          )}
           <div className="pd-hero-actions" aria-label={t('placeDiscover', 'quickActionsLabel')}>
             <Link to="/map" className="pd-hero-action">
               <Icon name="map" size={20} aria-hidden />
