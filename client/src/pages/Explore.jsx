@@ -433,7 +433,7 @@ function TopPicksCarousel({ places, t }) {
                           </span>
                         )}
                         {loc && (
-                          <span className="vd-top-picks-detail">
+                          <span className="vd-top-picks-detail vd-top-picks-detail--location">
                             <Icon name="location_on" size={18} /> {loc}
                           </span>
                         )}
