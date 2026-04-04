@@ -1761,6 +1761,13 @@ a.vd-top-picks-card-bg--hit {
   padding-bottom: clamp(48px, 6vw, 72px);
 }
 
+/* Home only: hide “Browse places by theme” on phones (Explore.jsx) */
+@media (max-width: 767px) {
+  .vd-find-your-way--map-themes {
+    display: none !important;
+  }
+}
+
 .vd-find-your-way--practical .vd-find-your-way-main-grid {
   margin-bottom: 0;
 }
