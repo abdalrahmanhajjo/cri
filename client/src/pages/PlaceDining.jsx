@@ -593,63 +593,38 @@ export default function PlaceDining() {
         <div className="dg-hero__glow" aria-hidden />
         <div className="dg-hero__grain" aria-hidden />
         <div className="dg-hero__inner">
-          <div className="dg-hero__intro">
-            <p className="dg-hero__eyebrow">{heroEyebrow}</p>
-            <h1 id="dg-hero-title" className="dg-hero__title">
-              {heroTitle}
-            </h1>
-            <p className="dg-hero__sub">{heroSubtitle}</p>
-          </div>
-          <div className="dg-hero__stats" aria-label={copy.smartTitle}>
-            <div className="dg-hero-stat">
-              <span className="dg-hero-stat__value">{diningPlacesAll.length}</span>
-              <span className="dg-hero-stat__label">{copy.heroStatPlaces}</span>
+          <div className="dg-hero__content">
+            <div className="dg-hero__intro">
+              <p className="dg-hero__eyebrow">{heroEyebrow}</p>
+              <h1 id="dg-hero-title" className="dg-hero__title">
+                {heroTitle}
+              </h1>
+              <p className="dg-hero__sub">{heroSubtitle}</p>
             </div>
-            <div className="dg-hero-stat">
-              <span className="dg-hero-stat__value">{smartSpotlight.length}</span>
-              <span className="dg-hero-stat__label">{copy.heroStatCurated}</span>
+            <div className="dg-hero__stats" aria-label={copy.smartTitle}>
+              <div className="dg-hero-stat">
+                <span className="dg-hero-stat__value">{diningPlacesAll.length}</span>
+                <span className="dg-hero-stat__label">{copy.heroStatPlaces}</span>
+              </div>
+              <div className="dg-hero-stat">
+                <span className="dg-hero-stat__value">{smartSpotlight.length}</span>
+                <span className="dg-hero-stat__label">{copy.heroStatCurated}</span>
+              </div>
+              <div className="dg-hero-stat">
+                <span className="dg-hero-stat__value">{Math.max(cuisinesCount, foodCategories.length)}</span>
+                <span className="dg-hero-stat__label">{copy.heroStatStyles}</span>
+              </div>
             </div>
-            <div className="dg-hero-stat">
-              <span className="dg-hero-stat__value">{Math.max(cuisinesCount, foodCategories.length)}</span>
-              <span className="dg-hero-stat__label">{copy.heroStatStyles}</span>
+            <div className="dg-hero__actions-top">
+              <Link to="/map" className="dg-hero__link">
+                <Icon name="map" size={20} aria-hidden />
+                <span>{copy.mapCta}</span>
+              </Link>
+              <Link to={PLACES_DISCOVER_PATH} className="dg-hero__link dg-hero__link--ghost">
+                <span>{copy.discoverCta}</span>
+                <Icon name="arrow_forward" size={18} aria-hidden />
+              </Link>
             </div>
-          </div>
-          <div className="dg-hero__actions-top">
-            <Link to="/map" className="dg-hero__link">
-              <Icon name="map" size={20} aria-hidden />
-              <span>{copy.mapCta}</span>
-            </Link>
-            <Link to={PLACES_DISCOVER_PATH} className="dg-hero__link dg-hero__link--ghost">
-              <span>{copy.discoverCta}</span>
-              <Icon name="arrow_forward" size={18} aria-hidden />
-            </Link>
-          </div>
-          <div className="dg-search-wrap">
-            <GlobalSearchBar
-              className="global-search-bar--full dg-global-search"
-              idPrefix="place-dining"
-              queryValue={qDraft}
-              onQueryChange={setQDraft}
-            />
-          </div>
-          <div className="dg-hero-cats" role="group" aria-label="Quick category filter">
-            <button
-              type="button"
-              className={`dg-hero-cat ${!fcatParam ? 'dg-hero-cat--on' : ''}`}
-              onClick={() => setParam('fcat', '')}
-            >
-              All
-            </button>
-            {foodCategories.slice(0, 10).map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className={`dg-hero-cat ${String(fcatParam) === String(c.id) ? 'dg-hero-cat--on' : ''}`}
-                onClick={() => setParam('fcat', String(fcatParam) === String(c.id) ? '' : String(c.id))}
-              >
-                {c.name}
-              </button>
-            ))}
           </div>
         </div>
       </header>
@@ -835,6 +810,14 @@ export default function PlaceDining() {
           <div className="dg-panel__heading">
             <h2 className="dg-panel__title">{copy.filtersTitle}</h2>
             <p className="dg-panel__intro">{copy.collectionSub}</p>
+          </div>
+          <div className="dg-panel__row dg-panel__row--search">
+            <GlobalSearchBar
+              className="global-search-bar--full dg-global-search dg-global-search--panel"
+              idPrefix="place-dining"
+              queryValue={qDraft}
+              onQueryChange={setQDraft}
+            />
           </div>
           <div className="dg-panel__row dg-panel__row--chips">
             <p className="dg-panel__label">{t('diningGuide', 'categoryFilterLabel')}</p>
