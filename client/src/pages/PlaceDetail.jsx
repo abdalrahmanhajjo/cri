@@ -151,6 +151,11 @@ function normalizeDiningProfile(place) {
     contactEmail: String(raw.contactEmail || raw.email || '').trim(),
     contactAddress: String(raw.contactAddress || raw.address || '').trim(),
     contactNote: String(raw.contactNote || '').trim(),
+    socialMedia: {
+      instagram: String(raw.instagram || raw.social_instagram || '').trim(),
+      facebook: String(raw.facebook || raw.social_facebook || '').trim(),
+      website: String(raw.website || raw.link || '').trim(),
+    },
     signatureDishes,
     menuSections,
   };
@@ -179,6 +184,75 @@ function normalizeHoursEntries(hours) {
       value: String(value || '').trim(),
     }))
     .filter((item) => item.value);
+}
+
+function LiveStatus({ hours, t }) {
+  if (!hours || typeof hours !== 'object' || Array.isArray(hours)) return null;
+
+  const weekdayMap = {
+    Sunday: 'sun',
+    Monday: 'mon',
+    Tuesday: 'tue',
+    Wednesday: 'wed',
+    Thursday: 'thu',
+    Friday: 'fri',
+    Saturday: 'sat',
+  };
+
+  const now = new Date();
+  const weekday = now.toLocaleDateString('en-US', { weekday: 'long' });
+  const dayKey = weekdayMap[weekday];
+  const todayHoursRaw = (dayKey && hours[dayKey]) || hours[weekday] || '';
+  const todayHours = String(todayHoursRaw || '').trim();
+
+  if (!todayHours) {
+    return (
+      <span className="place-status place-status--unknown">
+        {t('detail', 'statusUnknown') || 'Hours N/A'}
+      </span>
+    );
+  }
+
+  const rangeParts = todayHours.split(/\s*[–-]\s*/);
+  if (rangeParts.length < 2) {
+    return (
+      <span className="place-status place-status--unknown">
+        {todayHours}
+      </span>
+    );
+  }
+
+  const parseClock = (value) => {
+    const match = String(value || '').trim().match(/^(\d{1,2})(?::(\d{2}))?$/);
+    if (!match) return null;
+    const hh = Number(match[1]);
+    const mm = Number(match[2] || '0');
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+    return hh * 60 + mm;
+  };
+
+  const start = parseClock(rangeParts[0]);
+  const end = parseClock(rangeParts[1]);
+  if (start == null || end == null) {
+    return (
+      <span className="place-status place-status--unknown">
+        {todayHours}
+      </span>
+    );
+  }
+
+  const current = now.getHours() * 60 + now.getMinutes();
+  const closesNextDay = end <= start;
+  const open =
+    closesNextDay
+      ? current >= start || current < end
+      : current >= start && current < end;
+
+  return (
+    <span className={`place-status ${open ? 'place-status--open' : 'place-status--closed'}`}>
+      {open ? (t('detail', 'openNow') || 'Open now') : (t('detail', 'closedNow') || 'Closed now')}
+    </span>
+  );
 }
 
 function InfoRow({ icon, label, value }) {
