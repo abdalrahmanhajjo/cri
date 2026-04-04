@@ -13,7 +13,7 @@ import { getCategoriesForWay } from '../utils/findYourWayGrouping';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import { useSiteSettings } from '../context/SiteSettingsContext';
-import './PlaceDining.css';
+import './PlaceHotels.css';
 
 function formatTripRange(trip, locale) {
   const a = trip.startDate ? new Date(trip.startDate) : null;
@@ -21,7 +21,7 @@ function formatTripRange(trip, locale) {
   if (!a || Number.isNaN(a.getTime())) return '';
   const opts = { day: 'numeric', month: 'short', year: 'numeric' };
   if (!b || Number.isNaN(b.getTime())) return a.toLocaleDateString(locale, opts);
-  return `${a.toLocaleDateString(locale, opts)} - ${b.toLocaleDateString(locale, opts)}`;
+  return `${a.toLocaleDateString(locale, opts)} – ${b.toLocaleDateString(locale, opts)}`;
 }
 
 function uniqStrings(list) {
@@ -47,17 +47,13 @@ function diningSignals(place) {
     ...(dp.reservations ? ['reservations'] : []),
     ...(dp.outdoorSeating ? ['outdoor seating'] : []),
   ]).map(titleizeToken);
-  const dietaryOptions = uniqStrings(dp.dietaryOptions).map(titleizeToken);
-  const signatureDishes = uniqStrings(dp.signatureDishes).map(titleizeToken);
   const menuSections = Array.isArray(dp.menuSections) ? dp.menuSections.filter(Boolean) : [];
   return {
     cuisines,
     bestFor,
     serviceModes,
-    dietaryOptions,
-    signatureDishes,
     menuSections,
-    hasMenu: menuSections.length > 0 || signatureDishes.length > 0 || Boolean(String(dp.menuNote || '').trim()),
+    hasMenu: menuSections.length > 0 || Boolean(String(dp.menuNote || '').trim()),
     hasHours: Boolean(String(place?.hours || '').trim()),
     hasContact:
       Boolean(String(dp.contactPhone || '').trim()) ||
@@ -88,7 +84,6 @@ function diningSmartScore(place, { query = '', activeCategoryId = '', featuredId
   score += featuredIds.has(String(place?.id)) ? 48 : 0;
   score += signals.hasMenu ? 22 : 0;
   score += Math.min(signals.menuDepth, 12) * 1.4;
-  score += Math.min(signals.signatureDishes.length, 4) * 5;
   score += Math.min(signals.serviceModes.length, 4) * 4;
   score += Math.min(signals.cuisines.length, 4) * 4;
   score += Math.min(signals.bestFor.length, 3) * 3;
@@ -100,33 +95,68 @@ function diningSmartScore(place, { query = '', activeCategoryId = '', featuredId
   return score;
 }
 
-function localDiningCopy(lang, t) {
-  const pick = (key, fallback) => {
-    const value = t('diningGuide', key);
-    return value && value !== key ? value : fallback;
-  };
-  return {
-    smartTitle: 'Smart dining picks',
-    smartSub: 'A stronger ranking blends place quality, menu richness, visuals, services, and search intent behind the scenes.',
-    guideBadge: 'Curated pick',
-    menuBadge: 'Menu-ready',
-    contactBadge: 'Contact available',
-    openNowBadge: 'Visit info',
-    cuisinesTitle: 'Browse by cuisine or mood',
-    cuisinesSub: 'We group places by cuisine, occasion, and visit style so first-time users can decide faster.',
-    browseCluster: 'Browse selection',
-    smartReasons: 'Why it stands out',
-    menuReady: 'Menu or signature dishes available',
-    menuSoon: 'Profile is ready for a full menu',
-    collectionTitle: 'All dining places',
-    collectionSub: 'A clearer restaurant directory with richer cards that help people decide faster.',
-    filtersTitle: 'Refine your dining search',
-    heroStatPlaces: 'Dining places',
-    heroStatCurated: 'Smart picks',
-    heroStatStyles: 'Styles & moods',
-    mapCta: pick('heroMapCta', 'Open map'),
-    discoverCta: pick('browseDiscover', 'Browse full guide'),
-  };
+function StayCard({ place, layout, onMapClick, onAddToTrip, viewDetailsLabel, mapAriaLabel, addToTripLabel }) {
+  const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
+  const rating = place.rating != null ? Number(place.rating).toFixed(1) : null;
+  return (
+    <article className={`hg-stay-card hg-stay-card--${layout}`}>
+      <Link to={`/place/${place.id}`} className="hg-stay-card__main">
+        <div className="hg-stay-card__media">
+          {img ? (
+            <DeliveryImg url={img} preset="gridCard" alt="" />
+          ) : (
+            <span className="hg-stay-card__fallback">
+              <Icon name="restaurant" size={32} />
+            </span>
+          )}
+          <div className="hg-stay-card__frame" aria-hidden />
+          {rating ? (
+            <span className="hg-stay-card__rating">
+              <Icon name="star" size={14} /> {rating}
+            </span>
+          ) : null}
+        </div>
+        <div className="hg-stay-card__body">
+          <h3 className="hg-stay-card__title">{place.name}</h3>
+          {place.location ? <p className="hg-stay-card__loc">{place.location}</p> : null}
+          <span className="hg-stay-card__cta">
+            <span>{viewDetailsLabel}</span>
+            <Icon name="arrow_forward" size={18} aria-hidden />
+          </span>
+        </div>
+      </Link>
+      <div className="hg-stay-card__actions">
+        {onAddToTrip ? (
+          <button
+            type="button"
+            className="hg-stay-card__btn hg-stay-card__btn--trip"
+            onClick={() => onAddToTrip(place)}
+            aria-label={addToTripLabel}
+          >
+            <Icon name="event_note" size={18} aria-hidden />
+          </button>
+        ) : null}
+        {onMapClick ? (
+          <button
+            type="button"
+            className="hg-stay-card__btn hg-stay-card__btn--map"
+            onClick={() => onMapClick(place)}
+            aria-label={mapAriaLabel}
+          >
+            <Icon name="map" size={18} aria-hidden />
+          </button>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function stayLayoutForIndex(i) {
+  const r = i % 5;
+  if (r === 0) return 'feature';
+  if (r === 1) return 'wide';
+  if (r === 2) return 'tall';
+  return 'base';
 }
 
 export default function PlaceDining() {
@@ -138,7 +168,6 @@ export default function PlaceDining() {
   const toolbarRef = useRef(null);
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const locale = lang === 'ar' ? 'ar-LB' : lang === 'fr' ? 'fr-LB' : 'en-GB';
-  const copy = useMemo(() => localDiningCopy(lang, t), [lang, t]);
 
   const fcatParam = searchParams.get('fcat') || '';
   const sortParam = searchParams.get('sort') || 'recommended';
@@ -254,7 +283,6 @@ export default function PlaceDining() {
   }, [tripPickPlace, user]);
 
   const foodCategories = useMemo(() => getCategoriesForWay('food', categories), [categories]);
-
   const foodCategoryIds = useMemo(() => new Set(foodCategories.map((c) => String(c.id))), [foodCategories]);
   const hiddenPlaceIdSet = useMemo(
     () => new Set((diningGuide.hiddenPlaceIds || []).map((id) => String(id))),
@@ -267,7 +295,6 @@ export default function PlaceDining() {
       ),
     [places, foodCategoryIds, hiddenPlaceIdSet]
   );
-
   const diningPlaceIdSet = useMemo(() => new Set(diningPlacesAll.map((p) => String(p.id))), [diningPlacesAll]);
   const featuredIdSet = useMemo(
     () => new Set((diningGuide.featuredPlaceIds || []).map((id) => String(id))),
@@ -318,47 +345,6 @@ export default function PlaceDining() {
     const need = Math.max(0, 8 - fromFeatured.length);
     return [...fromFeatured, ...rest.slice(0, need)];
   }, [filteredForTopPicks, filteredTopPicksById, diningGuide.featuredPlaceIds]);
-
-  const rankedDiningPlaces = useMemo(
-    () =>
-      [...diningPlacesAll].sort(
-        (a, b) =>
-          diningSmartScore(b, { query: qParam, activeCategoryId: fcatParam, featuredIds: featuredIdSet }) -
-          diningSmartScore(a, { query: qParam, activeCategoryId: fcatParam, featuredIds: featuredIdSet })
-      ),
-    [diningPlacesAll, qParam, fcatParam, featuredIdSet]
-  );
-
-  const smartSpotlight = useMemo(() => rankedDiningPlaces.slice(0, 3), [rankedDiningPlaces]);
-
-  const smartCuisineClusters = useMemo(() => {
-    const clusterMap = new Map();
-    rankedDiningPlaces.forEach((place) => {
-      const signals = diningSignals(place);
-      const labels = [...signals.cuisines, ...signals.bestFor].slice(0, 4);
-      if (labels.length === 0 && place.category) labels.push(String(place.category));
-      labels.forEach((label) => {
-        const key = String(label || '').trim();
-        if (!key) return;
-        if (!clusterMap.has(key)) clusterMap.set(key, []);
-        const items = clusterMap.get(key);
-        if (items.length < 4) items.push(place);
-      });
-    });
-    return [...clusterMap.entries()]
-      .map(([label, items]) => ({
-        label,
-        items,
-        score: items.reduce(
-          (sum, item) =>
-            sum + diningSmartScore(item, { query: qParam, activeCategoryId: fcatParam, featuredIds: featuredIdSet }),
-          0
-        ),
-      }))
-      .filter((cluster) => cluster.items.length >= 2)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 4);
-  }, [rankedDiningPlaces, qParam, fcatParam, featuredIdSet]);
 
   const mainListPlaces = useMemo(() => {
     let base = diningPlacesAll;
@@ -491,6 +477,11 @@ export default function PlaceDining() {
     toolbarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
+  const countLabel = (t('placeDiscover', 'resultCount') || '{count} places').replace(
+    '{count}',
+    String(mainListPlaces.length)
+  );
+
   const langKey = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const heroLoc = diningGuide.hero?.[langKey] || {};
   const heroEyebrow = String(heroLoc.kicker || '').trim() || t('diningGuide', 'eyebrow');
@@ -506,40 +497,19 @@ export default function PlaceDining() {
   const rawHeroImg = (diningGuide.heroImageUrl || '').trim();
   const heroImageResolved = rawHeroImg ? getImageUrl(rawHeroImg) : '';
 
-  const countLabel = (t('placeDiscover', 'resultCount') || '{count} places').replace(
-    '{count}',
-    String(mainListPlaces.length)
-  );
-  const cuisinesCount = useMemo(() => {
-    const set = new Set();
-    diningPlacesAll.forEach((place) => diningSignals(place).cuisines.forEach((item) => set.add(item)));
-    return set.size;
-  }, [diningPlacesAll]);
-  const quickFilterItems = useMemo(() => {
-    const icons = ['restaurant', 'local_cafe', 'bakery_dining', 'icecream', 'brunch_dining', 'ramen_dining'];
-    return [
-      { id: '', label: t('diningGuide', 'allStyles'), icon: 'apps' },
-      ...foodCategories.slice(0, 7).map((c, index) => ({
-        id: String(c.id),
-        label: c.name,
-        icon: icons[index % icons.length],
-      })),
-    ];
-  }, [foodCategories, t]);
-
   if (siteSettingsLoading) {
     return (
-      <div className="dg-page" role="main">
-        <header className="dg-hero dg-hero--loading">
-          <div className="dg-hero__inner">
-            <div className="dg-skel dg-skel--title" />
-            <div className="dg-skel dg-skel--search" />
+      <div className="hg-page" role="main">
+        <header className="hg-hero hg-hero--loading">
+          <div className="hg-hero__inner">
+            <div className="hg-skel hg-skel--title" />
+            <div className="hg-skel hg-skel--search" />
           </div>
         </header>
-        <div className="dg-container">
-          <div className="dg-skel-grid">
+        <div className="hg-container">
+          <div className="hg-skel-grid">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="dg-skel dg-skel--card" />
+              <div key={i} className="hg-skel hg-skel--card" />
             ))}
           </div>
         </div>
@@ -553,17 +523,17 @@ export default function PlaceDining() {
 
   if (loading) {
     return (
-      <div className="dg-page" role="main">
-        <header className="dg-hero dg-hero--loading">
-          <div className="dg-hero__inner">
-            <div className="dg-skel dg-skel--title" />
-            <div className="dg-skel dg-skel--search" />
+      <div className="hg-page" role="main">
+        <header className="hg-hero hg-hero--loading">
+          <div className="hg-hero__inner">
+            <div className="hg-skel hg-skel--title" />
+            <div className="hg-skel hg-skel--search" />
           </div>
         </header>
-        <div className="dg-container">
-          <div className="dg-skel-grid">
+        <div className="hg-container">
+          <div className="hg-skel-grid">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="dg-skel dg-skel--card" />
+              <div key={i} className="hg-skel hg-skel--card" />
             ))}
           </div>
         </div>
@@ -573,12 +543,12 @@ export default function PlaceDining() {
 
   if (error) {
     return (
-      <div className="dg-page" role="main">
-        <div className="dg-container dg-error-wrap">
-          <p className="dg-error" role="alert">
+      <div className="hg-page" role="main">
+        <div className="hg-container hg-error-wrap">
+          <p className="hg-error" role="alert">
             {error}
           </p>
-          <Link to="/" className="dg-btn-secondary">
+          <Link to="/" className="hg-btn-secondary">
             {t('nav', 'home')}
           </Link>
         </div>
@@ -587,132 +557,60 @@ export default function PlaceDining() {
   }
 
   return (
-    <div className="dg-page" role="main">
+    <div className="hg-page" role="main">
       <header
-        className={`dg-hero${heroImageResolved ? ' dg-hero--photo' : ''}`}
-        aria-labelledby="dg-hero-title"
+        className={`hg-hero${heroImageResolved ? ' hg-hero--photo' : ''}`}
+        aria-labelledby="hg-hero-title"
         style={
           heroImageResolved
             ? {
-                backgroundImage: `linear-gradient(165deg, rgba(74,18,18,0.92) 0%, rgba(45,10,10,0.88) 48%, rgba(124,45,18,0.9) 100%), url(${heroImageResolved})`,
+                backgroundImage: `linear-gradient(145deg, rgba(74,18,18,0.92) 0%, rgba(45,10,10,0.88) 48%, rgba(124,45,18,0.9) 100%), url(${heroImageResolved})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }
             : undefined
         }
       >
-        <div className="dg-hero__glow" aria-hidden />
-        <div className="dg-hero__grain" aria-hidden />
-        <div className="dg-hero__inner">
-          <div className="dg-hero__content">
-            <div className="dg-hero__intro">
-              <p className="dg-hero__eyebrow">{heroEyebrow}</p>
-              <h1 id="dg-hero-title" className="dg-hero__title">
-                {heroTitle}
-              </h1>
-              <p className="dg-hero__sub">{heroSubtitle}</p>
-            </div>
-            <div className="dg-hero__search">
-              <GlobalSearchBar
-                className="global-search-bar--full dg-global-search dg-global-search--hero"
-                idPrefix="place-dining-hero"
-                queryValue={qDraft}
-                onQueryChange={setQDraft}
-              />
-            </div>
-            <div className="dg-hero__stats" aria-label={copy.smartTitle}>
-              <div className="dg-hero-stat">
-                <span className="dg-hero-stat__value">{diningPlacesAll.length}</span>
-                <span className="dg-hero-stat__label">{copy.heroStatPlaces}</span>
-              </div>
-              <div className="dg-hero-stat">
-                <span className="dg-hero-stat__value">{smartSpotlight.length}</span>
-                <span className="dg-hero-stat__label">{copy.heroStatCurated}</span>
-              </div>
-              <div className="dg-hero-stat">
-                <span className="dg-hero-stat__value">{Math.max(cuisinesCount, foodCategories.length)}</span>
-                <span className="dg-hero-stat__label">{copy.heroStatStyles}</span>
-              </div>
-            </div>
-            <div className="dg-hero__actions-top">
-              <Link to="/map" className="dg-hero__link">
-                <Icon name="map" size={20} aria-hidden />
-                <span>{copy.mapCta}</span>
-              </Link>
-              <Link to={PLACES_DISCOVER_PATH} className="dg-hero__link dg-hero__link--ghost">
-                <span>{copy.discoverCta}</span>
-                <Icon name="arrow_forward" size={18} aria-hidden />
-              </Link>
-            </div>
+        <div className="hg-hero__mesh" aria-hidden />
+        <div className="hg-hero__stripes" aria-hidden />
+        <div className="hg-hero__inner">
+          <div className="hg-hero__intro">
+            <p className="hg-hero__eyebrow">{heroEyebrow}</p>
+            <h1 id="hg-hero-title" className="hg-hero__title">
+              {heroTitle}
+            </h1>
+            <p className="hg-hero__sub">{heroSubtitle}</p>
           </div>
-          <div className="dg-hero-shortcuts" aria-label={t('diningGuide', 'categoryFilterLabel')}>
-            {quickFilterItems.map((item) => (
-              <button
-                key={item.id || 'all'}
-                type="button"
-                className={`dg-hero-shortcut ${String(fcatParam) === String(item.id) || (!fcatParam && !item.id) ? 'dg-hero-shortcut--on' : ''}`}
-                onClick={() => setParam('fcat', item.id)}
-              >
-                <span className="dg-hero-shortcut__icon">
-                  <Icon name={item.icon} size={18} aria-hidden />
-                </span>
-                <span className="dg-hero-shortcut__label">{item.label}</span>
-              </button>
-            ))}
+          <div className="hg-hero__actions">
+            <Link to="/map" className="hg-hero__btn hg-hero__btn--gold">
+              <Icon name="map" size={20} aria-hidden />
+              <span>{t('diningGuide', 'heroMapCta')}</span>
+            </Link>
+            <Link to={PLACES_DISCOVER_PATH} className="hg-hero__btn hg-hero__btn--ghost">
+              <span>{t('diningGuide', 'browseDiscover')}</span>
+              <Icon name="arrow_forward" size={18} aria-hidden />
+            </Link>
+          </div>
+          <div className="hg-search">
+            <GlobalSearchBar
+              className="global-search-bar--full hg-global-search"
+              idPrefix="place-dining"
+              queryValue={qDraft}
+              onQueryChange={setQDraft}
+            />
           </div>
         </div>
       </header>
 
-      <div className="dg-container dg-body">
-        <section className="dg-toolbar-shell" ref={toolbarRef} aria-label={t('diningGuide', 'openFilters')}>
-          <div className="dg-toolbar-shell__top">
-            <div>
-              <h2 className="dg-toolbar-shell__title">{copy.collectionTitle}</h2>
-              <p className="dg-toolbar-shell__sub">{copy.collectionSub}</p>
-            </div>
-            <span className="dg-count" aria-live="polite">
-              {countLabel}
-            </span>
-          </div>
-          <div className="dg-toolbar-shell__row">
-            <div className="dg-chips" role="group">
-              {quickFilterItems.map((item) => (
-                <button
-                  key={`toolbar-${item.id || 'all'}`}
-                  type="button"
-                  className={`dg-chip ${String(fcatParam) === String(item.id) || (!fcatParam && !item.id) ? 'dg-chip--on' : ''}`}
-                  onClick={() => setParam('fcat', item.id)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <div className="dg-sort-wrap">
-              <label className="dg-sr-only" htmlFor="dg-sort">
-                {t('diningGuide', 'sortLabel')}
-              </label>
-              <select
-                id="dg-sort"
-                className="dg-select"
-                value={sortParam}
-                onChange={(e) => setParam('sort', e.target.value)}
-              >
-                <option value="recommended">{t('placeDiscover', 'sortRecommended')}</option>
-                <option value="rating">{t('home', 'spotsSortRating')}</option>
-                <option value="name">{t('home', 'spotsSortName')}</option>
-              </select>
-            </div>
-          </div>
-        </section>
-
+      <div className="hg-container hg-main">
         {sponsoredDining.length > 0 ? (
-          <section className="dg-sponsored" aria-label={sponsoredKicker}>
-            <div className="dg-section-head">
-              <h2 className="dg-section-title">{sponsoredKicker}</h2>
-            </div>
-            <div className="dg-sponsored-rail">
+          <section className="hg-sponsored" aria-label={sponsoredKicker}>
+            <header className="hg-section-head">
+              <h2 className="hg-section-title">{sponsoredKicker}</h2>
+            </header>
+            <div className="hg-sponsored-track">
               {sponsoredDining.slice(0, 6).map((item) => (
-                <div key={item.id} className="dg-sponsored-rail__item">
+                <div key={item.id} className="hg-sponsored-track__cell">
                   <SponsoredPlaceCard item={item} t={t} variant="tile" />
                 </div>
               ))}
@@ -721,44 +619,37 @@ export default function PlaceDining() {
         ) : null}
 
         {topPicks.length > 0 ? (
-          <section className="dg-top-picks" aria-labelledby="dg-top-picks-title">
-            <div className="dg-section-head">
-              <h2 id="dg-top-picks-title" className="dg-section-title">
+          <section className="hg-picks" aria-labelledby="hg-picks-title">
+            <header className="hg-section-head">
+              <h2 id="hg-picks-title" className="hg-section-title">
                 {topPicksTitle}
               </h2>
-              <p className="dg-section-sub">{t('diningGuide', 'topPicksSub')}</p>
-            </div>
-            <div className="dg-rail" role="list">
+              <p className="hg-section-lead">{t('diningGuide', 'topPicksSub')}</p>
+            </header>
+            <div className="hg-picks-scroll" role="list">
               {topPicks.map((place) => {
                 const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
                 const rating = place.rating != null ? Number(place.rating).toFixed(1) : null;
                 return (
-                  <div key={place.id} className="dg-rail__item" role="listitem">
-                    <Link to={`/place/${place.id}`} className="dg-rail-card">
-                      <div className="dg-rail-card__media">
+                  <div key={place.id} className="hg-picks-scroll__item" role="listitem">
+                    <Link to={`/place/${place.id}`} className="hg-pick-card">
+                      <div className="hg-pick-card__visual">
                         {img ? (
                           <DeliveryImg url={img} preset="discoverCard" alt="" />
                         ) : (
-                          <span className="dg-rail-card__fallback">
+                          <span className="hg-pick-card__ph">
                             <Icon name="restaurant" size={28} />
                           </span>
                         )}
                         {rating ? (
-                          <span className="dg-rail-card__rating">
+                          <span className="hg-pick-card__score">
                             <Icon name="star" size={12} /> {rating}
                           </span>
                         ) : null}
-                        <span className="dg-rail-card__badge">
-                          {featuredIdSet.has(String(place.id)) ? copy.guideBadge : copy.menuBadge}
-                        </span>
                       </div>
-                      <div className="dg-rail-card__body">
-                        <h3 className="dg-rail-card__title">{place.name}</h3>
-                        {place.location ? <p className="dg-rail-card__loc">{place.location}</p> : null}
-                        <div className="dg-rail-card__footer">
-                          <span>{t('home', 'viewDetails')}</span>
-                          <Icon name="arrow_forward" size={16} aria-hidden />
-                        </div>
+                      <div className="hg-pick-card__text">
+                        <h3 className="hg-pick-card__name">{place.name}</h3>
+                        {place.location ? <p className="hg-pick-card__meta">{place.location}</p> : null}
                       </div>
                     </Link>
                   </div>
@@ -768,294 +659,146 @@ export default function PlaceDining() {
           </section>
         ) : null}
 
-        {smartSpotlight.length > 0 ? (
-          <section className="dg-smart" aria-labelledby="dg-smart-title">
-            <div className="dg-section-head">
-              <h2 id="dg-smart-title" className="dg-section-title">
-                {copy.smartTitle}
-              </h2>
-              <p className="dg-section-sub">{copy.smartSub}</p>
-            </div>
-            <div className="dg-smart-grid">
-              {smartSpotlight.map((place, index) => {
-                const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
-                const signals = diningSignals(place);
-                const reasons = [...signals.cuisines, ...signals.bestFor, ...signals.serviceModes].slice(0, 4);
-                return (
-                  <Link
-                    key={place.id}
-                    to={`/place/${place.id}`}
-                    className={`dg-smart-card ${index === 0 ? 'dg-smart-card--lead' : ''}`}
-                  >
-                    <div className="dg-smart-card__media">
-                      {img ? (
-                        <DeliveryImg url={img} preset="discoverCard" alt="" />
-                      ) : (
-                        <span className="dg-smart-card__fallback">
-                          <Icon name="restaurant" size={36} />
-                        </span>
-                      )}
-                      <div className="dg-smart-card__scrim" aria-hidden />
-                      <div className="dg-smart-card__badges">
-                        <span className="dg-smart-card__badge">{copy.guideBadge}</span>
-                        {signals.hasMenu ? (
-                          <span className="dg-smart-card__badge dg-smart-card__badge--soft">{copy.menuBadge}</span>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="dg-smart-card__body">
-                      <h3 className="dg-smart-card__title">{place.name}</h3>
-                      {place.location ? <p className="dg-smart-card__loc">{place.location}</p> : null}
-                      {reasons.length > 0 ? (
-                        <div className="dg-smart-card__facts">
-                          {reasons.map((item) => (
-                            <span key={`${place.id}-${item}`} className="dg-smart-card__fact">
-                              {item}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                      <div className="dg-smart-card__meta">
-                        {place.rating != null ? (
-                          <span>
-                            <Icon name="star" size={14} aria-hidden /> {Number(place.rating).toFixed(1)}
-                          </span>
-                        ) : null}
-                        {signals.hasContact ? (
-                          <span>
-                            <Icon name="call" size={14} aria-hidden /> {copy.contactBadge}
-                          </span>
-                        ) : null}
-                        {signals.hasHours ? (
-                          <span>
-                            <Icon name="schedule" size={14} aria-hidden /> {copy.openNowBadge}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        ) : null}
-
-        {smartCuisineClusters.length > 0 ? (
-          <section className="dg-clusters" aria-labelledby="dg-clusters-title">
-            <div className="dg-section-head">
-              <h2 id="dg-clusters-title" className="dg-section-title">
-                {copy.cuisinesTitle}
-              </h2>
-              <p className="dg-section-sub">{copy.cuisinesSub}</p>
-            </div>
-            <div className="dg-clusters-grid">
-              {smartCuisineClusters.map((cluster) => (
-                <article key={cluster.label} className="dg-cluster-card">
-                  <div className="dg-cluster-card__head">
-                    <div>
-                      <h3 className="dg-cluster-card__title">{cluster.label}</h3>
-                      <p className="dg-cluster-card__count">
-                        {(t('placeDiscover', 'resultCount') || '{count} places').replace('{count}', String(cluster.items.length))}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="dg-cluster-card__cta"
-                      onClick={() => setQDraft(cluster.label)}
-                    >
-                      {copy.browseCluster}
-                    </button>
-                  </div>
-                  <div className="dg-cluster-card__stack">
-                    {cluster.items.slice(0, 3).map((place) => {
-                      const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
-                      return (
-                        <Link key={place.id} to={`/place/${place.id}`} className="dg-cluster-card__item">
-                          <span className="dg-cluster-card__thumb">
-                            {img ? <DeliveryImg url={img} preset="avatar" alt="" /> : <Icon name="restaurant" size={18} />}
-                          </span>
-                          <span className="dg-cluster-card__item-text">
-                            <strong>{place.name}</strong>
-                            <span>{place.location}</span>
-                          </span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </article>
+        <section className="hg-toolbar" ref={toolbarRef} aria-label={t('diningGuide', 'openFilters')}>
+          <div className="hg-toolbar__chips">
+            <p className="hg-toolbar__label">{t('diningGuide', 'categoryFilterLabel')}</p>
+            <div className="hg-pills" role="group">
+              <button
+                type="button"
+                className={`hg-pill ${!fcatParam ? 'hg-pill--active' : ''}`}
+                onClick={() => setParam('fcat', '')}
+              >
+                {t('diningGuide', 'allStyles')}
+              </button>
+              {foodCategories.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`hg-pill ${String(fcatParam) === String(c.id) ? 'hg-pill--active' : ''}`}
+                  onClick={() =>
+                    setParam('fcat', String(fcatParam) === String(c.id) ? '' : String(c.id))
+                  }
+                >
+                  {c.name}
+                </button>
               ))}
             </div>
-          </section>
-        ) : null}
+          </div>
+          <div className="hg-toolbar__sort">
+            <span className="hg-meta-count" aria-live="polite">
+              {countLabel}
+            </span>
+            <label className="hg-sr-only" htmlFor="hg-sort-dining">
+              {t('diningGuide', 'sortLabel')}
+            </label>
+            <select
+              id="hg-sort-dining"
+              className="hg-sort-select"
+              value={sortParam}
+              onChange={(e) => setParam('sort', e.target.value)}
+            >
+              <option value="recommended">{t('placeDiscover', 'sortRecommended')}</option>
+              <option value="rating">{t('home', 'spotsSortRating')}</option>
+              <option value="name">{t('home', 'spotsSortName')}</option>
+            </select>
+          </div>
+        </section>
 
-        <h2 id="dg-collection-title" className="dg-sr-only">
+        <h2 id="hg-grid-label-dining" className="hg-sr-only">
           {mainCollectionTitleSr}
         </h2>
         {mainListPlaces.length === 0 ? (
-          <p className="dg-empty">{t('home', 'noSpots')}</p>
+          <p className="hg-empty">{t('home', 'noSpots')}</p>
         ) : (
-          <section className="dg-place-list" aria-labelledby="dg-collection-title">
-            {mainListPlaces.map((place) => {
-              const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
-              const rating = place.rating != null ? Number(place.rating).toFixed(1) : null;
-              const signals = diningSignals(place);
-              const chips = [...signals.cuisines, ...signals.bestFor].slice(0, 3);
-              const facts = [...signals.serviceModes, ...signals.dietaryOptions].slice(0, 2);
-              return (
-                <article key={place.id} className="dg-place-row">
-                  <Link to={`/place/${place.id}`} className="dg-place-row__link">
-                    <div className="dg-place-row__img">
-                      {img ? (
-                        <DeliveryImg url={img} preset="gridCard" alt="" />
-                      ) : (
-                        <span className="dg-place-row__fallback"><Icon name="restaurant" size={32} /></span>
-                      )}
-                      {rating && (
-                        <span className="dg-place-row__rating">
-                          <Icon name="star" size={12} /> {rating}
-                        </span>
-                      )}
-                      {featuredIdSet.has(String(place.id)) ? (
-                        <span className="dg-place-row__badge">{copy.guideBadge}</span>
-                      ) : null}
-                    </div>
-                    <div className="dg-place-row__body">
-                      <div className="dg-place-row__head">
-                        <h3 className="dg-place-row__name">{place.name}</h3>
-                        {place.price ? <span className="dg-place-row__price">{place.price}</span> : null}
-                      </div>
-                      {place.location && (
-                        <p className="dg-place-row__loc">
-                          <Icon name="location_on" size={12} />
-                          {place.location}
-                        </p>
-                      )}
-                      {chips.length > 0 && (
-                        <div className="dg-place-row__chips">
-                          {chips.map(c => <span key={c} className="dg-place-row__chip">{c}</span>)}
-                        </div>
-                      )}
-                      <div className="dg-place-row__meta">
-                        {facts.map(mode => (
-                          <span key={mode}>
-                            <Icon name="room_service" size={12} /> {mode}
-                          </span>
-                        ))}
-                        {signals.hasMenu && (
-                          <span>
-                            <Icon name="menu_book" size={12} /> {copy.menuReady}
-                          </span>
-                        )}
-                      </div>
-                      <div className="dg-place-row__footer">
-                        <span className="dg-place-row__cta">
-                          {t('home', 'viewDetails')}
-                          <Icon name="arrow_forward" size={16} aria-hidden />
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                  <div className="dg-place-row__actions">
-                    {openAddToTrip && (
-                      <button
-                        type="button"
-                        className="dg-place-row__btn"
-                        onClick={() => openAddToTrip(place)}
-                        aria-label={t('placeDiscover', 'addToTrip')}
-                      >
-                        <Icon name="event_note" size={20} />
-                        <span>{t('placeDiscover', 'addToTrip')}</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="dg-place-row__btn"
-                      onClick={() => handleViewOnMap(place)}
-                      aria-label={t('placeDiscover', 'viewOnMap')}
-                    >
-                      <Icon name="map" size={20} />
-                      <span>{t('placeDiscover', 'viewOnMap')}</span>
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
+          <section className="hg-stays" aria-labelledby="hg-grid-label-dining">
+            {mainListPlaces.map((p, i) => (
+              <StayCard
+                key={p.id}
+                place={p}
+                layout={stayLayoutForIndex(i)}
+                onMapClick={handleViewOnMap}
+                onAddToTrip={openAddToTrip}
+                viewDetailsLabel={t('home', 'viewDetails')}
+                mapAriaLabel={t('placeDiscover', 'viewOnMap')}
+                addToTripLabel={t('placeDiscover', 'addToTrip')}
+              />
+            ))}
           </section>
         )}
       </div>
 
-      <nav className="dg-dock" aria-label={t('diningGuide', 'dockLabel')}>
-        <Link to="/map" className="dg-dock__item">
+      <nav className="hg-dock" aria-label={t('diningGuide', 'dockLabel')}>
+        <Link to="/map" className="hg-dock__btn">
           <Icon name="map" size={22} aria-hidden />
-          <span className="dg-dock__label">{t('home', 'viewMap')}</span>
+          <span className="hg-dock__txt">{t('home', 'viewMap')}</span>
         </Link>
-        <Link to={COMMUNITY_PATH} className="dg-dock__item">
+        <Link to={COMMUNITY_PATH} className="hg-dock__btn">
           <Icon name="dynamic_feed" size={22} aria-hidden />
-          <span className="dg-dock__label">{t('nav', 'communityFeed')}</span>
+          <span className="hg-dock__txt">{t('nav', 'communityFeed')}</span>
         </Link>
-        <button type="button" className="dg-dock__item" onClick={scrollToFilters}>
+        <button type="button" className="hg-dock__btn" onClick={scrollToFilters}>
           <Icon name="tune" size={22} aria-hidden />
-          <span className="dg-dock__label">{t('diningGuide', 'openFilters')}</span>
+          <span className="hg-dock__txt">{t('diningGuide', 'openFilters')}</span>
         </button>
       </nav>
 
       {tripPickPlace && (
-        <div className="dg-modal-backdrop" role="presentation" onClick={closeTripModal}>
+        <div className="hg-sheet-bg" role="presentation" onClick={closeTripModal}>
           <div
-            className="dg-modal"
+            className="hg-sheet"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="dg-trip-modal-title"
+            aria-labelledby="hg-trip-title-dining"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="dg-modal-header">
-              <h2 id="dg-trip-modal-title" className="dg-modal-title">
+            <div className="hg-sheet__head">
+              <h2 id="hg-trip-title-dining" className="hg-sheet__h">
                 {t('placeDiscover', 'addToTripTitle')}
               </h2>
               <button
                 type="button"
-                className="dg-modal-close"
+                className="hg-sheet__x"
                 onClick={closeTripModal}
                 aria-label={t('placeDiscover', 'modalClose')}
               >
                 <Icon name="close" size={22} />
               </button>
             </div>
-            <p className="dg-modal-place-name">{tripPickPlace.name}</p>
-            <p className="dg-modal-hint">{t('placeDiscover', 'addToTripHint')}</p>
+            <p className="hg-sheet__place">{tripPickPlace.name}</p>
+            <p className="hg-sheet__hint">{t('placeDiscover', 'addToTripHint')}</p>
 
             {tripModalLoading ? (
-              <p className="dg-modal-loading">{t('placeDiscover', 'tripsLoading')}</p>
+              <p className="hg-sheet__wait">{t('placeDiscover', 'tripsLoading')}</p>
             ) : tripModalTrips.length === 0 ? (
-              <div className="dg-modal-empty">
+              <div className="hg-sheet__zero">
                 <p>{t('placeDiscover', 'addToTripEmpty')}</p>
-                <Link to="/plan" className="dg-modal-primary">
+                <Link to="/plan" className="hg-sheet__primary">
                   {t('home', 'createTrip')}
                 </Link>
               </div>
             ) : (
-              <ul className="dg-modal-trip-list">
+              <ul className="hg-sheet__trips">
                 {tripModalTrips.map((tr) => (
                   <li key={tr.id}>
                     <button
                       type="button"
-                      className="dg-modal-trip-row"
+                      className="hg-sheet__trip"
                       disabled={tripAddSaving}
                       onClick={() => addPlaceToTripFirstDay(tr)}
                     >
-                      <span className="dg-modal-trip-text">
-                        <span className="dg-modal-trip-name">{tr.name}</span>
-                        <span className="dg-modal-trip-dates">{formatTripRange(tr, locale)}</span>
+                      <span className="hg-sheet__trip-txt">
+                        <span className="hg-sheet__trip-name">{tr.name}</span>
+                        <span className="hg-sheet__trip-when">{formatTripRange(tr, locale)}</span>
                       </span>
-                      <Icon name="chevron_right" size={22} className="dg-modal-trip-chev" aria-hidden />
+                      <Icon name="chevron_right" size={22} className="hg-sheet__trip-go" aria-hidden />
                     </button>
                   </li>
                 ))}
               </ul>
             )}
 
-            <div className="dg-modal-footer">
-              <Link to="/plan" className="dg-modal-link">
+            <div className="hg-sheet__foot">
+              <Link to="/plan" className="hg-sheet__link">
                 {t('placeDiscover', 'goToPlan')}
               </Link>
             </div>
@@ -1063,14 +806,11 @@ export default function PlaceDining() {
         </div>
       )}
 
-      {toast && (
-        <div className={`dg-toast dg-toast--${toast.kind}`} role="status">
+      {toast ? (
+        <div className={`hg-snack hg-snack--${toast.kind}`} role="status">
           {toast.message}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
-
-
-

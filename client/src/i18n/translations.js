@@ -416,6 +416,8 @@ export const translations = {
       goToPlan: 'Open trip planner',
       sortViewGroupLabel: 'Sort and layout',
       resultsHeading: 'Places matching your filters',
+      exploreDining: 'Explore dining options',
+      exploreHotels: 'Browse hotels and stays',
     },
     diningGuide: {
       eyebrow: 'Eat & drink',
@@ -1769,6 +1771,8 @@ export const translations = {
       goToPlan: 'Ø§ÙØªØ­ Ù…Ø®Ø·Ù‘Ø· Ø§Ù„Ø±Ø­Ù„Ø§Øª',
       sortViewGroupLabel: 'Ø§Ù„ØªØ±ØªÙŠØ¨ ÙˆØ·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¹Ø±Ø¶',
       resultsHeading: 'Ø§Ù„Ø£Ù…Ø§ÙƒÙ† Ø§Ù„Ù…Ø·Ø§Ø¨Ù‚Ø© Ù„Ù„Ø¹ÙˆØ§Ù…Ù„',
+      exploreDining: 'Ø§Ø³ØªÙƒØ´Ù Ø®ÙŠØ§Ø±Ø§Øª Ø§Ù„Ù…Ø·Ø§Ø¹Ù…',
+      exploreHotels: 'ØªØµÙØ­ Ø§Ù„ÙÙ†Ø§Ø¯Ù‚ ÙˆØ§Ù„Ø¥Ù‚Ø§Ù…Ø©',
     },
     diningGuide: {
       eyebrow: 'Ø·Ø¹Ø§Ù… ÙˆØ´Ø±Ø§Ø¨',
@@ -3113,6 +3117,8 @@ export const translations = {
       goToPlan: 'Ouvrir le planificateur',
       sortViewGroupLabel: 'Tri et affichage',
       resultsHeading: 'Lieux correspondant Ã  vos filtres',
+      exploreDining: 'Explorer les restaurants',
+      exploreHotels: 'Parcourir hÃ´tels & hÃ©bergement',
     },
     diningGuide: {
       eyebrow: 'Boire & manger',
