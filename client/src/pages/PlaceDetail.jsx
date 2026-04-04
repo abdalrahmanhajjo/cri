@@ -858,6 +858,24 @@ export default function PlaceDetail() {
     [galleryUrls.length]
   );
 
+  const openExternalDirections = useCallback(() => {
+    const coords =
+      place?.coordinates ||
+      (place?.latitude != null && place?.longitude != null
+        ? { lat: Number(place.latitude), lng: Number(place.longitude) }
+        : null);
+    const address =
+      place?.diningProfile && typeof place.diningProfile === 'object'
+        ? String(place.diningProfile.contactAddress || place.diningProfile.address || '').trim()
+        : '';
+    const query = address || place?.location || place?.name || 'Tripoli Lebanon';
+    const url =
+      coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)
+        ? `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}`
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }, [place]);
+
   if (loading) {
     return (
       <div className="place-detail place-detail--loading">
@@ -1336,6 +1354,26 @@ export default function PlaceDetail() {
           {diningTab === 'contact' && (
             <div className="place-detail-app-contact-blocks">
               <div className="place-detail-app-contact-group">
+                {(diningProfile.contactAddress || place.location) && (
+                  <button type="button" onClick={openPlaceOnMap} className="place-detail-app-action-row">
+                    <div className="action-icon pin"><Icon name="location_on" size={24} /></div>
+                    <div className="action-text">
+                      <h4>{t('detail', 'viewOnMap') || 'See on map'}</h4>
+                      <span>{diningProfile.contactAddress || place.location}</span>
+                    </div>
+                    <Icon name="chevron_right" size={24} className="action-chevron" />
+                  </button>
+                )}
+                {(diningProfile.contactAddress || place.location || place.latitude != null || place.longitude != null) && (
+                  <button type="button" onClick={openExternalDirections} className="place-detail-app-action-row">
+                    <div className="action-icon map"><Icon name="directions" size={24} /></div>
+                    <div className="action-text">
+                      <h4>{t('detail', 'getDirections') || 'Get Directions'}</h4>
+                      <span>{diningProfile.contactAddress || place.location || 'Open in Maps'}</span>
+                    </div>
+                    <Icon name="chevron_right" size={24} className="action-chevron" />
+                  </button>
+                )}
                 {diningProfile.contactPhone && (
                   <a href={`tel:${diningProfile.contactPhone}`} className="place-detail-app-action-row">
                     <div className="action-icon call"><Icon name="call" size={24} /></div>
@@ -1346,14 +1384,25 @@ export default function PlaceDetail() {
                     <Icon name="chevron_right" size={24} className="action-chevron" />
                   </a>
                 )}
-                <button type="button" onClick={openPlaceOnMap} className="place-detail-app-action-row">
-                  <div className="action-icon map"><Icon name="directions" size={24} /></div>
-                  <div className="action-text">
-                    <h4>{t('detail', 'getDirections') || 'Get Directions'}</h4>
-                    <span>{diningProfile.contactAddress || place.location || 'View on Map'}</span>
+                {diningProfile.contactEmail && (
+                  <a href={`mailto:${diningProfile.contactEmail}`} className="place-detail-app-action-row">
+                    <div className="action-icon email"><Icon name="mail" size={24} /></div>
+                    <div className="action-text">
+                      <h4>{t('detail', 'email') || 'Email'}</h4>
+                      <span>{diningProfile.contactEmail}</span>
+                    </div>
+                    <Icon name="chevron_right" size={24} className="action-chevron" />
+                  </a>
+                )}
+                {(diningProfile.contactAddress || place.location) && (
+                  <div className="place-detail-app-action-row place-detail-app-action-row--static">
+                    <div className="action-icon info"><Icon name="info" size={24} /></div>
+                    <div className="action-text">
+                      <h4>{t('detail', 'location') || 'Location'}</h4>
+                      <span>{diningProfile.contactAddress || place.location}</span>
+                    </div>
                   </div>
-                  <Icon name="chevron_right" size={24} className="action-chevron" />
-                </button>
+                )}
                 {diningProfile.socialMedia?.website && (
                   <a href={diningProfile.socialMedia.website} target="_blank" rel="noreferrer" className="place-detail-app-action-row">
                     <div className="action-icon web"><Icon name="language" size={24} /></div>
@@ -1369,6 +1418,16 @@ export default function PlaceDetail() {
                     <div className="action-icon insta"><Icon name="photo_camera" size={24} /></div>
                     <div className="action-text">
                       <h4>Instagram</h4>
+                      <span>{t('detail', 'viewProfile') || 'View Profile'}</span>
+                    </div>
+                    <Icon name="chevron_right" size={24} className="action-chevron" />
+                  </a>
+                )}
+                {diningProfile.socialMedia?.facebook && (
+                  <a href={diningProfile.socialMedia.facebook} target="_blank" rel="noreferrer" className="place-detail-app-action-row">
+                    <div className="action-icon facebook"><Icon name="thumb_up" size={24} /></div>
+                    <div className="action-text">
+                      <h4>Facebook</h4>
                       <span>{t('detail', 'viewProfile') || 'View Profile'}</span>
                     </div>
                     <Icon name="chevron_right" size={24} className="action-chevron" />

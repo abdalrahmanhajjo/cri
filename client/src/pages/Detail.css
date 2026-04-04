@@ -3044,6 +3044,9 @@
   text-align: left;
   width: 100%;
 }
+.place-detail-app-action-row--static {
+  cursor: default;
+}
 .place-detail-app-action-row:active {
   transform: scale(0.98);
 }
@@ -3058,9 +3061,13 @@
   flex-shrink: 0;
 }
 .place-detail-app-action-row .action-icon.call { background: #34C759; }
+.place-detail-app-action-row .action-icon.pin { background: #5b8def; }
 .place-detail-app-action-row .action-icon.map { background: #007AFF; }
+.place-detail-app-action-row .action-icon.email { background: #8e44ad; }
+.place-detail-app-action-row .action-icon.info { background: #6b7280; }
 .place-detail-app-action-row .action-icon.web { background: #FF9500; }
 .place-detail-app-action-row .action-icon.insta { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+.place-detail-app-action-row .action-icon.facebook { background: #1877f2; }
 
 .place-detail-app-action-row .action-text {
   flex: 1;
