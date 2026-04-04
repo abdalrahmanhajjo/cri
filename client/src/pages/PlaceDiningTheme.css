@@ -1,0 +1,259 @@
+/**
+ * Dining guide — warm burgundy / terracotta / honey (replaces hotels’ blue-slate look).
+ * Loaded after PlaceHotels.css; scoped to .hg-page--dining only.
+ */
+
+.hg-page--dining {
+  --hg-night: #3d1510;
+  --hg-night-mid: #5c2018;
+  --hg-slate: #6b4a42;
+  --hg-mist: #fff5eb;
+  --hg-gold: #e8a849;
+  --hg-gold-soft: #ffd8a8;
+  --hg-ice: #fffbf8;
+  color: var(--hg-night);
+  background: linear-gradient(180deg, #fffbf8 0%, #fff4ec 48%, #fdeee4 100%);
+}
+
+/* Hero: wine / ember (no blue #243152) */
+.hg-page--dining .hg-hero {
+  background: linear-gradient(155deg, #2a0c0a 0%, #4a1510 38%, #6b2218 72%, #3d100c 100%);
+}
+
+.hg-page--dining .hg-hero--loading {
+  background: linear-gradient(155deg, #2a0c0a 0%, #4a1510 100%);
+}
+
+.hg-page--dining .hg-hero__mesh {
+  opacity: 0.4;
+  background:
+    radial-gradient(ellipse 78% 52% at 18% 0%, rgba(232, 168, 73, 0.32), transparent 52%),
+    radial-gradient(ellipse 58% 42% at 86% 28%, rgba(255, 190, 140, 0.14), transparent 46%),
+    radial-gradient(ellipse 50% 60% at 50% 100%, rgba(180, 60, 40, 0.12), transparent 55%);
+}
+
+.hg-page--dining .hg-hero__sub {
+  color: rgba(255, 245, 235, 0.9);
+}
+
+.hg-page--dining .hg-hero__btn--gold {
+  background: linear-gradient(135deg, #f0b24a 0%, #c45c2e 100%);
+  border-color: rgba(255, 220, 180, 0.45);
+  color: #2c0f0a;
+  box-shadow: 0 10px 28px rgba(40, 10, 8, 0.45);
+}
+
+.hg-page--dining .hg-hero__btn--gold:hover {
+  color: #2c0f0a;
+  box-shadow: 0 14px 36px rgba(40, 10, 8, 0.5);
+}
+
+.hg-page--dining .hg-hero__btn--ghost {
+  border-color: rgba(255, 230, 210, 0.28);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.hg-page--dining .hg-global-search {
+  --gs-border: rgba(232, 168, 73, 0.42);
+  --gs-bg: rgba(45, 14, 12, 0.48);
+}
+
+.hg-page--dining .hg-hero--loading .hg-skel--title,
+.hg-page--dining .hg-hero--loading .hg-skel--search {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Section headings */
+.hg-page--dining .hg-section-title {
+  color: var(--hg-night);
+  letter-spacing: -0.02em;
+}
+
+.hg-page--dining .hg-section-title::after {
+  content: '';
+  display: block;
+  width: 48px;
+  height: 3px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #c45c2e, #e8a849);
+  opacity: 0.88;
+}
+
+/* Sponsored rail */
+.hg-page--dining .hg-sponsored {
+  margin-bottom: 40px;
+}
+
+.hg-page--dining .hg-sponsored-track__cell {
+  scroll-snap-align: start;
+}
+
+/* Pick cards */
+.hg-page--dining .hg-pick-card {
+  border-color: rgba(196, 92, 62, 0.18);
+  box-shadow: 0 12px 32px rgba(58, 22, 16, 0.09);
+}
+
+.hg-page--dining .hg-pick-card:hover {
+  box-shadow: 0 20px 44px rgba(58, 22, 16, 0.14);
+}
+
+.hg-page--dining .hg-pick-card__visual {
+  background: linear-gradient(145deg, #fdeee4, #f0d4c4);
+}
+
+.hg-page--dining .hg-pick-card__score {
+  background: rgba(45, 14, 12, 0.88);
+  color: var(--hg-gold-soft);
+  border: 1px solid rgba(232, 168, 73, 0.25);
+}
+
+/* Toolbar */
+.hg-page--dining .hg-toolbar {
+  border-color: rgba(196, 92, 62, 0.12);
+  box-shadow: 0 8px 28px rgba(58, 22, 16, 0.06);
+}
+
+.hg-page--dining .hg-toolbar__chips {
+  border-bottom-color: rgba(196, 92, 62, 0.1);
+}
+
+.hg-page--dining .hg-toolbar__label {
+  color: #9a4a38;
+}
+
+.hg-page--dining .hg-pill {
+  border-color: rgba(120, 60, 48, 0.16);
+  background: #fff;
+}
+
+.hg-page--dining .hg-pill:hover {
+  border-color: rgba(232, 168, 73, 0.55);
+  background: #fffbf8;
+}
+
+.hg-page--dining .hg-pill--active {
+  background: linear-gradient(145deg, #5c2018 0%, #3d1510 100%);
+  color: var(--hg-gold-soft);
+  border-color: #3d1510;
+}
+
+.hg-page--dining .hg-sort-select {
+  border-color: rgba(120, 60, 48, 0.16);
+  background: #fff;
+}
+
+.hg-page--dining .hg-meta-count {
+  color: var(--hg-slate);
+}
+
+/* Stay / dining cards */
+.hg-page--dining .hg-stay-card {
+  border-color: rgba(196, 92, 62, 0.22);
+  box-shadow: 0 8px 26px rgba(58, 22, 16, 0.07);
+}
+
+.hg-page--dining .hg-stay-card:hover {
+  box-shadow: 0 18px 42px rgba(58, 22, 16, 0.12);
+}
+
+.hg-page--dining .hg-stay-card__media {
+  background: linear-gradient(160deg, #fdeee4, #e8d0c4);
+}
+
+.hg-page--dining .hg-stay-card__frame {
+  background: linear-gradient(to top, rgba(45, 14, 12, 0.45) 0%, transparent 42%);
+}
+
+.hg-page--dining .hg-stay-card__rating {
+  border-color: rgba(232, 168, 73, 0.4);
+  color: var(--hg-night);
+}
+
+.hg-page--dining .hg-stay-card__cta {
+  color: #b4532a;
+}
+
+.hg-page--dining .hg-stay-card__actions {
+  border-top-color: rgba(196, 92, 62, 0.1);
+}
+
+.hg-page--dining .hg-stay-card__btn {
+  background: linear-gradient(180deg, #fffbf8 0%, #fdeee4 100%);
+  color: var(--hg-night);
+}
+
+.hg-page--dining .hg-stay-card__btn:hover {
+  background: #fce8dc;
+}
+
+.hg-page--dining .hg-stay-card__btn--trip {
+  border-inline-end-color: rgba(196, 92, 62, 0.12);
+}
+
+/* Dock */
+.hg-page--dining .hg-dock {
+  background: rgba(255, 251, 248, 0.96);
+  border-top-color: rgba(196, 92, 62, 0.15);
+  box-shadow: 0 -10px 32px rgba(58, 22, 16, 0.1);
+}
+
+.hg-page--dining .hg-dock__btn:hover {
+  background: rgba(232, 168, 73, 0.14);
+  color: var(--hg-night);
+}
+
+/* Trip sheet */
+.hg-page--dining .hg-sheet-bg {
+  background: rgba(35, 12, 10, 0.5);
+}
+
+.hg-page--dining .hg-sheet {
+  border-color: rgba(196, 92, 62, 0.14);
+  box-shadow: 0 28px 64px rgba(40, 14, 12, 0.22);
+}
+
+.hg-page--dining .hg-sheet__x {
+  background: rgba(120, 60, 48, 0.08);
+}
+
+.hg-page--dining .hg-sheet__trip {
+  border-color: rgba(120, 60, 48, 0.12);
+  background: var(--hg-ice);
+}
+
+.hg-page--dining .hg-sheet__trip:hover:not(:disabled) {
+  border-color: rgba(232, 168, 73, 0.45);
+}
+
+.hg-page--dining .hg-sheet__primary {
+  background: linear-gradient(135deg, #f0b24a 0%, #c45c2e 100%);
+  color: #2c0f0a;
+}
+
+.hg-page--dining .hg-sheet__link {
+  color: #a63d1f;
+}
+
+.hg-page--dining .hg-sheet__foot {
+  border-top-color: rgba(196, 92, 62, 0.1);
+}
+
+/* Toast + misc */
+.hg-page--dining .hg-snack--info {
+  border-color: rgba(196, 92, 62, 0.14);
+}
+
+.hg-page--dining .hg-btn-secondary {
+  background: linear-gradient(135deg, #f0b24a 0%, #c45c2e 100%);
+  color: #2c0f0a;
+}
+
+.hg-page--dining .hg-btn-secondary:hover {
+  color: #2c0f0a;
+}
+
+.hg-page--dining .hg-skel--card {
+  background: rgba(196, 92, 62, 0.12);
+}

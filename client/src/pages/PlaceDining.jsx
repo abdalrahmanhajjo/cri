@@ -14,6 +14,7 @@ import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripD
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import './PlaceHotels.css';
+import './PlaceDiningTheme.css';
 
 function formatTripRange(trip, locale) {
   const a = trip.startDate ? new Date(trip.startDate) : null;
@@ -491,7 +492,7 @@ export default function PlaceDining() {
 
   if (siteSettingsLoading) {
     return (
-      <div className="hg-page" role="main">
+      <div className="hg-page hg-page--dining" role="main">
         <header className="hg-hero hg-hero--loading">
           <div className="hg-hero__inner">
             <div className="hg-skel hg-skel--title" />
@@ -515,7 +516,7 @@ export default function PlaceDining() {
 
   if (loading) {
     return (
-      <div className="hg-page" role="main">
+      <div className="hg-page hg-page--dining" role="main">
         <header className="hg-hero hg-hero--loading">
           <div className="hg-hero__inner">
             <div className="hg-skel hg-skel--title" />
@@ -535,7 +536,7 @@ export default function PlaceDining() {
 
   if (error) {
     return (
-      <div className="hg-page" role="main">
+      <div className="hg-page hg-page--dining" role="main">
         <div className="hg-container hg-error-wrap">
           <p className="hg-error" role="alert">
             {error}
@@ -549,7 +550,7 @@ export default function PlaceDining() {
   }
 
   return (
-    <div className="hg-page" role="main">
+    <div className="hg-page hg-page--dining" role="main">
       <header
         className={`hg-hero${heroImageResolved ? ' hg-hero--photo' : ''}`}
         aria-labelledby="hg-hero-title"
