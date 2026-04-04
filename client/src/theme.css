@@ -236,9 +236,7 @@
   color: var(--color-text-primary);
 }
 
-:root[data-theme="dark"] .pd-hero-grid,
-:root[data-theme="dark"] .pd-hero-action,
-:root[data-theme="dark"] .pd-hero-action:hover {
+:root[data-theme="dark"] .pd-hero-grid {
   background: rgba(255, 255, 255, 0.06);
 }
 

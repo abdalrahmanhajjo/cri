@@ -554,12 +554,6 @@ export default function PlaceDiscover() {
               )}
             </div>
           )}
-          <div className="pd-hero-actions" aria-label={t('placeDiscover', 'quickActionsLabel')}>
-            <Link to="/map" className="pd-hero-action">
-              <Icon name="map" size={20} aria-hidden />
-              <span>{t('home', 'viewMap')}</span>
-            </Link>
-          </div>
         </div>
       </header>
 
