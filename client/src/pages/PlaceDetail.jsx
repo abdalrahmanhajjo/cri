@@ -885,6 +885,195 @@ export default function PlaceDetail() {
     </div>
   );
 
+              const contactContent = (
+                <div className="place-detail-dining-contact-layout">
+                  <article className="place-detail-dining-card place-detail-dining-card--contact-details" style={{ border: '2px solid rgba(0,0,0,0.05)', backgroundColor: 'transparent' }}>
+                    <div className="place-detail-dining-card-icon" aria-hidden="true" style={{ backgroundColor: 'var(--te-primary)', color: '#fff' }}>
+                      <Icon name="event_seat" size={24} />
+                    </div>
+                    <h3>{t('detail', 'diningBookingTitle') || 'Reservation & Booking'}</h3>
+                    <p style={{ marginBottom: '24px' }}>{diningProfile.reservationNotes || t('detail', 'diningContactLead')}</p>
+                    
+                    <form className="place-detail-contact-form" onSubmit={submitInquiry} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {!user && (
+                        <>
+                          <label className="place-detail-review-field">
+                            <span>{t('detail', 'inquiryName') || 'Your Name'}</span>
+                            <input type="text" required value={guestName} onChange={e => setGuestName(e.target.value)} />
+                          </label>
+                          <label className="place-detail-review-field">
+                            <span>{t('detail', 'inquiryEmail') || 'Email'}</span>
+                            <input type="email" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} />
+                          </label>
+                        </>
+                      )}
+                      <label className="place-detail-review-field">
+                        <span>{t('detail', 'inquiryPhone') || 'Phone'}</span>
+                        <input type="tel" required value={guestPhone} onChange={e => setGuestPhone(e.target.value)} />
+                      </label>
+                      <label className="place-detail-review-field">
+                        <span>{t('detail', 'inquiryMessage') || 'Special Requests / Notes'}</span>
+                        <textarea required value={inqMessage} onChange={e => setInqMessage(e.target.value)} rows={3} />
+                      </label>
+                      <button type="submit" className="place-detail-btn place-detail-btn--primary" disabled={inqSending} style={{ marginTop: '8px' }}>
+                        <Icon name="send" size={20} />
+                        {inqSending ? t('detail', 'inquirySending') || 'Sending...' : t('detail', 'inquirySubmit') || 'Request Booking'}
+                      </button>
+                      {inqStatus === 'sent' && <p className="place-detail-toast-inline">{t('detail', 'inquirySent') || 'Your request was sent successfully!'}</p>}
+                    </form>
+                  </article>
+
+                  <div className="place-detail-dining-grid">
+                    <article className="place-detail-dining-card">
+                      <div className="place-detail-dining-contact-list">
+                        <div className="place-detail-dining-contact-row">
+                          <Icon name="location_on" size={18} />
+                          <span>{diningProfile.contactAddress || place.location || translationOr(t, 'detail', 'location', 'Location')}</span>
+                        </div>
+                        {diningProfile.contactPhone ? (
+                          <div className="place-detail-dining-contact-row">
+                            <Icon name="call" size={18} />
+                            <a href={`tel:${diningProfile.contactPhone}`}>{diningProfile.contactPhone}</a>
+                          </div>
+                        ) : null}
+                        {diningProfile.contactEmail ? (
+                          <div className="place-detail-dining-contact-row">
+                            <Icon name="mail" size={18} />
+                            <a href={`mailto:${diningProfile.contactEmail}`}>{diningProfile.contactEmail}</a>
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="place-detail-dining-contact-actions" style={{ marginTop: '24px' }}>
+                        <button type="button" className="place-detail-btn place-detail-btn--secondary" onClick={openPlaceOnMap} style={{ width: '100%', justifyContent: 'center' }}>
+                          <Icon name="map" size={18} />
+                          {t('detail', 'diningMapCta')}
+                        </button>
+                      </div>
+                    </article>
+                    
+                    <article className="place-detail-dining-card">
+                      <div className="place-detail-dining-card-icon" aria-hidden="true">
+                        <Icon name="schedule" size={22} />
+                      </div>
+                      <h3>{t('detail', 'openingHours')}</h3>
+                      <p>{hoursStr || t('detail', 'diningContactHoursFallback')}</p>
+                    </article>
+                  </div>
+                </div>
+              );
+
+  if (isDining) {
+    const totersHeroUrl = galleryUrls[0] || null;
+    return (
+      <div className="place-detail-app">
+        <header className="place-detail-app-hero">
+          <div className="place-detail-app-hero-media">
+            {totersHeroUrl ? (
+              <img src={totersHeroUrl} alt={place.name} className="place-detail-app-hero-img" {...getDeliveryImgProps(totersHeroUrl, 'detailHero')} />
+            ) : (
+              <div className="place-detail-app-hero-fallback"><Icon name="restaurant" size={40} /></div>
+            )}
+            <div className="place-detail-app-hero-overlay" />
+            <Link to="/" className="place-detail-app-back-btn"><Icon name="arrow_back" size={24} /></Link>
+            <div className="place-detail-app-hero-actions">
+              <button type="button" className={`place-detail-app-hero-action ${isFavourite ? 'on' : ''}`} onClick={toggleFavourite}>
+                <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={24} />
+              </button>
+              <button type="button" className="place-detail-app-hero-action" onClick={handleShare}><Icon name="share" size={24} /></button>
+            </div>
+          </div>
+          
+          <div className="place-detail-app-info-card">
+            <div className="place-detail-app-info-header">
+              <h1 className="place-detail-app-name">{place.name}</h1>
+              <LiveStatus hours={place.hours} t={t} />
+            </div>
+            <div className="place-detail-app-meta">
+              {place.rating != null && place.rating > 0 && <div className="place-detail-app-rating"><Icon name="star" size={16} /><span>{Number(place.rating).toFixed(1)}</span></div>}
+              <div className="place-detail-app-dot" />
+              <span className="place-detail-app-cuisines">{diningSummary.cuisines.slice(0, 2).join(', ')}</span>
+              {place.price && <><div className="place-detail-app-dot" /><span className="place-detail-app-price">{place.price}</span></>}
+            </div>
+          </div>
+        </header>
+
+        <nav className="place-detail-app-tabs">
+          <div className="place-detail-app-tabs-scroll">
+            {diningTabs.map(tab => (
+              <button key={tab.id} type="button" className={`place-detail-app-tab ${diningTab === tab.id ? 'active' : ''}`} onClick={() => setDiningTab(tab.id)}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        <main className="place-detail-app-main-content">
+          {diningTab === 'overview' && (
+            <div className="place-detail-app-overview">
+              <section className="place-detail-app-section">
+                <h3>{t('detail', 'description') || 'About'}</h3>
+                <p>{place.description}</p>
+                <div className="place-detail-app-tags">
+                  {diningSummary.cuisines.map(c => <span key={c} className="place-detail-app-tag">{c}</span>)}
+                  {diningSummary.features.map(f => <span key={f} className="place-detail-app-tag alt">{f}</span>)}
+                </div>
+              </section>
+              
+              <section className="place-detail-app-section hours-section">
+                <h3>{t('detail', 'openingHours') || 'Opening Hours'}</h3>
+                <div className="place-detail-app-hours">
+                  {hoursEntries.map((e) => (
+                    <div key={e.key} className="place-detail-app-hour-row">
+                      <span className="day">{e.label}</span>
+                      <span className="time">{e.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="place-detail-app-section">
+                <h3>{t('detail', 'location') || 'Location'}</h3>
+                <p className="place-detail-app-address">{place.location}</p>
+                <button className="place-detail-app-map-btn" onClick={openPlaceOnMap}>
+                  <Icon name="directions" size={18} /> {t('detail', 'viewOnMap') || 'View on Map'}
+                </button>
+              </section>
+            </div>
+          )}
+
+          {diningTab === 'menu' && (
+            <div className="place-detail-app-menu">
+              {diningProfile.menuSections?.length > 0 ? (
+                diningProfile.menuSections.map(section => (
+                  <section key={section.title} className="place-detail-app-menu-section">
+                    <h4>{section.title}</h4>
+                    <div className="place-detail-app-menu-items">
+                      {section.items.map(item => (
+                        <div key={item.name} className="place-detail-app-menu-item">
+                          <div className="info">
+                            <span className="name">{item.name}</span>
+                            <span className="desc">{item.description}</span>
+                            <span className="price">{item.price}</span>
+                          </div>
+                          <button className="add-btn"><Icon name="add" size={20} /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))
+              ) : (
+                <div className="place-detail-app-empty">{t('detail', 'menuEmpty') || 'Menu not available yet'}</div>
+              )}
+            </div>
+          )}
+
+          {diningTab === 'reviews' && reviewsContent}
+          {diningTab === 'contact' && contactContent}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="place-detail">
       <div className="place-detail-container">
@@ -1242,82 +1431,7 @@ export default function PlaceDetail() {
 
               {diningTab === 'reviews' && reviewsContent}
 
-              {diningTab === 'contact' && (
-                <div className="place-detail-dining-contact-layout">
-                  <article className="place-detail-dining-card place-detail-dining-card--contact-details" style={{ border: '2px solid rgba(0,0,0,0.05)', backgroundColor: 'transparent' }}>
-                    <div className="place-detail-dining-card-icon" aria-hidden="true" style={{ backgroundColor: 'var(--te-primary)', color: '#fff' }}>
-                      <Icon name="event_seat" size={24} />
-                    </div>
-                    <h3>{t('detail', 'diningBookingTitle') || 'Reservation & Booking'}</h3>
-                    <p style={{ marginBottom: '24px' }}>{diningProfile.reservationNotes || t('detail', 'diningContactLead')}</p>
-                    
-                    <form className="place-detail-contact-form" onSubmit={submitInquiry} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {!user && (
-                        <>
-                          <label className="place-detail-review-field">
-                            <span>{t('detail', 'inquiryName') || 'Your Name'}</span>
-                            <input type="text" required value={guestName} onChange={e => setGuestName(e.target.value)} />
-                          </label>
-                          <label className="place-detail-review-field">
-                            <span>{t('detail', 'inquiryEmail') || 'Email'}</span>
-                            <input type="email" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} />
-                          </label>
-                        </>
-                      )}
-                      <label className="place-detail-review-field">
-                        <span>{t('detail', 'inquiryPhone') || 'Phone'}</span>
-                        <input type="tel" required value={guestPhone} onChange={e => setGuestPhone(e.target.value)} />
-                      </label>
-                      <label className="place-detail-review-field">
-                        <span>{t('detail', 'inquiryMessage') || 'Special Requests / Notes'}</span>
-                        <textarea required value={inqMessage} onChange={e => setInqMessage(e.target.value)} rows={3} />
-                      </label>
-                      <button type="submit" className="place-detail-btn place-detail-btn--primary" disabled={inqSending} style={{ marginTop: '8px' }}>
-                        <Icon name="send" size={20} />
-                        {inqSending ? t('detail', 'inquirySending') || 'Sending...' : t('detail', 'inquirySubmit') || 'Request Booking'}
-                      </button>
-                      {inqStatus === 'sent' && <p className="place-detail-toast-inline">{t('detail', 'inquirySent') || 'Your request was sent successfully!'}</p>}
-                    </form>
-                  </article>
-
-                  <div className="place-detail-dining-grid">
-                    <article className="place-detail-dining-card">
-                      <div className="place-detail-dining-contact-list">
-                        <div className="place-detail-dining-contact-row">
-                          <Icon name="location_on" size={18} />
-                          <span>{diningProfile.contactAddress || place.location || translationOr(t, 'detail', 'location', 'Location')}</span>
-                        </div>
-                        {diningProfile.contactPhone ? (
-                          <div className="place-detail-dining-contact-row">
-                            <Icon name="call" size={18} />
-                            <a href={`tel:${diningProfile.contactPhone}`}>{diningProfile.contactPhone}</a>
-                          </div>
-                        ) : null}
-                        {diningProfile.contactEmail ? (
-                          <div className="place-detail-dining-contact-row">
-                            <Icon name="mail" size={18} />
-                            <a href={`mailto:${diningProfile.contactEmail}`}>{diningProfile.contactEmail}</a>
-                          </div>
-                        ) : null}
-                      </div>
-                      <div className="place-detail-dining-contact-actions" style={{ marginTop: '24px' }}>
-                        <button type="button" className="place-detail-btn place-detail-btn--secondary" onClick={openPlaceOnMap} style={{ width: '100%', justifyContent: 'center' }}>
-                          <Icon name="map" size={18} />
-                          {t('detail', 'diningMapCta')}
-                        </button>
-                      </div>
-                    </article>
-                    
-                    <article className="place-detail-dining-card">
-                      <div className="place-detail-dining-card-icon" aria-hidden="true">
-                        <Icon name="schedule" size={22} />
-                      </div>
-                      <h3>{t('detail', 'openingHours')}</h3>
-                      <p>{hoursStr || t('detail', 'diningContactHoursFallback')}</p>
-                    </article>
-                  </div>
-                </div>
-              )}
+              {diningTab === 'contact' && contactContent}
               </div>
             </section>
           )}
