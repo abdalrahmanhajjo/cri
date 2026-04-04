@@ -270,7 +270,7 @@ function PlaceCard({ place, size }) {
   );
 }
 
-function TopPicksCarousel({ places, t }) {
+function TopPicksCarousel({ places, t, moreTo }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -360,8 +360,18 @@ function TopPicksCarousel({ places, t }) {
     <section className="vd-section vd-top-picks">
       <div className="vd-container">
         <header className="vd-top-picks-header">
-          <h2 className="vd-top-picks-title">{t('home', 'topPicks')}</h2>
-          <p className="vd-top-picks-subtitle">{t('home', 'topPicksSub')}</p>
+          <div className="vd-top-picks-header-row">
+            <div className="vd-top-picks-heading-text">
+              <h2 className="vd-top-picks-title">{t('home', 'topPicks')}</h2>
+              <p className="vd-top-picks-subtitle">{t('home', 'topPicksSub')}</p>
+            </div>
+            {moreTo ? (
+              <Link to={moreTo} className="vd-community-feed-more">
+                {t('discover', 'seeAllDiscover')}
+                <Icon name="arrow_forward" size={18} />
+              </Link>
+            ) : null}
+          </div>
         </header>
         <div
           className="vd-top-picks-carousel"
@@ -1183,7 +1193,7 @@ export default function Explore() {
 
       {/* Featured picks first; community feed directly below */}
       {topPicks.length > 0 && (
-        <TopPicksCarousel places={topPicks} t={t} />
+        <TopPicksCarousel places={topPicks} t={t} moreTo={PLACES_DISCOVER_PATH} />
       )}
 
       {sponsoredHomeEnabled && sponsoredHome.length > 0 && (
