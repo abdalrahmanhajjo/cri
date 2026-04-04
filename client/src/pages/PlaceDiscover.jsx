@@ -117,6 +117,11 @@ function DiscoverCard({
   );
 }
 
+function getDefaultDiscoverViewMode() {
+  if (typeof window === 'undefined') return 'grid';
+  return window.matchMedia('(max-width: 767px)').matches ? 'list' : 'grid';
+}
+
 export default function PlaceDiscover() {
   const { t, lang } = useLanguage();
   const { user } = useAuth();
@@ -135,7 +140,7 @@ export default function PlaceDiscover() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState(() => getDefaultDiscoverViewMode());
   const [qDraft, setQDraft] = useState(qParam);
   const [tripPickPlace, setTripPickPlace] = useState(null);
   const [tripModalTrips, setTripModalTrips] = useState([]);
@@ -148,6 +153,7 @@ export default function PlaceDiscover() {
 
   const searchParamsRef = useRef(searchParams);
   searchParamsRef.current = searchParams;
+  const hasManualViewChoice = useRef(false);
 
   const showToast = useCallback((message, kind = 'info') => {
     setToast({ message, kind });
@@ -159,6 +165,23 @@ export default function PlaceDiscover() {
   useEffect(() => {
     setQDraft(qParam);
   }, [qParam]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const media = window.matchMedia('(max-width: 767px)');
+    const syncDefaultView = () => {
+      if (!hasManualViewChoice.current) {
+        setViewMode(media.matches ? 'list' : 'grid');
+      }
+    };
+    syncDefaultView();
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', syncDefaultView);
+      return () => media.removeEventListener('change', syncDefaultView);
+    }
+    media.addListener(syncDefaultView);
+    return () => media.removeListener(syncDefaultView);
+  }, []);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -543,7 +566,10 @@ export default function PlaceDiscover() {
                   <button
                     type="button"
                     className={`pd-view-btn ${viewMode === 'grid' ? 'pd-view-btn--on' : ''}`}
-                    onClick={() => setViewMode('grid')}
+                    onClick={() => {
+                      hasManualViewChoice.current = true;
+                      setViewMode('grid');
+                    }}
                     aria-pressed={viewMode === 'grid'}
                     aria-label={t('home', 'spotsViewGrid')}
                   >
@@ -552,7 +578,10 @@ export default function PlaceDiscover() {
                   <button
                     type="button"
                     className={`pd-view-btn ${viewMode === 'list' ? 'pd-view-btn--on' : ''}`}
-                    onClick={() => setViewMode('list')}
+                    onClick={() => {
+                      hasManualViewChoice.current = true;
+                      setViewMode('list');
+                    }}
                     aria-pressed={viewMode === 'list'}
                     aria-label={t('home', 'spotsViewList')}
                   >
