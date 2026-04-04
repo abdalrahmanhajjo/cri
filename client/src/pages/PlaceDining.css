@@ -33,7 +33,7 @@
 .dg-hero {
   position: relative;
   overflow: hidden;
-  padding: 128px 0 34px;
+  padding: clamp(24px, 4vw, 42px) 0 28px;
   background: linear-gradient(145deg, #211814 0%, #3f2418 62%, #6c3521 100%);
   color: #fff;
 }
@@ -991,8 +991,8 @@
 
 @media (max-width: 760px) {
   .dg-hero {
-    padding-top: 108px;
-    padding-bottom: 26px;
+    padding-top: 20px;
+    padding-bottom: 22px;
   }
 
   .dg-hero__content {
