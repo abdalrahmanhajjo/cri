@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import api, { getPlaceImageUrl, getImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
@@ -113,93 +113,6 @@ function localDiningCopy(lang, t) {
     mapCta: pick('heroMapCta', 'Open map'),
     discoverCta: pick('browseDiscover', 'Browse full guide'),
   };
-}
-function BentoCard({ place, layout, onMapClick, onAddToTrip, viewDetailsLabel, mapAriaLabel, addToTripLabel, copy }) {
-  const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
-  const rating = place.rating != null ? Number(place.rating).toFixed(1) : null;
-  const signals = diningSignals(place);
-  const topFacts = [...signals.cuisines, ...signals.bestFor].slice(0, 3);
-  const serviceSummary = signals.serviceModes.slice(0, 2);
-  return (
-    <article className={`dg-bento-card dg-bento-card--${layout}`}>
-      <Link to={`/place/${place.id}`} className="dg-bento-card__main">
-        <div className="dg-bento-card__media">
-          {img ? (
-            <DeliveryImg url={img} preset="gridCard" alt="" />
-          ) : (
-            <span className="dg-bento-card__fallback">
-              <Icon name="restaurant" size={32} />
-            </span>
-          )}
-          <div className="dg-bento-card__scrim" aria-hidden />
-          {rating ? (
-            <span className="dg-bento-card__rating">
-              <Icon name="star" size={14} /> {rating}
-            </span>
-          ) : null}
-        </div>
-        <div className="dg-bento-card__body">
-          <h3 className="dg-bento-card__title">{place.name}</h3>
-          {place.location ? <p className="dg-bento-card__loc">{place.location}</p> : null}
-          {topFacts.length > 0 ? (
-            <div className="dg-bento-card__chips" aria-label={copy.smartReasons}>
-              {topFacts.map((item) => (
-                <span key={`${place.id}-${item}`} className="dg-bento-card__chip">
-                  {item}
-                </span>
-              ))}
-            </div>
-          ) : null}
-          <div className="dg-bento-card__meta">
-            <span className="dg-bento-card__meta-item">
-              <Icon name="menu_book" size={14} aria-hidden />
-              <span>{signals.hasMenu ? copy.menuReady : copy.menuSoon}</span>
-            </span>
-            {serviceSummary.length > 0 ? (
-              <span className="dg-bento-card__meta-item">
-                <Icon name="room_service" size={14} aria-hidden />
-                <span>{serviceSummary.join(' · ')}</span>
-              </span>
-            ) : null}
-          </div>
-          <span className="dg-bento-card__cta">
-            <span>{viewDetailsLabel}</span>
-            <Icon name="arrow_forward" size={18} aria-hidden />
-          </span>
-        </div>
-      </Link>
-      <div className="dg-bento-card__actions">
-        {onAddToTrip ? (
-          <button
-            type="button"
-            className="dg-bento-card__btn dg-bento-card__btn--trip"
-            onClick={() => onAddToTrip(place)}
-            aria-label={addToTripLabel}
-          >
-            <Icon name="event_note" size={18} aria-hidden />
-          </button>
-        ) : null}
-        {onMapClick ? (
-          <button
-            type="button"
-            className="dg-bento-card__btn dg-bento-card__btn--map"
-            onClick={() => onMapClick(place)}
-            aria-label={mapAriaLabel}
-          >
-            <Icon name="map" size={18} aria-hidden />
-          </button>
-        ) : null}
-      </div>
-    </article>
-  );
-}
-
-function bentoLayoutForIndex(i) {
-  const r = i % 7;
-  if (r === 0) return 'hero';
-  if (r === 1 || r === 4) return 'wide';
-  if (r === 2) return 'tall';
-  return 'std';
 }
 
 export default function PlaceDining() {
@@ -705,6 +618,25 @@ export default function PlaceDining() {
               onQueryChange={setQDraft}
             />
           </div>
+          <div className="dg-hero-cats" role="group" aria-label="Quick category filter">
+            <button
+              type="button"
+              className={`dg-hero-cat ${!fcatParam ? 'dg-hero-cat--on' : ''}`}
+              onClick={() => setParam('fcat', '')}
+            >
+              All
+            </button>
+            {foodCategories.slice(0, 10).map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`dg-hero-cat ${String(fcatParam) === String(c.id) ? 'dg-hero-cat--on' : ''}`}
+                onClick={() => setParam('fcat', String(fcatParam) === String(c.id) ? '' : String(c.id))}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -942,20 +874,77 @@ export default function PlaceDining() {
         {mainListPlaces.length === 0 ? (
           <p className="dg-empty">{t('home', 'noSpots')}</p>
         ) : (
-          <section className="dg-bento" aria-labelledby="dg-collection-title">
-            {mainListPlaces.map((p, i) => (
-                <BentoCard
-                  key={p.id}
-                  place={p}
-                  layout={bentoLayoutForIndex(i)}
-                  onMapClick={handleViewOnMap}
-                  onAddToTrip={openAddToTrip}
-                  viewDetailsLabel={t('home', 'viewDetails')}
-                  mapAriaLabel={t('placeDiscover', 'viewOnMap')}
-                  addToTripLabel={t('placeDiscover', 'addToTrip')}
-                  copy={copy}
-                />
-            ))}
+          <section className="dg-place-list" aria-labelledby="dg-collection-title">
+            {mainListPlaces.map((place) => {
+              const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
+              const rating = place.rating != null ? Number(place.rating).toFixed(1) : null;
+              const signals = diningSignals(place);
+              const chips = [...signals.cuisines, ...signals.bestFor].slice(0, 3);
+              return (
+                <article key={place.id} className="dg-place-row">
+                  <Link to={`/place/${place.id}`} className="dg-place-row__link">
+                    <div className="dg-place-row__img">
+                      {img ? (
+                        <DeliveryImg url={img} preset="gridCard" alt="" />
+                      ) : (
+                        <span className="dg-place-row__fallback"><Icon name="restaurant" size={32} /></span>
+                      )}
+                      {rating && (
+                        <span className="dg-place-row__rating">
+                          <Icon name="star" size={12} /> {rating}
+                        </span>
+                      )}
+                    </div>
+                    <div className="dg-place-row__body">
+                      <h3 className="dg-place-row__name">{place.name}</h3>
+                      {place.location && (
+                        <p className="dg-place-row__loc">
+                          <Icon name="location_on" size={12} />
+                          {place.location}
+                        </p>
+                      )}
+                      {chips.length > 0 && (
+                        <div className="dg-place-row__chips">
+                          {chips.map(c => <span key={c} className="dg-place-row__chip">{c}</span>)}
+                        </div>
+                      )}
+                      <div className="dg-place-row__meta">
+                        {signals.serviceModes.slice(0, 2).map(mode => (
+                          <span key={mode}>
+                            <Icon name="room_service" size={12} /> {mode}
+                          </span>
+                        ))}
+                        {signals.hasMenu && (
+                          <span>
+                            <Icon name="menu_book" size={12} /> {copy.menuReady}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                  <div className="dg-place-row__actions">
+                    {openAddToTrip && (
+                      <button
+                        type="button"
+                        className="dg-place-row__btn"
+                        onClick={() => openAddToTrip(place)}
+                        aria-label={t('placeDiscover', 'addToTrip')}
+                      >
+                        <Icon name="event_note" size={20} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="dg-place-row__btn"
+                      onClick={() => handleViewOnMap(place)}
+                      aria-label={t('placeDiscover', 'viewOnMap')}
+                    >
+                      <Icon name="map" size={20} />
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </section>
         )}
       </div>
