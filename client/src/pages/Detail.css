@@ -2563,6 +2563,29 @@
   inset: 0;
   background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.7) 100%);
 }
+.place-detail-app-hero-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 9;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.88);
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  cursor: pointer;
+}
+.place-detail-app-hero-nav--prev {
+  left: 18px;
+}
+.place-detail-app-hero-nav--next {
+  right: 18px;
+}
 .place-detail-app-back-btn {
   position: absolute;
   top: 20px;
@@ -2606,6 +2629,49 @@
 }
 .place-detail-app-hero-action.on {
   color: #ff4d4f;
+}
+.place-detail-app-hero-gallery-ui {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 18px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.place-detail-app-hero-gallery-count {
+  border: none;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.place-detail-app-hero-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.34);
+}
+.place-detail-app-hero-dot {
+  width: 8px;
+  height: 8px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.45);
+  padding: 0;
+  cursor: pointer;
+}
+.place-detail-app-hero-dot--on {
+  width: 22px;
+  border-radius: 999px;
+  background: #fff;
 }
 .place-detail-app-info-card {
   position: relative;
@@ -2739,6 +2805,43 @@
 .place-detail-app-tag.alt {
   background: #eef9f2;
   color: #1b8a4a;
+}
+.place-detail-app-section--actions {
+  border: 1px solid rgba(39, 174, 96, 0.12);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%);
+}
+.place-detail-app-primary-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.place-detail-app-primary-btn {
+  min-height: 54px;
+  border: 1px solid #ece9e2;
+  border-radius: 16px;
+  background: #fff;
+  color: #1a1a1a;
+  font-weight: 700;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+}
+.place-detail-app-primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+}
+.place-detail-app-primary-btn--booking {
+  background: #27ae60;
+  color: #fff;
+  border-color: #27ae60;
+}
+.place-detail-app-primary-btn--ghost {
+  background: #f7f8fa;
 }
 .place-detail-app-hours {
   display: flex;
@@ -2978,4 +3081,109 @@
 .place-detail-app-action-row .action-chevron {
   color: var(--te-text-muted);
   opacity: 0.6;
+}
+
+.place-detail-app-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  background: rgba(0,0,0,0.48);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.place-detail-app-modal {
+  width: min(100%, 560px);
+  background: #fff;
+  border-radius: 28px 28px 0 0;
+  padding: 20px;
+  box-shadow: 0 -20px 50px rgba(0,0,0,0.22);
+}
+.place-detail-app-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.place-detail-app-modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+.place-detail-app-modal-close {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 999px;
+  background: #f3f4f6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.place-detail-app-modal-place {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.place-detail-app-modal-hint,
+.place-detail-app-modal-loading {
+  margin: 0 0 14px;
+  color: #666;
+}
+.place-detail-app-modal-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.place-detail-app-modal-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border-radius: 16px;
+  background: #27ae60;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+}
+.place-detail-app-trip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.place-detail-app-trip-item {
+  width: 100%;
+  min-height: 58px;
+  border: 1px solid #ece9e2;
+  border-radius: 18px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  cursor: pointer;
+  text-align: left;
+}
+.place-detail-app-trip-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+.place-detail-app-trip-arrow {
+  color: #777;
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (max-width: 767px) {
+  .place-detail-app-primary-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .place-detail-app-hero-nav {
+    display: none;
+  }
 }

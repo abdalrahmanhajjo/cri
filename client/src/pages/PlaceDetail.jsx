@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/client';
 import Icon from '../components/Icon';
@@ -9,6 +9,13 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
+import {
+  getDayCount,
+  ensureDaysArray,
+  toDateOnly,
+  sortPlacesForItinerary,
+  tripDaysPlaceIdsOnlyToPayload,
+} from '../utils/tripPlannerHelpers';
 import './Detail.css';
 
 /** Resolved, unique image URLs for gallery (primary `image` + `images[]`). */
@@ -306,6 +313,11 @@ export default function PlaceDetail() {
   const [reviewMsg, setReviewMsg] = useState(null);
   const [reviewsOpen, setReviewsOpen] = useState(false);
   const [diningTab, setDiningTab] = useState('overview');
+  const [tripPickPlace, setTripPickPlace] = useState(null);
+  const [tripModalTrips, setTripModalTrips] = useState([]);
+  const [tripModalLoading, setTripModalLoading] = useState(false);
+  const [tripAddSaving, setTripAddSaving] = useState(false);
+  const heroTouchStartX = useRef(null);
 
   const myReview = useMemo(() => placeReviews.find((r) => r.isYours), [placeReviews]);
 
@@ -420,6 +432,29 @@ export default function PlaceDetail() {
   useEffect(() => {
     if (user?.email) setGuestEmail(user.email);
   }, [user?.email]);
+
+  useEffect(() => {
+    if (!tripPickPlace || !user) {
+      setTripModalTrips([]);
+      return;
+    }
+    let cancelled = false;
+    setTripModalLoading(true);
+    api.user
+      .trips()
+      .then((res) => {
+        if (!cancelled) setTripModalTrips(Array.isArray(res.trips) ? res.trips : []);
+      })
+      .catch(() => {
+        if (!cancelled) setTripModalTrips([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTripModalLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tripPickPlace, user]);
 
   useEffect(() => {
     if (!id) {
@@ -730,6 +765,99 @@ export default function PlaceDetail() {
     });
   }, [place, user, navigate, location.pathname, location.search, location.hash]);
 
+  const openAddToTrip = useCallback(() => {
+    if (!place) return;
+    const returnTo = `${location.pathname}${location.search}${location.hash || ''}`;
+    if (!user) {
+      navigate('/login', { state: { from: returnTo } });
+      return;
+    }
+    setTripPickPlace(place);
+  }, [place, user, navigate, location.pathname, location.search, location.hash]);
+
+  const closeTripModal = useCallback(() => {
+    setTripPickPlace(null);
+  }, []);
+
+  const addPlaceToTripFirstDay = useCallback(
+    async (trip) => {
+      if (!tripPickPlace || tripAddSaving) return;
+      const start = toDateOnly(trip.startDate);
+      const end = toDateOnly(trip.endDate);
+      const dayCount = getDayCount(start || trip.startDate, end || trip.endDate);
+      const days = ensureDaysArray(trip.days, dayCount);
+      const idStr = String(tripPickPlace.id);
+      const firstIds = days[0]?.placeIds || [];
+      if (firstIds.includes(idStr)) {
+        showToast(t('placeDiscover', 'addToTripAlready'), 'info');
+        closeTripModal();
+        return;
+      }
+      const mergedIds = sortPlacesForItinerary([...firstIds, idStr], { [idStr]: tripPickPlace });
+      const newDaysPlaceIds = [
+        { placeIds: mergedIds },
+        ...days.slice(1).map((d) => ({ placeIds: [...(d?.placeIds || [])] })),
+      ];
+      const newDays = tripDaysPlaceIdsOnlyToPayload(newDaysPlaceIds, start || toDateOnly(trip.startDate));
+
+      setTripAddSaving(true);
+      try {
+        await api.user.updateTrip(trip.id, { days: newDays });
+        showToast((t('placeDiscover', 'addToTripSuccess') || '').replace('{name}', trip.name || ''), 'success');
+        closeTripModal();
+      } catch (err) {
+        showToast(err?.message || t('placeDiscover', 'addToTripFailed'), 'error');
+      } finally {
+        setTripAddSaving(false);
+      }
+    },
+    [tripPickPlace, tripAddSaving, showToast, t, closeTripModal]
+  );
+
+  useEffect(() => {
+    if (!tripPickPlace) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') closeTripModal();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tripPickPlace, closeTripModal]);
+
+  const handleBookingAction = useCallback(() => {
+    const phone =
+      place?.diningProfile && typeof place.diningProfile === 'object'
+        ? String(place.diningProfile.contactPhone || place.diningProfile.phone || '').trim()
+        : '';
+    setInquiryIntent('booking');
+    setDiningTab('contact');
+    const scrollToProposal = () => {
+      const el = document.getElementById('place-proposal');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    if (phone) {
+      window.location.href = `tel:${phone}`;
+      return;
+    }
+    requestAnimationFrame(scrollToProposal);
+  }, [place]);
+
+  const handleHeroTouchStart = useCallback((e) => {
+    heroTouchStartX.current = e.touches?.[0]?.clientX ?? null;
+  }, []);
+
+  const handleHeroTouchEnd = useCallback(
+    (e) => {
+      const startX = heroTouchStartX.current;
+      const endX = e.changedTouches?.[0]?.clientX ?? null;
+      heroTouchStartX.current = null;
+      if (startX == null || endX == null || galleryUrls.length < 2) return;
+      const deltaX = endX - startX;
+      if (Math.abs(deltaX) < 40) return;
+      setGalleryIndex((i) => (deltaX < 0 ? (i + 1) % galleryUrls.length : (i - 1 + galleryUrls.length) % galleryUrls.length));
+    },
+    [galleryUrls.length]
+  );
+
   if (loading) {
     return (
       <div className="place-detail place-detail--loading">
@@ -1006,17 +1134,41 @@ export default function PlaceDetail() {
   );
 
   if (isDining) {
-    const totersHeroUrl = galleryUrls[0] || null;
+    const totersHeroUrl = heroUrl;
     return (
       <div className="place-detail-app">
         <header className="place-detail-app-hero">
-          <div className="place-detail-app-hero-media">
+          <div
+            className="place-detail-app-hero-media"
+            onTouchStart={handleHeroTouchStart}
+            onTouchEnd={handleHeroTouchEnd}
+          >
             {totersHeroUrl ? (
               <img src={totersHeroUrl} alt={place.name} className="place-detail-app-hero-img" {...getDeliveryImgProps(totersHeroUrl, 'detailHero')} />
             ) : (
               <div className="place-detail-app-hero-fallback"><Icon name="restaurant" size={40} /></div>
             )}
             <div className="place-detail-app-hero-overlay" />
+            {hasMultiGallery && (
+              <>
+                <button
+                  type="button"
+                  className="place-detail-app-hero-nav place-detail-app-hero-nav--prev"
+                  onClick={() => setGalleryIndex((i) => (i - 1 + galleryUrls.length) % galleryUrls.length)}
+                  aria-label={t('detail', 'previousPhoto')}
+                >
+                  <Icon name="chevron_left" size={24} />
+                </button>
+                <button
+                  type="button"
+                  className="place-detail-app-hero-nav place-detail-app-hero-nav--next"
+                  onClick={() => setGalleryIndex((i) => (i + 1) % galleryUrls.length)}
+                  aria-label={t('detail', 'nextPhoto')}
+                >
+                  <Icon name="chevron_right" size={24} />
+                </button>
+              </>
+            )}
             <Link to="/" className="place-detail-app-back-btn"><Icon name="arrow_back" size={24} /></Link>
             <div className="place-detail-app-hero-actions">
               <button type="button" className={`place-detail-app-hero-action ${isFavourite ? 'on' : ''}`} onClick={toggleFavourite}>
@@ -1024,6 +1176,29 @@ export default function PlaceDetail() {
               </button>
               <button type="button" className="place-detail-app-hero-action" onClick={handleShare}><Icon name="share" size={24} /></button>
             </div>
+            {hasMultiGallery && (
+              <div className="place-detail-app-hero-gallery-ui">
+                <button
+                  type="button"
+                  className="place-detail-app-hero-gallery-count"
+                  onClick={() => openLightbox(galleryIndex)}
+                >
+                  {galleryIndex + 1} / {galleryUrls.length}
+                </button>
+                <div className="place-detail-app-hero-dots" role="tablist" aria-label={t('detail', 'gallery')}>
+                  {galleryUrls.map((url, index) => (
+                    <button
+                      key={url}
+                      type="button"
+                      role="tab"
+                      aria-selected={index === galleryIndex}
+                      className={`place-detail-app-hero-dot ${index === galleryIndex ? 'place-detail-app-hero-dot--on' : ''}`}
+                      onClick={() => setGalleryIndex(index)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="place-detail-app-info-card">
@@ -1053,6 +1228,29 @@ export default function PlaceDetail() {
         <main className="place-detail-app-main-content">
           {diningTab === 'overview' && (
             <div className="place-detail-app-overview">
+              <section className="place-detail-app-section place-detail-app-section--actions">
+                <h3>{t('detail', 'diningBestForTitle') || 'Best for your plan'}</h3>
+                <div className="place-detail-app-primary-actions">
+                  <button type="button" className="place-detail-app-primary-btn place-detail-app-primary-btn--booking" onClick={handleBookingAction}>
+                    <Icon name="event_available" size={18} />
+                    <span>{t('detail', 'intentBooking') || 'Booking / reservation'}</span>
+                  </button>
+                  <button type="button" className="place-detail-app-primary-btn" onClick={openAddToTrip}>
+                    <Icon name="event_note" size={18} />
+                    <span>{t('placeDiscover', 'addToTrip') || 'Add to trip'}</span>
+                  </button>
+                  <button type="button" className="place-detail-app-primary-btn place-detail-app-primary-btn--ghost" onClick={openPlaceOnMap}>
+                    <Icon name="map" size={18} />
+                    <span>{t('detail', 'viewOnMap') || 'View on map'}</span>
+                  </button>
+                </div>
+                {diningSignals.length > 0 && (
+                  <div className="place-detail-app-tags">
+                    {diningSignals.slice(0, 6).map((item) => <span key={item} className="place-detail-app-tag alt">{item}</span>)}
+                  </div>
+                )}
+              </section>
+
               <section className="place-detail-app-section">
                 <h3>{t('detail', 'description') || 'About'}</h3>
                 <p>{place.description}</p>
@@ -1156,6 +1354,61 @@ export default function PlaceDetail() {
             </div>
           )}
         </main>
+
+        {tripPickPlace && (
+          <div className="place-detail-app-modal-backdrop" role="presentation" onClick={closeTripModal}>
+            <div
+              className="place-detail-app-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="place-detail-trip-modal-title"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="place-detail-app-modal-header">
+                <h2 id="place-detail-trip-modal-title" className="place-detail-app-modal-title">
+                  {t('placeDiscover', 'addToTripTitle')}
+                </h2>
+                <button
+                  type="button"
+                  className="place-detail-app-modal-close"
+                  onClick={closeTripModal}
+                  aria-label={t('placeDiscover', 'modalClose') || 'Close'}
+                >
+                  <Icon name="close" size={22} />
+                </button>
+              </div>
+              <p className="place-detail-app-modal-place">{tripPickPlace.name}</p>
+              <p className="place-detail-app-modal-hint">{t('placeDiscover', 'addToTripHint')}</p>
+              {tripModalLoading ? (
+                <p className="place-detail-app-modal-loading">{t('placeDiscover', 'tripsLoading')}</p>
+              ) : tripModalTrips.length === 0 ? (
+                <div className="place-detail-app-modal-empty">
+                  <p>{t('placeDiscover', 'addToTripEmpty')}</p>
+                  <Link to="/plan" className="place-detail-app-modal-primary" onClick={closeTripModal}>
+                    {t('home', 'createTrip')}
+                  </Link>
+                </div>
+              ) : (
+                <div className="place-detail-app-trip-list">
+                  {tripModalTrips.map((trip) => (
+                    <button
+                      key={trip.id}
+                      type="button"
+                      className="place-detail-app-trip-item"
+                      onClick={() => addPlaceToTripFirstDay(trip)}
+                      disabled={tripAddSaving}
+                    >
+                      <span className="place-detail-app-trip-name">{trip.name}</span>
+                      <span className="place-detail-app-trip-arrow">
+                        {tripAddSaving ? '…' : <Icon name="chevron_right" size={18} />}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
