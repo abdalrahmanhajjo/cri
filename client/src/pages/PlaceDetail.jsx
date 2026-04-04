@@ -1279,6 +1279,30 @@ export default function PlaceDetail() {
                   <Icon name="directions" size={18} /> {t('detail', 'viewOnMap') || 'View on Map'}
                 </button>
               </section>
+
+              {promotions.length > 0 && (
+                <section className="place-detail-app-section">
+                  <h3>{t('detail', 'offersTitle') || 'Coupons & offers'}</h3>
+                  <div className="offer-card-scope">
+                    <div className="ig-offer-list">
+                      {promotions.map((pr, i) => (
+                        <OfferCard
+                          key={pr.id}
+                          item={pr}
+                          index={i}
+                          showPlaceLink={false}
+                          t={t}
+                          user={user}
+                          redeemedPromotionIds={redeemedPromotionIds}
+                          onRedeemed={(promoId) =>
+                            setRedeemedPromotionIds((prev) => (prev.includes(promoId) ? prev : [...prev, promoId]))
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              )}
             </div>
           )}
 
