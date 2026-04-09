@@ -351,10 +351,159 @@
   flex-shrink: 0;
 }
 
+.trip-detail-section--users {
+  margin-bottom: 22px;
+}
+
+.trip-detail-users-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.trip-detail-user-row {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--color-surface);
+}
+
+.trip-detail-user-main {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.trip-detail-user-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.trip-detail-user-username {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.trip-detail-user-role {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated, #f6f6f6);
+}
+
+.trip-detail-user-role--host {
+  color: var(--color-primary-dark, #0f766e);
+  border-color: rgba(15, 118, 110, 0.35);
+  background: rgba(15, 118, 110, 0.12);
+}
+
 .trip-detail-error-msg {
   margin: 16px 0 0;
   color: var(--color-error, #b91c1c);
   font-weight: 600;
+}
+
+.trip-share-request-form {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-elevated, #fafafa);
+  display: grid;
+  gap: 10px;
+}
+
+.trip-share-request-field {
+  display: grid;
+  gap: 6px;
+}
+
+.trip-share-request-field span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.trip-share-request-field input,
+.trip-share-request-field textarea {
+  width: 100%;
+  font: inherit;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background);
+  padding: 10px 12px;
+}
+
+.trip-share-request-field textarea {
+  resize: vertical;
+}
+
+.trip-share-request-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.trip-share-request-hint,
+.trip-share-request-selected {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.trip-share-request-suggestions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  max-height: 220px;
+  overflow: auto;
+}
+
+.trip-share-request-suggestion {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--color-border);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  padding: 9px 12px;
+  display: grid;
+  gap: 2px;
+}
+
+.trip-share-request-suggestions li:first-child .trip-share-request-suggestion {
+  border-top: none;
+}
+
+.trip-share-request-suggestion:hover {
+  background: rgba(15, 118, 110, 0.05);
+}
+
+.trip-share-request-suggestion-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.trip-share-request-suggestion-username {
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 
 @media (max-width: 520px) {

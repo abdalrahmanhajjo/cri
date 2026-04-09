@@ -735,3 +735,96 @@
     font-size: 12px;
   }
 }
+
+/* Flat style mode for Activities: remove decorative color effects */
+.activities-hub {
+  background: var(--color-background, #fafaf9);
+}
+
+.activities-hub-hero,
+.activities-hub--experiences .activities-hub-hero {
+  background: var(--color-background, #fafaf9);
+  border-bottom: 1px solid var(--color-border, #e7e5e4);
+}
+
+.activities-hub-hero::after,
+.activities-hub-tab::before,
+.activities-hub-panel::before,
+.activities-hub-card::after,
+.activities-hub-results-meta::before {
+  display: none;
+}
+
+.activities-hub-tabs {
+  background: var(--color-surface, #fff);
+  border-color: var(--color-border, #e7e5e4);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.activities-hub-tab:hover {
+  background: var(--color-surface-variant, #f5f5f4);
+}
+
+.activities-hub-tab--active {
+  background: var(--color-primary, #0d9488);
+  box-shadow: none;
+}
+
+.activities-hub-intro-pill {
+  background: var(--color-surface, #fff);
+  border-color: var(--color-border, #e7e5e4);
+  box-shadow: none;
+}
+
+.activities-hub-panel {
+  background: var(--color-surface, #fff);
+  border-color: var(--color-border, #e7e5e4);
+  box-shadow: none;
+}
+
+.activities-hub-panel-head {
+  border-bottom: 1px solid var(--color-border, #e7e5e4);
+}
+
+.activities-hub-toolbar {
+  background: var(--color-surface, #fff);
+  border-color: var(--color-border, #e7e5e4);
+  box-shadow: none;
+}
+
+.activities-hub-search,
+.activities-hub-select {
+  border-color: var(--color-border, #e7e5e4);
+  background: var(--color-background, #fafaf9);
+}
+
+.activities-hub-card {
+  border-color: var(--color-border, #e7e5e4);
+  box-shadow: none;
+}
+
+.activities-hub-card:hover,
+.activities-hub-card:focus-visible {
+  box-shadow: none;
+}
+
+.activities-hub-footer-cta .vd-btn {
+  box-shadow: none;
+}
+
+:root[data-theme="dark"] .activities-hub,
+:root[data-theme="dark"] .activities-hub-hero,
+:root[data-theme="dark"] .activities-hub--experiences .activities-hub-hero {
+  background: var(--color-background);
+}
+
+:root[data-theme="dark"] .activities-hub-tabs,
+:root[data-theme="dark"] .activities-hub-toolbar,
+:root[data-theme="dark"] .activities-hub-panel,
+:root[data-theme="dark"] .activities-hub-intro-pill,
+:root[data-theme="dark"] .activities-hub-card {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: none;
+}

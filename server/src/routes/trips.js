@@ -10,6 +10,12 @@ function generateTripId() {
   return `trip_${t}_${r}`;
 }
 
+function generateTripShareRequestId() {
+  const t = Date.now();
+  const r = crypto.randomBytes(6).toString('hex');
+  return `tsr_${t}_${r}`;
+}
+
 const router = express.Router();
 router.use(authMiddleware);
 
@@ -75,6 +81,107 @@ function normalizeDays(raw) {
   });
 }
 
+function usernameNormalize(raw) {
+  return String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/, '')
+    .replace(/\s+/g, '');
+}
+
+function escapeRegex(raw) {
+  return String(raw || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function getUserPreviewById(userId) {
+  const usersColl = await getCollection('users');
+  const user = await usersColl.findOne({ id: userId });
+  if (!user) return null;
+  const profile = user.profile || {};
+  return {
+    id: user.id,
+    username: profile.username || '',
+    name: user.name || '',
+  };
+}
+
+async function getUserPreviewByUsername(rawUsername) {
+  const handle = usernameNormalize(rawUsername);
+  if (!handle) return null;
+  const usersColl = await getCollection('users');
+  const user = await usersColl.findOne({ 'profile.username_normalized': handle });
+  if (!user) return null;
+  const profile = user.profile || {};
+  return {
+    id: user.id,
+    username: profile.username || '',
+    name: user.name || '',
+  };
+}
+
+function mapShareRequestForClient(row, currentUserId) {
+  const trip = row.trip_snapshot || {};
+  const fromUser = row.from_user || {};
+  const toUser = row.to_user || {};
+  const days = normalizeDays(trip.days || []);
+  const stopCount = days.reduce((acc, d) => acc + (Array.isArray(d.slots) ? d.slots.length : 0), 0);
+  return {
+    id: row.id,
+    status: row.status || 'pending',
+    message: row.message || '',
+    createdAt: row.created_at || null,
+    respondedAt: row.responded_at || null,
+    respondedBy: row.responded_by || null,
+    isIncoming: String(row.to_user_id) === String(currentUserId),
+    fromUser: {
+      id: fromUser.id || row.from_user_id,
+      name: fromUser.name || '',
+      username: fromUser.username || '',
+    },
+    toUser: {
+      id: toUser.id || row.to_user_id,
+      name: toUser.name || '',
+      username: toUser.username || '',
+    },
+    trip: {
+      id: trip.id || row.trip_id,
+      name: trip.name || 'Trip',
+      startDate: trip.startDate || '',
+      endDate: trip.endDate || '',
+      description: trip.description || '',
+      days,
+      dayCount: days.length,
+      stopCount,
+    },
+  };
+}
+
+async function buildTripUsersPayload(tripRow) {
+  const hostId = tripRow.shared_from_user_id || tripRow.user_id;
+  const hostUser = await getUserPreviewById(hostId);
+  const users = [];
+  if (hostUser) users.push({ ...hostUser, role: 'host' });
+
+  if (tripRow.shared_from_user_id) {
+    const owner = await getUserPreviewById(tripRow.user_id);
+    if (owner && String(owner.id) !== String(hostId)) users.push({ ...owner, role: 'member' });
+    return { users, hostUserId: hostId };
+  }
+
+  const requestsColl = await getCollection('trip_share_requests');
+  const acceptedRows = await requestsColl
+    .find({ trip_id: tripRow.id, status: 'accepted' })
+    .project({ to_user_id: 1 })
+    .toArray();
+  const memberIds = [...new Set(acceptedRows.map((r) => r.to_user_id).filter(Boolean))];
+  for (const memberId of memberIds) {
+    if (String(memberId) === String(hostId)) continue;
+    const member = await getUserPreviewById(memberId);
+    if (member) users.push({ ...member, role: 'member' });
+  }
+  return { users, hostUserId: hostId };
+}
+
 router.get('/trips', async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -105,6 +212,7 @@ router.get('/trips/:id', async (req, res) => {
     const row = await tripsColl.findOne({ id: tripId, user_id: userId });
     
     if (!row) return res.status(404).json({ error: 'Trip not found' });
+    const membership = await buildTripUsersPayload(row);
     res.json({
       id: row.id,
       name: row.name,
@@ -113,6 +221,10 @@ router.get('/trips/:id', async (req, res) => {
       description: row.description,
       days: normalizeDays(row.days),
       createdAt: row.created_at,
+      isHost: String(membership.hostUserId) === String(userId),
+      users: membership.users,
+      hostUserId: membership.hostUserId,
+      sharedFromUserId: row.shared_from_user_id || null,
     });
   } catch (err) {
     console.error(err);
@@ -227,6 +339,216 @@ router.delete('/trips/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Delete failed' });
+  }
+});
+
+router.get('/trip-share-requests', async (req, res) => {
+  const userId = req.user.userId;
+  const box = String(req.query?.box || 'inbox').toLowerCase();
+  const status = String(req.query?.status || 'all').toLowerCase();
+  const isSent = box === 'sent';
+  const statusFilter = ['pending', 'accepted', 'rejected', 'cancelled'].includes(status) ? status : 'all';
+
+  try {
+    const requestsColl = await getCollection('trip_share_requests');
+    const query = isSent ? { from_user_id: userId } : { to_user_id: userId };
+    if (statusFilter !== 'all') query.status = statusFilter;
+    const rows = await requestsColl.find(query).sort({ created_at: -1 }).limit(200).toArray();
+    const requests = rows.map((row) => mapShareRequestForClient(row, userId));
+    res.json({ requests });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load share requests' });
+  }
+});
+
+router.get('/trip-share-users', async (req, res) => {
+  const userId = req.user.userId;
+  const qRaw = String(req.query?.q || '').trim();
+  if (qRaw.length < 2) return res.json({ users: [] });
+  try {
+    const usersColl = await getCollection('users');
+    const q = escapeRegex(qRaw);
+    const rx = new RegExp(q, 'i');
+    const rows = await usersColl
+      .find({
+        id: { $ne: userId },
+        $or: [
+          { name: rx },
+          { 'profile.username': rx },
+          { 'profile.username_normalized': rx },
+          { email: rx },
+        ],
+      })
+      .project({ id: 1, name: 1, email: 1, profile: 1 })
+      .limit(12)
+      .toArray();
+    const users = rows.map((u) => ({
+      id: u.id,
+      name: u.name || '',
+      username: u.profile?.username || '',
+      email: u.email || '',
+    }));
+    res.json({ users });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to search users' });
+  }
+});
+
+router.post('/trip-share-requests', async (req, res) => {
+  const userId = req.user.userId;
+  const tripId = req.body?.tripId != null ? String(req.body.tripId) : '';
+  const recipientUserId = req.body?.recipientUserId != null ? String(req.body.recipientUserId) : '';
+  const recipientUsername = req.body?.recipientUsername != null ? String(req.body.recipientUsername) : '';
+  const messageRaw = req.body?.message != null ? String(req.body.message) : '';
+  const message = messageRaw.trim().slice(0, 1200);
+  if (!tripId) return res.status(400).json({ error: 'tripId required' });
+  if (!recipientUsername.trim() && !recipientUserId.trim()) {
+    return res.status(400).json({ error: 'recipient required' });
+  }
+
+  try {
+    const tripsColl = await getCollection('trips');
+    const requestsColl = await getCollection('trip_share_requests');
+    const trip = await tripsColl.findOne({ id: tripId, user_id: userId });
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+    if (trip.shared_from_user_id) {
+      return res.status(403).json({ error: 'Only the trip host can send share requests' });
+    }
+
+    let recipient = null;
+    if (recipientUserId.trim()) recipient = await getUserPreviewById(recipientUserId.trim());
+    if (!recipient && recipientUsername.trim()) recipient = await getUserPreviewByUsername(recipientUsername);
+    if (!recipient) return res.status(404).json({ error: 'Recipient not found' });
+    if (String(recipient.id) === String(userId)) {
+      return res.status(400).json({ error: 'Cannot send a share request to yourself' });
+    }
+
+    const sender = await getUserPreviewById(userId);
+    if (!sender) return res.status(404).json({ error: 'Sender not found' });
+
+    const existingPending = await requestsColl.findOne({
+      from_user_id: userId,
+      to_user_id: recipient.id,
+      trip_id: tripId,
+      status: 'pending',
+    });
+    if (existingPending) {
+      return res.status(409).json({ error: 'A pending request already exists for this user and trip' });
+    }
+
+    const row = {
+      id: generateTripShareRequestId(),
+      trip_id: trip.id,
+      from_user_id: userId,
+      to_user_id: recipient.id,
+      status: 'pending',
+      message,
+      created_at: new Date(),
+      responded_at: null,
+      responded_by: null,
+      from_user: sender,
+      to_user: recipient,
+      trip_snapshot: {
+        id: trip.id,
+        name: trip.name || 'Trip',
+        startDate: trip.start_date || '',
+        endDate: trip.end_date || '',
+        description: trip.description || '',
+        days: normalizeDays(trip.days || []).map((d) => ({
+          date: d.date,
+          slots: d.slots,
+        })),
+      },
+    };
+    await requestsColl.insertOne(row);
+    res.status(201).json(mapShareRequestForClient(row, userId));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to send share request' });
+  }
+});
+
+router.post('/trip-share-requests/:id/respond', async (req, res) => {
+  const userId = req.user.userId;
+  const requestId = req.params.id;
+  const decision = String(req.body?.decision || '').toLowerCase();
+  if (!['accept', 'reject'].includes(decision)) {
+    return res.status(400).json({ error: "decision must be 'accept' or 'reject'" });
+  }
+
+  try {
+    const requestsColl = await getCollection('trip_share_requests');
+    const tripsColl = await getCollection('trips');
+    const row = await requestsColl.findOne({ id: requestId, to_user_id: userId });
+    if (!row) return res.status(404).json({ error: 'Share request not found' });
+    if (row.status !== 'pending') return res.status(409).json({ error: 'Share request already decided' });
+
+    if (decision === 'reject') {
+      await requestsColl.updateOne(
+        { id: requestId },
+        { $set: { status: 'rejected', responded_at: new Date(), responded_by: userId } }
+      );
+      const updated = await requestsColl.findOne({ id: requestId });
+      return res.json({ request: mapShareRequestForClient(updated, userId) });
+    }
+
+    const snap = row.trip_snapshot || {};
+    const startDate = toYmdDb(snap.startDate || '');
+    const endDate = toYmdDb(snap.endDate || '');
+    if (!startDate || !endDate) {
+      return res.status(422).json({ error: 'Shared trip data is incomplete' });
+    }
+    if (startDate > endDate) {
+      return res.status(422).json({ error: 'Shared trip date range is invalid' });
+    }
+
+    const overlaps = await findOverlappingTrips(userId, startDate, endDate, null);
+    if (overlaps.length > 0) {
+      return res.status(409).json({
+        error: 'Cannot accept due to date overlap with your existing trips',
+        conflicts: overlaps.map((o) => ({ id: o.id, name: o.name })),
+      });
+    }
+
+    const sharedTrip = {
+      id: generateTripId(),
+      user_id: userId,
+      name: snap.name ? `${snap.name} (Shared)` : 'Shared Trip',
+      start_date: startDate,
+      end_date: endDate,
+      description: snap.description || null,
+      days: normalizeDays(snap.days || []).map((d) => ({ date: d.date, slots: d.slots })),
+      created_at: new Date(),
+      shared_from_user_id: row.from_user_id,
+      shared_from_request_id: row.id,
+    };
+    await tripsColl.insertOne(sharedTrip);
+    await requestsColl.updateOne(
+      { id: requestId },
+      {
+        $set: {
+          status: 'accepted',
+          responded_at: new Date(),
+          responded_by: userId,
+          accepted_trip_id: sharedTrip.id,
+        },
+      }
+    );
+    const updated = await requestsColl.findOne({ id: requestId });
+    res.json({
+      request: mapShareRequestForClient(updated, userId),
+      acceptedTrip: {
+        id: sharedTrip.id,
+        name: sharedTrip.name,
+        startDate: sharedTrip.start_date,
+        endDate: sharedTrip.end_date,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to process share request' });
   }
 });
 

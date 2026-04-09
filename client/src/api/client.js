@@ -743,6 +743,18 @@ export const api = {
     createTrip: (data) => api.post('/api/user/trips', data),
     updateTrip: (id, data) => api.patch(`/api/user/trips/${id}`, data),
     deleteTrip: (id) => api.delete(`/api/user/trips/${id}`),
+    tripShareRequests: (params) => {
+      const qs = new URLSearchParams();
+      if (params?.box) qs.set('box', String(params.box));
+      if (params?.status) qs.set('status', String(params.status));
+      const q = qs.toString();
+      return api.get(`/api/user/trip-share-requests${q ? `?${q}` : ''}`);
+    },
+    sendTripShareRequest: (body) => api.post('/api/user/trip-share-requests', body || {}),
+    respondTripShareRequest: (requestId, decision) =>
+      api.post(`/api/user/trip-share-requests/${encodeURIComponent(requestId)}/respond`, { decision }),
+    searchTripShareUsers: (q) =>
+      api.get(`/api/user/trip-share-users?q=${encodeURIComponent(String(q || ''))}`),
     favourites: () => api.get('/api/user/favourites'),
     addFavourite: (placeId) => api.post('/api/user/favourites', { placeId }),
     removeFavourite: (placeId) => api.delete(`/api/user/favourites/${placeId}`),

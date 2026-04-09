@@ -103,6 +103,295 @@
   gap: 10px 12px;
 }
 
+.plan-page .plan-share-requests-panel {
+  margin-bottom: 22px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--plan-border, #d6d3d1) 82%, var(--plan-accent, #0f766e) 18%);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--plan-accent, #0f766e) 4%, var(--plan-surface, #fff)) 0%, var(--plan-surface, #fff) 44%),
+    var(--plan-surface, #fff);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 14px 30px rgba(15, 23, 42, 0.07);
+}
+
+.plan-page .plan-share-requests-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.plan-page .plan-share-requests-heading h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--plan-text);
+}
+
+.plan-page .plan-share-requests-heading p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--plan-muted);
+}
+
+.plan-page .plan-share-requests-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-page .plan-share-requests-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--plan-accent-dim);
+  color: var(--plan-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.plan-page .plan-share-requests-collapse-btn {
+  min-height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--plan-border);
+  background: var(--plan-surface);
+  color: var(--plan-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.plan-page .plan-share-requests-collapse-btn:hover {
+  border-color: color-mix(in srgb, var(--plan-border, #d6d3d1) 60%, var(--plan-accent, #0f766e) 40%);
+  background: color-mix(in srgb, var(--plan-accent, #0f766e) 7%, transparent);
+}
+
+.plan-page .plan-share-requests-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--plan-muted);
+}
+
+.plan-page .plan-share-requests-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.plan-page .plan-share-request-item {
+  border: 1px solid var(--plan-border);
+  border-radius: 14px;
+  padding: 12px;
+  background: var(--plan-surface);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.75) inset,
+    0 6px 14px rgba(15, 23, 42, 0.05);
+}
+
+.plan-page .plan-share-request-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.plan-page .plan-share-request-user,
+.plan-page .plan-share-request-trip,
+.plan-page .plan-share-request-meta,
+.plan-page .plan-share-request-message,
+.plan-page .plan-share-request-handle,
+.plan-page .plan-share-request-time {
+  margin: 0;
+}
+
+.plan-page .plan-share-request-user {
+  font-size: 13px;
+  color: var(--plan-text);
+}
+
+.plan-page .plan-share-request-from-label {
+  color: var(--plan-muted);
+  font-weight: 600;
+}
+
+.plan-page .plan-share-request-handle {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--plan-muted);
+}
+
+.plan-page .plan-share-request-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--plan-border, #d6d3d1) 80%, var(--plan-accent, #0f766e) 20%);
+  font-size: 11px;
+  text-transform: capitalize;
+  color: var(--plan-accent, #0f766e);
+  background: color-mix(in srgb, var(--plan-accent, #0f766e) 8%, transparent);
+}
+
+.plan-page .plan-share-request-trip {
+  margin-top: 6px;
+  font-weight: 700;
+  color: var(--plan-text);
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.plan-page .plan-share-request-meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--plan-muted);
+}
+
+.plan-page .plan-share-request-time {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--plan-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.plan-page .plan-share-request-message {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--plan-muted);
+  padding: 7px 8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--plan-accent, #0f766e) 6%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--plan-border, #d6d3d1) 70%, var(--plan-accent, #0f766e) 30%);
+}
+
+.plan-page .plan-share-request-preview-actions {
+  margin-top: 10px;
+}
+
+.plan-page .plan-share-request-link-btn {
+  border: 1px solid color-mix(in srgb, var(--plan-accent, #0f766e) 35%, var(--plan-border, #d6d3d1) 65%);
+  background: color-mix(in srgb, var(--plan-accent, #0f766e) 8%, transparent);
+  color: var(--plan-accent, #0f766e);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: 10px;
+  min-height: 38px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plan-page .plan-share-request-link-btn:hover {
+  background: color-mix(in srgb, var(--plan-accent, #0f766e) 14%, transparent);
+  border-color: var(--plan-accent, #0f766e);
+}
+
+.plan-page .plan-share-request-details {
+  margin-top: 9px;
+  border: 1px solid var(--plan-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--plan-surface, #fff) 88%, var(--plan-accent, #0f766e) 12%);
+  padding: 10px;
+}
+
+.plan-page .plan-share-request-days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.plan-page .plan-share-request-day {
+  border: 1px dashed var(--plan-border);
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.plan-page .plan-share-request-day-title {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--plan-text);
+}
+
+.plan-page .plan-share-request-day-places {
+  list-style: disc;
+  margin: 0;
+  padding-inline-start: 16px;
+  display: grid;
+  gap: 2px;
+}
+
+.plan-page .plan-share-request-day-place {
+  font-size: 12px;
+  color: var(--plan-muted);
+}
+
+.plan-page .plan-share-request-day-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--plan-muted);
+}
+
+.plan-page .plan-share-request-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.plan-page .plan-share-request-btn {
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--plan-border);
+  background: var(--plan-surface);
+  color: var(--plan-text);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.plan-page .plan-share-request-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}
+
+.plan-page .plan-share-request-btn--accept {
+  border-color: color-mix(in srgb, var(--plan-accent, #0f766e) 40%, var(--plan-border, #d6d3d1) 60%);
+  color: var(--plan-accent, #0f766e);
+  background: color-mix(in srgb, var(--plan-accent, #0f766e) 10%, transparent);
+}
+
+.plan-page .plan-share-request-btn--reject {
+  border-color: rgba(185, 28, 28, 0.35);
+  color: var(--color-error, #b91c1c);
+  background: rgba(185, 28, 28, 0.05);
+}
+
 .plan-page .plan-btn-ai {
   display: inline-flex;
   align-items: center;

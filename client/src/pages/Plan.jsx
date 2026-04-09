@@ -237,6 +237,11 @@ export default function Plan() {
   const [tripFilterPhase, setTripFilterPhase] = useState('all');
   const [tripFilterStops, setTripFilterStops] = useState('any');
   const [tripFiltersOpen, setTripFiltersOpen] = useState(false);
+  const [incomingShareRequests, setIncomingShareRequests] = useState([]);
+  const [shareRequestsLoading, setShareRequestsLoading] = useState(false);
+  const [shareActionBusyId, setShareActionBusyId] = useState(null);
+  const [shareRequestsCollapsed, setShareRequestsCollapsed] = useState(false);
+  const [expandedShareRequestIds, setExpandedShareRequestIds] = useState(() => new Set());
   const { settings } = useSiteSettings();
 
   const sortedTrips = useMemo(() => sortTripsSmart(trips), [trips]);
@@ -337,6 +342,19 @@ export default function Plan() {
       .finally(() => setTripsLoading(false));
   }, []);
 
+  const loadIncomingShareRequests = useCallback(() => {
+    setShareRequestsLoading(true);
+    api.user
+      .tripShareRequests({ box: 'inbox', status: 'pending' })
+      .then((data) => {
+        setIncomingShareRequests(Array.isArray(data?.requests) ? data.requests : []);
+      })
+      .catch(() => {
+        setIncomingShareRequests([]);
+      })
+      .finally(() => setShareRequestsLoading(false));
+  }, []);
+
   const loadFavourites = useCallback(() => {
     api.user
       .favourites()
@@ -401,6 +419,7 @@ export default function Plan() {
   );
 
   useEffect(() => { loadTrips(); }, [loadTrips]);
+  useEffect(() => { loadIncomingShareRequests(); }, [loadIncomingShareRequests]);
 
   useEffect(() => {
     if (tripsLoading) return;
@@ -900,6 +919,38 @@ export default function Plan() {
       navigator.clipboard?.writeText(url).then(() => showToast(t('home', 'linkCopied'))).catch(() => {});
     }
   }, [t, showToast]);
+
+  const handleRespondIncomingShare = useCallback(
+    (requestId, decision) => {
+      if (!requestId || shareActionBusyId) return;
+      setShareActionBusyId(requestId);
+      api.user
+        .respondTripShareRequest(requestId, decision)
+        .then(() => {
+          if (decision === 'accept') {
+            showToast('Trip request accepted and added to your trips.');
+            loadTrips();
+          } else {
+            showToast('Trip request rejected.', 'info');
+          }
+          loadIncomingShareRequests();
+        })
+        .catch((err) => {
+          showToast(err?.message || t('feedback', 'actionFailed'), 'error');
+        })
+        .finally(() => setShareActionBusyId(null));
+    },
+    [shareActionBusyId, showToast, loadTrips, loadIncomingShareRequests, t]
+  );
+
+  const toggleRequestExpanded = useCallback((requestId) => {
+    setExpandedShareRequestIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(requestId)) next.delete(requestId);
+      else next.add(requestId);
+      return next;
+    });
+  }, []);
 
   const handleDuplicateTrip = useCallback((tr) => {
     const name = (tr.name || t('home', 'planTitle')).trim() + ' (Copy)';
@@ -1476,6 +1527,123 @@ export default function Plan() {
                   )}
                 </div>
               </div>
+
+              {(shareRequestsLoading || incomingShareRequests.length > 0) && (
+                <div className="plan-share-requests-panel">
+                  <div className="plan-share-requests-head">
+                    <div className="plan-share-requests-heading">
+                      <h3>Incoming trip requests</h3>
+                      <p>Review shared itineraries before accepting.</p>
+                    </div>
+                    <div className="plan-share-requests-head-actions">
+                      <span className="plan-share-requests-count">{incomingShareRequests.length}</span>
+                      <button
+                        type="button"
+                        className="plan-share-requests-collapse-btn"
+                        onClick={() => setShareRequestsCollapsed((v) => !v)}
+                      >
+                        {shareRequestsCollapsed ? 'Show all' : 'Hide all'}
+                      </button>
+                    </div>
+                  </div>
+                  {shareRequestsLoading ? (
+                    <p className="plan-share-requests-empty">{t('home', 'loading')}</p>
+                  ) : shareRequestsCollapsed ? (
+                    <p className="plan-share-requests-empty">Requests hidden.</p>
+                  ) : (
+                    <ul className="plan-share-requests-list">
+                      {incomingShareRequests.map((req) => (
+                        <li key={req.id} className="plan-share-request-item">
+                        <div className="plan-share-request-top">
+                          <p className="plan-share-request-user">
+                            <span className="plan-share-request-from-label">From</span>{' '}
+                            <strong>{req.fromUser?.name || req.fromUser?.username || 'User'}</strong>
+                          </p>
+                          <span className="plan-share-request-status">{req.status}</span>
+                        </div>
+                        {req.fromUser?.username ? (
+                          <p className="plan-share-request-handle">{req.fromUser.username}</p>
+                        ) : null}
+                        <p className="plan-share-request-trip">{req.trip?.name || 'Trip'}</p>
+                        <p className="plan-share-request-meta">
+                          {req.trip?.dayCount || 0} day(s) - {req.trip?.stopCount || 0} stop(s)
+                        </p>
+                        {req.createdAt ? (
+                          <p className="plan-share-request-time">
+                            <Icon name="schedule" size={14} ariaHidden /> {new Date(req.createdAt).toLocaleString()}
+                          </p>
+                        ) : null}
+                        {req.message ? <p className="plan-share-request-message">"{req.message}"</p> : null}
+                        <div className="plan-share-request-preview-actions">
+                          <button
+                            type="button"
+                            className="plan-share-request-link-btn"
+                            onClick={() => toggleRequestExpanded(req.id)}
+                          >
+                            {expandedShareRequestIds.has(req.id) ? 'Hide trip details' : 'View trip details'}
+                          </button>
+                        </div>
+                        {expandedShareRequestIds.has(req.id) && (
+                          <div className="plan-share-request-details">
+                            {Array.isArray(req.trip?.days) && req.trip.days.length > 0 ? (
+                              <ul className="plan-share-request-days">
+                                {req.trip.days.map((day, idx) => {
+                                  const slots = Array.isArray(day?.slots) ? day.slots : [];
+                                  const dayPlaceIds = slots.map((s) => String(s.placeId)).filter(Boolean);
+                                  return (
+                                    <li key={`${req.id}-day-${idx}`} className="plan-share-request-day">
+                                      <p className="plan-share-request-day-title">
+                                        Day {idx + 1}
+                                        {day?.date ? ` - ${day.date}` : ''}
+                                        {` (${dayPlaceIds.length} place${dayPlaceIds.length === 1 ? '' : 's'})`}
+                                      </p>
+                                      {dayPlaceIds.length > 0 ? (
+                                        <ul className="plan-share-request-day-places">
+                                          {dayPlaceIds.map((pid, pidx) => {
+                                            const placeName = placeNames[String(pid)] || placeMap[String(pid)]?.name || pid;
+                                            return (
+                                              <li key={`${req.id}-day-${idx}-place-${pidx}`} className="plan-share-request-day-place">
+                                                {placeName}
+                                              </li>
+                                            );
+                                          })}
+                                        </ul>
+                                      ) : (
+                                        <p className="plan-share-request-day-empty">No places in this day.</p>
+                                      )}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            ) : (
+                              <p className="plan-share-request-day-empty">No day details provided.</p>
+                            )}
+                          </div>
+                        )}
+                        <div className="plan-share-request-actions">
+                          <button
+                            type="button"
+                            className="plan-share-request-btn plan-share-request-btn--accept"
+                            onClick={() => handleRespondIncomingShare(req.id, 'accept')}
+                            disabled={shareActionBusyId === req.id}
+                          >
+                            <Icon name="check" size={16} ariaHidden /> Accept
+                          </button>
+                          <button
+                            type="button"
+                            className="plan-share-request-btn plan-share-request-btn--reject"
+                            onClick={() => handleRespondIncomingShare(req.id, 'reject')}
+                            disabled={shareActionBusyId === req.id}
+                          >
+                            <Icon name="close" size={16} ariaHidden /> Reject
+                          </button>
+                        </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
 
               {trips.length > 0 && !showCreateForm && (
                 <div className="plan-trips-filters" aria-label={t('home', 'tripsFilterTitle')}>

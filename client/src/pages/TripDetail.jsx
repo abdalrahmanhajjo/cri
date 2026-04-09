@@ -40,6 +40,14 @@ export default function TripDetail() {
   const [error, setError] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+  const [shareRequestOpen, setShareRequestOpen] = useState(false);
+  const [recipientUsername, setRecipientUsername] = useState('');
+  const [selectedRecipient, setSelectedRecipient] = useState(null);
+  const [recipientOptions, setRecipientOptions] = useState([]);
+  const [searchingRecipients, setSearchingRecipients] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
+  const [sendingShareRequest, setSendingShareRequest] = useState(false);
+  const [shareRequestError, setShareRequestError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -158,6 +166,72 @@ export default function TripDetail() {
       });
   }, [trip, deleting, t, navigate, showToast]);
 
+  const handleSendShareRequest = useCallback(
+    (e) => {
+      e.preventDefault();
+      if (!trip || sendingShareRequest) return;
+      if (!selectedRecipient?.id) {
+        setShareRequestError('Select a recipient from the list.');
+        return;
+      }
+      setSendingShareRequest(true);
+      setShareRequestError(null);
+      api.user
+        .sendTripShareRequest({
+          tripId: trip.id,
+          recipientUserId: selectedRecipient.id,
+          recipientUsername: selectedRecipient.username || recipientUsername.trim(),
+          message: shareMessage.trim(),
+        })
+        .then(() => {
+          showToast('Trip share request sent.', 'success');
+          setShareRequestOpen(false);
+          setRecipientUsername('');
+          setSelectedRecipient(null);
+          setRecipientOptions([]);
+          setShareMessage('');
+        })
+        .catch((err) => {
+          setShareRequestError(err?.message || 'Failed to send share request');
+          showToast(t('feedback', 'actionFailed'), 'error');
+        })
+        .finally(() => setSendingShareRequest(false));
+    },
+    [trip, sendingShareRequest, selectedRecipient, recipientUsername, shareMessage, showToast, t]
+  );
+
+  useEffect(() => {
+    if (!shareRequestOpen) return undefined;
+    const q = recipientUsername.trim();
+    if (selectedRecipient && q === (selectedRecipient.username || selectedRecipient.name || '').trim()) return undefined;
+    setSelectedRecipient(null);
+    if (q.length < 2) {
+      setRecipientOptions([]);
+      setSearchingRecipients(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setSearchingRecipients(true);
+    const timer = setTimeout(() => {
+      api.user
+        .searchTripShareUsers(q)
+        .then((data) => {
+          if (cancelled) return;
+          setRecipientOptions(Array.isArray(data?.users) ? data.users : []);
+        })
+        .catch(() => {
+          if (!cancelled) setRecipientOptions([]);
+        })
+        .finally(() => {
+          if (!cancelled) setSearchingRecipients(false);
+        });
+    }, 220);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [recipientUsername, shareRequestOpen, selectedRecipient]);
+
   if (loading) {
     return (
       <div className="trip-detail trip-detail--loading">
@@ -226,6 +300,23 @@ export default function TripDetail() {
             <button type="button" className="trip-detail-btn trip-detail-btn--ghost" onClick={handleShare}>
               <Icon name="share" size={20} /> {t('detail', 'share')}
             </button>
+            {trip.isHost !== false && (
+              <button
+                type="button"
+                className="trip-detail-btn trip-detail-btn--outline"
+                onClick={() => {
+                  setShareRequestError(null);
+                  if (shareRequestOpen) {
+                    setRecipientUsername('');
+                    setSelectedRecipient(null);
+                    setRecipientOptions([]);
+                  }
+                  setShareRequestOpen((v) => !v);
+                }}
+              >
+                <Icon name="person_add" size={20} /> {shareRequestOpen ? 'Close request' : 'Send request'}
+              </button>
+            )}
             <Link to={`/plan?edit=${encodeURIComponent(trip.id)}`} className="trip-detail-btn trip-detail-btn--outline">
               <Icon name="edit" size={20} /> {t('home', 'tripDetailEdit')}
             </Link>
@@ -245,7 +336,102 @@ export default function TripDetail() {
               {deleteError}
             </p>
           )}
+          {shareRequestOpen && (
+            <form className="trip-share-request-form" onSubmit={handleSendShareRequest}>
+              <label className="trip-share-request-field">
+                <span>Recipient username</span>
+                <input
+                  type="text"
+                  value={recipientUsername}
+                  onChange={(ev) => {
+                    setRecipientUsername(ev.target.value);
+                    setShareRequestError(null);
+                  }}
+                  placeholder="Type name or username"
+                  autoComplete="off"
+                  maxLength={80}
+                  required
+                />
+              </label>
+              {searchingRecipients && <p className="trip-share-request-hint">Searching users...</p>}
+              {!searchingRecipients && recipientOptions.length > 0 && (
+                <ul className="trip-share-request-suggestions" role="listbox" aria-label="Recipients">
+                  {recipientOptions.map((u) => {
+                    const handle = u.username || '';
+                    const label = u.name || handle || u.email || 'User';
+                    return (
+                      <li key={u.id}>
+                        <button
+                          type="button"
+                          className="trip-share-request-suggestion"
+                          onClick={() => {
+                            setSelectedRecipient(u);
+                            setRecipientUsername(handle || u.name || u.email || '');
+                            setRecipientOptions([]);
+                            setShareRequestError(null);
+                          }}
+                        >
+                          <span className="trip-share-request-suggestion-name">{label}</span>
+                          {handle ? <span className="trip-share-request-suggestion-username">{handle}</span> : null}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {!searchingRecipients && recipientUsername.trim().length >= 2 && recipientOptions.length === 0 && !selectedRecipient && (
+                <p className="trip-share-request-hint">No matching users found.</p>
+              )}
+              {selectedRecipient && (
+                <p className="trip-share-request-selected">
+                  Selected: <strong>{selectedRecipient.name || selectedRecipient.username || selectedRecipient.email}</strong>
+                </p>
+              )}
+              <label className="trip-share-request-field">
+                <span>Message (optional)</span>
+                <textarea
+                  value={shareMessage}
+                  onChange={(ev) => setShareMessage(ev.target.value)}
+                  placeholder="Would you like to share this trip with me?"
+                  rows={3}
+                  maxLength={1200}
+                />
+              </label>
+              <div className="trip-share-request-actions">
+                <button type="submit" className="trip-detail-btn trip-detail-btn--primary" disabled={sendingShareRequest}>
+                  <Icon name="send" size={18} />
+                  {sendingShareRequest ? 'Sending...' : 'Send request'}
+                </button>
+              </div>
+              {shareRequestError && (
+                <p className="trip-detail-delete-error" role="alert">
+                  {shareRequestError}
+                </p>
+              )}
+            </form>
+          )}
         </header>
+
+        {Array.isArray(trip.users) && trip.users.length > 0 && (
+          <section className="trip-detail-section trip-detail-section--users" aria-labelledby="trip-users-head">
+            <h2 id="trip-users-head" className="trip-detail-section-title">
+              Trip users
+            </h2>
+            <ul className="trip-detail-users-list">
+              {trip.users.map((u) => (
+                <li key={u.id || `${u.username}-${u.name}`} className="trip-detail-user-row">
+                  <div className="trip-detail-user-main">
+                    <span className="trip-detail-user-name">{u.name || u.username || 'User'}</span>
+                    {u.username ? <span className="trip-detail-user-username">{u.username}</span> : null}
+                  </div>
+                  <span className={`trip-detail-user-role ${u.role === 'host' ? 'trip-detail-user-role--host' : ''}`}>
+                    {u.role === 'host' ? 'Host' : 'Member'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="trip-detail-section" aria-labelledby="trip-itin-head">
           <h2 id="trip-itin-head" className="trip-detail-section-title">
