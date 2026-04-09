@@ -1,0 +1,322 @@
+/* Find Your Way (Bento Grid) - Full Premium Modernization */
+
+.vd-home-bento {
+  background: 
+    radial-gradient(circle at 0% 0%, rgba(15, 118, 110, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(99, 102, 241, 0.04) 0%, transparent 40%),
+    #f8fafc !important;
+  position: relative !important;
+  padding-top: 48px !important; /* Smaller section padding */
+  padding-bottom: 48px !important;
+}
+
+.vd-bento-hero-main,
+.vd-bento-hero-side,
+.vd-bento-card,
+.vd-bento-mosaic-panel {
+  border-radius: 32px !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+  overflow: hidden !important;
+}
+
+.vd-bento-hero-main:hover,
+.vd-bento-hero-side:hover,
+.vd-bento-card:hover,
+.vd-bento-mosaic-panel:hover {
+  box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.vd-bento-hero-main-content {
+  padding: 48px !important;
+}
+
+.vd-bento-hero-title {
+  font-family: var(--font-serif) !important;
+  font-size: clamp(32px, 5vw, 56px) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  margin-bottom: 16px !important;
+}
+
+.vd-bento-hero-tagline {
+  font-size: 18px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+}
+
+.vd-bento-mosaic-panel {
+  background: rgba(255, 255, 255, 0.65) !important; /* Slightly more opaque for text visibility */
+  backdrop-filter: blur(40px) !important;
+  -webkit-backdrop-filter: blur(40px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  padding: 32px !important;
+}
+
+.vd-bento-panel-kicker {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.15em !important;
+  text-transform: uppercase !important;
+  color: var(--color-primary-dark) !important; /* Darker teal */
+  margin-bottom: 16px !important;
+  display: block !important;
+}
+
+.vd-bento-panel-title {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  margin-bottom: 12px !important;
+  color: #0f172a !important; /* High contrast black */
+}
+
+.vd-bento-panel-lead,
+.vd-bento-panel-note,
+.vd-bento-panel-lead-short {
+  font-size: 16px !important;
+  color: #1e293b !important; /* Much darker slate for visibility */
+  line-height: 1.6 !important;
+  font-weight: 500 !important;
+  opacity: 1 !important;
+}
+
+.vd-bento-panel-badges-label {
+  color: #64748b !important; /* Visible grey for the sub-header */
+  font-weight: 800 !important;
+  opacity: 1 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  margin-bottom: 12px !important;
+}
+
+/* App Badges Styles - Glass Pillars */
+.vd-download-app-badge {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 1) !important;
+  border-radius: 99px !important;
+  padding: 12px 24px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Universal Fix for invisible icons (Absolute Force Vibrant Green) */
+.vd-download-app-badge * {
+  border-color: #10b981 !important; /* For outlined icons */
+  stroke: #10b981 !important; /* For Feather icons */
+}
+
+.vd-download-app-badge .icon,
+.vd-download-app-badge .icon--feather,
+.vd-download-app-badge .material-symbols-rounded {
+  color: #10b981 !important;
+}
+
+.vd-download-app-badge .icon svg,
+.vd-download-app-badge .icon svg path,
+.vd-download-app-badge .icon svg circle,
+.vd-download-app-badge .icon svg line {
+  stroke: #10b981 !important;
+  color: #10b981 !important;
+}
+
+.vd-download-app-badge:hover {
+  background: #fff !important;
+  transform: translateY(-3px) scale(1.03) !important;
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Vibrant Bento Sides */
+.vd-bento-hero-side--guides {
+  background: linear-gradient(145deg, #6366f1 0%, #4f46e5 100%) !important;
+  color: #fff !important;
+}
+
+.vd-bento-hero-side--explore {
+  background: linear-gradient(145deg, #f43f5e 0%, #e11d48 100%) !important;
+  color: #fff !important;
+}
+
+.vd-bento-hero-side--guides .vd-bento-panel-kicker,
+.vd-bento-hero-side--explore .vd-bento-panel-kicker {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.vd-bento-hero-side--guides .vd-bento-panel-title,
+.vd-bento-hero-side--explore .vd-bento-panel-title {
+  color: #fff !important;
+}
+
+/* Bento Footer CTA - Pill style */
+.vd-bento-mosaic-cta {
+  background: var(--color-primary-dark) !important;
+  color: #fff !important;
+  padding: 12px 28px !important;
+  border-radius: 99px !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+.vd-bento-mosaic-cta:hover {
+  transform: translateX(6px) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15) !important;
+  background: #0d9488 !important;
+}
+
+/* Simplifying Map Component (fym) */
+.fym-map-stage {
+  margin-top: -10px !important;
+}
+
+.fym-map-canvas,
+.fym-map-wrap {
+  height: min(280px, 45vh) !important; /* Smaller map height */
+  min-height: 240px !important;
+}
+
+.fym-legend,
+.fym-rail,
+.fym-live-badge {
+  display: none !important; /* Hide non-essential UI for simplicity */
+}
+
+.fym-toolbar {
+  padding: 6px 10px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+}
+
+.fym-chip {
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+}
+
+.fym-meta {
+  display: none !important; /* Hide secondary meta for simplicity */
+}
+
+.fym-expand-map {
+  padding: 6px 12px !important;
+  min-height: 32px !important;
+  font-size: 12px !important;
+}
+
+/* Find Your Way Section Header Modernization */
+.vd-find-your-way-header {
+  margin-bottom: 48px !important;
+  border-bottom: none !important;
+  text-align: left !important;
+  position: relative !important;
+  padding-left: 28px !important; /* Space for the green line */
+}
+
+.vd-find-your-way-header::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 4px !important;
+  bottom: 4px !important;
+  width: 4.5px !important;
+  background: linear-gradient(to bottom, var(--color-primary) 0%, rgba(15, 118, 110, 0.1) 100%) !important;
+  border-radius: 99px !important;
+}
+
+.vd-find-your-way-title {
+  font-family: var(--font-serif) !important;
+  font-size: clamp(32px, 5vw, 48px) !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.1 !important;
+  margin-bottom: 0 !important;
+}
+
+.vd-find-your-way-sub,
+.vd-find-your-way-community {
+  display: none !important;
+}
+
+/* Side Discovery Cards - Hotels & Restaurants */
+.vd-find-your-way-side-stack {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 24px !important;
+}
+
+.vd-find-your-way-side-card {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(40px) !important;
+  -webkit-backdrop-filter: blur(40px) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.9) !important;
+  padding: 36px !important;
+  border-radius: 32px !important;
+  box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.4s ease !important;
+}
+
+.vd-find-your-way-side-card:hover {
+  box-shadow: 0 25px 50px -15px rgba(0, 0, 0, 0.12) !important;
+  border-color: #fff !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+.vd-find-your-way-side-card .vd-plan-trip-block-title {
+  font-family: var(--font-serif) !important;
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin-bottom: 14px !important;
+  line-height: 1.2 !important;
+}
+
+.vd-find-your-way-side-card .vd-plan-trip-block-desc {
+  font-size: 15px !important;
+  color: #475569 !important;
+  line-height: 1.6 !important;
+  margin-bottom: 28px !important;
+  font-weight: 500 !important;
+}
+
+.vd-plan-trip-inline-actions {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 24px !important;
+}
+
+.vd-plan-trip-inline-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: var(--color-primary-dark) !important;
+  text-decoration: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.vd-plan-trip-inline-link:hover {
+  color: var(--color-primary) !important;
+  transform: translateX(4px) !important;
+}
+
+@media (max-width: 1023px) {
+  .vd-find-your-way-side-card {
+    padding: 28px !important;
+  }
+  
+  .vd-plan-trip-inline-actions {
+    gap: 16px !important;
+  }
+}

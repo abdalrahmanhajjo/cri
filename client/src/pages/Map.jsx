@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import api, { getPlaceImageUrl } from '../api/client';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
-import { useTheme } from '../context/ThemeContext';
 import Icon from '../components/Icon';
 import DeliveryImg from '../components/DeliveryImg';
 import GlobalSearchBar from '../components/GlobalSearchBar';
@@ -30,24 +29,6 @@ const TRAVEL_MODES = Object.freeze([
 
 const LIVE_ROUTE_MIN_INTERVAL_MS = 22000;
 const LIVE_ROUTE_MIN_MOVE_M = 48;
-const DARK_MAP_STYLES = [
-  { elementType: 'geometry', stylers: [{ color: '#0b1520' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#0b1520' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#8ea3b8' }] },
-  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#2a3644' }] },
-  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#b7c7d8' }] },
-  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d6e2ee' }] },
-  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#8ea3b8' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#11261d' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#16212d' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1f2d3a' }] },
-  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#a8bbcd' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#1c3340' }] },
-  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#294654' }] },
-  { featureType: 'transit', elementType: 'labels.text.fill', stylers: [{ color: '#7d93a8' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#08111c' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#64829e' }] },
-];
 
 function formatMapDistanceM(meters) {
   if (!Number.isFinite(meters)) return '';
@@ -228,8 +209,7 @@ function escapeHtml(s) {
 }
 
 export default function MapPage() {
-  const { t, lang } = useLanguage();
-  const { theme } = useTheme();
+  const { lang, t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -507,7 +487,7 @@ export default function MapPage() {
     const qq = deferredSearchQuery.trim();
     if (!qq) return mapDisplayPlaces;
     const narrow = filterPlacesByQuery(mapDisplayPlaces, qq);
-    return narrow.length > 0 ? narrow : mapDisplayPlaces;
+    return narrow;
   }, [tripFilterName, currentDayPlaceIds.length, mapDisplayPlaces, deferredSearchQuery]);
 
   const catalogPickerPlaces = useMemo(() => {
@@ -850,7 +830,7 @@ export default function MapPage() {
           }
           setSelectedPlaceId(placeId);
           setListOpen(false);
-          infoWindow.setContent(buildInfoContent(p, apiKey, infoWindowStrings, theme === 'dark'));
+          infoWindow.setContent(buildInfoContent(p, apiKey, infoWindowStrings, false));
           infoWindow.open(map, marker);
         });
         const entry = { marker, placeId };
@@ -885,8 +865,8 @@ export default function MapPage() {
           fullscreenControl: false,
           zoomControl: false,
           scaleControl: false,
-          backgroundColor: theme === 'dark' ? '#071116' : '#e8eaed',
-          styles: theme === 'dark' ? DARK_MAP_STYLES : [],
+          backgroundColor: '#e8eaed',
+          styles: [],
         });
         mapInstanceRef.current = map;
         const infoWindow = new maps.InfoWindow();

@@ -37,6 +37,10 @@ import {
 } from '../utils/findYourWayGrouping';
 import { supabaseOptimizeForThumbnail } from '../utils/supabaseImage.js';
 import './Explore.css';
+import './CommunityFeedRedesign.css';
+import './PlanYourVisitRedesign.css';
+import './FindYourWayRedesign.css';
+import './BrowseThemesRedesign.css';
 
 const TRIPOLI_TIMEZONE = 'Asia/Beirut';
 
@@ -218,9 +222,9 @@ function WeatherTripoli({
           </div>
           <div className="vd-widget-detail">
             <span className="vd-widget-detail-label">{windLabel}</span>
-<span className="vd-widget-detail-value">{wind}</span>
+            <span className="vd-widget-detail-value">{wind}</span>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );
@@ -373,6 +377,7 @@ function TopPicksCarousel({ places, t, moreTo }) {
             ) : null}
           </div>
         </header>
+
         <div
           className="vd-top-picks-carousel"
           tabIndex={0}
@@ -383,7 +388,11 @@ function TopPicksCarousel({ places, t, moreTo }) {
         >
           <div
             className="vd-top-picks-track"
-            style={{ transform: `translateX(-${index * 100}%)`, direction: 'ltr' }}
+            style={{ 
+              transform: `translateX(calc(-${index} * (100% + 24px)))`, 
+              gap: '24px',
+              direction: 'ltr' 
+            }}
           >
             {safePlaces.map((p, slideIndex) => {
               if (!p || p.id == null) return null;
@@ -391,8 +400,6 @@ function TopPicksCarousel({ places, t, moreTo }) {
               const safeImg = getPlaceImageUrl(p.image || (p.images && p.images[0])) || null;
               const name = p.name != null ? String(p.name) : '';
               const desc = p.description != null ? String(p.description) : '';
-              const loc = p.location != null ? String(p.location) : '';
-              const cat = p.categoryName != null ? String(p.categoryName) : '';
               const ratingNum = Number(p.rating);
               const rating = Number.isFinite(ratingNum) ? ratingNum : null;
               const isFavourite = favouriteIds.has(String(p.id));
@@ -421,104 +428,80 @@ function TopPicksCarousel({ places, t, moreTo }) {
                     )}
                   </Link>
                   <div className="vd-top-picks-card-body">
-                    <Link
-                      to={`/place/${placeId}`}
-                      className="vd-top-picks-card-text-hit"
-                      aria-labelledby={titleId}
-                      aria-describedby={desc ? `${titleId}-desc` : undefined}
-                    >
-                      <span className="vd-top-picks-eyebrow">{t('home', 'topPickEyebrow')}</span>
-                      <h3 id={titleId} className="vd-top-picks-name">
-                        {name}
-                      </h3>
-                      {desc ? (
-                        <p id={`${titleId}-desc`} className="vd-top-picks-desc">
-                          {desc}
-                        </p>
-                      ) : null}
-                      <div className="vd-top-picks-details">
-                        {rating != null && (
-                          <span className="vd-top-picks-detail">
-                            <Icon name="star" size={18} /> {rating.toFixed(1)}
-                          </span>
-                        )}
-                        {loc && (
-                          <span className="vd-top-picks-detail vd-top-picks-detail--location">
-                            <Icon name="location_on" size={18} /> {loc}
-                          </span>
-                        )}
-                        {cat && (
-                          <span className="vd-top-picks-detail">{cat}</span>
-                        )}
-                      </div>
-                    </Link>
-                    <div className="vd-top-picks-cta-row">
-                      <Link to={`/place/${placeId}`} className="vd-top-picks-read-now" tabIndex={-1} aria-hidden="true">
-                        {t('home', 'readNow')}
-                      </Link>
-                      <button
-                        type="button"
-                        className={`vd-top-picks-action-btn vd-top-picks-action-btn--heart ${isFavourite ? 'vd-top-picks-action-btn--active' : ''}`}
-                        aria-label={heartAria}
-                        onClick={(e) => toggleFavourite(e, p.id)}
+                    <div className="vd-top-picks-card-content">
+                      <Link
+                        to={`/place/${placeId}`}
+                        className="vd-top-picks-card-text-hit"
+                        aria-labelledby={titleId}
+                        aria-describedby={desc ? `${titleId}-desc` : undefined}
                       >
-                        <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={22} />
-                      </button>
+                        <span className="vd-top-picks-eyebrow">{t('home', 'topPickEyebrow')}</span>
+                        <h3 id={titleId} className="vd-top-picks-name">
+                          {name}
+                        </h3>
+                        {desc ? (
+                          <p id={`${titleId}-desc`} className="vd-top-picks-desc">
+                            {desc}
+                          </p>
+                        ) : null}
+                        <div className="vd-top-picks-details">
+                          {rating != null && rating > 0 && (
+                            <span className="vd-top-picks-detail vd-top-picks-detail--rating">
+                              <Icon name="star" size={16} /> {rating.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+                      </Link>
                     </div>
-                  </div>
-                  <div className="vd-top-picks-card-floating-actions">
-                    <button
-                      type="button"
-                      className="vd-top-picks-scroll-top"
-                      aria-label={t('home', 'scrollToTop')}
-                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                    >
-                      <Icon name="arrow_upward" size={22} />
-                    </button>
+                    <div className="vd-top-picks-glass-footer">
+                      <div className="vd-top-picks-cta-row">
+                        <Link to={`/place/${placeId}`} className="vd-top-picks-read-now">
+                          {t('home', 'topPicksReadMore')}
+                          <Icon name="arrow_forward" size={18} className="vd-btn-arrow" />
+                        </Link>
+                        <div className="vd-top-picks-card-floating-actions">
+                          <button
+                            type="button"
+                            className={`vd-top-picks-action-btn vd-top-picks-action-btn--heart ${isFavourite ? 'vd-top-picks-action-btn--active' : ''}`}
+                            onClick={(e) => toggleFavourite(e, placeId)}
+                            aria-label={heartAria}
+                          >
+                            <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={24} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </article>
               );
             })}
           </div>
-          <div className="vd-top-picks-carousel-footer">
-            {safePlaces.length > 1 ? (
-              <p
-                className="vd-top-picks-counter"
-                aria-live="polite"
-                aria-atomic="true"
-                aria-label={t('home', 'topPicksSlidePosition')
-                  .replace('{current}', String(index + 1))
-                  .replace('{total}', String(safePlaces.length))}
-              >
-                <span className="vd-top-picks-counter-label">{t('home', 'topPicksCounterLabel')}</span>
-                <span className="vd-top-picks-counter-nums" aria-hidden="true">
-                  <span className="vd-top-picks-counter-current">{index + 1}</span>
-                  <span className="vd-top-picks-counter-sep">/</span>
-                  <span className="vd-top-picks-counter-total">{safePlaces.length}</span>
-                </span>
-              </p>
-            ) : (
-              <span className="vd-top-picks-counter vd-top-picks-counter--placeholder" aria-hidden="true" />
-            )}
-            <div className="vd-top-picks-dots" role="group" aria-label={t('home', 'topPicksCarouselLabel')}>
-              {safePlaces.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className={`vd-top-picks-dot ${i === index ? 'vd-top-picks-dot--active' : ''}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIndex(i);
-                  }}
-                  aria-label={`${t('home', 'topPicks')} — ${i + 1} / ${safePlaces.length}`}
-                  aria-current={i === index ? 'true' : undefined}
-                />
-              ))}
+        </div>
+
+        <footer className="vd-top-picks-carousel-footer">
+          <div className="vd-top-picks-counter">
+            <span className="vd-top-picks-counter-label">{t('home', 'topPicksCounterLabel')}</span>
+            <div className="vd-top-picks-counter-nums">
+              <span className="vd-top-picks-counter-current">{String(index + 1).padStart(2, '0')}</span>
+              <span className="vd-top-picks-counter-sep">/</span>
+              <span className="vd-top-picks-counter-total">{String(safePlaces.length).padStart(2, '0')}</span>
             </div>
           </div>
-          <p className="vd-top-picks-carousel-keys-hint">{t('home', 'topPicksCarouselKeysHint')}</p>
-        </div>
+
+          <div className="vd-top-picks-dots" role="tablist">
+            {safePlaces.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                role="tab"
+                aria-selected={i === index}
+                aria-label={t('home', 'goToSlide').replace('{n}', i + 1)}
+                className={`vd-top-picks-dot ${i === index ? 'vd-top-picks-dot--active' : ''}`}
+                onClick={() => setIndex(i)}
+              />
+            ))}
+          </div>
+        </footer>
       </div>
     </section>
   );
@@ -664,15 +647,8 @@ function FindYourWayPracticalSection({ t, places = [], showMap = true, showTips 
       <div className="vd-container">
         <header className="vd-find-your-way-header">
           <h2 id="find-your-way-practical-title" className="vd-find-your-way-title">
-            {safeT('home', 'findYourWayTitle')}
+            Find your way — navigation & maps
           </h2>
-          <p className="vd-find-your-way-sub">{safeT('home', 'findYourWaySub')}</p>
-          <p className="vd-find-your-way-community">
-            <Link to={COMMUNITY_PATH} className="vd-find-your-way-community-link">
-              {safeT('home', 'findYourWayCommunityHint')}
-              <Icon name="arrow_forward" size={18} aria-hidden />
-            </Link>
-          </p>
         </header>
 
         <div className="vd-find-your-way-main-grid">
@@ -685,50 +661,38 @@ function FindYourWayPracticalSection({ t, places = [], showMap = true, showTips 
           </div>
           <div className="vd-find-your-way-side-stack">
             <div className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card">
-              <h3 className="vd-plan-trip-block-title">{safeT('home', 'gettingThereTitle')}</h3>
-              <p className="vd-plan-trip-block-desc">{safeT('home', 'gettingThereSub')}</p>
-              <Link to="/plan" className="vd-plan-trip-cta vd-btn vd-btn--primary">
-                {safeT('home', 'gettingThereCta')}
-                <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
-              </Link>
-            </div>
-            <div className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card">
               <h3 className="vd-plan-trip-block-title">{safeT('home', 'stayTitle')}</h3>
               <p className="vd-plan-trip-block-desc">{safeT('home', 'staySub')}</p>
-              <Link to={HOTELS_PATH} className="vd-plan-trip-cta vd-btn vd-btn--primary">
-                {safeT('home', 'stayBrowseHotels')}
-                <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
-              </Link>
-              {showMap ? (
-                <Link to="/map" className="vd-find-your-way-stay-map-link">
-                  {safeT('home', 'stayCta')}
-                  <Icon name="arrow_forward" size={16} aria-hidden />
+              <div className="vd-plan-trip-inline-actions">
+                <Link to={HOTELS_PATH} className="vd-plan-trip-cta vd-btn vd-btn--primary">
+                  {safeT('home', 'stayBrowseHotels')}
+                  <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
                 </Link>
-              ) : null}
-            </div>
-            {showTips ? (
-              <div
-                id="plan-trip"
-                className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card vd-find-your-way-tips-block"
-              >
-                <h3 className="vd-plan-trip-block-title">{safeT('home', 'tipsTitle')}</h3>
-                <p className="vd-plan-trip-block-desc">{safeT('home', 'tipsSub')}</p>
-                <div className="vd-plan-trip-inline-actions vd-find-your-way-tips-actions">
-                  <Link to={COMMUNITY_PATH} className="vd-plan-trip-inline-link">
-                    {safeT('home', 'planTripTipsCommunityCta')}
+                {showMap && (
+                  <Link to="/map?q=hotel" className="vd-plan-trip-inline-link">
+                    {safeT('home', 'stayCta')}
                     <Icon name="arrow_forward" size={18} aria-hidden />
                   </Link>
-                  <a href="#areas" className="vd-plan-trip-inline-link">
-                    {safeT('home', 'planTripLinkAreas')}
-                    <Icon name="arrow_forward" size={18} aria-hidden />
-                  </a>
-                  <a href="#plan" className="vd-plan-trip-inline-link">
-                    {safeT('home', 'tipsCta')}
-                    <Icon name="arrow_forward" size={18} aria-hidden />
-                  </a>
-                </div>
+                )}
               </div>
-            ) : null}
+            </div>
+
+            <div className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card">
+              <h3 className="vd-plan-trip-block-title">{safeT('home', 'diningTitle')}</h3>
+              <p className="vd-plan-trip-block-desc">{safeT('home', 'diningSub')}</p>
+              <div className="vd-plan-trip-inline-actions">
+                <Link to={DINING_PATH} className="vd-plan-trip-cta vd-btn vd-btn--primary">
+                  {safeT('home', 'diningCta')}
+                  <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
+                </Link>
+                {showMap && (
+                  <Link to="/map?q=dining" className="vd-plan-trip-inline-link">
+                    {safeT('home', 'viewMapCta')}
+                    <Icon name="arrow_forward" size={18} aria-hidden />
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -968,6 +932,8 @@ export default function Explore() {
               <div className="vd-bento-card vd-bento-hero-main">
                 {isDefaultCityHeroPath(bentoV.hero) ? (
                   <picture>
+                    <source media="(max-width: 767px)" srcSet="/oscar-niemeyer-arch.jpg" />
+                    <source media="(min-width: 768px)" srcSet="/oscar-niemeyer-arch-wide.jpg" />
                     <source type="image/webp" srcSet={cityHeroWebpSrcSet()} sizes={CITY_HERO_SIZES} />
                     <img
                       className="vd-bento-hero-main-photo"
@@ -986,46 +952,52 @@ export default function Explore() {
                 )}
                 <div className="vd-bento-hero-main-scrim" aria-hidden="true" />
                 <div className="vd-bento-hero-main-content">
-                  <h1 className="vd-bento-hero-title">{heroTitle}</h1>
-                  <p className="vd-bento-hero-tagline">{heroTagline}</p>
-                  <div className="vd-bento-hero-ctas">
-                    <Link to="/plan" className="vd-bento-btn vd-bento-btn--primary">
-                      {t('home', 'webTripPlannerCta')}
-                      <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
-                    </Link>
+                  <div className="vd-bento-hero-copy">
+                    <h1 className="vd-bento-hero-title">{heroTitle}</h1>
+                    <p className="vd-bento-hero-tagline">{heroTagline}</p>
                   </div>
-                  {showBentoAvatarStack && (
-                    <div
-                      className="vd-bento-avatar-stack"
-                      role="group"
-                      aria-label={t('home', 'bentoAvatarStackAria')}
-                    >
-                      {bentoAvatarSlots.map((slot, i) => {
-                        const to = slot.placeId ? `/place/${slot.placeId}` : COMMUNITY_PATH;
-                        const key = slot.placeId ? `bento-av-${slot.placeId}` : `bento-av-${i}`;
-                        return (
-                          <Link
-                            key={key}
-                            to={to}
-                            className="vd-bento-avatar"
-                            aria-label={bentoAvatarLinkLabel(slot)}
-                            style={
-                              slot.href
-                                ? { backgroundImage: bentoCssUrl(supabaseOptimizeForThumbnail(slot.href, 120)) }
-                                : undefined
-                            }
-                          >
-                            {!slot.href && <Icon name="travel_explore" size={22} aria-hidden />}
-                          </Link>
-                        );
-                      })}
+                  <div className="vd-bento-hero-meta">
+                    <div className="vd-bento-hero-ctas">
+                      <Link to="/plan" className="vd-bento-btn vd-bento-btn--primary">
+                        {t('home', 'webTripPlannerCta')}
+                        <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
+                      </Link>
                     </div>
-                  )}
+                    {showBentoAvatarStack && (
+                      <div
+                        className="vd-bento-avatar-stack"
+                        role="group"
+                        aria-label={t('home', 'bentoAvatarStackAria')}
+                      >
+                        {bentoAvatarSlots.map((slot, i) => {
+                          const to = slot.placeId ? `/place/${slot.placeId}` : COMMUNITY_PATH;
+                          const key = slot.placeId ? `bento-av-${slot.placeId}` : `bento-av-${i}`;
+                          return (
+                            <Link
+                              key={key}
+                              to={to}
+                              className="vd-bento-avatar"
+                              aria-label={bentoAvatarLinkLabel(slot)}
+                              style={
+                                slot.href
+                                  ? { backgroundImage: bentoCssUrl(supabaseOptimizeForThumbnail(slot.href, 120)) }
+                                  : undefined
+                              }
+                            >
+                              {!slot.href && <Icon name="travel_explore" size={22} aria-hidden />}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div className="vd-bento-card vd-bento-why-intro">
-                <h2 className="vd-bento-why-intro-title">{t('home', 'whyVisitTitle')}</h2>
+                <div className="vd-bento-why-intro-top">
+                  <h2 className="vd-bento-why-intro-title">{t('home', 'whyVisitTitle')}</h2>
+                </div>
                 <p className="vd-bento-why-intro-sub">{t('home', 'whyVisitSub')}</p>
                 <div className="vd-bento-why-intro-footer">
                   <Link to={PLACES_DISCOVER_PATH} className="vd-bento-why-intro-link">
@@ -1117,7 +1089,6 @@ export default function Explore() {
                 <p className="vd-bento-panel-kicker vd-bento-panel-kicker--desktop">{t('home', 'bentoMosaicKicker')}</p>
                 <div className="vd-bento-mosaic-panel-grid">
                   <div className="vd-bento-mosaic-panel-copy">
-                    <p className="vd-bento-panel-lead vd-bento-panel-lead--desktop">{t('home', 'bentoSiteGuideLead')}</p>
                     <p className="vd-bento-panel-note vd-bento-panel-note--desktop">{t('home', 'bentoSiteGuideAppNote')}</p>
                     <p className="vd-bento-panel-lead-short">{t('home', 'bentoSiteGuideLeadShort')}</p>
                   </div>

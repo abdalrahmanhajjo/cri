@@ -83,8 +83,10 @@ export function CommunityFeedCard({ post, t }) {
           <video
             className="vd-community-feed-video"
             src={vid}
-            controls
+            muted
+            loop
             playsInline
+            autoPlay
             preload="auto"
             poster={img ? optimizeVideoPosterUrl(img) : undefined}
             aria-label={fullCap.slice(0, 120) || reelLabel}
@@ -107,62 +109,53 @@ export function CommunityFeedCard({ post, t }) {
         {isVideo && <span className="vd-community-feed-reel-badge">{reelLabel}</span>}
       </div>
       <div className="vd-community-feed-card-body">
-        {placeId ? (
-          <Link
-            to={discoverPlaceFeedPath(placeId)}
-            className="vd-community-feed-place-row"
-            title={t('discover', 'feedVenueHubTitle')}
-          >
-            {(() => {
-              const av = post.place_image_url
-                ? getPlaceImageUrl(String(post.place_image_url).trim())
-                : null;
-              return av ? (
-                <img
-                  alt=""
-                  className="vd-community-feed-place-avatar"
-                  width={36}
-                  height={36}
-                  loading="lazy"
-                  decoding="async"
-                  {...getDeliveryImgProps(av, 'thumb')}
-                />
-              ) : (
-                <span className="vd-community-feed-place-avatar vd-community-feed-place-avatar--icon" aria-hidden>
-                  <Icon name="storefront" size={18} />
-                </span>
-              );
-            })()}
-            {placeName ? <span className="vd-community-feed-place-name">{placeName}</span> : null}
-          </Link>
-        ) : null}
-        <p className="vd-community-feed-caption">
-          {caption}
-          {fullCap.length > 160 ? '…' : ''}
-        </p>
-        <div className="vd-community-feed-meta">
-          {placeName && <span className="vd-community-feed-author">{placeName}</span>}
-          {(Number(post.likes_count) > 0 || Number(post.comments_count) > 0) && (
-            <span className="vd-community-feed-stats" aria-label="Engagement">
-              {Number(post.likes_count) > 0 && (
-                <span className="vd-community-feed-stat">
-                  <Icon name="favorite" size={15} /> {post.likes_count}
-                </span>
-              )}
-              {Number(post.comments_count) > 0 && (
-                <span className="vd-community-feed-stat">
-                  <Icon name="chat_bubble_outline" size={15} /> {post.comments_count}
-                </span>
-              )}
-            </span>
+        <div className="vd-community-feed-card-content">
+          <p className="vd-community-feed-caption">
+            {caption}
+            {fullCap.length > 160 ? '…' : ''}
+          </p>
+        </div>
+        <div className="vd-community-feed-glass-footer">
+          <div className="vd-community-feed-meta">
+            {placeId ? (
+              <Link
+                to={discoverPlaceFeedPath(placeId)}
+                className="vd-community-feed-place-row"
+                title={t('discover', 'feedVenueHubTitle')}
+              >
+                {(() => {
+                  const av = post.place_image_url
+                    ? getPlaceImageUrl(String(post.place_image_url).trim())
+                    : null;
+                  return av ? (
+                    <img
+                      alt=""
+                      className="vd-community-feed-place-avatar"
+                      width={28}
+                      height={28}
+                      loading="lazy"
+                      decoding="async"
+                      {...getDeliveryImgProps(av, 'thumb')}
+                    />
+                  ) : (
+                    <span className="vd-community-feed-place-avatar vd-community-feed-place-avatar--icon" aria-hidden>
+                      <Icon name="storefront" size={14} />
+                    </span>
+                  );
+                })()}
+                {placeName ? <span className="vd-community-feed-author">{placeName}</span> : null}
+              </Link>
+            ) : placeName ? (
+              <span className="vd-community-feed-author">{placeName}</span>
+            ) : null}
+          </div>
+          {placeId && (
+            <Link to={`/place/${placeId}`} className="vd-community-feed-cta">
+              {t('home', 'communityViewPost')}
+              <Icon name="arrow_forward" size={16} className="vd-btn-arrow" />
+            </Link>
           )}
         </div>
-        {placeId && (
-          <Link to={`/place/${placeId}`} className="vd-community-feed-cta">
-            {t('home', 'communityViewPlace')}
-            <Icon name="arrow_forward" size={16} />
-          </Link>
-        )}
       </div>
     </article>
   );
@@ -220,7 +213,7 @@ export function CommunityFeedStrip({ posts, t, moreTo, layout = 'scroll' }) {
                   <span className="vd-community-feed-pulse" />
                   {t('home', 'communityFeedLiveEyebrow')}
                 </p>
-                <h2 className="vd-top-picks-title vd-community-feed-showcase-title">{t('home', 'communityFeedTitle')}</h2>
+                <h2 className="vd-top-picks-title vd-community-feed-showcase-title">Community — venue reels & posts</h2>
                 <p className="vd-community-feed-showcase-tagline">{t('home', 'communityFeedShowcaseTagline')}</p>
               </div>
               {moreTo && (

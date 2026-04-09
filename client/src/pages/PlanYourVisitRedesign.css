@@ -1,0 +1,130 @@
+/* Plan Your Visit Modernization Overrides */
+
+.vd-plan {
+  background: 
+    radial-gradient(1200px 520px at 10% -18%, rgba(15, 118, 110, 0.25), transparent 60%),
+    radial-gradient(900px 460px at 92% 18%, rgba(13, 92, 86, 0.2), transparent 62%),
+    linear-gradient(160deg, #064e3b 0%, #0d9488 45%, #064e3b 100%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.vd-plan::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E") !important;
+  opacity: 0.04 !important;
+  pointer-events: none !important;
+  mix-blend-mode: overlay !important;
+}
+
+.vd-plan-inner {
+  padding-top: clamp(60px, 8vw, 100px) !important;
+  padding-bottom: clamp(60px, 8vw, 100px) !important;
+}
+
+.vd-plan-title {
+  font-family: var(--font-serif) !important;
+  font-size: clamp(32px, 5vw, 48px) !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+  margin-bottom: 40px !important;
+  letter-spacing: -0.01em !important;
+  position: relative !important;
+  padding-left: 28px !important;
+}
+
+.vd-plan-title::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 4px !important;
+  bottom: 4px !important;
+  width: 4.5px !important;
+  background: linear-gradient(to bottom, #10b981 0%, rgba(16, 185, 129, 0.1) 100%) !important;
+  border-radius: 99px !important;
+}
+
+.vd-plan-card {
+  background: rgba(255, 255, 255, 0.75) !important; /* More opaque for text readability */
+  backdrop-filter: blur(40px) !important;
+  -webkit-backdrop-filter: blur(40px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  border-radius: 32px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+  padding: 40px !important;
+  margin-bottom: 32px !important;
+  color: #1e293b !important;
+}
+
+.vd-widgets-row {
+  gap: 40px 60px !important;
+}
+
+@media (min-width: 769px) {
+  .vd-plan-card .vd-widgets-row > *:last-child {
+    padding-left: 60px !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.15) !important;
+  }
+}
+
+.vd-widget-title {
+  color: #0d9488 !important; /* Bold teal for better visibility */
+  font-size: 14px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  margin-bottom: 20px !important;
+  font-weight: 800 !important;
+}
+
+.vd-widget-value {
+  color: #0f172a !important; /* High contrast main value */
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.vd-widget-detail-label {
+  color: #64748b !important; /* Visible slate grey */
+  font-weight: 800 !important;
+}
+
+.vd-widget-detail-value {
+  color: #1e293b !important; /* High contrast dark value */
+  font-weight: 700 !important;
+}
+
+.vd-plan-text {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 18px !important;
+  line-height: 1.6 !important;
+  max-width: 800px !important;
+  margin: 0 auto 40px !important;
+}
+
+/* Clock and Weather Specifics */
+.vd-tripoli-clock-tower-img, 
+.vd-weather-sun-icon {
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3)) invert(1) brightness(1.5) !important;
+}
+
+/* CTAs Redesign matching pills */
+.vd-plan .vd-btn--primary {
+  background: rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  padding: 14px 28px !important;
+  border-radius: 99px !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.2) !important;
+}
+
+.vd-plan .vd-btn--primary:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.3) !important;
+}

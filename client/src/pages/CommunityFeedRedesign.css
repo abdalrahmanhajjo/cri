@@ -1,0 +1,382 @@
+/* Community Feed Glassmorphism Redesign Overrides */
+
+.vd-community-feed {
+  background: transparent !important;
+  border-top: none !important;
+}
+
+.vd-community-feed-card {
+  border-radius: 24px !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  min-height: 420px !important;
+  transition: transform var(--duration-normal) var(--ease-out) !important;
+}
+
+.vd-community-feed-card-media {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+.vd-community-feed-img, 
+.vd-community-feed-video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.vd-community-feed-card-body {
+  position: relative !important;
+  z-index: 1 !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-end !important;
+  padding: 24px !important;
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%) !important;
+  border-radius: 0 0 28px 28px !important;
+}
+
+.vd-community-feed-card-content {
+  padding: 20px 22px !important;
+}
+
+.vd-community-feed-caption {
+  margin-bottom: 24px !important;
+  color: #fff !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.4) !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+.vd-community-feed-glass-footer {
+  background: rgba(43, 44, 47, 0.4) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  padding: 14px 18px !important;
+  margin: 0 12px 14px !important;
+  border-radius: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25) !important;
+}
+
+.vd-community-feed-meta {
+  display: flex !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+.vd-community-feed-place-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  text-decoration: none !important;
+  min-width: 0 !important;
+}
+
+.vd-community-feed-place-avatar {
+  border-radius: 50% !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.vd-community-feed-author {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.vd-community-feed-cta {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 16px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 12px !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+  transition: all 0.2s !important;
+  flex-shrink: 0 !important;
+}
+
+.vd-community-feed-cta:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: translateX(3px) !important;
+}
+
+.vd-community-feed-grid--bento > .vd-community-feed-card .vd-community-feed-card-media,
+.vd-community-feed-grid--trio.vd-community-feed-grid--bento > .vd-community-feed-card .vd-community-feed-card-media {
+  aspect-ratio: unset !important;
+  min-height: 0 !important;
+}
+
+.vd-community-feed-video-progress,
+.vd-community-feed-video-bar,
+.vd-community-feed-video-overlay,
+.vd-community-feed-video-play-hint,
+.vd-community-feed-ext-link,
+.vd-community-feed-reel-badge {
+  display: none !important;
+}
+
+.vd-community-feed-meta {
+  display: flex !important; /* Restore default for desktop */
+}
+
+/* Aggressive cleanup for the persistent vertical bar and horizontal lines */
+.vd-community-feed-card-media::before,
+.vd-community-feed-card-media::after,
+.vd-community-feed-video-wrapper::before,
+.vd-community-feed-video-wrapper::after,
+.vd-community-feed-video::before,
+.vd-community-feed-video::after {
+  content: none !important;
+  display: none !important;
+  border: none !important;
+  opacity: 0 !important;
+}
+
+/* Hide scrollbars on the community feed container */
+.vd-community-feed-scroll {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.vd-community-feed-scroll::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* Nuke any legacy pseudo-elements or decorators that create lines/arrows */
+.vd-community-feed-card::before,
+.vd-community-feed-card::after,
+.vd-community-feed-card-body::before,
+.vd-community-feed-card-body::after,
+.vd-community-feed-glass-footer::before,
+.vd-community-feed-glass-footer::after,
+/* Community Feed Header Redesign - Alignment with other sections */
+.vd-community-feed-header {
+  margin-bottom: 48px !important;
+  border-bottom: none !important;
+  position: relative !important;
+  padding-left: 28px !important;
+}
+
+.vd-community-feed-header::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 4px !important;
+  bottom: 4px !important;
+  width: 4.5px !important;
+  background: linear-gradient(to bottom, var(--color-primary) 0%, rgba(15, 118, 110, 0.1) 100%) !important;
+  border-radius: 99px !important;
+}
+
+.vd-community-feed-showcase-title {
+  font-family: var(--font-serif) !important;
+  font-size: clamp(32px, 5vw, 48px) !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.1 !important;
+  margin-bottom: 12px !important;
+}
+
+.vd-community-feed-showcase-tagline {
+  font-size: 16px !important;
+  color: #475569 !important;
+  font-weight: 500 !important;
+  max-width: 600px !important;
+}
+
+.vd-community-feed-intro-eyebrow {
+  margin-bottom: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  color: var(--color-primary-dark) !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.12em !important;
+}
+
+/* --- Mobile Enhancements (Small Devices) --- */
+@media (max-width: 767px) {
+  .vd-community-feed {
+    padding-bottom: 40px !important;
+  }
+
+  .vd-community-feed-header {
+    border-bottom: none !important;
+    margin-bottom: 24px !important;
+    padding-bottom: 0 !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-end !important;
+    position: relative !important;
+  }
+
+  .vd-community-feed-more--pill-compact {
+    flex-shrink: 0 !important;
+    margin-bottom: 8px !important;
+    padding: 8px 16px !important;
+    background: rgba(15, 118, 110, 0.08) !important;
+    border: 1.5px solid rgba(15, 118, 110, 0.2) !important;
+    color: var(--color-primary) !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    border-radius: 99px !important;
+  }
+
+  .vd-community-feed-intro {
+    padding-left: 24px !important;
+    border-left: none !important; /* Remove solid border */
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    position: relative !important;
+    background: none !important; /* Remove background color effect */
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+
+  .vd-community-feed-intro::before {
+    content: none !important;
+  }
+
+  .vd-community-feed-intro-avatars {
+    justify-content: flex-start !important;
+    margin-bottom: 12px !important;
+    gap: -12px !important; /* more overlap */
+  }
+
+  .vd-community-feed-intro-avatars img {
+    width: 48px !important;
+    height: 48px !important;
+    border-width: 2.5px !important;
+    border-color: #fff !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+  }
+
+  .vd-community-feed-showcase-title {
+    font-size: 30px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin-bottom: 8px !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.2 !important;
+  }
+
+  .vd-community-feed-showcase-tagline {
+    font-size: 14px !important;
+    color: #475569 !important;
+    opacity: 1 !important;
+    margin-bottom: 12px !important;
+    line-height: 1.5 !important;
+    font-weight: 500 !important;
+  }
+
+  .vd-community-feed-intro-eyebrow {
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.12em !important;
+    margin-bottom: 4px !important;
+    color: var(--color-primary-dark) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    text-transform: uppercase !important;
+  }
+  
+  .vd-community-feed-pulse {
+    width: 8px !important;
+    height: 8px !important;
+    background-color: var(--color-primary) !important;
+  }
+
+  /* Card Redesign - Removing the heavy box */
+  .vd-community-feed-card {
+    min-height: 480px !important; /* Taller for mobile */
+    border-radius: 28px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .vd-community-feed-card-body {
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 40%, transparent 100%) !important;
+    padding: 20px !important;
+    justify-content: flex-end !important;
+  }
+
+  .vd-community-feed-card-content {
+    padding: 0 !important;
+    margin-bottom: 16px !important;
+  }
+
+  .vd-community-feed-caption {
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    font-weight: 500 !important;
+  }
+
+  /* Remove the glass box container entirely on mobile */
+  .vd-community-feed-glass-footer {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .vd-community-feed-meta {
+    display: none !important; /* User: only keep view post button and description */
+  }
+
+  /* Floating Author Info */
+  .vd-community-feed-author {
+    font-size: 13px !important;
+    opacity: 0.9 !important;
+  }
+
+  /* Redesigned Floating Button */
+  .vd-community-feed-cta {
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    padding: 10px 20px !important;
+    border-radius: 99px !important;
+    font-size: 14px !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+  }
+}

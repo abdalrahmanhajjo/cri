@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { getPlaceImageUrl } from '../api/client';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
-import { useTheme } from '../context/ThemeContext';
 import { loadGoogleMapsScript } from '../utils/mapGoogleLoader';
 import { MAP_PATH, PLAN_TRIP_AREA_NAV, PLAN_TRIP_AREA_I18N_KEYS } from '../config/planTripAreas';
 import { getTripoliAreaKeyForCoordinates, TRIPOLI_AREA_MARKER_COLORS } from '../utils/tripoliAreaBounds';
@@ -25,16 +24,6 @@ const LIGHT_MAP_SUBTLE = [
   { featureType: 'transit', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
 ];
 
-const DARK_MAP_STYLES = [
-  { elementType: 'geometry', stylers: [{ color: '#0b1520' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#0b1520' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#94a3b8' }] },
-  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#061018' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#152535' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1e3044' }] },
-  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#7c8ea0' }] },
-];
 
 function haversineMeters(a, b) {
   if (!a || !b || a.lat == null || b.lat == null) return Infinity;
@@ -82,7 +71,6 @@ function markerIconSpec(maps, p, selected) {
  * Home “Find your way” — polished Google Map: quarter pins, legend, stats, detail sheet, nearby with thumbnails.
  */
 export default function FindYourWayMap({ places = [], t }) {
-  const { theme } = useTheme();
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const apiKey = typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -187,7 +175,7 @@ export default function FindYourWayMap({ places = [], t }) {
         if (typeof window !== 'undefined') window.gm_authFailure = null;
 
         let map = mapInstanceRef.current;
-        const lightStyles = theme === 'dark' ? DARK_MAP_STYLES : [...LIGHT_MAP_SUBTLE];
+        const lightStyles = [...LIGHT_MAP_SUBTLE];
         if (!map) {
           map = new maps.Map(mapRef.current, {
             center: TRIPOLI_CENTER,
@@ -201,14 +189,14 @@ export default function FindYourWayMap({ places = [], t }) {
             fullscreenControlOptions: { position: maps.ControlPosition.RIGHT_TOP },
             scaleControl: false,
             gestureHandling: 'greedy',
-            backgroundColor: theme === 'dark' ? '#071116' : '#f1f5f9',
+            backgroundColor: '#f1f5f9',
             styles: lightStyles,
           });
           mapInstanceRef.current = map;
         } else {
           map.setOptions({
             styles: lightStyles,
-            backgroundColor: theme === 'dark' ? '#071116' : '#f1f5f9',
+            backgroundColor: '#f1f5f9',
           });
         }
         setMapReady(true);
@@ -222,7 +210,7 @@ export default function FindYourWayMap({ places = [], t }) {
       cancelled = true;
       if (typeof window !== 'undefined') window.gm_authFailure = null;
     };
-  }, [visible, apiKey, theme]);
+  }, [visible, apiKey]);
 
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -473,7 +461,7 @@ export default function FindYourWayMap({ places = [], t }) {
                 className="fym-panel-btn fym-panel-btn--ghost"
               >
                 {safeT('home', 'mapDirections')}
-                <Icon name="directions_walk" size={18} aria-hidden />
+                <Icon name="near_me" size={18} aria-hidden />
               </a>
             </div>
             {nearbyForSelected.length > 0 && (
