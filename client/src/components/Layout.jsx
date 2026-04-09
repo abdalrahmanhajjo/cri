@@ -98,10 +98,8 @@ export default function Layout() {
     }
   }, [user?.id]);
 
-  const useLegacyMobileNav = isCommunityHub || isActivitiesHub;
-
   return (
-    <div className={`layout${useLegacyMobileNav ? ' layout--legacy-mobile-nav' : ''}`}>
+    <div className="layout">
       <header id="site-header" className={`header header--vd ${menuOpen ? 'menu-open' : ''}`}>
         <div className="header-inner">
           <div className="header-row header-row--main">
