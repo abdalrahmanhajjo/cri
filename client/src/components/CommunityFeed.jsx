@@ -161,11 +161,6 @@ export function CommunityFeedCard({ post, t }) {
   );
 }
 
-function showcaseThumbSrc(post) {
-  const raw = rawFeedImageUrls(post)[0];
-  return raw ? feedMediaUrl(fixImageUrlExtension(raw)) : '';
-}
-
 export function CommunityFeedStrip({ posts, t, moreTo, layout = 'scroll' }) {
   const displayPosts = useMemo(() => {
     if (layout === 'bento') return pickBestMixedThree(posts);
@@ -187,59 +182,18 @@ export function CommunityFeedStrip({ posts, t, moreTo, layout = 'scroll' }) {
         <header
           className={`vd-top-picks-header vd-community-feed-header${isShowcase ? ' vd-community-feed-header--showcase vd-community-feed-header--showcase-compact' : ''}`}
         >
-          {isShowcase ? (
-            <div className="vd-community-feed-intro">
-              <div className="vd-community-feed-intro-visual" aria-hidden="true">
-                {displayPosts.slice(0, 3).map((p, i) => {
-                  const src = showcaseThumbSrc(p);
-                  return (
-                    <div
-                      key={p.id}
-                      className={`vd-community-feed-mosaic-cell vd-community-feed-mosaic-cell--${i + 1}`}
-                    >
-                      {src ? (
-                        <img alt="" className="vd-community-feed-mosaic-img" loading="lazy" decoding="async" {...getDeliveryImgProps(src, 'thumb')} />
-                      ) : (
-                        <span className="vd-community-feed-mosaic-fallback">
-                          <Icon name={isCommunityFeedVideo(p) ? 'play_circle' : 'photo_camera'} size={22} />
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="vd-community-feed-intro-copy">
-                <p className="vd-community-feed-intro-eyebrow">
-                  <span className="vd-community-feed-pulse" />
-                  {t('home', 'communityFeedLiveEyebrow')}
-                </p>
-                <h2 className="vd-top-picks-title vd-community-feed-showcase-title">Community — venue reels & posts</h2>
-                <p className="vd-community-feed-showcase-tagline">{t('home', 'communityFeedShowcaseTagline')}</p>
-              </div>
-              {moreTo && (
-                <Link
-                  to={moreTo}
-                  className="vd-community-feed-more vd-community-feed-more--pill vd-community-feed-more--pill-compact"
-                >
-                  {t('discover', 'seeAllDiscover')}
-                  <Icon name="arrow_forward" size={16} />
-                </Link>
-              )}
+          <div className="vd-top-picks-header-row vd-community-feed-header-row">
+            <div className="vd-top-picks-heading-text vd-community-feed-heading-text">
+              <h2 className="vd-top-picks-title">{t('home', 'communityFeedTitle')}</h2>
+              <p className="vd-top-picks-subtitle">{t('home', 'communityFeedSub')}</p>
             </div>
-          ) : (
-            <div className="vd-community-feed-header-row">
-              <div className="vd-community-feed-heading-text">
-                <h2 className="vd-top-picks-title">{t('home', 'communityFeedTitle')}</h2>
-                <p className="vd-top-picks-subtitle">{t('home', 'communityFeedSub')}</p>
-              </div>
-              {moreTo && (
-                <Link to={moreTo} className="vd-community-feed-more">
-                  {t('discover', 'seeAllDiscover')}
-                  <Icon name="arrow_forward" size={18} />
-                </Link>
-              )}
-            </div>
-          )}
+            {moreTo && (
+              <Link to={moreTo} className="vd-community-feed-more">
+                {t('discover', 'seeAllDiscover')}
+                <Icon name="arrow_forward" size={18} />
+              </Link>
+            )}
+          </div>
         </header>
         <div
           className={`${listClass}${isShowcase ? ' vd-community-feed-bento-shell vd-community-feed-grid--trio' : ''}`}

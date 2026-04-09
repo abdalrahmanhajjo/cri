@@ -1131,7 +1131,7 @@ a.vd-top-picks-card-bg--hit {
     margin-bottom: 20px;
     padding-bottom: 18px;
     position: relative;
-    border-bottom-color: rgba(22, 51, 49, 0.1);
+    border-bottom: none;
   }
 
   .vd-top-picks-header::before {
@@ -1173,24 +1173,24 @@ a.vd-top-picks-card-bg--hit {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    min-height: 42px;
-    padding: 0 14px;
-    border-radius: 999px;
-    background: rgba(15, 118, 110, 0.08);
-    border: 1px solid rgba(15, 118, 110, 0.14);
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: none;
     color: var(--color-primary-dark, #0d5c56);
-    box-shadow: 0 6px 18px rgba(15, 118, 110, 0.08);
+    box-shadow: none;
   }
 
   .vd-top-picks-header .vd-community-feed-more .icon,
   .vd-top-picks-header .vd-community-feed-more .icon--feather {
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
+    width: auto;
+    height: auto;
+    border-radius: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(15, 118, 110, 0.12);
+    background: transparent;
   }
 
   .vd-top-picks-carousel {
@@ -1405,7 +1405,7 @@ a.vd-top-picks-card-bg--hit {
   .vd-top-picks-header {
     position: relative;
     padding-inline-start: 22px;
-    border-bottom-color: rgba(28, 25, 23, 0.08);
+    border-bottom: none;
   }
 
   .vd-top-picks-header::before {
@@ -6278,7 +6278,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 /* Community feed — same section + card language as Top picks / Experiences */
 .vd-community-feed {
   background: var(--color-background);
-  border-top: 1px solid var(--color-border);
+  border-top: none;
 }
 
 .vd-community-feed-header.vd-top-picks-header {
@@ -7165,13 +7165,8 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 1px;
-  background: linear-gradient(90deg,
-      transparent 0%,
-      rgba(15, 118, 110, 0.22) 18%,
-      rgba(15, 118, 110, 0.12) 50%,
-      rgba(15, 118, 110, 0.22) 82%,
-      transparent 100%);
+  height: 0;
+  background: transparent;
 }
 
 .vd-community-feed-header--showcase .vd-community-feed-showcase-title.vd-top-picks-title {
