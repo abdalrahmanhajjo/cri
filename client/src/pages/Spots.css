@@ -238,7 +238,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.8);
+  border: 2px solid rgba(15, 118, 110, 0.4);
   background: transparent;
   cursor: pointer;
   padding: 0;
@@ -246,11 +246,12 @@
 }
 
 .spots-featured-dot:hover {
-  background: rgba(255,255,255,0.5);
+  background: rgba(15, 118, 110, 0.2);
 }
 
 .spots-featured-dot--active {
-  background: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   transform: scale(1.2);
 }
 

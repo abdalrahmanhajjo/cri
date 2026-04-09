@@ -293,6 +293,16 @@ function TopPicksCarousel({ places, t, moreTo }) {
     setIndex((i) => (safePlaces.length ? Math.min(i, safePlaces.length - 1) : 0));
   }, [safePlaces.length]);
 
+  const handlePrev = useCallback((e) => {
+    e?.preventDefault();
+    setIndex((i) => (i - 1 + safePlaces.length) % safePlaces.length);
+  }, [safePlaces.length]);
+
+  const handleNext = useCallback((e) => {
+    e?.preventDefault();
+    setIndex((i) => (i + 1) % safePlaces.length);
+  }, [safePlaces.length]);
+
   const onCarouselKeyDown = useCallback(
     (e) => {
       if (safePlaces.length <= 1) return;
@@ -476,6 +486,27 @@ function TopPicksCarousel({ places, t, moreTo }) {
               );
             })}
           </div>
+
+          {safePlaces.length > 1 && (
+            <div className="vd-top-picks-nav" aria-hidden="true">
+              <button
+                type="button"
+                className="vd-top-picks-arrow vd-top-picks-arrow--prev"
+                onClick={handlePrev}
+                aria-label={t('home', 'prevSlide')}
+              >
+                <Icon name="chevron_left" size={28} />
+              </button>
+              <button
+                type="button"
+                className="vd-top-picks-arrow vd-top-picks-arrow--next"
+                onClick={handleNext}
+                aria-label={t('home', 'nextSlide')}
+              >
+                <Icon name="chevron_right" size={28} />
+              </button>
+            </div>
+          )}
         </div>
 
         <footer className="vd-top-picks-carousel-footer">

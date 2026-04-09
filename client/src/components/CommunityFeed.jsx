@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { getImageUrl, fixImageUrlExtension, getPlaceImageUrl } from '../api/client';
 import Icon from './Icon';
-import { discoverPlaceFeedPath } from '../utils/discoverPaths';
+import { COMMUNITY_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
 import { isLikelyDirectStreamableVideo } from '../utils/feedVideoPlayback';
 import { rawFeedImageUrls } from '../utils/feedPostImages';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
@@ -150,7 +150,7 @@ export function CommunityFeedCard({ post, t }) {
             ) : null}
           </div>
           {placeId && (
-            <Link to={`/place/${placeId}`} className="vd-community-feed-cta">
+            <Link to={`${COMMUNITY_PATH}#feed-post-${post.id}`} className="vd-community-feed-cta">
               {t('home', 'communityViewPost')}
               <Icon name="arrow_forward" size={16} className="vd-btn-arrow" />
             </Link>
