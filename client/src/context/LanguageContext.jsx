@@ -36,13 +36,16 @@ export function LanguageProvider({ children }) {
     return getTranslation(lang, namespace, key);
   }, [lang, overrideVersion]);
 
-  const value = {
-    lang,
-    setLanguage,
-    t,
-    languages,
-    isRtl: lang === 'ar',
-  };
+  const value = useMemo(
+    () => ({
+      lang,
+      setLanguage,
+      t,
+      languages,
+      isRtl: lang === 'ar',
+    }),
+    [lang, setLanguage, t]
+  );
 
   return (
     <LanguageContext.Provider value={value}>

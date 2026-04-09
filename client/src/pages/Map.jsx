@@ -324,7 +324,7 @@ export default function MapPage() {
         .catch(() => setPlaces([]))
         .finally(() => setLoading(false));
     }
-  }, [langParam, location.state, searchParams]);
+  }, [langParam, location.state, searchParams.toString()]);
 
   useEffect(() => {
     if (!addingTripStop || catalogFetched) return undefined;
@@ -708,7 +708,7 @@ export default function MapPage() {
   const peekPlaceOnMap = useCallback(
     (place) => {
       if (!place || addingTripStop) return;
-      setSelectedPlaceId(place.id);
+      setSelectedPlaceId((curr) => (curr === place.id ? curr : place.id));
       const map = mapInstanceRef.current;
       const infoWindow = infoWindowRef.current;
       const maps = window.google?.maps;
@@ -722,8 +722,11 @@ export default function MapPage() {
     const idx = selectedPlaceId
       ? swipeDeckPlaces.findIndex((p) => String(p.id) === String(selectedPlaceId))
       : -1;
-    if (idx >= 0) setSwipeDeckIndex(idx);
-    else setSwipeDeckIndex(0);
+    if (idx >= 0) {
+      setSwipeDeckIndex((curr) => (curr === idx ? curr : idx));
+    } else {
+      setSwipeDeckIndex((curr) => (curr === 0 ? curr : 0));
+    }
   }, [listOpen, addingTripStop, swipeDeckPlaces, selectedPlaceId]);
 
   useEffect(() => {
@@ -786,7 +789,7 @@ export default function MapPage() {
     if (!apiKey || !mapRef.current) return;
 
     let cancelled = false;
-    setMapError(null);
+    setMapError((prev) => (prev === null ? prev : null));
 
     const addMarkers = (map, maps, infoWindow) => {
       markersRef.current.forEach((m) => m?.marker?.setMap?.(null));
