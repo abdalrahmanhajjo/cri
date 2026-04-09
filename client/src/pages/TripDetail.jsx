@@ -317,19 +317,23 @@ export default function TripDetail() {
                 <Icon name="person_add" size={20} /> {shareRequestOpen ? 'Close request' : 'Send request'}
               </button>
             )}
-            <Link to={`/plan?edit=${encodeURIComponent(trip.id)}`} className="trip-detail-btn trip-detail-btn--outline">
-              <Icon name="edit" size={20} /> {t('home', 'tripDetailEdit')}
-            </Link>
-            <button
-              type="button"
-              className="trip-detail-btn trip-detail-btn--danger trip-detail-btn--icon-only"
-              onClick={handleDeleteTrip}
-              disabled={deleting}
-              aria-busy={deleting}
-              aria-label={deleting ? t('home', 'loading') : t('home', 'deleteTrip')}
-            >
-              <Icon name="delete" size={22} ariaHidden />
-            </button>
+            {trip.isHost !== false && (
+              <Link to={`/plan?edit=${encodeURIComponent(trip.id)}`} className="trip-detail-btn trip-detail-btn--outline">
+                <Icon name="edit" size={20} /> {t('home', 'tripDetailEdit')}
+              </Link>
+            )}
+            {trip.isHost !== false && (
+              <button
+                type="button"
+                className="trip-detail-btn trip-detail-btn--danger trip-detail-btn--icon-only"
+                onClick={handleDeleteTrip}
+                disabled={deleting}
+                aria-busy={deleting}
+                aria-label={deleting ? t('home', 'loading') : t('home', 'deleteTrip')}
+              >
+                <Icon name="delete" size={22} ariaHidden />
+              </button>
+            )}
           </div>
           {deleteError && (
             <p className="trip-detail-delete-error" role="alert">

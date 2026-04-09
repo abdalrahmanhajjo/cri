@@ -425,7 +425,15 @@ export default function Plan() {
     if (tripsLoading) return;
     const editId = searchParams.get('edit');
     if (!editId) return;
-    if (trips.some((tr) => tr.id === editId)) {
+    const existingTrip = trips.find((tr) => tr.id === editId);
+    if (existingTrip) {
+      if (existingTrip.isHost === false) {
+        showToast('Only the host can edit this trip.', 'error');
+        const next = new URLSearchParams(searchParams);
+        next.delete('edit');
+        setSearchParams(next, { replace: true });
+        return;
+      }
       setEditingTripId(editId);
       setShowCreateForm(false);
       const next = new URLSearchParams(searchParams);
@@ -438,6 +446,13 @@ export default function Plan() {
       .getTrip(editId)
       .then((trip) => {
         if (cancelled || !trip?.id) return;
+        if (trip.isHost === false) {
+          showToast('Only the host can edit this trip.', 'error');
+          const next = new URLSearchParams(searchParams);
+          next.delete('edit');
+          setSearchParams(next, { replace: true });
+          return;
+        }
         setTrips((prev) => (prev.some((t) => t.id === trip.id) ? prev : [trip, ...prev]));
         setEditingTripId(editId);
         setShowCreateForm(false);
@@ -449,7 +464,7 @@ export default function Plan() {
     return () => {
       cancelled = true;
     };
-  }, [tripsLoading, trips, searchParams, setSearchParams]);
+  }, [tripsLoading, trips, searchParams, setSearchParams, showToast]);
   useEffect(() => { loadFavourites(); }, [loadFavourites]);
   useEffect(() => { loadPlacesAndCategories(); }, [loadPlacesAndCategories]);
 
@@ -641,6 +656,10 @@ export default function Plan() {
 
   const handleSaveTrip = () => {
     if (!editingTripId) return;
+    if (editingTrip?.isHost === false) {
+      showToast('Only the host can edit this trip.', 'error');
+      return;
+    }
     const name = editName.trim();
     setNameError('');
     if (!name) {
@@ -706,6 +725,11 @@ export default function Plan() {
 
   const handleDeleteTrip = (id) => {
     if (!id || deletingTripId) return;
+    const trip = trips.find((x) => x.id === id);
+    if (trip?.isHost === false) {
+      showToast('Only the host can delete this trip.', 'error');
+      return;
+    }
     if (!window.confirm(t('home', 'deleteTrip') + '?')) return;
     setDeletingTripId(id);
     api.user
@@ -1484,20 +1508,22 @@ export default function Plan() {
                 <button type="button" className="vd-btn vd-btn--secondary" onClick={handleCancelEdit}>
                   {t('home', 'cancel')}
                 </button>
-                <button
-                  type="button"
-                  className="vd-btn plan-delete-btn plan-delete-btn--icon-only"
-                  onClick={() => handleDeleteTrip(editingTripId)}
-                  disabled={saving || deletingTripId === editingTripId}
-                  aria-busy={deletingTripId === editingTripId}
-                  aria-label={
-                    deletingTripId === editingTripId
-                      ? t('home', 'loading')
-                      : t('home', 'deleteTrip')
-                  }
-                >
-                  <Icon name="delete" size={22} ariaHidden />
-                </button>
+                {editingTrip?.isHost !== false && (
+                  <button
+                    type="button"
+                    className="vd-btn plan-delete-btn plan-delete-btn--icon-only"
+                    onClick={() => handleDeleteTrip(editingTripId)}
+                    disabled={saving || deletingTripId === editingTripId}
+                    aria-busy={deletingTripId === editingTripId}
+                    aria-label={
+                      deletingTripId === editingTripId
+                        ? t('home', 'loading')
+                        : t('home', 'deleteTrip')
+                    }
+                  >
+                    <Icon name="delete" size={22} ariaHidden />
+                  </button>
+                )}
               </div>
             </section>
           </div>
@@ -1851,6 +1877,7 @@ export default function Plan() {
                       : 0;
                     const numDays = getDayCount(tr.startDate, tr.endDate);
                     const hasPlaces = totalPlaces > 0;
+                    const canHostManage = tr.isHost !== false;
                     return (
                       <li key={tr.id} className="plan-trip-card">
                         <button type="button" className="plan-trip-card-inner" onClick={() => navigate(`/trips/${encodeURIComponent(tr.id)}`)}>
@@ -1878,21 +1905,23 @@ export default function Plan() {
                           <button type="button" className="plan-trip-card-btn" onClick={(e) => { e.stopPropagation(); handleDuplicateTrip(tr); }} disabled={duplicatingId === tr.id}>
                             <Icon name="content_copy" size={18} /> {t('home', 'duplicate')}
                           </button>
-                          <button
-                            type="button"
-                            className="plan-trip-card-btn plan-trip-card-btn--danger plan-trip-card-btn--icon-only"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteTrip(tr.id);
-                            }}
-                            disabled={deletingTripId === tr.id || duplicatingId === tr.id}
-                            aria-busy={deletingTripId === tr.id}
-                            aria-label={
-                              deletingTripId === tr.id ? t('home', 'loading') : t('home', 'deleteTrip')
-                            }
-                          >
-                            <Icon name="delete" size={20} ariaHidden />
-                          </button>
+                          {canHostManage && (
+                            <button
+                              type="button"
+                              className="plan-trip-card-btn plan-trip-card-btn--danger plan-trip-card-btn--icon-only"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteTrip(tr.id);
+                              }}
+                              disabled={deletingTripId === tr.id || duplicatingId === tr.id}
+                              aria-busy={deletingTripId === tr.id}
+                              aria-label={
+                                deletingTripId === tr.id ? t('home', 'loading') : t('home', 'deleteTrip')
+                              }
+                            >
+                              <Icon name="delete" size={20} ariaHidden />
+                            </button>
+                          )}
                         </div>
                       </li>
                     );

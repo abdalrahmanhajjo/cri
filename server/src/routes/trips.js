@@ -195,7 +195,9 @@ router.get('/trips', async (req, res) => {
       endDate: row.end_date,
       description: row.description,
       days: normalizeDays(row.days),
-      createdAt: row.created_at
+      createdAt: row.created_at,
+      isHost: !row.shared_from_user_id,
+      sharedFromUserId: row.shared_from_user_id || null,
     }));
     res.json({ trips });
   } catch (err) {
@@ -294,6 +296,9 @@ router.patch('/trips/:id', async (req, res) => {
     const tripsColl = await getCollection('trips');
     const trip = await tripsColl.findOne({ id: tripId, user_id: userId });
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
+    if (trip.shared_from_user_id) {
+      return res.status(403).json({ error: 'Only the trip host can edit this trip' });
+    }
     
     const setObj = {};
     if (name !== undefined) setObj.name = name.trim().slice(0, 200);
@@ -333,6 +338,11 @@ router.delete('/trips/:id', async (req, res) => {
   const tripId = req.params.id;
   try {
     const tripsColl = await getCollection('trips');
+    const trip = await tripsColl.findOne({ id: tripId, user_id: userId });
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+    if (trip.shared_from_user_id) {
+      return res.status(403).json({ error: 'Only the trip host can delete this trip' });
+    }
     const result = await tripsColl.deleteOne({ id: tripId, user_id: userId });
     if (result.deletedCount === 0) return res.status(404).json({ error: 'Trip not found' });
     res.json({ ok: true });
