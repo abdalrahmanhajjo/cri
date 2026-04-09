@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
@@ -248,9 +248,12 @@ export default function MapPage() {
   const [catalogFetched, setCatalogFetched] = useState(false);
   /** Places list: `off` = default order; `me` = by distance from user; `place` = from selected pin. */
   const [nearbyMode, setNearbyMode] = useState('off');
+  /** Fixed anchor for nearby-by-place sorting to avoid selection-driven reorder loops. */
+  const [nearbyAnchorPlaceId, setNearbyAnchorPlaceId] = useState(null);
   const [nearbyLocating, setNearbyLocating] = useState(false);
   /** One-place-at-a-time carousel index in the drawer (ordered by nearby / center). */
   const [swipeDeckIndex, setSwipeDeckIndex] = useState(0);
+  const [showMapOnboarding, setShowMapOnboarding] = useState(false);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
@@ -274,6 +277,15 @@ export default function MapPage() {
   useEffect(() => {
     userLocationRef.current = userLocation;
   }, [userLocation]);
+
+  useEffect(() => {
+    try {
+      const seen = window.localStorage.getItem('mapOnboardingSeen');
+      if (!seen) setShowMapOnboarding(true);
+    } catch {
+      setShowMapOnboarding(true);
+    }
+  }, []);
 
   /* Live nav: start in map-only mode; full sheet opens only when user asks. */
   useEffect(() => {
@@ -503,6 +515,12 @@ export default function MapPage() {
     return [...tripOrdered, ...extras];
   }, [addingTripStop, mapBrowseMarkers, mapDisplayPlaces, catalogPickerPlaces]);
 
+  const markersVisibleOnMap = useMemo(() => {
+    if (!listOpen || addingTripStop || selectedPlaceId == null) return markersForMapList;
+    const selectedOnly = markersForMapList.filter((p) => String(p.id) === String(selectedPlaceId));
+    return selectedOnly.length > 0 ? selectedOnly : markersForMapList;
+  }, [listOpen, addingTripStop, selectedPlaceId, markersForMapList]);
+
   const drawerPlaces = useMemo(() => {
     const base = addingTripStop ? catalogPlaces : mapDisplayPlaces;
     const narrow = filterPlacesByQuery(base, deferredSearchQuery);
@@ -533,7 +551,7 @@ export default function MapPage() {
       if (!userLocation) return null;
       anchor = userLocation;
     } else if (nearbyMode === 'place') {
-      const sp = coordsById.get(String(selectedPlaceId));
+      const sp = coordsById.get(String(nearbyAnchorPlaceId));
       if (!sp || sp.latitude == null || sp.longitude == null) return null;
       anchor = { lat: Number(sp.latitude), lng: Number(sp.longitude) };
     }
@@ -544,7 +562,7 @@ export default function MapPage() {
     }));
     rows.sort((a, b) => a._distanceM - b._distanceM);
     return rows;
-  }, [nearbyMode, userLocation, selectedPlaceId, drawerPlacesWithCoords, coordsById]);
+  }, [nearbyMode, userLocation, nearbyAnchorPlaceId, drawerPlacesWithCoords, coordsById]);
 
   const listForDrawer = useMemo(() => {
     if (nearbyMode === 'off') return drawerPlaces;
@@ -590,13 +608,13 @@ export default function MapPage() {
 
   useEffect(() => {
     if (nearbyMode !== 'place') return;
-    if (!selectedPlaceId) {
+    if (!nearbyAnchorPlaceId) {
       setNearbyMode('off');
       return;
     }
-    const sp = coordsById.get(String(selectedPlaceId));
+    const sp = coordsById.get(String(nearbyAnchorPlaceId));
     if (!sp || sp.latitude == null || sp.longitude == null) setNearbyMode('off');
-  }, [nearbyMode, selectedPlaceId, coordsById]);
+  }, [nearbyMode, nearbyAnchorPlaceId, coordsById]);
 
   const nearbyFromSelectionReady = useMemo(() => {
     if (!selectedPlaceId) return false;
@@ -717,24 +735,15 @@ export default function MapPage() {
     [addingTripStop, focusMapOnPlace]
   );
 
-  useLayoutEffect(() => {
-    if (!listOpen || addingTripStop || swipeDeckPlaces.length === 0) return;
-    const idx = selectedPlaceId
-      ? swipeDeckPlaces.findIndex((p) => String(p.id) === String(selectedPlaceId))
-      : -1;
-    if (idx >= 0) {
-      setSwipeDeckIndex((curr) => (curr === idx ? curr : idx));
-    } else {
-      setSwipeDeckIndex((curr) => (curr === 0 ? curr : 0));
-    }
-  }, [listOpen, addingTripStop, swipeDeckPlaces, selectedPlaceId]);
-
+  // NOTE: Auto-sync between selected place, swipe index, and map focus can create
+  // feedback loops in some browser/render timing paths. Keep this flow explicit via
+  // user actions (card arrows / map marker clicks) to avoid maximum update depth errors.
   useEffect(() => {
     if (!listOpen || addingTripStop || swipeDeckPlaces.length === 0) return;
     const p = swipeDeckPlaces[swipeDeckIndex];
     if (!p) return;
-    peekPlaceOnMap(p);
-  }, [listOpen, addingTripStop, swipeDeckIndex, swipeDeckPlaces, peekPlaceOnMap]);
+    setSelectedPlaceId((curr) => (String(curr) === String(p.id) ? curr : p.id));
+  }, [listOpen, addingTripStop, swipeDeckIndex, swipeDeckPlaces]);
 
   const handleMapSearchPick = useCallback(
     (p) => {
@@ -795,7 +804,7 @@ export default function MapPage() {
       markersRef.current.forEach((m) => m?.marker?.setMap?.(null));
       markersRef.current = [];
       markersByPlaceIdRef.current.clear();
-      const list = markersForMapList || [];
+      const list = markersVisibleOnMap || [];
       const tripRank = new Map((mapDisplayPlaces || []).map((p, i) => [p.id, String(i + 1)]));
       const showTripNumbers = Boolean(tripFilterName && mapDisplayPlaces.length > 0);
       const bounds = new maps.LatLngBounds();
@@ -888,7 +897,7 @@ export default function MapPage() {
       markersRef.current = [];
       markersByPlaceIdRef.current.clear();
     };
-  }, [apiKey, markersForMapList, mapDisplayPlaces, tripFilterName, infoWindowStrings, addingTripStop, commitAddStop]);
+  }, [apiKey, markersVisibleOnMap, mapDisplayPlaces, tripFilterName, infoWindowStrings, addingTripStop, commitAddStop]);
 
   useEffect(() => {
     return () => {
@@ -911,14 +920,15 @@ export default function MapPage() {
     if (!map || !maps) return;
     setTimeout(() => {
       maps.event.trigger(map, 'resize');
-      const leftPadding = tripFilterName ? 400 : (listOpen ? 360 : MAP_FIT_PADDING);
+      const leftPadding = tripFilterName ? 400 : MAP_FIT_PADDING;
+      const bottomPadding = listOpen && !tripFilterName ? 320 : MAP_FIT_PADDING;
       if (markersRef.current.length > 1) {
         const bounds = new maps.LatLngBounds();
         markersRef.current.forEach((m) => bounds.extend(m.marker.getPosition()));
         map.fitBounds(bounds, {
           top: tripFilterName ? MAP_FIT_PADDING + 8 : MAP_FIT_PADDING + 16,
           right: MAP_FIT_PADDING,
-          bottom: MAP_FIT_PADDING,
+          bottom: bottomPadding,
           left: leftPadding,
         });
       } else if (markersRef.current.length === 1) {
@@ -1100,11 +1110,13 @@ export default function MapPage() {
 
   const handleNearbyModeAll = useCallback(() => {
     setNearbyMode('off');
+    setNearbyAnchorPlaceId(null);
     setNearbyLocating(false);
   }, []);
 
   const handleNearbyModeMe = useCallback(() => {
     setNearbyMode('me');
+    setNearbyAnchorPlaceId(null);
     if (userLocation) {
       userLocationRef.current = userLocation;
       return;
@@ -1144,6 +1156,7 @@ export default function MapPage() {
   const handleNearbyModePlace = useCallback(() => {
     const sp = coordsById.get(String(selectedPlaceId));
     if (!sp || sp.latitude == null || sp.longitude == null) return;
+    setNearbyAnchorPlaceId(selectedPlaceId);
     setNearbyMode('place');
   }, [selectedPlaceId, coordsById]);
 
@@ -1291,11 +1304,12 @@ export default function MapPage() {
     if (!map || markersRef.current.length === 0) return;
     const bounds = new window.google.maps.LatLngBounds();
     markersRef.current.forEach((m) => bounds.extend(m.marker.getPosition()));
-    const leftPadding = tripFilterName ? 400 : (listOpen ? 360 : MAP_FIT_PADDING);
+    const leftPadding = tripFilterName ? 400 : MAP_FIT_PADDING;
+    const bottomPadding = listOpen && !tripFilterName ? 320 : MAP_FIT_PADDING;
     map.fitBounds(bounds, {
       top: tripFilterName ? MAP_FIT_PADDING + 8 : MAP_FIT_PADDING + 16,
       right: MAP_FIT_PADDING,
-      bottom: MAP_FIT_PADDING,
+      bottom: bottomPadding,
       left: leftPadding,
     });
   }, [listOpen, tripFilterName]);
@@ -1303,6 +1317,15 @@ export default function MapPage() {
   const handleShowAllPlaces = useCallback(() => {
     navigate('/map', { replace: true });
   }, [navigate]);
+
+  const dismissMapOnboarding = useCallback(() => {
+    setShowMapOnboarding(false);
+    try {
+      window.localStorage.setItem('mapOnboardingSeen', '1');
+    } catch {
+      /* ignore storage issues */
+    }
+  }, []);
 
   if (!apiKey) {
     return (
@@ -1324,7 +1347,7 @@ export default function MapPage() {
     <div
       className={`vd map-page map-page--google${liveNavigation ? ' map-page--live-nav' : ''}${
         liveNavigation && !liveNavDirectionsExpanded ? ' map-page--live-nav-collapsed' : ''
-      }`}
+      }${listOpen ? ' map-page--list-open' : ''}`}
       role="main"
       aria-label={t('home', 'mapPageTitle')}
     >
@@ -1395,6 +1418,19 @@ export default function MapPage() {
           </div>
         )}
 
+        {showMapOnboarding && (
+          <div className="map-onboarding-hint" role="status" aria-live="polite">
+            <p className="map-onboarding-title">{t('home', 'mapPageTitle')}</p>
+            <p className="map-onboarding-text">
+              Tap <strong>List</strong> to browse places, tap a pin or card to focus one place, and use
+              <strong> Near me</strong> to sort by distance from your current location.
+            </p>
+            <button type="button" className="map-onboarding-dismiss" onClick={dismissMapOnboarding}>
+              Got it
+            </button>
+          </div>
+        )}
+
         {/* Floating search — hidden in trip/tour mode (VisitTripoliApp map_screen). */}
         {(!tripFilterName || addingTripStop) && (
           <div
@@ -1432,7 +1468,7 @@ export default function MapPage() {
         </button>
 
         {/* Zoom to fit */}
-        {markersForMapList.length > 1 && (
+        {markersVisibleOnMap.length > 1 && (
           <button type="button" className="map-fab map-fab--fit" onClick={handleZoomToFit} aria-label="Fit all places">
             <Icon name="fit_screen" size={22} />
           </button>
@@ -1717,44 +1753,46 @@ export default function MapPage() {
         )}
 
         {/* Places list drawer */}
+        {!addingTripStop && listOpen && (
+          <div
+            className={`map-nearby-tabs-floating${listOpen ? ' map-nearby-tabs-floating--open' : ''}`}
+            role="group"
+            aria-label={t('home', 'mapNearbyGroupAria')}
+          >
+            <button
+              type="button"
+              className={`map-drawer-nearby-btn ${nearbyMode === 'off' ? 'map-drawer-nearby-btn--active' : ''}`}
+              onClick={handleNearbyModeAll}
+              aria-pressed={nearbyMode === 'off'}
+            >
+              <Icon name="list" size={18} />
+              <span>{t('home', 'mapNearbyAll')}</span>
+            </button>
+            <button
+              type="button"
+              className={`map-drawer-nearby-btn ${nearbyMode === 'me' ? 'map-drawer-nearby-btn--active' : ''}`}
+              onClick={handleNearbyModeMe}
+              aria-pressed={nearbyMode === 'me'}
+            >
+              <Icon name="my_location" size={18} />
+              <span>{t('home', 'mapNearbyNearMe')}</span>
+            </button>
+            <button
+              type="button"
+              className={`map-drawer-nearby-btn ${nearbyMode === 'place' ? 'map-drawer-nearby-btn--active' : ''}`}
+              onClick={handleNearbyModePlace}
+              disabled={!nearbyFromSelectionReady}
+              title={!nearbyFromSelectionReady ? t('home', 'mapNearbySelectForDisabledTitle') : undefined}
+              aria-pressed={nearbyMode === 'place'}
+            >
+              <Icon name="place" size={18} />
+              <span>{t('home', 'mapNearbyNearSelection')}</span>
+            </button>
+          </div>
+        )}
         <div className={`map-drawer ${listOpen ? 'map-drawer--open' : ''}`}>
           <div className="map-drawer-header">
             <h2 className="map-drawer-title">{t('home', 'mapPageTitle')}</h2>
-            {!addingTripStop && (
-              <div className="map-drawer-nearby" role="group" aria-label={t('home', 'mapNearbyGroupAria')}>
-                <button
-                  type="button"
-                  className={`map-drawer-nearby-btn ${nearbyMode === 'off' ? 'map-drawer-nearby-btn--active' : ''}`}
-                  onClick={handleNearbyModeAll}
-                  aria-pressed={nearbyMode === 'off'}
-                >
-                  <Icon name="list" size={18} />
-                  <span>{t('home', 'mapNearbyAll')}</span>
-                </button>
-                <button
-                  type="button"
-                  className={`map-drawer-nearby-btn ${nearbyMode === 'me' ? 'map-drawer-nearby-btn--active' : ''}`}
-                  onClick={handleNearbyModeMe}
-                  aria-pressed={nearbyMode === 'me'}
-                >
-                  <Icon name="my_location" size={18} />
-                  <span>{t('home', 'mapNearbyNearMe')}</span>
-                </button>
-                <button
-                  type="button"
-                  className={`map-drawer-nearby-btn ${nearbyMode === 'place' ? 'map-drawer-nearby-btn--active' : ''}`}
-                  onClick={handleNearbyModePlace}
-                  disabled={!nearbyFromSelectionReady}
-                  title={
-                    !nearbyFromSelectionReady ? t('home', 'mapNearbySelectForDisabledTitle') : undefined
-                  }
-                  aria-pressed={nearbyMode === 'place'}
-                >
-                  <Icon name="place" size={18} />
-                  <span>{t('home', 'mapNearbyNearSelection')}</span>
-                </button>
-              </div>
-            )}
             <p className="map-drawer-sub">
               {nearbyMode === 'off' && t('home', 'mapNearbyCount').replace('{n}', String(drawerPlaces.length))}
               {nearbyMode === 'me' && nearbyLocating && t('home', 'mapNearbyGettingLocation')}
