@@ -76,6 +76,7 @@ export default function FindYourWayMap({ places = [], t }) {
 
   const rootRef = useRef(null);
   const mapRef = useRef(null);
+  const mapWrapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
   const [visible, setVisible] = useState(false);
@@ -132,7 +133,12 @@ export default function FindYourWayMap({ places = [], t }) {
       { rootMargin: '160px', threshold: 0.04 }
     );
     obs.observe(el);
-    return () => obs.disconnect();
+    // Mobile reliability fallback: force lazy section visible even if observer misses.
+    const fallbackTimer = window.setTimeout(() => setVisible(true), 1400);
+    return () => {
+      obs.disconnect();
+      window.clearTimeout(fallbackTimer);
+    };
   }, []);
 
   const fitBounds = useCallback((map, maps, markerList) => {
@@ -201,6 +207,7 @@ export default function FindYourWayMap({ places = [], t }) {
         }
         setMapReady(true);
         setTimeout(() => maps.event.trigger(map, 'resize'), 0);
+        setTimeout(() => maps.event.trigger(map, 'resize'), 260);
       })
       .catch((err) => {
         if (!cancelled) setMapError(err.message || 'Failed to load map');
@@ -211,6 +218,36 @@ export default function FindYourWayMap({ places = [], t }) {
       if (typeof window !== 'undefined') window.gm_authFailure = null;
     };
   }, [visible, apiKey]);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const maps = window.google?.maps;
+    const wrap = mapWrapRef.current;
+    if (!map || !maps || !mapReady || !wrap) return undefined;
+
+    const triggerResize = () => maps.event.trigger(map, 'resize');
+    const onOrientation = () => {
+      triggerResize();
+      setTimeout(triggerResize, 220);
+    };
+    const onPageShow = () => setTimeout(triggerResize, 80);
+
+    let ro;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => triggerResize());
+      ro.observe(wrap);
+    }
+    window.addEventListener('orientationchange', onOrientation);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('resize', onPageShow);
+
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('orientationchange', onOrientation);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('resize', onPageShow);
+    };
+  }, [mapReady]);
 
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -353,7 +390,7 @@ export default function FindYourWayMap({ places = [], t }) {
       </div>
 
       <div className="fym-map-stage">
-        <div className="fym-map-wrap">
+        <div className="fym-map-wrap" ref={mapWrapRef}>
           <div ref={mapRef} className="fym-map-canvas" role="application" aria-label={safeT('home', 'findYourWayMapAria')} />
           <div className="fym-map-vignette" aria-hidden />
           <div className="fym-map-overlay fym-map-overlay--top">
