@@ -682,11 +682,11 @@ export default function MapPage() {
     map.setZoom(DETAIL_MAP_ZOOM);
     const markerEntry = markersByPlaceIdRef.current.get(place.id);
     if (markerEntry?.marker && infoWindow) {
-      const content = buildInfoContent(place, apiKey, infoWindowStrings, theme === 'dark');
+      const content = buildInfoContent(place, apiKey, infoWindowStrings, false);
       infoWindow.setContent(content);
       infoWindow.open(map, markerEntry.marker);
     }
-  }, [apiKey, infoWindowStrings, theme]);
+  }, [apiKey, infoWindowStrings]);
 
   const handlePlaceSelect = useCallback(
     (place, opts = {}) => {
@@ -885,7 +885,7 @@ export default function MapPage() {
       markersRef.current = [];
       markersByPlaceIdRef.current.clear();
     };
-  }, [apiKey, markersForMapList, mapDisplayPlaces, tripFilterName, infoWindowStrings, addingTripStop, commitAddStop, theme]);
+  }, [apiKey, markersForMapList, mapDisplayPlaces, tripFilterName, infoWindowStrings, addingTripStop, commitAddStop]);
 
   useEffect(() => {
     return () => {
