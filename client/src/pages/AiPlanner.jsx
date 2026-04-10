@@ -2599,9 +2599,11 @@ export default function AiPlanner() {
             if (tourStep >= TOUR_STEP_COUNT - 1) finishTour();
             else setTourStep((s) => s + 1);
           }}
-          onBack={() => setTourStep((s) => Math.max(0, s - 1))}
+          onBack={() => {
+            if (tourStep === 0) finishTour();
+            else setTourStep((s) => Math.max(0, s - 1));
+          }}
           onSkip={finishTour}
-          isFirstStep={tourStep === 0}
           isLastStep={tourStep === TOUR_STEP_COUNT - 1}
           nextLabel={t('aiPlanner', 'onboardingNext')}
           backLabel={t('aiPlanner', 'onboardingBack')}

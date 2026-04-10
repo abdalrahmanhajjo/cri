@@ -2369,13 +2369,16 @@ export default function Plan() {
           }
         }}
         onBack={() => {
+          if (createTourStep === 0) {
+            finishCreateTour();
+            return;
+          }
           if (createTourStep === 2) {
             setShowCreateForm(false);
           }
           setCreateTourStep((s) => Math.max(0, s - 1));
         }}
         onSkip={finishCreateTour}
-        isFirstStep={createTourStep === 0}
         isLastStep={createTourStep === CREATE_TOUR_STEP_COUNT - 1}
         nextLabel={t('aiPlanner', 'onboardingNext')}
         backLabel={t('aiPlanner', 'onboardingBack')}
@@ -2398,9 +2401,14 @@ export default function Plan() {
             setBuilderTourStep((s) => s + 1);
           }
         }}
-        onBack={() => setBuilderTourStep((s) => Math.max(0, s - 1))}
+        onBack={() => {
+          if (builderTourStep === 0) {
+            finishBuilderTour();
+            return;
+          }
+          setBuilderTourStep((s) => Math.max(0, s - 1));
+        }}
         onSkip={finishBuilderTour}
-        isFirstStep={builderTourStep === 0}
         isLastStep={builderTourStep === BUILDER_TOUR_STEP_COUNT - 1}
         nextLabel={t('aiPlanner', 'onboardingNext')}
         backLabel={t('aiPlanner', 'onboardingBack')}

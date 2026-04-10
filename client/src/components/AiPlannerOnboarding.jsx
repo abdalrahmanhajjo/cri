@@ -16,7 +16,6 @@ export default function AiPlannerOnboarding({
   onNext,
   onBack,
   onSkip,
-  isFirstStep,
   isLastStep,
   nextLabel,
   backLabel,
@@ -204,13 +203,14 @@ export default function AiPlannerOnboarding({
           ))}
         </div>
         <div className="ai-planner-tour__actions">
-          {!isFirstStep ? (
-            <button type="button" className="ai-planner-tour__btn ai-planner-tour__btn--ghost" onClick={onBack}>
-              {backLabel}
-            </button>
-          ) : (
-            <span className="ai-planner-tour__actions-spacer" />
-          )}
+          <button
+            type="button"
+            className="ai-planner-tour__btn ai-planner-tour__btn--ghost ai-planner-tour__btn--back"
+            onClick={onBack}
+          >
+            <Icon name="arrow_back" size={18} aria-hidden />
+            {backLabel}
+          </button>
           <div className="ai-planner-tour__actions-primary">
             <button type="button" className="ai-planner-tour__btn ai-planner-tour__btn--ghost" onClick={onSkip}>
               {skipLabel}

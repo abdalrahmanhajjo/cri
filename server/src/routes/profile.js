@@ -11,14 +11,13 @@ const { validatePassword } = require('../utils/passwordValidator');
 const { isImageMime, prepareUploadedImage, pickImageExtension } = require('../utils/imageUpload');
 const { getMulterFileSizeLimit } = require('../utils/uploadLimits');
 const { visitorFollowupsFromDb } = require('../utils/inquiryFollowups');
+const { getImageKit } = require('../utils/imagekit');
 
 const router = express.Router();
 router.use(authMiddleware);
 
-const LOCAL_AVATARS = path.join(__dirname, '../../uploads/avatars');
 const MULTER_TMP = path.join(os.tmpdir(), 'visit-multer-uploads');
 try {
-  fs.mkdirSync(LOCAL_AVATARS, { recursive: true });
   fs.mkdirSync(MULTER_TMP, { recursive: true });
 } catch (_) {}
 
@@ -150,36 +149,52 @@ router.post('/profile/avatar', avatarUpload.single('file'), async (req, res) => 
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   const userId = req.user.userId;
 
+  const imagekit = getImageKit();
+  if (!imagekit) {
+    return res.status(500).json({
+      error: 'ImageKit is not configured. Please set IMAGEKIT_* in server .env (same as place/tour uploads).',
+    });
+  }
+
+  const storageFolder = '/tripoli-explorer/avatars';
   const multerPath = req.file.path;
   try {
     const buf0 = await fs.promises.readFile(multerPath);
     await fs.promises.unlink(multerPath).catch(() => {});
     const prep = await prepareUploadedImage(buf0, req.file.mimetype, req.file.originalname);
-    const ext = pickImageExtension(prep.contentType, req.file.originalname, prep.useExtension);
-    const fileName = `${crypto.randomBytes(18).toString('hex')}${ext}`;
-    const diskPath = path.join(LOCAL_AVATARS, fileName);
-    await fs.promises.writeFile(diskPath, prep.buffer);
+    const safeExt = pickImageExtension(prep.contentType, req.file.originalname, prep.useExtension);
+    const finalFileName = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
+
+    const uploadResponse = await imagekit.upload({
+      file: prep.buffer,
+      fileName: finalFileName,
+      folder: storageFolder,
+      useUniqueFileName: false,
+      customMetadata: { userId: String(userId) },
+    });
+    const ikUrl = uploadResponse.url;
+    if (!ikUrl) throw new Error('ImageKit returned no url');
 
     const usersColl = await getCollection('users');
     const user = await usersColl.findOne({ id: userId });
     const prevUrl = user?.avatar_url;
-    
+
     if (typeof prevUrl === 'string' && prevUrl.startsWith('/uploads/avatars/')) {
       const prevName = prevUrl.replace('/uploads/avatars/', '');
-      if (prevName && !prevName.includes('..') && !prevName.includes('/') && prevName !== fileName) {
-        const prevDisk = path.join(LOCAL_AVATARS, prevName);
+      const localAvatars = path.join(__dirname, '../../uploads/avatars');
+      if (prevName && !prevName.includes('..') && !prevName.includes('/') && prevName !== finalFileName) {
+        const prevDisk = path.join(localAvatars, prevName);
         await fs.promises.unlink(prevDisk).catch(() => {});
       }
     }
 
-    const relativeUrl = `/uploads/avatars/${fileName}`;
-    await usersColl.updateOne({ id: userId }, { $set: { avatar_url: relativeUrl } });
+    await usersColl.updateOne({ id: userId }, { $set: { avatar_url: ikUrl } });
 
-    res.json({ avatarUrl: relativeUrl, avatarPath: relativeUrl });
+    res.json({ avatarUrl: ikUrl, avatarPath: ikUrl });
   } catch (err) {
     await fs.promises.unlink(multerPath).catch(() => {});
-    console.error(err);
-    res.status(500).json({ error: 'Failed to upload avatar' });
+    console.error('Profile avatar ImageKit upload error:', err);
+    res.status(500).json({ error: err?.message || 'Failed to upload avatar' });
   }
 });
 

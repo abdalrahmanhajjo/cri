@@ -218,8 +218,12 @@
   flex-wrap: wrap;
 }
 
-.ai-planner-tour__actions-spacer {
-  min-width: 8px;
+.ai-planner-tour__btn--back {
+  flex-shrink: 0;
+}
+
+[dir='rtl'] .ai-planner-tour__btn--back .icon {
+  transform: scaleX(-1);
 }
 
 .ai-planner-tour__actions-primary {
