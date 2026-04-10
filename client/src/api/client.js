@@ -328,6 +328,8 @@ export const api = {
   siteSettings: () => api.get('/api/site-settings'),
 
   auth: {
+    /** Public GIS client id from server when VITE_GOOGLE_CLIENT_ID was not set at build time. */
+    googlePublicConfig: () => api.get('/api/auth/google-public-config'),
     checkUsername: (username) =>
       api.get(`/api/auth/check-username?username=${encodeURIComponent(username || '')}`),
     login: (email, password) => api.post('/api/auth/login', { email, password }),

@@ -14,6 +14,12 @@ function stripDeprecatedSiteSettings(obj) {
   return next;
 }
 
+function googleWebClientIdFromEnv() {
+  const raw = process.env.GOOGLE_CLIENT_ID;
+  if (raw == null || !String(raw).trim()) return null;
+  return String(raw).trim();
+}
+
 router.get('/', async (req, res) => {
   try {
     const siteSettings = await getCollection('site_settings');
@@ -21,9 +27,11 @@ router.get('/', async (req, res) => {
     
     const data = row?.data;
     const settings = stripDeprecatedSiteSettings(data && typeof data === 'object' ? data : {});
-    res.json({ settings, updatedAt: row?.updated_at ?? null });
+    /** Public OAuth web client id — same as VITE_GOOGLE_CLIENT_ID / GIS; not a secret. */
+    const googleWebClientId = googleWebClientIdFromEnv();
+    res.json({ settings, updatedAt: row?.updated_at ?? null, googleWebClientId });
   } catch (err) {
-    res.json({ settings: {}, updatedAt: null });
+    res.json({ settings: {}, updatedAt: null, googleWebClientId: googleWebClientIdFromEnv() });
   }
 });
 

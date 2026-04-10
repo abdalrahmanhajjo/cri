@@ -7,6 +7,8 @@ const SiteSettingsContext = createContext(null);
 
 export function SiteSettingsProvider({ children }) {
   const [settings, setSettings] = useState(() => mergeWithSiteSettingsDefaults({}));
+  /** From GET /api/site-settings — avoids a separate request on Login when VITE_GOOGLE_CLIENT_ID was not set at build. */
+  const [googleWebClientId, setGoogleWebClientId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -17,6 +19,8 @@ export function SiteSettingsProvider({ children }) {
       .then((r) => {
         const s = r?.settings && typeof r.settings === 'object' ? r.settings : {};
         setSettings(mergeWithSiteSettingsDefaults(s));
+        const gid = typeof r?.googleWebClientId === 'string' ? r.googleWebClientId.trim() : '';
+        setGoogleWebClientId(gid);
         setError(null);
       })
       .catch((e) => {
@@ -27,6 +31,7 @@ export function SiteSettingsProvider({ children }) {
             : e?.message || 'Failed to load site settings'
         );
         setSettings(mergeWithSiteSettingsDefaults({}));
+        setGoogleWebClientId('');
       })
       .finally(() => setLoading(false));
   }, []);
@@ -41,7 +46,10 @@ export function SiteSettingsProvider({ children }) {
     return () => window.removeEventListener('tripoli-site-settings-saved', onSaved);
   }, [refresh]);
 
-  const value = useMemo(() => ({ settings, loading, error, refresh }), [settings, loading, error, refresh]);
+  const value = useMemo(
+    () => ({ settings, loading, error, refresh, googleWebClientId }),
+    [settings, loading, error, refresh, googleWebClientId]
+  );
 
   return <SiteSettingsContext.Provider value={value}>{children}</SiteSettingsContext.Provider>;
 }

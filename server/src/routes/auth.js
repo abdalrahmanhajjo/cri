@@ -89,6 +89,23 @@ async function pickUsernameForGoogle(users, email) {
   throw new Error('Could not allocate username for Google sign-in');
 }
 
+/**
+ * GET /api/auth/google-public-config
+ * Public OAuth web client id for Google Identity Services (same value as VITE_GOOGLE_CLIENT_ID).
+ * Lets production frontends work when the static bundle was built without Vite env, as long as
+ * GOOGLE_CLIENT_ID is set on this server — it is not a secret.
+ */
+router.get('/google-public-config', (req, res) => {
+  try {
+    const raw = process.env.GOOGLE_CLIENT_ID;
+    const clientId = raw != null && String(raw).trim() ? String(raw).trim() : null;
+    res.json({ clientId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not load Google config' });
+  }
+});
+
 /** GET /api/auth/check-username?username= — availability for sign-up (debounced on client). */
 router.get('/check-username', async (req, res) => {
   try {

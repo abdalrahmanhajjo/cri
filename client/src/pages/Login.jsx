@@ -3,6 +3,8 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
+import { useSiteSettings } from '../context/SiteSettingsContext';
+import { api } from '../api/client';
 import Icon from '../components/Icon';
 import './Auth.css';
 
@@ -38,7 +40,42 @@ export default function Login() {
   const rawFrom = location.state?.from || searchParams.get('redirect') || '/';
   const from = typeof rawFrom === 'string' && rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/';
 
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim?.() || '';
+  const googleClientIdBuild = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim?.() || '';
+  const { loading: siteSettingsLoading, googleWebClientId: googleFromSiteSettings } = useSiteSettings();
+  const [googleClientIdFromDedicated, setGoogleClientIdFromDedicated] = useState('');
+  const [dedicatedGoogleConfigDone, setDedicatedGoogleConfigDone] = useState(() =>
+    Boolean(googleClientIdBuild)
+  );
+
+  useEffect(() => {
+    if (googleClientIdBuild) return undefined;
+    if (siteSettingsLoading) return undefined;
+    if (googleFromSiteSettings) {
+      setDedicatedGoogleConfigDone(true);
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await api.auth.googlePublicConfig();
+        const id = typeof data?.clientId === 'string' ? data.clientId.trim() : '';
+        if (!cancelled && id) setGoogleClientIdFromDedicated(id);
+      } catch {
+        /* 404 if server not updated, CORS, etc. */
+      } finally {
+        if (!cancelled) setDedicatedGoogleConfigDone(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [googleClientIdBuild, siteSettingsLoading, googleFromSiteSettings]);
+
+  const googleClientId =
+    googleClientIdBuild || googleFromSiteSettings || googleClientIdFromDedicated;
+  const googleClientIdResolved =
+    Boolean(googleClientIdBuild) ||
+    (!siteSettingsLoading && (Boolean(googleFromSiteSettings) || dedicatedGoogleConfigDone));
 
   const handleGoogleCredentialRef = useRef(
     /** @param {{ credential?: string }} response */
@@ -242,11 +279,11 @@ export default function Login() {
                     </p>
                   ) : null}
                 </div>
-              ) : (
+              ) : googleClientIdResolved ? (
                 <p className="auth-google-missing" role="note">
                   {t('feedback', 'googleUnavailable')}
                 </p>
-              )}
+              ) : null}
 
               <div className="auth-divider" role="separator">
                 <span>{t('authPage', 'loginDividerOr')}</span>
