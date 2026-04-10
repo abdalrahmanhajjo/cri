@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
-import { suggestPublicId } from '../../utils/adminContentHelpers';
+import { suggestPublicId, linesToStringArray, parseItineraryJson } from '../../utils/adminContentHelpers';
 import { AdminCoverImageField, AdminPlaceIdsPicker } from './AdminFormPickers';
 import './Admin.css';
 
@@ -19,6 +19,7 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
     id: '', name: '', duration: '', durationHours: '', locations: '', rating: '', reviews: '',
     price: '', currency: '', priceDisplay: '', badge: '', badgeColor: '', description: '', image: '',
     difficulty: '', placeIds: '',
+    languagesText: '', highlightsText: '', includesText: '', excludesText: '', itineraryJson: '',
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
@@ -42,6 +43,13 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
         image: tour.image || '',
         difficulty: tour.difficulty || 'Easy',
         placeIds: Array.isArray(tour.placeIds) ? tour.placeIds.join(', ') : (Array.isArray(tour.place_ids) ? tour.place_ids.join(', ') : ''),
+        languagesText: Array.isArray(tour.languages) ? tour.languages.join('\n') : '',
+        highlightsText: Array.isArray(tour.highlights) ? tour.highlights.join('\n') : '',
+        includesText: Array.isArray(tour.includes) ? tour.includes.join('\n') : '',
+        excludesText: Array.isArray(tour.excludes) ? tour.excludes.join('\n') : '',
+        itineraryJson: Array.isArray(tour.itinerary) && tour.itinerary.length > 0
+          ? JSON.stringify(tour.itinerary, null, 2)
+          : '',
       });
     } else {
       setForm({
@@ -61,6 +69,11 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
         image: '',
         difficulty: 'Easy',
         placeIds: '',
+        languagesText: '',
+        highlightsText: '',
+        includesText: '',
+        excludesText: '',
+        itineraryJson: '',
       });
     }
   }, [tour]);
@@ -70,6 +83,12 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
     setErr(null);
     setSaving(true);
     try {
+      const itParsed = parseItineraryJson(form.itineraryJson);
+      if (!itParsed.ok) {
+        setErr(itParsed.error || 'Invalid itinerary JSON');
+        setSaving(false);
+        return;
+      }
       const placeIds = form.placeIds.trim() ? form.placeIds.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : [];
       const customId = (form.id || '').trim();
       const resolvedId = !tour && !customId ? suggestPublicId('tour', form.name) : customId || undefined;
@@ -92,6 +111,11 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
         image: form.image.trim() || 'https://via.placeholder.com/400',
         difficulty: form.difficulty,
         placeIds,
+        languages: linesToStringArray(form.languagesText),
+        highlights: linesToStringArray(form.highlightsText),
+        includes: linesToStringArray(form.includesText),
+        excludes: linesToStringArray(form.excludesText),
+        itinerary: itParsed.data,
       };
       if (tour) {
         await api.admin.tours.update(tour.id, payload);
@@ -130,6 +154,7 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
               <p className="admin-modal-lead">
                 <strong>Quick add:</strong> title and duration are enough — a URL id is generated on save. Price is optional (saved as &quot;On request&quot; if you leave it blank).
                 Add <strong>place IDs</strong> to link stops; the stop count follows the list. Open <strong>More options</strong> for ratings, badges, or a manual stop count.
+                Use <strong>Full tour content</strong> for languages, bullet lists, and a JSON itinerary.
               </p>
             )}
 
@@ -221,6 +246,60 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
                 onError={(msg) => setErr(msg)}
               />
             </div>
+
+            <details className="admin-advanced-details">
+              <summary>Full tour content — languages, highlights, includes / excludes, itinerary</summary>
+              <div className="admin-form-section" style={{ border: 'none', paddingBottom: 0 }}>
+                <div className="admin-form-group">
+                  <label>Languages (one per line)</label>
+                  <textarea
+                    value={form.languagesText}
+                    onChange={(e) => setForm((f) => ({ ...f, languagesText: e.target.value }))}
+                    placeholder={'English\nArabic'}
+                    rows={3}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>Highlights (one per line)</label>
+                  <textarea
+                    value={form.highlightsText}
+                    onChange={(e) => setForm((f) => ({ ...f, highlightsText: e.target.value }))}
+                    placeholder="Short bullets shown on the public page"
+                    rows={3}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>Includes (one per line)</label>
+                  <textarea
+                    value={form.includesText}
+                    onChange={(e) => setForm((f) => ({ ...f, includesText: e.target.value }))}
+                    placeholder="e.g. Local guide, water"
+                    rows={3}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>Excludes (one per line)</label>
+                  <textarea
+                    value={form.excludesText}
+                    onChange={(e) => setForm((f) => ({ ...f, excludesText: e.target.value }))}
+                    placeholder="e.g. Meals, tips"
+                    rows={3}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>Itinerary (JSON array)</label>
+                  <textarea
+                    value={form.itineraryJson}
+                    onChange={(e) => setForm((f) => ({ ...f, itineraryJson: e.target.value }))}
+                    placeholder='[{"time":"09:00","activity":"Hallab","description":"..."}]'
+                    rows={8}
+                    spellCheck={false}
+                    className="admin-textarea-code"
+                  />
+                  <span className="admin-form-hint">Leave empty if none. Each item can be a string or an object with time, activity, description.</span>
+                </div>
+              </div>
+            </details>
 
             <details className="admin-advanced-details">
               <summary>More options — ratings, badge &amp; stop count</summary>

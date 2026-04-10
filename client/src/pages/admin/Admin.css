@@ -1332,6 +1332,12 @@
 
 .admin-form-group textarea { min-height: 80px; resize: vertical; }
 
+.admin-textarea-code {
+  font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
 .admin-form-color-wrap {
   display: flex;
   gap: 0.5rem;

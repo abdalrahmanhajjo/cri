@@ -156,8 +156,9 @@ function EventFormModal({ event, onClose, onSaved }) {
             {err && <div className="admin-error">{err}</div>}
             {!event && (
               <p className="admin-modal-lead">
-                <strong>Quick add:</strong> name and dates are enough — a URL id is generated on save. Use “More options” for pricing and publishing,
-                and open “Custom URL id” only if you need a fixed link.
+                <strong>Quick add:</strong> name and dates are enough — a URL id is generated on save.
+                Use <strong>Location &amp; media</strong> for venue link, map pin, address, and cover image; <strong>More options</strong> for pricing and status;
+                “Custom URL id” only if you need a fixed link. The public page hides any field you leave empty.
               </p>
             )}
 

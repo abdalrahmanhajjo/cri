@@ -31,6 +31,21 @@ function parseBadgeColor(hex) {
   return `#${h}`;
 }
 
+/** `locations` in API is usually a stop count (number) — only show as a label when it is real area text. */
+function tourAreaLabel(tour) {
+  const loc = tour?.locations;
+  if (loc == null || loc === '') return null;
+  if (Array.isArray(loc)) {
+    const parts = loc.map(String).map((s) => s.trim()).filter(Boolean);
+    return parts.length ? parts.join(', ') : null;
+  }
+  if (typeof loc === 'number') return null;
+  const s = String(loc).trim();
+  if (!s) return null;
+  if (/^\d+$/.test(s)) return null;
+  return s;
+}
+
 /** API may return plain strings or objects e.g. { time, activity, description }. */
 function ItineraryStepContent({ item }) {
   if (item == null) return null;
@@ -126,6 +141,17 @@ export default function TourDetail() {
       .catch(() => setTourList([]));
   }, [langParam]);
 
+  useEffect(() => {
+    if (!tour) return;
+    const stops = Array.isArray(tour.placeIds) ? tour.placeIds.length : 0;
+    const itin = Array.isArray(tour.itinerary) ? tour.itinerary : [];
+    setTab((current) => {
+      if (current === 'map' && stops === 0) return 'overview';
+      if (current === 'itinerary' && itin.length === 0) return 'overview';
+      return current;
+    });
+  }, [tour]);
+
   const similarTours = useMemo(
     () => tourList.filter((x) => String(x.id) !== String(id)).slice(0, 8),
     [tourList, id]
@@ -189,7 +215,7 @@ export default function TourDetail() {
   }
 
   const img = getPlaceImageUrl(tour.image);
-  const locationsStr = Array.isArray(tour.locations) ? tour.locations.join(', ') : tour.locations;
+  const areaLabel = tourAreaLabel(tour);
   const languagesStr = Array.isArray(tour.languages) && tour.languages.length > 0
     ? tour.languages.join(', ')
     : null;
@@ -202,6 +228,16 @@ export default function TourDetail() {
   const itinerary = Array.isArray(tour.itinerary) ? tour.itinerary : [];
   const rating = tour.rating != null && Number.isFinite(Number(tour.rating)) ? Number(tour.rating) : null;
   const reviews = tour.reviews != null && Number.isFinite(Number(tour.reviews)) ? Number(tour.reviews) : null;
+  const badgeText = tour.badge && String(tour.badge).trim() ? String(tour.badge).trim() : '';
+  const subtitleParts = [];
+  if (badgeText) subtitleParts.push(badgeText);
+  if (stopCount > 0) subtitleParts.push(t('detail', 'stopsCount').replace('{count}', String(stopCount)));
+  const showMapTab = stopCount > 0;
+  const showItineraryTab = itinerary.length > 0;
+  const showHeroRating = (rating != null && rating > 0) || (reviews != null && reviews > 0);
+  const durText = tour.duration && String(tour.duration).trim() ? String(tour.duration).trim() : '';
+  const priceDText = tour.priceDisplay && String(tour.priceDisplay).trim() ? String(tour.priceDisplay).trim() : '';
+  const diffText = tour.difficulty && String(tour.difficulty).trim() ? String(tour.difficulty).trim() : '';
 
   return (
     <div className="place-detail place-detail--tabs place-detail--experience">
@@ -238,33 +274,31 @@ export default function TourDetail() {
               </div>
             )}
             <div className="place-detail-hero-overlay" />
-            <div
-              className="place-detail-hero-badge"
-              style={badgeStyle}
-            >
-              {tour.badge || t('detail', 'tourBadge')}
-            </div>
+            {badgeText ? (
+              <div className="place-detail-hero-badge" style={badgeStyle}>
+                {badgeText}
+              </div>
+            ) : null}
             <div className="place-detail-hero-content">
               <h1 className="place-detail-title">{tour.name}</h1>
-              {locationsStr && (
+              {areaLabel ? (
                 <p className="place-detail-location">
-                  <Icon name="location_on" size={18} /> {locationsStr}
+                  <Icon name="location_on" size={18} /> {areaLabel}
                 </p>
-              )}
-              <p className="place-detail-subtitle">
-                {(tour.badge && String(tour.badge).trim()) ? `${String(tour.badge).trim()} · ` : ''}
-                {t('detail', 'stopsCount').replace('{count}', String(stopCount))}
-              </p>
+              ) : null}
+              {subtitleParts.length > 0 ? (
+                <p className="place-detail-subtitle">{subtitleParts.join(' · ')}</p>
+              ) : null}
               <div className="place-detail-hero-meta">
-                {tour.duration && <span className="place-detail-category">{tour.duration}</span>}
-                {tour.priceDisplay && <span className="place-detail-category">{tour.priceDisplay}</span>}
-                {tour.difficulty && <span className="place-detail-category">{tour.difficulty}</span>}
-                {rating != null && (
+                {durText ? <span className="place-detail-category">{durText}</span> : null}
+                {priceDText ? <span className="place-detail-category">{priceDText}</span> : null}
+                {diffText ? <span className="place-detail-category">{diffText}</span> : null}
+                {showHeroRating ? (
                   <span className="place-detail-category">
-                    <Icon name="star" size={14} /> {rating.toFixed(1)}
+                    <Icon name="star" size={14} /> {rating != null ? rating.toFixed(1) : '—'}
                     {reviews != null ? ` (${reviews})` : ''}
                   </span>
-                )}
+                ) : null}
               </div>
             </div>
           </header>
@@ -272,8 +306,8 @@ export default function TourDetail() {
           <div className="detail-tab-bar" role="tablist" aria-label={t('detail', 'tourBadge')}>
             {[
               { id: 'overview', label: t('detail', 'tourOverviewTab') },
-              { id: 'map', label: t('detail', 'tourMapTab') },
-              { id: 'itinerary', label: t('detail', 'tourItineraryTab') },
+              ...(showMapTab ? [{ id: 'map', label: t('detail', 'tourMapTab') }] : []),
+              ...(showItineraryTab ? [{ id: 'itinerary', label: t('detail', 'tourItineraryTab') }] : []),
             ].map(({ id: tid, label }) => (
               <button
                 key={tid}
@@ -305,11 +339,11 @@ export default function TourDetail() {
               </div>
 
               <div className="place-detail-info">
-                <InfoRow icon="schedule" label={t('detail', 'duration')} value={tour.duration} />
-                <InfoRow icon="payments" label={t('detail', 'priceRange')} value={tour.priceDisplay} />
-                <InfoRow icon="terrain" label={t('detail', 'difficulty')} value={tour.difficulty} />
-                <InfoRow icon="translate" label={t('detail', 'languages')} value={languagesStr || (Array.isArray(tour.languages) ? tour.languages : null)} />
-                <InfoRow icon="location_on" label={t('detail', 'location')} value={locationsStr} />
+                <InfoRow icon="schedule" label={t('detail', 'duration')} value={durText} />
+                <InfoRow icon="payments" label={t('detail', 'priceRange')} value={priceDText} />
+                <InfoRow icon="terrain" label={t('detail', 'difficulty')} value={diffText} />
+                <InfoRow icon="translate" label={t('detail', 'languages')} value={languagesStr} />
+                <InfoRow icon="location_on" label={t('detail', 'location')} value={areaLabel} />
               </div>
 
               {itinerary.length > 0 && (

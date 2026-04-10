@@ -130,6 +130,19 @@ export default function EventDetail() {
     Number.isFinite(Number(event.latitude)) &&
     Number.isFinite(Number(event.longitude));
 
+  const canShowEventMapTab = Boolean(
+    event &&
+      (event.placeId ||
+        venue ||
+        hasEventMapPin ||
+        (event.location && !isLiveUrl))
+  );
+
+  useEffect(() => {
+    if (!event) return;
+    if (tab === 'map' && !canShowEventMapTab) setTab('overview');
+  }, [event, canShowEventMapTab, tab]);
+
   const openVenueOnMap = useCallback(() => {
     if (!event?.placeId && !venue) return;
     const returnTo = `${location.pathname}${location.search}${location.hash || ''}`;
@@ -232,7 +245,16 @@ export default function EventDetail() {
   const img = getPlaceImageUrl(event.image);
   const dateLabel = eventDateRangeLabel(event.startDate, event.endDate);
   const timeStr = eventTimeRangeLabel(event.startDate, event.endDate);
-  const pricePill = event.priceDisplay || (event.price != null ? String(event.price) : '') || t('detail', 'free');
+  const hasEventCategory = Boolean(event.category && String(event.category).trim());
+  const eventPriceDisplayValue = (() => {
+    const pd = event.priceDisplay != null && String(event.priceDisplay).trim() !== '' ? String(event.priceDisplay).trim() : '';
+    if (pd) return pd;
+    if (event.price != null && event.price !== '' && !Number.isNaN(Number(event.price))) return String(event.price);
+    return null;
+  })();
+  const showEventPriceHero = Boolean(eventPriceDisplayValue);
+  const organizerDisplay = event.organizer != null && String(event.organizer).trim() !== '' ? String(event.organizer).trim() : null;
+  const statusDisplay = event.status != null && String(event.status).trim() !== '' ? String(event.status).trim() : null;
   const venueImgs = collectPlaceImageUrls(venue);
 
   return (
@@ -270,8 +292,12 @@ export default function EventDetail() {
               </div>
             )}
             <div className="place-detail-hero-overlay" />
-            <div className="place-detail-hero-badge place-detail-hero-badge--event">{event.category || t('detail', 'eventBadge')}</div>
-            <div className="place-detail-hero-price-pill">{pricePill}</div>
+            {hasEventCategory ? (
+              <div className="place-detail-hero-badge place-detail-hero-badge--event">{String(event.category).trim()}</div>
+            ) : null}
+            {showEventPriceHero ? (
+              <div className="place-detail-hero-price-pill">{eventPriceDisplayValue}</div>
+            ) : null}
             <div className="place-detail-hero-content">
               <h1 className="place-detail-title">{event.name}</h1>
               {event.location && !isLiveUrl && (
@@ -280,9 +306,8 @@ export default function EventDetail() {
                 </p>
               )}
               <div className="place-detail-hero-meta">
-                {dateLabel && <span className="place-detail-category">{dateLabel}</span>}
-                {event.category && <span className="place-detail-category">{event.category}</span>}
-                {timeStr && <span className="place-detail-category">{timeStr}</span>}
+                {dateLabel ? <span className="place-detail-category">{dateLabel}</span> : null}
+                {timeStr ? <span className="place-detail-category">{timeStr}</span> : null}
               </div>
             </div>
           </header>
@@ -297,15 +322,17 @@ export default function EventDetail() {
             >
               {t('detail', 'eventOverviewTab')}
             </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === 'map'}
-              className={`detail-tab ${tab === 'map' ? 'detail-tab--active' : ''}`}
-              onClick={() => setTab('map')}
-            >
-              {t('detail', 'eventMapTab')}
-            </button>
+            {canShowEventMapTab ? (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === 'map'}
+                className={`detail-tab ${tab === 'map' ? 'detail-tab--active' : ''}`}
+                onClick={() => setTab('map')}
+              >
+                {t('detail', 'eventMapTab')}
+              </button>
+            ) : null}
           </div>
 
           {tab === 'overview' && (
@@ -338,10 +365,10 @@ export default function EventDetail() {
                 <InfoRow icon="calendar_today" label={t('detail', 'date')} value={dateLabel} />
                 <InfoRow icon="schedule" label={t('detail', 'time')} value={timeStr} />
                 {!isLiveUrl && <InfoRow icon="location_on" label={t('detail', 'location')} value={event.location} />}
-                <InfoRow icon="category" label={t('detail', 'category')} value={event.category} />
-                <InfoRow icon="group" label={t('detail', 'organizer')} value={event.organizer} />
-                <InfoRow icon="payments" label={t('detail', 'priceRange')} value={event.priceDisplay || event.price} />
-                <InfoRow icon="info" label={t('detail', 'status')} value={event.status} />
+                <InfoRow icon="category" label={t('detail', 'category')} value={hasEventCategory ? String(event.category).trim() : null} />
+                <InfoRow icon="group" label={t('detail', 'organizer')} value={organizerDisplay} />
+                <InfoRow icon="payments" label={t('detail', 'priceRange')} value={eventPriceDisplayValue} />
+                <InfoRow icon="info" label={t('detail', 'status')} value={statusDisplay} />
               </div>
 
               {event.description && (
