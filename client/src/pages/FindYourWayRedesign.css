@@ -184,8 +184,6 @@
 .fym-map-wrap {
   height: min(280px, 45vh) !important;
   min-height: 240px !important;
-  transform: translateZ(0) !important;
-  -webkit-transform: translateZ(0) !important;
 }
 
 .fym-map-canvas {

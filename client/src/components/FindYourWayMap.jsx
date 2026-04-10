@@ -4,7 +4,7 @@ import { getPlaceImageUrl } from '../api/client';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { loadGoogleMapsScript } from '../utils/mapGoogleLoader';
 import { MAP_PATH, PLAN_TRIP_AREA_NAV, PLAN_TRIP_AREA_I18N_KEYS } from '../config/planTripAreas';
-import { getTripoliAreaKeyForCoordinates, TRIPOLI_AREA_MARKER_COLORS } from '../utils/tripoliAreaBounds';
+import { getTripoliAreaKeyForCoordinates } from '../utils/tripoliAreaBounds';
 import Icon from './Icon';
 import './FindYourWayMap.css';
 
@@ -49,12 +49,8 @@ const AREA_I18N = {
   tell: 'areaTel',
 };
 
-/** Softer light basemap — less POI noise, editorial feel */
-const LIGHT_MAP_SUBTLE = [
-  { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-  { featureType: 'transit', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-];
-
+/** Toolbar / legend dots — neutral so the map stays the default Google look */
+const FYM_AREA_UI_DOT = '#64748b';
 
 function haversineMeters(a, b) {
   if (!a || !b || a.lat == null || b.lat == null) return Infinity;
@@ -85,21 +81,8 @@ function firstPlaceImage(p) {
   return raw ? getPlaceImageUrl(raw) : null;
 }
 
-function markerIconSpec(maps, p, selected) {
-  const isSel = selected && String(selected.id) === String(p.id);
-  const color = TRIPOLI_AREA_MARKER_COLORS[p._areaKey] || TRIPOLI_AREA_MARKER_COLORS.other;
-  return {
-    path: maps.SymbolPath.CIRCLE,
-    fillColor: color,
-    fillOpacity: isSel ? 1 : 0.94,
-    strokeColor: isSel ? '#0c4a43' : '#ffffff',
-    strokeWeight: isSel ? 3 : 2,
-    scale: isSel ? 14 : 10,
-  };
-}
-
 /**
- * Home “Find your way” — polished Google Map: quarter pins, legend, stats, detail sheet, nearby with thumbnails.
+ * Home “Find your way” — default Google roadmap, area filters, detail sheet, nearby list.
  */
 export default function FindYourWayMap({ places = [], t }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
@@ -211,39 +194,58 @@ export default function FindYourWayMap({ places = [], t }) {
         if (cancelled || !mapRef.current) return;
         if (typeof window !== 'undefined') window.gm_authFailure = null;
 
-        const mountMap = () => {
+        const mountMap = async () => {
           if (cancelled || !mapRef.current) return;
           let map = mapInstanceRef.current;
-          const lightStyles = [...LIGHT_MAP_SUBTLE];
+          const baseOpts = {
+            center: TRIPOLI_CENTER,
+            zoom: DEFAULT_ZOOM,
+            mapTypeId: 'roadmap',
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: true,
+            zoomControl: true,
+            zoomControlOptions: { position: maps.ControlPosition.RIGHT_BOTTOM },
+            fullscreenControlOptions: { position: maps.ControlPosition.RIGHT_TOP },
+            scaleControl: false,
+            gestureHandling: 'greedy',
+          };
           if (!map) {
-            map = new maps.Map(mapRef.current, {
-              center: TRIPOLI_CENTER,
-              zoom: DEFAULT_ZOOM,
-              mapTypeId: 'roadmap',
-              mapTypeControl: false,
-              streetViewControl: false,
-              fullscreenControl: true,
-              zoomControl: true,
-              zoomControlOptions: { position: maps.ControlPosition.RIGHT_BOTTOM },
-              fullscreenControlOptions: { position: maps.ControlPosition.RIGHT_TOP },
-              scaleControl: false,
-              gestureHandling: 'greedy',
-              backgroundColor: '#f1f5f9',
-              styles: lightStyles,
-            });
+            let MapCtor = maps.Map;
+            let renderingTypeOpt = {};
+            try {
+              const lib = await window.google.maps.importLibrary('maps');
+              if (lib?.Map && lib.RenderingType?.RASTER != null) {
+                MapCtor = lib.Map;
+                renderingTypeOpt = { renderingType: lib.RenderingType.RASTER };
+              }
+            } catch {
+              /* Classic maps namespace only */
+            }
+            map = new MapCtor(mapRef.current, { ...baseOpts, ...renderingTypeOpt });
             mapInstanceRef.current = map;
           } else {
-            map.setOptions({
-              styles: lightStyles,
-              backgroundColor: '#f1f5f9',
-            });
+            map.setOptions({ styles: [] });
           }
           setMapReady(true);
           staggerMapResize(maps, map);
-          maps.event.addListenerOnce(map, 'idle', () => staggerMapResize(maps, map, [0, 100, 320]));
+          maps.event.addListenerOnce(map, 'idle', () => {
+            staggerMapResize(maps, map, [0, 100, 320]);
+            try {
+              map.panBy(1, 0);
+              map.panBy(-1, 0);
+            } catch {
+              /* ignore */
+            }
+          });
+          maps.event.addListenerOnce(map, 'tilesloaded', () => staggerMapResize(maps, map, [0, 50]));
         };
 
-        runWhenMapContainerReady(mapRef.current, mountMap);
+        runWhenMapContainerReady(mapRef.current, () => {
+          void mountMap().catch((e) => {
+            if (!cancelled) setMapError(e?.message || 'Map failed to start');
+          });
+        });
       })
       .catch((err) => {
         if (!cancelled) setMapError(err.message || 'Failed to load map');
@@ -309,8 +311,6 @@ export default function FindYourWayMap({ places = [], t }) {
         position: { lat: p._lat, lng: p._lng },
         map,
         title: p.name || String(p.id),
-        icon: markerIconSpec(maps, p, null),
-        zIndex: 1,
       });
       marker.addListener('click', () => {
         setSelected(p);
@@ -328,12 +328,11 @@ export default function FindYourWayMap({ places = [], t }) {
     const maps = window.google?.maps;
     if (!maps || !mapReady) return;
     markersRef.current.forEach(({ marker, placeId }) => {
-      const p = visibleMarkers.find((x) => String(x.id) === String(placeId));
-      if (!p || !marker) return;
-      marker.setIcon(markerIconSpec(maps, p, selected));
-      marker.setZIndex(selected && String(selected.id) === String(placeId) ? 900 : 1);
+      if (!marker) return;
+      const isSel = selected && String(selected.id) === String(placeId);
+      marker.setZIndex(isSel ? maps.Marker.MAX_ZINDEX + 1 : 0);
     });
-  }, [selected, mapReady, visibleMarkers]);
+  }, [selected, mapReady]);
 
   useEffect(() => {
     return () => {
@@ -412,7 +411,7 @@ export default function FindYourWayMap({ places = [], t }) {
                 type="button"
                 className={`fym-chip ${areaFilter === key ? 'fym-chip--active' : ''}`}
                 onClick={() => setAreaFilter(key)}
-                style={{ '--fym-chip-dot': TRIPOLI_AREA_MARKER_COLORS[key] || TRIPOLI_AREA_MARKER_COLORS.other }}
+                style={{ '--fym-chip-dot': FYM_AREA_UI_DOT }}
               >
                 <span className="fym-chip-dot" aria-hidden />
                 {label}
@@ -432,7 +431,6 @@ export default function FindYourWayMap({ places = [], t }) {
       <div className="fym-map-stage">
         <div className="fym-map-wrap" ref={mapWrapRef}>
           <div ref={mapRef} className="fym-map-canvas" role="application" aria-label={safeT('home', 'findYourWayMapAria')} />
-          <div className="fym-map-vignette" aria-hidden />
           <div className="fym-map-overlay fym-map-overlay--top">
             <div className="fym-live-badge">
               <span className="fym-live-dot" aria-hidden />
@@ -449,12 +447,12 @@ export default function FindYourWayMap({ places = [], t }) {
               <div className="fym-legend-items">
                 {areaChips.map(({ key, label }) => (
                   <span key={key} className="fym-legend-item">
-                    <span className="fym-legend-swatch" style={{ background: TRIPOLI_AREA_MARKER_COLORS[key] }} />
+                    <span className="fym-legend-swatch" style={{ background: FYM_AREA_UI_DOT }} />
                     {label}
                   </span>
                 ))}
                 <span className="fym-legend-item fym-legend-item--muted">
-                  <span className="fym-legend-swatch" style={{ background: TRIPOLI_AREA_MARKER_COLORS.other }} />
+                  <span className="fym-legend-swatch" style={{ background: FYM_AREA_UI_DOT }} />
                   {safeT('home', 'findYourWayMapOtherArea')}
                 </span>
               </div>
@@ -495,12 +493,7 @@ export default function FindYourWayMap({ places = [], t }) {
           <div className="fym-panel-inner">
             <div className="fym-panel-head">
               <div className="fym-panel-head-copy">
-                <span
-                  className="fym-area-badge"
-                  style={{
-                    '--fym-badge': TRIPOLI_AREA_MARKER_COLORS[selected._areaKey] || TRIPOLI_AREA_MARKER_COLORS.other,
-                  }}
-                >
+                <span className="fym-area-badge">
                   {areaBadgeLabel(selected._areaKey)}
                 </span>
                 <h4 className="fym-panel-title">{selected.name || safeT('home', 'viewDetails')}</h4>
