@@ -12,6 +12,37 @@ const TRIPOLI_CENTER = { lat: 34.43692, lng: 35.83846 };
 const DEFAULT_ZOOM = 13;
 const NEARBY_LIMIT = 6;
 
+/** Wait until the map node has real layout size (mobile/WebKit often initializes too early). */
+function runWhenMapContainerReady(mapEl, done, { maxFrames = 48 } = {}) {
+  if (!mapEl || typeof requestAnimationFrame === 'undefined') {
+    done();
+    return;
+  }
+  let frames = 0;
+  const tick = () => {
+    const r = mapEl.getBoundingClientRect();
+    if ((r.width >= 48 && r.height >= 48) || frames >= maxFrames) {
+      done();
+      return;
+    }
+    frames += 1;
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function staggerMapResize(maps, map, delaysMs = [0, 80, 240, 520, 1100]) {
+  delaysMs.forEach((ms) => {
+    window.setTimeout(() => {
+      try {
+        maps?.event?.trigger?.(map, 'resize');
+      } catch {
+        /* ignore */
+      }
+    }, ms);
+  });
+}
+
 const AREA_I18N = {
   mina: 'areaMina',
   old_city: 'areaOldCity',
@@ -130,7 +161,7 @@ export default function FindYourWayMap({ places = [], t }) {
       ([entry]) => {
         if (entry?.isIntersecting) setVisible(true);
       },
-      { rootMargin: '160px', threshold: 0.04 }
+      { rootMargin: '280px 0px', threshold: 0 }
     );
     obs.observe(el);
     // Mobile reliability fallback: force lazy section visible even if observer misses.
@@ -180,34 +211,39 @@ export default function FindYourWayMap({ places = [], t }) {
         if (cancelled || !mapRef.current) return;
         if (typeof window !== 'undefined') window.gm_authFailure = null;
 
-        let map = mapInstanceRef.current;
-        const lightStyles = [...LIGHT_MAP_SUBTLE];
-        if (!map) {
-          map = new maps.Map(mapRef.current, {
-            center: TRIPOLI_CENTER,
-            zoom: DEFAULT_ZOOM,
-            mapTypeId: 'roadmap',
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: true,
-            zoomControl: true,
-            zoomControlOptions: { position: maps.ControlPosition.RIGHT_BOTTOM },
-            fullscreenControlOptions: { position: maps.ControlPosition.RIGHT_TOP },
-            scaleControl: false,
-            gestureHandling: 'greedy',
-            backgroundColor: '#f1f5f9',
-            styles: lightStyles,
-          });
-          mapInstanceRef.current = map;
-        } else {
-          map.setOptions({
-            styles: lightStyles,
-            backgroundColor: '#f1f5f9',
-          });
-        }
-        setMapReady(true);
-        setTimeout(() => maps.event.trigger(map, 'resize'), 0);
-        setTimeout(() => maps.event.trigger(map, 'resize'), 260);
+        const mountMap = () => {
+          if (cancelled || !mapRef.current) return;
+          let map = mapInstanceRef.current;
+          const lightStyles = [...LIGHT_MAP_SUBTLE];
+          if (!map) {
+            map = new maps.Map(mapRef.current, {
+              center: TRIPOLI_CENTER,
+              zoom: DEFAULT_ZOOM,
+              mapTypeId: 'roadmap',
+              mapTypeControl: false,
+              streetViewControl: false,
+              fullscreenControl: true,
+              zoomControl: true,
+              zoomControlOptions: { position: maps.ControlPosition.RIGHT_BOTTOM },
+              fullscreenControlOptions: { position: maps.ControlPosition.RIGHT_TOP },
+              scaleControl: false,
+              gestureHandling: 'greedy',
+              backgroundColor: '#f1f5f9',
+              styles: lightStyles,
+            });
+            mapInstanceRef.current = map;
+          } else {
+            map.setOptions({
+              styles: lightStyles,
+              backgroundColor: '#f1f5f9',
+            });
+          }
+          setMapReady(true);
+          staggerMapResize(maps, map);
+          maps.event.addListenerOnce(map, 'idle', () => staggerMapResize(maps, map, [0, 100, 320]));
+        };
+
+        runWhenMapContainerReady(mapRef.current, mountMap);
       })
       .catch((err) => {
         if (!cancelled) setMapError(err.message || 'Failed to load map');
@@ -225,27 +261,31 @@ export default function FindYourWayMap({ places = [], t }) {
     const wrap = mapWrapRef.current;
     if (!map || !maps || !mapReady || !wrap) return undefined;
 
-    const triggerResize = () => maps.event.trigger(map, 'resize');
-    const onOrientation = () => {
-      triggerResize();
-      setTimeout(triggerResize, 220);
+    const onOrientation = () => staggerMapResize(maps, map, [0, 200, 450]);
+    const onPageShow = () => staggerMapResize(maps, map, [0, 120, 400]);
+    const onVis = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') staggerMapResize(maps, map);
     };
-    const onPageShow = () => setTimeout(triggerResize, 80);
 
     let ro;
     if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(() => triggerResize());
+      ro = new ResizeObserver(() => staggerMapResize(maps, map, [0, 60]));
       ro.observe(wrap);
     }
     window.addEventListener('orientationchange', onOrientation);
     window.addEventListener('pageshow', onPageShow);
     window.addEventListener('resize', onPageShow);
+    document.addEventListener('visibilitychange', onVis);
+    const vv = window.visualViewport;
+    vv?.addEventListener?.('resize', onPageShow);
 
     return () => {
       ro?.disconnect();
       window.removeEventListener('orientationchange', onOrientation);
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('resize', onPageShow);
+      document.removeEventListener('visibilitychange', onVis);
+      vv?.removeEventListener?.('resize', onPageShow);
     };
   }, [mapReady]);
 
@@ -260,7 +300,7 @@ export default function FindYourWayMap({ places = [], t }) {
     if (visibleMarkers.length === 0) {
       map.setCenter(TRIPOLI_CENTER);
       map.setZoom(DEFAULT_ZOOM);
-      setTimeout(() => maps.event.trigger(map, 'resize'), 50);
+      staggerMapResize(maps, map, [0, 80]);
       return;
     }
 
@@ -281,7 +321,7 @@ export default function FindYourWayMap({ places = [], t }) {
     });
 
     fitBounds(map, maps, visibleMarkers);
-    setTimeout(() => maps.event.trigger(map, 'resize'), 50);
+    staggerMapResize(maps, map, [0, 60, 200]);
   }, [visibleMarkers, mapReady, fitBounds]);
 
   useEffect(() => {

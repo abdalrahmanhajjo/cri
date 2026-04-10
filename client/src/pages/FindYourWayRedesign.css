@@ -180,10 +180,25 @@
   margin-top: -10px !important;
 }
 
-.fym-map-canvas,
+/* Size the wrapper only; canvas fills it so Maps gets a single consistent box (fixes mobile grey map). */
 .fym-map-wrap {
-  height: min(280px, 45vh) !important; /* Smaller map height */
+  height: min(280px, 45vh) !important;
   min-height: 240px !important;
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+}
+
+.fym-map-canvas {
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+}
+
+@media (min-width: 900px) {
+  .fym-map-wrap {
+    height: min(400px, 52vh) !important;
+    min-height: 360px !important;
+  }
 }
 
 .fym-legend,
