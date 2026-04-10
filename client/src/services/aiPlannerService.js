@@ -362,7 +362,8 @@ function parsePlanJson(rawText, placeIdSet, resolver = null) {
       });
     }
     if (slots.length === 0) return null;
-    return { text: beforeText || "Here's a plan for you!", slots };
+    /* Do not surface prose alongside PLAN_JSON — UI only shows the structured itinerary */
+    return { text: '', slots };
   };
 
   const planLabel = /[*_]*PLAN_JSON[*_]*\s*:?/i;
@@ -916,7 +917,7 @@ ${Array.from({ length: durationDays }, (_, d) => `- Exactly ${placesPerDay} obje
       : '';
 
   const planInstruction = `
-When you have enough information (e.g. days, interests, or the user asks for a plan), you MAY propose an itinerary. To do that, end your reply with a single newline then exactly: PLAN_JSON:
+When you have enough information (e.g. days, interests, or the user asks for a plan), you MAY propose an itinerary. To do that, output **nothing else** before this block: a single newline then exactly: PLAN_JSON:
 Then a JSON array of objects with placeId, suggestedTime, reason; add dayIndex (0,1,...) if multiple days. Use ONLY placeIds from the "Available places" list (copy ids exactly). Example: [{"placeId":"id1","suggestedTime":"9:00","reason":"...","dayIndex":0}]
 Each "reason" should be one short sentence: why this stop fits the day, how it connects to the previous stop or user request, or a timing note (use the place's bestTime when relevant).
 Within each dayIndex, use suggestedTime values in **chronological order** from first stop to last (earlier starts first); the app requires spacing between starts on the same day.
@@ -1081,13 +1082,7 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
     }
 
     let { text, slots } = parsePlanJson(rawForPlan, placeIdSet, placeResolver);
-    const fallbackLead =
-      lang === 'ar'
-        ? 'Ø£Ø¹Ø¯Øª ØªØ±ØªÙŠØ¨ Ø§Ù„Ø®Ø·Ø© Ø¨Ø§Ø¹ØªÙ…Ø§Ø¯ Ø¹Ù„Ù‰ Ø£ÙØ¶Ù„ Ø§Ù„Ø£Ù…Ø§ÙƒÙ† Ø§Ù„Ù…Ù†Ø§Ø³Ø¨Ø© Ù„Ø·Ù„Ø¨Ùƒ Ù„Ù„Ø­ÙØ§Ø¸ Ø¹Ù„Ù‰ Ø®Ø·Ø© ÙˆØ§Ø¶Ø­Ø© ÙˆÙ…ÙˆØ«ÙˆÙ‚Ø©.'
-        : lang === 'fr'
-          ? 'Jâ€™ai reconstruit le plan Ã  partir des lieux les plus pertinents pour garder un itinÃ©raire clair et fiable.'
-          : 'I rebuilt the plan from the strongest matching places to keep the itinerary clear and reliable.';
-    const outText = text || "Here's a plan for you!";
+    const outText = slots?.length ? '' : text || "Here's a plan for you!";
 
     const ensureExactSlotCount = (rawSlots) => {
       if (!Array.isArray(rawSlots) || rawSlots.length === 0) return rawSlots;
@@ -1175,7 +1170,7 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
       });
       if (fallbackSlots.length) {
         return {
-          text: text ? `${outText}\n\n${fallbackLead}` : fallbackLead,
+          text: '',
           slots: await finalizeTripSlots(fallbackSlots),
           tripSettings,
         };

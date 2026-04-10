@@ -28,6 +28,17 @@ export function AuthProvider({ children }) {
     return u;
   }, []);
 
+  const loginWithGoogle = useCallback(async (credential) => {
+    const { token, user: u } = await api.auth.google(credential);
+    saveToken(token);
+    setStoredUser(u);
+    setUser(u);
+    const code = generateSessionCode();
+    setSessionCode(code);
+    setSessionCodeState(code);
+    return u;
+  }, []);
+
   const register = useCallback(async (name, username, email, password) => {
     const data = await api.auth.register(name, username, email, password);
     const { user: u, verificationEmailDelivered, requiresEmailVerification } = data;
@@ -151,7 +162,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, applySession, logout, refreshUser, sessionCode }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, loginWithGoogle, register, applySession, logout, refreshUser, sessionCode }}
+    >
       {children}
     </AuthContext.Provider>
   );

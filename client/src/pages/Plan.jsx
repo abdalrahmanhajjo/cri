@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { getPlaceImageUrl } from '../api/client';
 import { useSiteSettings } from '../context/SiteSettingsContext';
+import { useAuth } from '../context/AuthContext';
 import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
@@ -31,8 +33,56 @@ import {
   formatYMD,
 } from '../utils/tripPlannerHelpers';
 import { loadSmartScheduleContext, sortAndAssignSmartSlotTimes } from '../utils/smartVisitTiming';
+import { getFoodAndStayCategoryIdSets, isDedicatedGuideListing } from '../utils/placeGuideExclusions';
+import {
+  isManualTripCreateTourDone,
+  setManualTripCreateTourDone,
+  clearManualTripCreateTour,
+  isManualTripBuilderTourDone,
+  setManualTripBuilderTourDone,
+  clearManualTripBuilderTour,
+} from '../utils/manualTripOnboardingStorage';
+import AiPlannerOnboarding from '../components/AiPlannerOnboarding';
 import './Explore.css';
 import './Plan.css';
+
+function getTourEffectiveScrollY() {
+  if (typeof document === 'undefined') return 0;
+  const { body } = document;
+  if (body.style.position === 'fixed') {
+    const n = parseFloat(body.style.top);
+    if (Number.isFinite(n)) return Math.max(0, -n);
+    return 0;
+  }
+  return window.scrollY ?? document.documentElement.scrollTop ?? 0;
+}
+
+function setTourEffectiveScrollY(y) {
+  const yClamped = Math.max(0, y);
+  const { body } = document;
+  if (body.style.position === 'fixed') {
+    body.style.top = `-${yClamped}px`;
+  } else {
+    window.scrollTo(0, yClamped);
+  }
+}
+
+function getTourMaxScrollY() {
+  if (typeof document === 'undefined') return 0;
+  const vh = window.innerHeight;
+  const b = document.body;
+  const e = document.documentElement;
+  const root = document.getElementById('root');
+  const h = Math.max(
+    b?.scrollHeight ?? 0,
+    b?.offsetHeight ?? 0,
+    e?.scrollHeight ?? 0,
+    e?.offsetHeight ?? 0,
+    root?.scrollHeight ?? 0,
+    root?.offsetHeight ?? 0
+  );
+  return Math.max(0, h - vh);
+}
 
 /** Replace `{key}` placeholders in translation strings. */
 function formatPlanToast(template, vars) {
@@ -243,6 +293,28 @@ export default function Plan() {
   const [shareRequestsCollapsed, setShareRequestsCollapsed] = useState(false);
   const [expandedShareRequestIds, setExpandedShareRequestIds] = useState(() => new Set());
   const { settings } = useSiteSettings();
+  const { user } = useAuth();
+  const storageUserId = user?.id != null ? String(user.id) : 'anon';
+
+  const tourCreateBtnRef = useRef(null);
+  const tourCreateFormRef = useRef(null);
+  const tourCreateCalendarRef = useRef(null);
+  const tourCreateActionsRef = useRef(null);
+  const tourBuilderNavRef = useRef(null);
+  const tourBuilderBasicsRef = useRef(null);
+  const tourBuilderDiscoverRef = useRef(null);
+  const tourBuilderFavouritesRef = useRef(null);
+  const tourBuilderSaveRef = useRef(null);
+
+  const [createTourOpen, setCreateTourOpen] = useState(false);
+  const [createTourStep, setCreateTourStep] = useState(0);
+  const [createTourHighlightRect, setCreateTourHighlightRect] = useState(null);
+  const [builderTourOpen, setBuilderTourOpen] = useState(false);
+  const [builderTourStep, setBuilderTourStep] = useState(0);
+  const [builderTourHighlightRect, setBuilderTourHighlightRect] = useState(null);
+
+  const CREATE_TOUR_STEP_COUNT = 5;
+  const BUILDER_TOUR_STEP_COUNT = 6;
 
   const sortedTrips = useMemo(() => sortTripsSmart(trips), [trips]);
 
@@ -400,13 +472,19 @@ export default function Plan() {
     });
   }, [langParam]);
 
+  const { foodCategoryIds, stayCategoryIds } = useMemo(
+    () => getFoodAndStayCategoryIdSets(categories),
+    [categories]
+  );
+
   const filteredPlaces = useMemo(() => {
-    let list = filterPlacesByQuery(places, placeSearch);
+    let list = places.filter((p) => !isDedicatedGuideListing(p, foodCategoryIds, stayCategoryIds));
+    list = filterPlacesByQuery(list, placeSearch);
     if (placeCategoryFilter) {
       list = list.filter((p) => (p.categoryId ?? p.category_id) === placeCategoryFilter);
     }
     return list;
-  }, [places, placeSearch, placeCategoryFilter]);
+  }, [places, placeSearch, placeCategoryFilter, foodCategoryIds, stayCategoryIds]);
 
   const placeSections = useMemo(
     () => groupPlacesByCategory(filteredPlaces, categories),
@@ -754,6 +832,9 @@ export default function Plan() {
   const handleCloseCreateForm = () => {
     const hadDraft =
       createName.trim() || createStart || createEnd || createDescription.trim();
+    if (createTourOpen && createTourStep >= 2) {
+      setCreateTourStep(1);
+    }
     setShowCreateForm(false);
     setDateError(null);
     setNameError('');
@@ -763,6 +844,312 @@ export default function Plan() {
     setCreateDescription('');
     if (hadDraft) showToast(t('home', 'planToastCreateFormClosed'), 'info');
   };
+
+  const createTourStepMeta = useMemo(
+    () => [
+      {
+        title: t('home', 'manualCreateTourWelcomeTitle'),
+        body: t('home', 'manualCreateTourWelcomeBody'),
+        target: null,
+      },
+      {
+        title: t('home', 'manualCreateTourNewBtnTitle'),
+        body: t('home', 'manualCreateTourNewBtnBody'),
+        target: 'newBtn',
+      },
+      {
+        title: t('home', 'manualCreateTourFormTitle'),
+        body: t('home', 'manualCreateTourFormBody'),
+        target: 'form',
+      },
+      {
+        title: t('home', 'manualCreateTourDatesTitle'),
+        body: t('home', 'manualCreateTourDatesBody'),
+        target: 'dates',
+      },
+      {
+        title: t('home', 'manualCreateTourSaveTitle'),
+        body: t('home', 'manualCreateTourSaveBody'),
+        target: 'save',
+      },
+    ],
+    [t]
+  );
+
+  const builderTourStepMeta = useMemo(
+    () => [
+      {
+        title: t('home', 'manualBuilderTourWelcomeTitle'),
+        body: t('home', 'manualBuilderTourWelcomeBody'),
+        target: null,
+      },
+      {
+        title: t('home', 'manualBuilderTourNavTitle'),
+        body: t('home', 'manualBuilderTourNavBody'),
+        target: 'nav',
+      },
+      {
+        title: t('home', 'manualBuilderTourBasicsTitle'),
+        body: t('home', 'manualBuilderTourBasicsBody'),
+        target: 'basics',
+      },
+      {
+        title: t('home', 'manualBuilderTourDiscoverTitle'),
+        body: t('home', 'manualBuilderTourDiscoverBody'),
+        target: 'discover',
+      },
+      {
+        title: t('home', 'manualBuilderTourFavouritesTitle'),
+        body: t('home', 'manualBuilderTourFavouritesBody'),
+        target: 'favourites',
+      },
+      {
+        title: t('home', 'manualBuilderTourItineraryTitle'),
+        body: t('home', 'manualBuilderTourItineraryBody'),
+        target: 'save',
+      },
+    ],
+    [t]
+  );
+
+  const createTourRefMap = useMemo(
+    () => ({
+      newBtn: tourCreateBtnRef,
+      form: tourCreateFormRef,
+      dates: tourCreateCalendarRef,
+      save: tourCreateActionsRef,
+    }),
+    []
+  );
+
+  const builderTourRefMap = useMemo(
+    () => ({
+      nav: tourBuilderNavRef,
+      basics: tourBuilderBasicsRef,
+      discover: tourBuilderDiscoverRef,
+      favourites: tourBuilderFavouritesRef,
+      save: tourBuilderSaveRef,
+    }),
+    []
+  );
+
+  const expandForBuilderTourTarget = useCallback((targetKey) => {
+    if (targetKey === 'basics') expandBuilderSection('basics');
+    else if (targetKey === 'discover') expandBuilderSection('discover');
+    else if (targetKey === 'favourites') expandBuilderSection('favourites');
+    else if (targetKey === 'save') {
+      expandBuilderSection('itinerary');
+    }
+  }, [expandBuilderSection]);
+
+  const syncCreateTourHighlightForStep = useCallback(() => {
+    if (!createTourOpen) return;
+    const meta = createTourStepMeta[createTourStep];
+    const key = meta?.target;
+    const ref = key ? createTourRefMap[key] : null;
+    if (createTourStep >= 2 && !showCreateForm) {
+      flushSync(() => {
+        setShowCreateForm(true);
+      });
+    }
+    if (!key || !ref?.current) {
+      setCreateTourHighlightRect(null);
+      return;
+    }
+    const el = ref.current;
+    const vh = window.innerHeight;
+    const marginTop = 76;
+    const marginBottom = Math.min(340, Math.max(220, Math.round(vh * 0.36)));
+    const maxScroll = getTourMaxScrollY();
+
+    const applyScrollForRect = () => {
+      const effectiveNow = getTourEffectiveScrollY();
+      const rect = el.getBoundingClientRect();
+      const elTopDoc = rect.top + effectiveNow;
+      const elBottomDoc = rect.bottom + effectiveNow;
+      const sLow = elBottomDoc - (vh - marginBottom);
+      const sHigh = elTopDoc - marginTop;
+      let s = effectiveNow;
+      if (sLow <= sHigh) {
+        s = Math.min(sHigh, Math.max(sLow, effectiveNow));
+      } else {
+        s = (elTopDoc + elBottomDoc - vh) / 2;
+      }
+      s = Math.max(0, Math.min(maxScroll, s));
+      if (Math.abs(s - effectiveNow) > 0.5) {
+        setTourEffectiveScrollY(s);
+        return true;
+      }
+      return false;
+    };
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      if (!applyScrollForRect()) break;
+    }
+
+    const rect = el.getBoundingClientRect();
+    setCreateTourHighlightRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+  }, [createTourOpen, createTourStep, createTourStepMeta, createTourRefMap, showCreateForm]);
+
+  const syncBuilderTourHighlightForStep = useCallback(() => {
+    if (!builderTourOpen) return;
+    const stepMeta = builderTourStepMeta[builderTourStep];
+    const key = stepMeta?.target;
+    if (key) {
+      flushSync(() => {
+        expandForBuilderTourTarget(key);
+      });
+    }
+    const ref = key ? builderTourRefMap[key] : null;
+    if (!key || !ref?.current) {
+      setBuilderTourHighlightRect(null);
+      return;
+    }
+    const el = ref.current;
+    const vh = window.innerHeight;
+    const marginTop = 76;
+    const marginBottom = Math.min(340, Math.max(220, Math.round(vh * 0.36)));
+    const maxScroll = getTourMaxScrollY();
+
+    const applyScrollForRect = () => {
+      const effectiveNow = getTourEffectiveScrollY();
+      const rect = el.getBoundingClientRect();
+      const elTopDoc = rect.top + effectiveNow;
+      const elBottomDoc = rect.bottom + effectiveNow;
+      const sLow = elBottomDoc - (vh - marginBottom);
+      const sHigh = elTopDoc - marginTop;
+      let s = effectiveNow;
+      if (sLow <= sHigh) {
+        s = Math.min(sHigh, Math.max(sLow, effectiveNow));
+      } else {
+        s = (elTopDoc + elBottomDoc - vh) / 2;
+      }
+      s = Math.max(0, Math.min(maxScroll, s));
+      if (Math.abs(s - effectiveNow) > 0.5) {
+        setTourEffectiveScrollY(s);
+        return true;
+      }
+      return false;
+    };
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      if (!applyScrollForRect()) break;
+    }
+
+    const rect = el.getBoundingClientRect();
+    setBuilderTourHighlightRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+  }, [builderTourOpen, builderTourStep, builderTourStepMeta, builderTourRefMap, expandForBuilderTourTarget]);
+
+  useLayoutEffect(() => {
+    if (!createTourOpen) {
+      setCreateTourHighlightRect(null);
+      return;
+    }
+    let cancelled = false;
+    syncCreateTourHighlightForStep();
+    const id = requestAnimationFrame(() => {
+      if (cancelled) return;
+      syncCreateTourHighlightForStep();
+      requestAnimationFrame(() => {
+        if (!cancelled) syncCreateTourHighlightForStep();
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, [createTourOpen, createTourStep, showCreateForm, syncCreateTourHighlightForStep]);
+
+  useLayoutEffect(() => {
+    if (!builderTourOpen) {
+      setBuilderTourHighlightRect(null);
+      return;
+    }
+    let cancelled = false;
+    syncBuilderTourHighlightForStep();
+    const id = requestAnimationFrame(() => {
+      if (cancelled) return;
+      syncBuilderTourHighlightForStep();
+      requestAnimationFrame(() => {
+        if (!cancelled) syncBuilderTourHighlightForStep();
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, [builderTourOpen, builderTourStep, builderSectionCollapsed, syncBuilderTourHighlightForStep]);
+
+  useEffect(() => {
+    if (!createTourOpen) return undefined;
+    const onResize = () => syncCreateTourHighlightForStep();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [createTourOpen, syncCreateTourHighlightForStep]);
+
+  useEffect(() => {
+    if (!builderTourOpen) return undefined;
+    const onResize = () => syncBuilderTourHighlightForStep();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [builderTourOpen, syncBuilderTourHighlightForStep]);
+
+  const finishCreateTour = useCallback(() => {
+    setCreateTourOpen(false);
+    setCreateTourStep(0);
+    setCreateTourHighlightRect(null);
+    setManualTripCreateTourDone(storageUserId);
+  }, [storageUserId]);
+
+  const finishBuilderTour = useCallback(() => {
+    setBuilderTourOpen(false);
+    setBuilderTourStep(0);
+    setBuilderTourHighlightRect(null);
+    setManualTripBuilderTourDone(storageUserId);
+  }, [storageUserId]);
+
+  const startCreateTour = useCallback(() => {
+    clearManualTripCreateTour(storageUserId);
+    setBuilderTourOpen(false);
+    setBuilderTourStep(0);
+    setBuilderTourHighlightRect(null);
+    setCreateTourStep(0);
+    setShowCreateForm(false);
+    setCreateTourOpen(true);
+  }, [storageUserId]);
+
+  const startBuilderTour = useCallback(() => {
+    clearManualTripBuilderTour(storageUserId);
+    setCreateTourOpen(false);
+    setCreateTourStep(0);
+    setCreateTourHighlightRect(null);
+    setBuilderTourStep(0);
+    setBuilderTourOpen(true);
+  }, [storageUserId]);
+
+  useEffect(() => {
+    if (!editingTripId || !createTourOpen) return;
+    setCreateTourOpen(false);
+    setCreateTourStep(0);
+    setCreateTourHighlightRect(null);
+    setManualTripCreateTourDone(storageUserId);
+  }, [editingTripId, createTourOpen, storageUserId]);
+
+  useEffect(() => {
+    if (tripsLoading || tripsError || editingTripId) return undefined;
+    if (isManualTripCreateTourDone(storageUserId)) return undefined;
+    if (showCreateForm) return undefined;
+    const id = window.setTimeout(() => setCreateTourOpen(true), 450);
+    return () => clearTimeout(id);
+  }, [tripsLoading, tripsError, editingTripId, storageUserId, showCreateForm]);
+
+  useEffect(() => {
+    if (!editingTripId || tripsLoading || tripsError) return undefined;
+    if (isManualTripBuilderTourDone(storageUserId)) return undefined;
+    if (createTourOpen) return undefined;
+    const id = window.setTimeout(() => setBuilderTourOpen(true), 450);
+    return () => clearTimeout(id);
+  }, [editingTripId, tripsLoading, tripsError, storageUserId, createTourOpen]);
 
   const applyEditQuickPreset = useCallback(
     (presetKey) => {
@@ -1070,7 +1457,8 @@ export default function Plan() {
           <div className="trips-error">{tripsError}</div>
         ) : isInBuilder ? (
           <>
-          <nav className="plan-section-nav" aria-label="Plan sections">
+          <div className="plan-section-nav-wrap">
+          <nav ref={tourBuilderNavRef} className="plan-section-nav" aria-label="Plan sections">
             <a
               href="#plan-basics"
               className={`plan-section-nav-link${builderSectionCollapsed.basics ? ' plan-section-nav-link--collapsed' : ''}`}
@@ -1104,8 +1492,19 @@ export default function Plan() {
               <span>{t('home', 'planStepItinerary')}</span>
             </a>
           </nav>
+          <button
+            type="button"
+            className="plan-manual-tour-btn plan-manual-tour-btn--nav"
+            onClick={startBuilderTour}
+            title={t('home', 'manualTourRestart')}
+            aria-label={t('home', 'manualTourRestartAria')}
+          >
+            <Icon name="zap" size={22} ariaHidden />
+          </button>
+          </div>
           <div className="plan-unified" id="plan">
             <section
+              ref={tourBuilderBasicsRef}
               className={`plan-unified-section plan-unified-section--basics${builderSectionCollapsed.basics ? ' plan-unified-section--collapsed' : ''}`}
               id="plan-basics"
             >
@@ -1204,6 +1603,7 @@ export default function Plan() {
             </section>
 
             <section
+              ref={tourBuilderDiscoverRef}
               className={`plan-unified-section plan-unified-section--discover${builderSectionCollapsed.discover ? ' plan-unified-section--collapsed' : ''}`}
               id="plan-discover"
             >
@@ -1329,6 +1729,7 @@ export default function Plan() {
             </section>
 
             <section
+              ref={tourBuilderFavouritesRef}
               className={`plan-unified-section plan-unified-section--favourites${builderSectionCollapsed.favourites ? ' plan-unified-section--collapsed' : ''}`}
               id="plan-favourites"
             >
@@ -1501,7 +1902,7 @@ export default function Plan() {
                   {t('home', 'planUnsavedHint')}
                 </p>
               ) : null}
-              <div className="plan-builder-actions">
+              <div ref={tourBuilderSaveRef} className="plan-builder-actions">
                 <button type="button" className="vd-btn vd-btn--primary" onClick={handleSaveTrip} disabled={saving}>
                   {saving ? t('home', 'loading') : t('home', 'saveTrip')}
                 </button>
@@ -1534,6 +1935,15 @@ export default function Plan() {
               <div className="plan-section-head">
                 <h2 className="plan-section-title">{t('nav', 'myTrips')}</h2>
                 <div className="plan-section-head-actions">
+                  <button
+                    type="button"
+                    className="plan-manual-tour-btn"
+                    onClick={startCreateTour}
+                    title={t('home', 'manualTourRestart')}
+                    aria-label={t('home', 'manualTourRestartAria')}
+                  >
+                    <Icon name="zap" size={22} ariaHidden />
+                  </button>
                   {settings.aiPlannerEnabled !== false && (
                     <Link to="/plan/ai" className="plan-btn-ai">
                       <Icon name="auto_awesome" size={22} /> {t('nav', 'aiPlanBannerCta')}
@@ -1543,6 +1953,7 @@ export default function Plan() {
                     <button
                       type="button"
                       className="plan-btn-create"
+                      ref={tourCreateBtnRef}
                       onClick={() => {
                         setShowCreateForm(true);
                         showToast(t('home', 'planToastNewTripForm'), 'info');
@@ -1816,7 +2227,7 @@ export default function Plan() {
               )}
 
               {showCreateForm && (
-                <form className="plan-create-form" onSubmit={handleCreateSubmit}>
+                <form ref={tourCreateFormRef} className="plan-create-form" onSubmit={handleCreateSubmit}>
                   <h3 className="plan-form-title">{t('home', 'createTrip')}</h3>
                   <label>
                     <span className="plan-label">{t('home', 'tripName')}</span>
@@ -1843,7 +2254,7 @@ export default function Plan() {
                     </label>
                   </div>
                   {dateError && <p className="plan-date-error" role="alert">{dateError}</p>}
-                  <div className="plan-calendar-wrap">
+                  <div ref={tourCreateCalendarRef} className="plan-calendar-wrap">
                     <DateRangeCalendar
                       startDate={createStart || undefined}
                       endDate={createEnd || undefined}
@@ -1852,7 +2263,7 @@ export default function Plan() {
                       hintEnd={t('home', 'selectEndDate')}
                     />
                   </div>
-                  <div className="plan-form-actions">
+                  <div ref={tourCreateActionsRef} className="plan-form-actions">
                     <button type="submit" className="vd-btn vd-btn--primary" disabled={saving}>
                       {saving ? t('home', 'loading') : t('home', 'saveTrip')}
                     </button>
@@ -1939,6 +2350,65 @@ export default function Plan() {
           </>
         )}
       </div>
+
+      <AiPlannerOnboarding
+        open={createTourOpen}
+        stepIndex={createTourStep}
+        stepCount={CREATE_TOUR_STEP_COUNT}
+        title={createTourStepMeta[createTourStep]?.title ?? ''}
+        body={createTourStepMeta[createTourStep]?.body ?? ''}
+        highlightRect={createTourHighlightRect}
+        onNext={() => {
+          if (createTourStep === 1) {
+            setShowCreateForm(true);
+          }
+          if (createTourStep >= CREATE_TOUR_STEP_COUNT - 1) {
+            finishCreateTour();
+          } else {
+            setCreateTourStep((s) => s + 1);
+          }
+        }}
+        onBack={() => {
+          if (createTourStep === 2) {
+            setShowCreateForm(false);
+          }
+          setCreateTourStep((s) => Math.max(0, s - 1));
+        }}
+        onSkip={finishCreateTour}
+        isFirstStep={createTourStep === 0}
+        isLastStep={createTourStep === CREATE_TOUR_STEP_COUNT - 1}
+        nextLabel={t('aiPlanner', 'onboardingNext')}
+        backLabel={t('aiPlanner', 'onboardingBack')}
+        skipLabel={t('aiPlanner', 'onboardingSkip')}
+        doneLabel={t('aiPlanner', 'onboardingDone')}
+        progressLabel={t('aiPlanner', 'onboardingProgress')}
+        dir={lang === 'ar' ? 'rtl' : 'ltr'}
+      />
+      <AiPlannerOnboarding
+        open={builderTourOpen}
+        stepIndex={builderTourStep}
+        stepCount={BUILDER_TOUR_STEP_COUNT}
+        title={builderTourStepMeta[builderTourStep]?.title ?? ''}
+        body={builderTourStepMeta[builderTourStep]?.body ?? ''}
+        highlightRect={builderTourHighlightRect}
+        onNext={() => {
+          if (builderTourStep >= BUILDER_TOUR_STEP_COUNT - 1) {
+            finishBuilderTour();
+          } else {
+            setBuilderTourStep((s) => s + 1);
+          }
+        }}
+        onBack={() => setBuilderTourStep((s) => Math.max(0, s - 1))}
+        onSkip={finishBuilderTour}
+        isFirstStep={builderTourStep === 0}
+        isLastStep={builderTourStep === BUILDER_TOUR_STEP_COUNT - 1}
+        nextLabel={t('aiPlanner', 'onboardingNext')}
+        backLabel={t('aiPlanner', 'onboardingBack')}
+        skipLabel={t('aiPlanner', 'onboardingSkip')}
+        doneLabel={t('aiPlanner', 'onboardingDone')}
+        progressLabel={t('aiPlanner', 'onboardingProgress')}
+        dir={lang === 'ar' ? 'rtl' : 'ltr'}
+      />
 
       {toast && (
         <div className={`plan-toast plan-toast--${toast.type}`} role="status" aria-live="polite">

@@ -1432,6 +1432,51 @@
 }
 
 /* ----- Section jump nav (page after page) ----- */
+.plan-page .plan-section-nav-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.plan-page .plan-section-nav-wrap .plan-section-nav {
+  flex: 1;
+  min-width: min(100%, 240px);
+  margin-bottom: 0;
+}
+
+.plan-page .plan-manual-tour-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border: 1px solid rgba(15, 118, 110, 0.35);
+  border-radius: 50%;
+  background: rgba(15, 118, 110, 0.09);
+  color: var(--color-primary-dark, #0d5c56);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.plan-page .plan-manual-tour-btn:hover {
+  background: rgba(15, 118, 110, 0.14);
+  border-color: var(--color-primary, #0f766e);
+}
+
+.plan-page .plan-manual-tour-btn:active {
+  transform: scale(0.96);
+}
+
+.plan-page .plan-manual-tour-btn--nav {
+  margin-top: 12px;
+}
+
 .plan-page .plan-section-nav {
   display: flex;
   flex-wrap: wrap;
@@ -2587,6 +2632,17 @@
 :root[data-theme="dark"] .plan-page .plan-event-card-cat {
   background: var(--plan-accent-dim);
   color: var(--plan-accent);
+}
+
+:root[data-theme="dark"] .plan-page .plan-manual-tour-btn {
+  background: rgba(43, 212, 192, 0.12);
+  border-color: rgba(43, 212, 192, 0.4);
+  color: var(--plan-accent);
+}
+
+:root[data-theme="dark"] .plan-page .plan-manual-tour-btn:hover {
+  background: rgba(43, 212, 192, 0.2);
+  border-color: var(--plan-accent);
 }
 
 :root[data-theme="dark"] .plan-page .plan-btn-ai,

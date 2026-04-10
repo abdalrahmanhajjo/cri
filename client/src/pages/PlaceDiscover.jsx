@@ -12,6 +12,10 @@ import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
 import { DINING_PATH, HOTELS_PATH } from '../utils/discoverPaths';
 import { useSiteSettings } from '../context/SiteSettingsContext';
+import {
+  getFoodAndStayCategoryIdSets,
+  isDedicatedGuideListing,
+} from '../utils/placeGuideExclusions';
 import './PlaceDiscover.css';
 
 function formatTripRange(trip, locale) {
@@ -21,18 +25,6 @@ function formatTripRange(trip, locale) {
   const opts = { day: 'numeric', month: 'short', year: 'numeric' };
   if (!b || Number.isNaN(b.getTime())) return a.toLocaleDateString(locale, opts);
   return `${a.toLocaleDateString(locale, opts)} – ${b.toLocaleDateString(locale, opts)}`;
-}
-
-function isDiningPlace(place) {
-  const hay = [
-    place?.category,
-    place?.categoryId,
-    ...(Array.isArray(place?.tags) ? place.tags : place?.tags ? [place.tags] : []),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-  return /(restaurant|food|dining|cafe|cafÃ©|coffee|bakery|sweet|dessert|cuisine|breakfast|lunch|dinner)/.test(hay);
 }
 
 function DiscoverCard({
@@ -309,10 +301,17 @@ export default function PlaceDiscover() {
     return new Set(Array.isArray(ids) ? ids.map(String) : []);
   }, [settings]);
 
+  const { foodCategoryIds, stayCategoryIds } = useMemo(
+    () => getFoodAndStayCategoryIdSets(categories),
+    [categories]
+  );
+
   const filteredPlaces = useMemo(() => {
-    let base = places.filter(
-      (p) => !(isDiningPlace(p) && hiddenRestaurantIds.has(String(p?.id)))
-    );
+    let base = places.filter((p) => {
+      if (hiddenRestaurantIds.has(String(p?.id))) return false;
+      if (isDedicatedGuideListing(p, foodCategoryIds, stayCategoryIds)) return false;
+      return true;
+    });
     if (categoryParam) {
       const id = String(categoryParam);
       base = base.filter((p) => String(p.categoryId ?? p.category_id) === id);
@@ -330,7 +329,27 @@ export default function PlaceDiscover() {
       if (sa !== sb) return sb - sa;
       return 0;
     });
-  }, [places, hiddenRestaurantIds, categoryParam, qParam, sortParam, sponsoredPlaceIdSet]);
+  }, [
+    places,
+    hiddenRestaurantIds,
+    foodCategoryIds,
+    stayCategoryIds,
+    categoryParam,
+    qParam,
+    sortParam,
+    sponsoredPlaceIdSet,
+  ]);
+
+  const sponsoredDiscoverVisible = useMemo(() => {
+    if (!Array.isArray(sponsoredDiscover) || sponsoredDiscover.length === 0) return [];
+    return sponsoredDiscover.filter((item) => {
+      const pid = item.placeId ?? item.place?.id;
+      if (pid == null) return false;
+      const pl = placeMap[String(pid)] || item.place;
+      if (!pl) return false;
+      return !isDedicatedGuideListing(pl, foodCategoryIds, stayCategoryIds);
+    });
+  }, [sponsoredDiscover, placeMap, foodCategoryIds, stayCategoryIds]);
 
   const setParam = useCallback(
     (key, value) => {
@@ -636,11 +655,11 @@ export default function PlaceDiscover() {
           <p className="pd-empty">{t('home', 'noSpots')}</p>
         ) : (
           <section className={`pd-mosaic pd-mosaic--${viewMode}`} aria-labelledby="pd-results-heading">
-            {sponsoredDiscover.length > 0 && viewMode === 'list' ? (
+            {sponsoredDiscoverVisible.length > 0 && viewMode === 'list' ? (
               <div className="pd-sponsored-block">
                 <p className="pd-sponsored-kicker">{t('discover', 'sponsoredDiscoverKicker')}</p>
                 <div className="pd-sponsored-inline">
-                  <SponsoredPlaceCard item={sponsoredDiscover[0]} t={t} variant="inline" />
+                  <SponsoredPlaceCard item={sponsoredDiscoverVisible[0]} t={t} variant="inline" />
                 </div>
               </div>
             ) : null}

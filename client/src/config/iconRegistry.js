@@ -59,6 +59,11 @@ export const ICON_DOCS = {
     description: 'Signals AI-assisted features: trip planner moods, sparkles on a stop, or AI plan CTA.',
     flaticonAnimated: 'Sparkles, magic wand, or “AI” stars animation from Flaticon (smart suggestion).',
   },
+  zap: {
+    variant: 'nav',
+    description: 'Lightning bolt (quick tour, energy, or fast path). Rendered from Feather zap.svg.',
+    flaticonAnimated: '',
+  },
   accessibility: {
     variant: 'status',
     description: 'Highlights inclusive access or accessibility-related practical tips on the home page.',

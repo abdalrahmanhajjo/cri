@@ -7,6 +7,7 @@ import Icon from '../components/Icon';
 import { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
 import { filterPlacesByQuery } from '../utils/searchFilter';
+import { filterGeneralDirectoryPlaces } from '../utils/placeGuideExclusions';
 import './Explore.css';
 import './Spots.css';
 
@@ -98,8 +99,10 @@ export default function Spots() {
       api.categories.list({ lang: langParam }).then((r) => r.categories || []),
     ])
       .then(([p, c]) => {
-        setPlaces(Array.isArray(p) ? p : []);
-        setCategories(Array.isArray(c) ? c : []);
+        const rawP = Array.isArray(p) ? p : [];
+        const rawC = Array.isArray(c) ? c : [];
+        setPlaces(filterGeneralDirectoryPlaces(rawP, rawC));
+        setCategories(rawC);
       })
       .catch((err) => setError(err.message || 'Failed to load'))
       .finally(() => setLoading(false));

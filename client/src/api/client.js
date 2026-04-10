@@ -331,6 +331,8 @@ export const api = {
     checkUsername: (username) =>
       api.get(`/api/auth/check-username?username=${encodeURIComponent(username || '')}`),
     login: (email, password) => api.post('/api/auth/login', { email, password }),
+    /** @param {string} credential JWT from Google Identity Services */
+    google: (credential) => api.post('/api/auth/google', { credential }),
     register: (name, username, email, password) =>
       api.post('/api/auth/register', { name, username, email, password }),
     /** Same 6-digit code + tokens table as the Tripoli Explorer mobile app. */

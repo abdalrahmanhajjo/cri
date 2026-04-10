@@ -1,0 +1,232 @@
+.ai-planner-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  pointer-events: none;
+  overscroll-behavior: none;
+}
+
+.ai-planner-tour__backdrop {
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+  touch-action: none;
+  overscroll-behavior: none;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.ai-planner-tour__backdrop--spotlight {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.ai-planner-tour__hole-cutout {
+  position: absolute;
+  background: transparent;
+  box-shadow: 0 0 0 max(120vmax, 4000px) rgba(15, 23, 42, 0.58);
+  pointer-events: none;
+}
+
+.ai-planner-tour__pulse-ring {
+  position: absolute;
+  pointer-events: none;
+  border: 2px solid rgba(15, 118, 110, 0.85);
+  box-sizing: border-box;
+  animation: ai-planner-tour-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes ai-planner-tour-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.015);
+  }
+}
+
+.ai-planner-tour--reduced-motion .ai-planner-tour__pulse-ring {
+  animation: none;
+}
+
+.ai-planner-tour__panel {
+  pointer-events: auto;
+  touch-action: auto;
+  background: var(--color-surface, #fff);
+  border-radius: 18px;
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  box-shadow:
+    0 24px 64px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  padding: 18px 18px 16px;
+  max-height: min(72vh, 420px);
+  overflow: auto;
+}
+
+.ai-planner-tour__panel--center {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100vw - 28px));
+}
+
+@media (min-width: 900px) {
+  .ai-planner-tour__panel {
+    padding: 22px 22px 18px;
+    border-radius: 20px;
+    max-height: min(78vh, 520px);
+  }
+
+  .ai-planner-tour__panel--center {
+    width: min(460px, calc(100vw - 48px));
+  }
+
+  .ai-planner-tour__title {
+    font-size: 1.45rem;
+  }
+
+  .ai-planner-tour__body {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+}
+
+.ai-planner-tour__panel--floating {
+  position: fixed;
+  transform: none;
+}
+
+.ai-planner-tour__panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.ai-planner-tour__badge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-primary-dark, #0d5c56);
+  background: rgba(15, 118, 110, 0.1);
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.ai-planner-tour__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: -8px -8px 0 0;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-text-secondary, #57534e);
+  cursor: pointer;
+}
+
+.ai-planner-tour__close:hover {
+  background: var(--color-surface-variant, #f5f5f4);
+  color: var(--color-text-primary, #1c1917);
+}
+
+.ai-planner-tour__title {
+  margin: 0 0 10px;
+  font-family: var(--font-serif, 'DM Serif Display', Georgia, serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-text-primary, #1c1917);
+}
+
+.ai-planner-tour__body {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-text-secondary, #57534e);
+  white-space: pre-wrap;
+}
+
+.ai-planner-tour__dots {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.ai-planner-tour__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-border, #e7e5e4);
+}
+
+.ai-planner-tour__dot--on {
+  background: var(--color-primary, #0f766e);
+  transform: scale(1.2);
+}
+
+.ai-planner-tour__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ai-planner-tour__actions-spacer {
+  min-width: 8px;
+}
+
+.ai-planner-tour__actions-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+[dir='rtl'] .ai-planner-tour__panel-head {
+  flex-direction: row-reverse;
+}
+
+.ai-planner-tour__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.ai-planner-tour__btn--ghost {
+  border: 1px solid var(--color-border, #e7e5e4);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary, #1c1917);
+}
+
+.ai-planner-tour__btn--ghost:hover {
+  border-color: rgba(15, 118, 110, 0.35);
+  color: var(--color-primary-dark, #0d5c56);
+}
+
+.ai-planner-tour__btn--primary {
+  border: none;
+  background: var(--color-primary, #0f766e);
+  color: #fff;
+}
+
+.ai-planner-tour__btn--primary:hover {
+  filter: brightness(1.05);
+}

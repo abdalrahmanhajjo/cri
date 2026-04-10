@@ -35,6 +35,11 @@ import {
   countDirectoryCategoriesForWay,
   formatFindYourWayThemeTitle,
 } from '../utils/findYourWayGrouping';
+import {
+  filterGeneralDirectoryPlaces,
+  getFoodAndStayCategoryIdSets,
+  isDedicatedGuideListing,
+} from '../utils/placeGuideExclusions';
 import { supabaseOptimizeForThumbnail } from '../utils/supabaseImage.js';
 import './Explore.css';
 import './CommunityFeedRedesign.css';
@@ -879,6 +884,23 @@ export default function Explore() {
   const showMap = settings.showMap !== false;
 
   const placesList = Array.isArray(places) ? places : [];
+  const directoryPlaces = useMemo(
+    () => filterGeneralDirectoryPlaces(placesList, categories),
+    [placesList, categories]
+  );
+
+  const sponsoredHomeVisible = useMemo(() => {
+    if (!Array.isArray(sponsoredHome) || sponsoredHome.length === 0) return [];
+    const { foodCategoryIds, stayCategoryIds } = getFoodAndStayCategoryIdSets(categories);
+    return sponsoredHome.filter((item) => {
+      const pid = item.placeId ?? item.place?.id;
+      if (pid == null) return false;
+      const pl = placesList.find((x) => String(x.id) === String(pid)) || item.place;
+      if (!pl) return false;
+      return !isDedicatedGuideListing(pl, foodCategoryIds, stayCategoryIds);
+    });
+  }, [sponsoredHome, categories, placesList]);
+
   const placeNameById = useMemo(() => {
     const m = new Map();
     for (const p of placesList) {
@@ -944,9 +966,12 @@ export default function Explore() {
     );
   }
 
-  const placeCountStr = formatDirectoryCount(placesList.length, lang);
+  const placeCountStr = formatDirectoryCount(directoryPlaces.length, lang);
   const categoryCountStr = formatDirectoryCount(categoryCount, lang);
-  const topPicks = placesList.slice().sort((a, b) => (Number(b?.rating) || 0) - (Number(a?.rating) || 0)).slice(0, 6);
+  const topPicks = directoryPlaces
+    .slice()
+    .sort((a, b) => (Number(b?.rating) || 0) - (Number(a?.rating) || 0))
+    .slice(0, 6);
   const bentoV = resolveHomeBentoVisuals(settings);
   const bentoAvatarSlots = resolveBentoAvatarSlots(settings, placesList, (p) =>
     getPlaceImageUrl(p?.image || (Array.isArray(p?.images) && p.images[0]))
@@ -1166,7 +1191,7 @@ export default function Explore() {
       <BrowseMapByThemeSection
         t={t}
         lang={lang}
-        places={placesList}
+        places={directoryPlaces}
         categories={categories}
         diningGuideEnabled={diningGuideEnabled}
         hotelsGuideEnabled={hotelsGuideEnabled}
@@ -1177,7 +1202,7 @@ export default function Explore() {
         <TopPicksCarousel places={topPicks} t={t} moreTo={PLACES_DISCOVER_PATH} />
       )}
 
-      {sponsoredHomeEnabled && sponsoredHome.length > 0 && (
+      {sponsoredHomeEnabled && sponsoredHomeVisible.length > 0 && (
         <section className="vd-section vd-sponsored" aria-label={t('discover', 'sponsoredSectionTitle')}>
           <div className="vd-container">
             <header className="vd-section-head vd-sponsored-head">
@@ -1185,7 +1210,7 @@ export default function Explore() {
               <p className="vd-section-subtitle vd-sponsored-sub">{t('discover', 'sponsoredSectionSub')}</p>
             </header>
             <div className="vd-sponsored-grid">
-              {sponsoredHome.slice(0, 6).map((item) => (
+              {sponsoredHomeVisible.slice(0, 6).map((item) => (
                 <SponsoredPlaceCard key={item.id || item.placeId} item={item} t={t} variant="tile" />
               ))}
             </div>
@@ -1199,7 +1224,7 @@ export default function Explore() {
 
       <FindYourWayPracticalSection
         t={t}
-        places={placesList}
+        places={directoryPlaces}
         showMap={showMap}
         showTips={user?.showTips !== false}
       />

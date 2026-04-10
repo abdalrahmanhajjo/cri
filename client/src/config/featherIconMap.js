@@ -100,6 +100,8 @@ export const MATERIAL_TO_FEATHER = {
   touch_app: 'zap',
   travel_explore: 'compass',
   trip_origin: 'flag',
+  thumb_up: 'thumbs-up',
+  thumb_down: 'thumbs-down',
   tune: 'sliders',
   verified: 'check-circle',
   verified_user: 'shield',

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
@@ -30,7 +30,52 @@ import {
   topMemoryCategoriesForRanker,
 } from '../utils/aiPlannerUserMemory';
 import { loadPlannerPrefs, savePlannerPrefs } from '../utils/aiPlannerPrefs';
+import {
+  isAiPlannerOnboardingDone,
+  setAiPlannerOnboardingDone,
+  clearAiPlannerOnboarding,
+} from '../utils/aiPlannerOnboardingStorage';
+import AiPlannerOnboarding from '../components/AiPlannerOnboarding';
 import './AiPlanner.css';
+
+function getTourEffectiveScrollY() {
+  if (typeof document === 'undefined') return 0;
+  const { body } = document;
+  if (body.style.position === 'fixed') {
+    const n = parseFloat(body.style.top);
+    if (Number.isFinite(n)) return Math.max(0, -n);
+    return 0;
+  }
+  return window.scrollY ?? document.documentElement.scrollTop ?? 0;
+}
+
+function setTourEffectiveScrollY(y) {
+  const yClamped = Math.max(0, y);
+  const { body } = document;
+  if (body.style.position === 'fixed') {
+    body.style.top = `-${yClamped}px`;
+  } else {
+    window.scrollTo(0, yClamped);
+  }
+}
+
+/** Full page height while the tour pins body — documentElement.scrollHeight alone often collapses to the viewport. */
+function getTourMaxScrollY() {
+  if (typeof document === 'undefined') return 0;
+  const vh = window.innerHeight;
+  const b = document.body;
+  const e = document.documentElement;
+  const root = document.getElementById('root');
+  const h = Math.max(
+    b?.scrollHeight ?? 0,
+    b?.offsetHeight ?? 0,
+    e?.scrollHeight ?? 0,
+    e?.offsetHeight ?? 0,
+    root?.scrollHeight ?? 0,
+    root?.offsetHeight ?? 0
+  );
+  return Math.max(0, h - vh);
+}
 
 function apiBase() {
   const raw = import.meta.env.VITE_API_URL;
@@ -56,6 +101,138 @@ function buildDayGroupsForDisplay(slots, durationDays) {
     rows.push({ dayIndex: d, items });
   }
   return rows;
+}
+
+function flattenSlotsOrdered(slots, durationDays) {
+  if (!Array.isArray(slots)) return [];
+  const groups = buildDayGroupsForDisplay(slots, durationDays);
+  const out = [];
+  for (const { dayIndex, items } of groups) {
+    for (const { s } of items) {
+      const di = Math.min(durationDays - 1, Math.max(0, s.dayIndex ?? dayIndex));
+      out.push({
+        placeId: String(s.placeId),
+        dayIndex: di,
+        time: normalizeSuggestedTime(s.suggestedTime),
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * Human-readable bullets comparing a previous itinerary to a new one (order, adds, removes, reschedules).
+ */
+function buildPlanChangelog(prevSlots, nextSlots, placeById, durationDays, formatDayLabel, t) {
+  if (!Array.isArray(nextSlots) || nextSlots.length === 0) return [];
+  const placeName = (id) => placeById[String(id)]?.name || String(id);
+  const whenLabel = (row) => {
+    const dayPart = formatDayLabel(row.dayIndex);
+    return dayPart ? `${dayPart} · ${row.time}` : row.time;
+  };
+
+  if (!Array.isArray(prevSlots) || prevSlots.length === 0) {
+    return [
+      t('aiPlanner', 'planChangeFreshStops').replace(/\{count\}/g, String(nextSlots.length)),
+    ];
+  }
+
+  const a = flattenSlotsOrdered(prevSlots, durationDays);
+  const b = flattenSlotsOrdered(nextSlots, durationDays);
+  const sig = (row) => `${row.placeId}|${row.dayIndex}|${row.time}`;
+  const toBag = (rows) => {
+    const m = new Map();
+    for (const row of rows) {
+      const s = sig(row);
+      if (!m.has(s)) m.set(s, []);
+      m.get(s).push(row);
+    }
+    return m;
+  };
+  const bagA = toBag(a);
+  const bagB = toBag(b);
+  const removed = [];
+  const added = [];
+  const allSigs = new Set([...bagA.keys(), ...bagB.keys()]);
+  for (const s of allSigs) {
+    const na = bagA.get(s)?.length || 0;
+    const nb = bagB.get(s)?.length || 0;
+    const take = Math.min(na, nb);
+    const ra = (bagA.get(s) || []).slice(take);
+    const rb = (bagB.get(s) || []).slice(take);
+    ra.forEach((row) => removed.push(row));
+    rb.forEach((row) => added.push(row));
+  }
+
+  const bullets = [];
+  const usedAdded = new Set();
+  const usedRemoved = new Set();
+
+  for (let i = 0; i < removed.length; i += 1) {
+    if (usedRemoved.has(i)) continue;
+    const r = removed[i];
+    const j = added.findIndex((x, idx) => !usedAdded.has(idx) && x.placeId === r.placeId);
+    if (j >= 0) {
+      const ad = added[j];
+      usedRemoved.add(i);
+      usedAdded.add(j);
+      if (r.dayIndex !== ad.dayIndex || r.time !== ad.time) {
+        bullets.push(
+          t('aiPlanner', 'planChangeRescheduled')
+            .replace(/\{place\}/g, placeName(r.placeId))
+            .replace(/\{from\}/g, whenLabel(r))
+            .replace(/\{to\}/g, whenLabel(ad))
+        );
+      }
+    }
+  }
+
+  for (let i = 0; i < removed.length; i += 1) {
+    if (!usedRemoved.has(i)) {
+      const r = removed[i];
+      bullets.push(
+        t('aiPlanner', 'planChangeRemovedStop')
+          .replace(/\{place\}/g, placeName(r.placeId))
+          .replace(/\{when\}/g, whenLabel(r))
+      );
+    }
+  }
+
+  for (let j = 0; j < added.length; j += 1) {
+    if (!usedAdded.has(j)) {
+      const ad = added[j];
+      bullets.push(
+        t('aiPlanner', 'planChangeAddedStop')
+          .replace(/\{place\}/g, placeName(ad.placeId))
+          .replace(/\{when\}/g, whenLabel(ad))
+      );
+    }
+  }
+
+  const MAX = 6;
+  if (bullets.length > MAX) {
+    const rest = bullets.length - MAX;
+    return [
+      ...bullets.slice(0, MAX),
+      t('aiPlanner', 'planChangeMore').replace(/\{n\}/g, String(rest)),
+    ];
+  }
+  if (bullets.length === 0) return [];
+  return bullets;
+}
+
+function buildPlanItineraryPlainText(slots, durationDays, placeById, dayHeaderLabelFn) {
+  if (!Array.isArray(slots) || slots.length === 0) return '';
+  const lines = [];
+  for (const { dayIndex, items } of buildDayGroupsForDisplay(slots, durationDays)) {
+    lines.push(dayHeaderLabelFn(dayIndex));
+    for (const { s } of items) {
+      const name = placeById[String(s.placeId)]?.name || String(s.placeId);
+      lines.push(`  ${normalizeSuggestedTime(s.suggestedTime)}  ${name}`);
+    }
+    lines.push('');
+  }
+  return lines.join('\n').trim();
 }
 
 /** Compact draft summary so the model respects user edits when refining the plan. */
@@ -198,7 +375,24 @@ export default function AiPlanner() {
   const [placeSearch, setPlaceSearch] = useState('');
   const [aiReplaceSheet, setAiReplaceSheet] = useState(null);
   const [aiReplaceNote, setAiReplaceNote] = useState('');
+  /** After AI returns a new/changed itinerary — prompt review & save */
+  const [highlightFreshPlan, setHighlightFreshPlan] = useState(false);
+  const [routeOverviewOpen, setRouteOverviewOpen] = useState(true);
+  const [planFeedback, setPlanFeedback] = useState(null);
+  const [planFeedbackNote, setPlanFeedbackNote] = useState('');
+  const [planFeedbackNoteSent, setPlanFeedbackNoteSent] = useState(false);
+  const [planChangelog, setPlanChangelog] = useState(null);
   const [activeChipEditor, setActiveChipEditor] = useState(null);
+  const routeOverviewRef = useRef(null);
+  const tourSettingsBtnRef = useRef(null);
+  const tourBriefRef = useRef(null);
+  const tourMoodsRef = useRef(null);
+  const tourStudioRef = useRef(null);
+  const tourPlanRef = useRef(null);
+  const tourSaveRef = useRef(null);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
+  const [tourHighlightRect, setTourHighlightRect] = useState(null);
 
   const [plannerMemory, setPlannerMemory] = useState(() => createEmptyPlannerMemory());
   const [profilePlannerHints, setProfilePlannerHints] = useState({});
@@ -493,17 +687,29 @@ export default function AiPlanner() {
 
   const buildGuidedPlannerPrompt = useCallback(
     (intent = '') => {
+      const budgetLabel =
+        budget === 'low'
+          ? t('aiPlanner', 'budgetLow')
+          : budget === 'luxury'
+            ? t('aiPlanner', 'budgetLuxury')
+            : t('aiPlanner', 'budgetModerate');
       const lines = [
-        `Build a Tripoli plan for ${durationDays} day(s) with ${placesPerDay} stops per day.`,
-        `Budget: ${budget}.`,
-        `Start date: ${formatYMD(selectedDate)}.`,
-        interestNames.length ? `Focus interests: ${interestNames.join(', ')}.` : 'Mix the best Tripoli highlights with a balanced pace.',
-        plannerMemory.personalNote ? `Traveler note: ${plannerMemory.personalNote}.` : '',
-        intent || 'Return the strongest itinerary with efficient routing, good pacing, and variety across the day.',
+        t('aiPlanner', 'guidedPromptDaysStops')
+          .replace(/\{days\}/g, String(durationDays))
+          .replace(/\{ppd\}/g, String(placesPerDay)),
+        t('aiPlanner', 'guidedPromptBudgetLine').replace(/\{budget\}/g, budgetLabel),
+        t('aiPlanner', 'guidedPromptStartDate').replace(/\{date\}/g, formatYMD(selectedDate)),
+        interestNames.length
+          ? t('aiPlanner', 'guidedPromptFocusInterests').replace(/\{list\}/g, interestNames.join(', '))
+          : t('aiPlanner', 'guidedPromptBalancedMix'),
+        plannerMemory.personalNote
+          ? t('aiPlanner', 'guidedPromptTravelerNote').replace(/\{note\}/g, plannerMemory.personalNote)
+          : '',
+        intent || t('aiPlanner', 'guidedPromptDefaultClose'),
       ].filter(Boolean);
       return lines.join(' ');
     },
-    [durationDays, placesPerDay, budget, selectedDate, interestNames, plannerMemory.personalNote]
+    [durationDays, placesPerDay, budget, selectedDate, interestNames, plannerMemory.personalNote, t]
   );
 
   const lastPlanMessageIndex = useMemo(() => {
@@ -533,6 +739,142 @@ export default function AiPlanner() {
     [lastSlots]
   );
 
+  const TOUR_STEP_COUNT = 8;
+
+  const tourStepMeta = useMemo(() => {
+    const hasPlan = Boolean(lastSlots?.length);
+    return [
+      { title: t('aiPlanner', 'onboardingWelcomeTitle'), body: t('aiPlanner', 'onboardingWelcomeBody'), target: null },
+      { title: t('aiPlanner', 'onboardingSettingsTitle'), body: t('aiPlanner', 'onboardingSettingsBody'), target: 'settings' },
+      { title: t('aiPlanner', 'onboardingChipsTitle'), body: t('aiPlanner', 'onboardingChipsBody'), target: 'chips' },
+      { title: t('aiPlanner', 'onboardingBriefTitle'), body: t('aiPlanner', 'onboardingBriefBody'), target: 'brief' },
+      { title: t('aiPlanner', 'onboardingMoodsTitle'), body: t('aiPlanner', 'onboardingMoodsBody'), target: 'moods' },
+      { title: t('aiPlanner', 'onboardingStudioTitle'), body: t('aiPlanner', 'onboardingStudioBody'), target: 'studio' },
+      {
+        title: hasPlan ? t('aiPlanner', 'onboardingPlanTitle') : t('aiPlanner', 'onboardingPlanWaitTitle'),
+        body: hasPlan ? t('aiPlanner', 'onboardingPlanBody') : t('aiPlanner', 'onboardingPlanWaitBody'),
+        target: hasPlan ? 'plan' : null,
+      },
+      {
+        title: hasPlan ? t('aiPlanner', 'onboardingSaveTitle') : t('aiPlanner', 'onboardingSaveWaitTitle'),
+        body: hasPlan ? t('aiPlanner', 'onboardingSaveBody') : t('aiPlanner', 'onboardingSaveWaitBody'),
+        target: hasPlan ? 'save' : null,
+      },
+    ];
+  }, [t, lastSlots?.length]);
+
+  const tourRefMap = useMemo(
+    () => ({
+      settings: tourSettingsBtnRef,
+      chips: chipsBarRef,
+      brief: tourBriefRef,
+      moods: tourMoodsRef,
+      studio: tourStudioRef,
+      plan: tourPlanRef,
+      save: tourSaveRef,
+    }),
+    []
+  );
+
+  const syncTourHighlightForStep = useCallback(() => {
+    if (!tourOpen) return;
+    const meta = tourStepMeta[tourStep];
+    const key = meta?.target;
+    const ref = key ? tourRefMap[key] : null;
+    if (!key || !ref?.current) {
+      setTourHighlightRect(null);
+      return;
+    }
+    const el = ref.current;
+    const vh = window.innerHeight;
+    const marginTop = 76;
+    const marginBottom = Math.min(340, Math.max(220, Math.round(vh * 0.36)));
+    const maxScroll = getTourMaxScrollY();
+
+    const applyScrollForRect = () => {
+      const effectiveNow = getTourEffectiveScrollY();
+      const rect = el.getBoundingClientRect();
+      const elTopDoc = rect.top + effectiveNow;
+      const elBottomDoc = rect.bottom + effectiveNow;
+      const sLow = elBottomDoc - (vh - marginBottom);
+      const sHigh = elTopDoc - marginTop;
+      let s = effectiveNow;
+      if (sLow <= sHigh) {
+        s = Math.min(sHigh, Math.max(sLow, effectiveNow));
+      } else {
+        s = (elTopDoc + elBottomDoc - vh) / 2;
+      }
+      s = Math.max(0, Math.min(maxScroll, s));
+      if (Math.abs(s - effectiveNow) > 0.5) {
+        setTourEffectiveScrollY(s);
+        return true;
+      }
+      return false;
+    };
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      if (!applyScrollForRect()) break;
+    }
+
+    const rect = el.getBoundingClientRect();
+    setTourHighlightRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+  }, [tourOpen, tourStep, tourStepMeta, tourRefMap]);
+
+  useLayoutEffect(() => {
+    if (!tourOpen) {
+      setTourHighlightRect(null);
+      return;
+    }
+    let cancelled = false;
+    syncTourHighlightForStep();
+    const id = requestAnimationFrame(() => {
+      if (cancelled) return;
+      syncTourHighlightForStep();
+      requestAnimationFrame(() => {
+        if (!cancelled) syncTourHighlightForStep();
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, [tourOpen, tourStep, syncTourHighlightForStep]);
+
+  useEffect(() => {
+    if (!tourOpen) return undefined;
+    const onResize = () => syncTourHighlightForStep();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [tourOpen, syncTourHighlightForStep]);
+
+  useEffect(() => {
+    if (dataLoading || !plannerPrefsReady || plannerDisabled) return undefined;
+    if (!aiConfigured) return undefined;
+    if (isAiPlannerOnboardingDone(storageUserId)) return undefined;
+    const id = window.setTimeout(() => setTourOpen(true), 450);
+    return () => clearTimeout(id);
+  }, [dataLoading, plannerPrefsReady, plannerDisabled, aiConfigured, storageUserId]);
+
+  const finishTour = useCallback(() => {
+    setTourOpen(false);
+    setTourStep(0);
+    setAiPlannerOnboardingDone(storageUserId);
+  }, [storageUserId]);
+
+  const startTour = useCallback(() => {
+    clearAiPlannerOnboarding(storageUserId);
+    setTourStep(0);
+    setTourOpen(true);
+  }, [storageUserId]);
+
+  const formatChangelogDay = useCallback(
+    (dayIndex) => {
+      if (durationDays <= 1) return '';
+      return `${t('aiPlanner', 'dayLabel')} ${dayIndex + 1}`;
+    },
+    [durationDays, t]
+  );
+
   const clampSlot = useCallback(
     (s) => ({
       ...s,
@@ -546,6 +888,8 @@ export default function AiPlanner() {
 
   const patchSlotField = useCallback(
     (messageIndex, slotIndex, patch) => {
+      setHighlightFreshPlan(false);
+      setPlanChangelog(null);
       setMessages((prev) => {
         const m = prev[messageIndex];
         if (!m?.slots || slotIndex < 0 || slotIndex >= m.slots.length) return prev;
@@ -563,6 +907,8 @@ export default function AiPlanner() {
 
   const deleteSlotAt = useCallback(
     (messageIndex, slotIndex) => {
+      setHighlightFreshPlan(false);
+      setPlanChangelog(null);
       setMessages((prev) => {
         const m = prev[messageIndex];
         if (!m?.slots) return prev;
@@ -607,10 +953,19 @@ export default function AiPlanner() {
 
   const conversationHistory = useMemo(
     () =>
-      messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
+      messages.map((m) => {
+        let content = m.content ?? '';
+        if (
+          m.role === 'assistant' &&
+          Array.isArray(m.slots) &&
+          m.slots.length > 0 &&
+          !String(content).trim()
+        ) {
+          content =
+            '(Prior turn: itinerary was returned as PLAN_JSON; the user edits it in the itinerary studio.)';
+        }
+        return { role: m.role, content };
+      }),
     [messages]
   );
 
@@ -677,6 +1032,21 @@ export default function AiPlanner() {
         ]);
 
         if (slots?.length) {
+          const changelog = buildPlanChangelog(
+            lastSlots,
+            slots,
+            placeById,
+            durationDays,
+            formatChangelogDay,
+            t
+          );
+          setPlanChangelog(changelog.length ? changelog : null);
+          setHighlightFreshPlan(true);
+          setRouteOverviewOpen(true);
+          setPlanFeedback(null);
+          setPlanFeedbackNote('');
+          setPlanFeedbackNoteSent(false);
+          showToast(t('aiPlanner', 'planUpdatedToast'), 'info');
           setPlannerMemory((prev) => {
             const next = recordSuccessfulPlan(prev, slots, placeById);
             savePlannerMemory(storageUserId, next);
@@ -715,6 +1085,8 @@ export default function AiPlanner() {
       userFamiliarityBlock,
       storageUserId,
       learnedCategoryHints,
+      showToast,
+      formatChangelogDay,
     ]
   );
 
@@ -793,6 +1165,21 @@ export default function AiPlanner() {
       ]);
 
       if (slots?.length) {
+        const changelog = buildPlanChangelog(
+          previousSlotsSnapshot,
+          slots,
+          placeById,
+          durationDays,
+          formatChangelogDay,
+          t
+        );
+        setPlanChangelog(changelog.length ? changelog : null);
+        setHighlightFreshPlan(true);
+        setRouteOverviewOpen(true);
+        setPlanFeedback(null);
+        setPlanFeedbackNote('');
+        setPlanFeedbackNoteSent(false);
+        showToast(t('aiPlanner', 'planUpdatedToast'), 'info');
         setPlannerMemory((prev) => {
           const next = recordSuccessfulPlan(prev, slots, placeById);
           savePlannerMemory(storageUserId, next);
@@ -827,6 +1214,8 @@ export default function AiPlanner() {
     userFamiliarityBlock,
     storageUserId,
     learnedCategoryHints,
+    showToast,
+    formatChangelogDay,
   ]);
 
   const pushDateOverlapAssistantMessage = useCallback(
@@ -1034,6 +1423,30 @@ export default function AiPlanner() {
     [selectedDate, durationDays, t]
   );
 
+  const scrollToRouteOverview = useCallback(() => {
+    setRouteOverviewOpen(true);
+    window.requestAnimationFrame(() => {
+      routeOverviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
+  const copyItineraryFromSlots = useCallback(
+    (slots) => {
+      const text = buildPlanItineraryPlainText(slots, durationDays, placeById, dayHeaderLabel);
+      if (!text) return;
+      const p = navigator.clipboard?.writeText(text);
+      if (p) {
+        p.then(
+          () => showToast(t('aiPlanner', 'copyItineraryDone'), 'success'),
+          () => showToast(t('aiPlanner', 'copyItineraryFail'), 'error')
+        );
+      } else {
+        showToast(t('aiPlanner', 'copyItineraryFail'), 'error');
+      }
+    },
+    [durationDays, placeById, dayHeaderLabel, showToast, t]
+  );
+
   const filteredPickerPlaces = useMemo(() => {
     const q = placeSearch.trim().toLowerCase();
     if (!q) return places.slice(0, 80);
@@ -1137,17 +1550,29 @@ export default function AiPlanner() {
           <Icon name="arrow_back" size={22} /> {t('aiPlanner', 'back')}
         </Link>
         <h1 className="ai-planner__page-title">{t('aiPlanner', 'title')}</h1>
-        <button
-          type="button"
-          className="ai-planner__settings"
-          onClick={() => {
-            setActiveChipEditor(null);
-            setSettingsOpen(true);
-          }}
-          aria-label={t('aiPlanner', 'configure')}
-        >
-          <Icon name="tune" size={22} />
-        </button>
+        <div className="ai-planner__page-actions">
+          <button
+            type="button"
+            className="ai-planner__tour-btn"
+            onClick={startTour}
+            aria-label={t('aiPlanner', 'onboardingRestartAria')}
+            title={t('aiPlanner', 'onboardingRestart')}
+          >
+            <Icon name="auto_awesome" size={22} aria-hidden />
+          </button>
+          <button
+            type="button"
+            className="ai-planner__settings"
+            ref={tourSettingsBtnRef}
+            onClick={() => {
+              setActiveChipEditor(null);
+              setSettingsOpen(true);
+            }}
+            aria-label={t('aiPlanner', 'configure')}
+          >
+            <Icon name="tune" size={22} />
+          </button>
+        </div>
       </header>
 
       {!aiConfigured && (
@@ -1157,17 +1582,19 @@ export default function AiPlanner() {
       )}
 
       <div className="ai-planner__hero">
-        <div className="ai-planner__flow" aria-label="Planner steps">
-          <span className="ai-planner__flow-step ai-planner__flow-step--active">1. Start</span>
-          <span className="ai-planner__flow-step">2. Set trip</span>
-          <span className="ai-planner__flow-step">3. Brief</span>
-          <span className="ai-planner__flow-step">4. Review</span>
+        <div className="ai-planner__flow" aria-label={t('aiPlanner', 'plannerFlowAria')}>
+          <span className="ai-planner__flow-step ai-planner__flow-step--active">{t('aiPlanner', 'plannerFlow1')}</span>
+          <span className="ai-planner__flow-step">{t('aiPlanner', 'plannerFlow2')}</span>
+          <span className="ai-planner__flow-step">{t('aiPlanner', 'plannerFlow3')}</span>
+          <span className="ai-planner__flow-step">{t('aiPlanner', 'plannerFlow4')}</span>
         </div>
 
         <div className="ai-planner__chips-wrap" ref={chipsBarRef}>
           <div className="ai-planner__chips-head">
             <div>
-              <span className="ai-planner__section-step">Step 1</span>
+              <span className="ai-planner__section-step">
+                {t('aiPlanner', 'sectionStepLabel').replace(/\{n\}/g, '1')}
+              </span>
               <h3 className="ai-planner__section-title">{t('aiPlanner', 'tripBriefTitle')}</h3>
             </div>
           </div>
@@ -1286,16 +1713,18 @@ export default function AiPlanner() {
           )}
         </div>
 
-        <div className="ai-planner__request-builder">
+        <div className="ai-planner__request-builder" ref={tourBriefRef}>
           <div className="ai-planner__request-head">
             <div>
-              <span className="ai-planner__section-step">Step 2</span>
-              <h3 className="ai-planner__section-title">Your brief</h3>
-              <p className="ai-planner__section-sub">Write one clear sentence about the kind of trip you want.</p>
+              <span className="ai-planner__section-step">
+                {t('aiPlanner', 'sectionStepLabel').replace(/\{n\}/g, '2')}
+              </span>
+              <h3 className="ai-planner__section-title">{t('aiPlanner', 'briefComposerTitle')}</h3>
+              <p className="ai-planner__section-sub">{t('aiPlanner', 'briefComposerSub')}</p>
             </div>
             {latestUserMessage?.content ? (
               <span className="ai-planner__request-status">
-                Latest brief ready
+                {t('aiPlanner', 'briefLatestReady')}
               </span>
             ) : null}
           </div>
@@ -1319,30 +1748,26 @@ export default function AiPlanner() {
               onClick={() => sendMessage(input)}
             >
               <Icon name="auto_awesome" size={18} />
-              Generate plan
+              {t('aiPlanner', 'generatePlan')}
             </button>
             <button
               type="button"
               className="ai-planner__btn ai-planner__btn--ghost"
               disabled={sending || !aiConfigured || dataLoading || !lastSlots?.length}
               onClick={() =>
-                sendMessage(
-                  buildGuidedPlannerPrompt(
-                    'Refine the current itinerary with the same brief, but improve flow, variety, and day balance.'
-                  )
-                )
+                sendMessage(buildGuidedPlannerPrompt(t('aiPlanner', 'guidedPromptRefineFlow')))
               }
             >
               <Icon name="refresh" size={18} />
-              Improve current plan
+              {t('aiPlanner', 'improvePlan')}
             </button>
           </div>
         </div>
 
-        <div className="ai-planner__quick-row">
+        <div className="ai-planner__quick-row" ref={tourMoodsRef}>
           <div className="ai-planner__quick-head">
-            <span className="ai-planner__section-step">Optional</span>
-            <h3 className="ai-planner__section-title">Quick start</h3>
+            <span className="ai-planner__section-step">{t('aiPlanner', 'quickStartOptional')}</span>
+            <h3 className="ai-planner__section-title">{t('aiPlanner', 'quickStartTitle')}</h3>
           </div>
           <div className="ai-planner__moods">
             {moodCards.map((m) => (
@@ -1364,13 +1789,15 @@ export default function AiPlanner() {
         </div>
       </div>
 
-      <div className="ai-planner__chat">
+      <div className="ai-planner__chat" ref={tourStudioRef}>
         <div className="ai-planner__workspace-head">
           <div>
-            <span className="ai-planner__section-step">Step 4</span>
-            <h3 className="ai-planner__section-title">Itinerary studio</h3>
-            <p className="ai-planner__section-sub">Check the result, adjust stops, then save the trip.</p>
-            <div className="ai-planner__brief-summary" aria-label="Trip brief summary">
+            <span className="ai-planner__section-step">
+              {t('aiPlanner', 'sectionStepLabel').replace(/\{n\}/g, '4')}
+            </span>
+            <h3 className="ai-planner__section-title">{t('aiPlanner', 'onboardingStudioTitle')}</h3>
+            <p className="ai-planner__section-sub">{t('aiPlanner', 'studioSectionSub')}</p>
+            <div className="ai-planner__brief-summary" aria-label={t('aiPlanner', 'tripBriefSummaryAria')}>
               {tripBriefSummary.map((item) => (
                 <span key={item} className="ai-planner__brief-pill">
                   {item}
@@ -1384,15 +1811,11 @@ export default function AiPlanner() {
               className="ai-planner__btn ai-planner__btn--ghost"
               disabled={sending || !aiConfigured || dataLoading}
               onClick={() =>
-                sendMessage(
-                  buildGuidedPlannerPrompt(
-                    'Refresh the itinerary using the current brief, but improve routing and overall trip quality.'
-                  )
-                )
+                sendMessage(buildGuidedPlannerPrompt(t('aiPlanner', 'guidedPromptRefreshQuality')))
               }
             >
               <Icon name="refresh" size={18} />
-              Refresh plan
+              {t('aiPlanner', 'refreshPlan')}
             </button>
           ) : null}
         </div>
@@ -1404,17 +1827,22 @@ export default function AiPlanner() {
           )}
           {latestUserMessage?.content ? (
             <section className="ai-planner__workspace-panel">
-              <div className="ai-planner__entry-label">Brief</div>
+              <div className="ai-planner__entry-label">{t('aiPlanner', 'workspaceBriefLabel')}</div>
               <div className="ai-planner__workspace-note">
                 {latestUserMessage.content}
               </div>
             </section>
           ) : null}
 
-          {latestAssistantMessage?.content ? (
+          {latestAssistantMessage?.content &&
+          (latestAssistantMessage.error ||
+            !Array.isArray(latestAssistantMessage.slots) ||
+            latestAssistantMessage.slots.length === 0) ? (
             <section className="ai-planner__workspace-panel">
               <div className="ai-planner__entry-label">
-                {latestAssistantMessage.error ? 'Issue' : 'Summary'}
+                {latestAssistantMessage.error
+                  ? t('aiPlanner', 'workspaceIssueLabel')
+                  : t('aiPlanner', 'workspaceSummaryLabel')}
               </div>
               <div
                 className={`ai-planner__bubble ai-planner__bubble--assistant${
@@ -1445,9 +1873,115 @@ export default function AiPlanner() {
             return (
               <div>
                 <div
-                  className="ai-planner__plan"
+                  ref={tourPlanRef}
+                  className={`ai-planner__plan${
+                    highlightFreshPlan && lastSlots?.length ? ' ai-planner__plan--fresh' : ''
+                  }`}
                   id={`ai-planner-plan-${i}-anchor`}
                 >
+                    {highlightFreshPlan && lastSlots?.length > 0 ? (
+                      <div className="ai-planner__plan-alert" role="status" aria-live="polite">
+                        <div className="ai-planner__plan-alert-row">
+                          <span className="ai-planner__plan-alert-icon" aria-hidden>
+                            <Icon name="auto_awesome" size={22} />
+                          </span>
+                          <div className="ai-planner__plan-alert-copy">
+                            <p className="ai-planner__plan-alert-title">{t('aiPlanner', 'planUpdatedTitle')}</p>
+                            <p className="ai-planner__plan-alert-body">{t('aiPlanner', 'planUpdatedBody')}</p>
+                            {planChangelog?.length ? (
+                              <div className="ai-planner__plan-changelog" aria-label={t('aiPlanner', 'planChangeTitle')}>
+                                <p className="ai-planner__plan-changelog-title">{t('aiPlanner', 'planChangeTitle')}</p>
+                                <ul className="ai-planner__plan-changelog-list">
+                                  {planChangelog.map((line, ci) => (
+                                    <li key={ci}>{line}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="ai-planner__plan-alert-actions">
+                          <button
+                            type="button"
+                            className="ai-planner__btn ai-planner__btn--primary"
+                            onClick={() => scrollToPlanDaySection(0)}
+                          >
+                            <Icon name="vertical_align_top" size={18} aria-hidden />
+                            {t('aiPlanner', 'planJumpToItinerary')}
+                          </button>
+                          <button
+                            type="button"
+                            className="ai-planner__btn ai-planner__btn--ghost"
+                            onClick={() => scrollToRouteOverview()}
+                          >
+                            <Icon name="view_list" size={18} aria-hidden />
+                            {t('aiPlanner', 'planOpenRouteOverview')}
+                          </button>
+                          <button
+                            type="button"
+                            className="ai-planner__btn ai-planner__btn--ghost"
+                            onClick={() => {
+                              setHighlightFreshPlan(false);
+                              setPlanChangelog(null);
+                            }}
+                          >
+                            {t('aiPlanner', 'planUpdatedDismiss')}
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {lastSlots?.length > 0 ? (
+                      <div
+                        ref={routeOverviewRef}
+                        id="ai-planner-route-overview"
+                        className="ai-planner__route-overview"
+                      >
+                        <div className="ai-planner__route-overview-toolbar">
+                          <button
+                            type="button"
+                            className="ai-planner__route-overview-toggle"
+                            aria-expanded={routeOverviewOpen}
+                            onClick={() => setRouteOverviewOpen((v) => !v)}
+                          >
+                            <Icon name="view_list" size={20} aria-hidden />
+                            <span>{t('aiPlanner', 'routeOverviewTitle')}</span>
+                            <Icon name={routeOverviewOpen ? 'expand_less' : 'expand_more'} size={20} aria-hidden />
+                          </button>
+                          <button
+                            type="button"
+                            className="ai-planner__route-overview-copy"
+                            onClick={() => copyItineraryFromSlots(m.slots)}
+                            title={t('aiPlanner', 'copyItinerary')}
+                            aria-label={t('aiPlanner', 'copyItinerary')}
+                          >
+                            <Icon name="content_copy" size={20} aria-hidden />
+                          </button>
+                        </div>
+                        {routeOverviewOpen ? (
+                          <>
+                            <p className="ai-planner__route-overview-hint">{t('aiPlanner', 'routeOverviewHint')}</p>
+                            <ul className="ai-planner__route-overview-list">
+                              {buildDayGroupsForDisplay(m.slots, durationDays).map(({ dayIndex, items }) => (
+                                <li key={dayIndex} className="ai-planner__route-overview-day">
+                                  <span className="ai-planner__route-overview-day-label">
+                                    {dayHeaderLabel(dayIndex)}
+                                  </span>
+                                  <span className="ai-planner__route-overview-stops" dir="ltr">
+                                    {items.length === 0
+                                      ? '—'
+                                      : items
+                                          .map(({ s }) => placeById[String(s.placeId)]?.name || String(s.placeId))
+                                          .join(' → ')}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
+
                     <p className="ai-planner__plan-title">{t('aiPlanner', 'proposedPlan')}</p>
                     {editable && (
                       <>
@@ -1618,7 +2152,7 @@ export default function AiPlanner() {
                       ))}
                     </div>
                     {editable && (
-                      <div className="ai-planner__plan-actions">
+                      <div className="ai-planner__plan-actions" ref={tourSaveRef}>
                         <p className="ai-planner__plan-gap-hint">{t('aiPlanner', 'minGapHint')}</p>
                         <button
                           type="button"
@@ -1637,6 +2171,69 @@ export default function AiPlanner() {
                         >
                           {applying ? t('aiPlanner', 'applying') : t('aiPlanner', 'applyTrip')}
                         </button>
+                        <div className="ai-planner__plan-feedback" role="group" aria-label={t('aiPlanner', 'planFeedbackPrompt')}>
+                          <span className="ai-planner__plan-feedback-prompt">{t('aiPlanner', 'planFeedbackPrompt')}</span>
+                          <div className="ai-planner__plan-feedback-btns">
+                            <button
+                              type="button"
+                              className={`ai-planner__plan-feedback-btn${planFeedback === 'up' ? ' ai-planner__plan-feedback-btn--active' : ''}`}
+                              disabled={planFeedback != null}
+                              aria-pressed={planFeedback === 'up'}
+                              onClick={() => {
+                                setPlanFeedback('up');
+                                setPlanFeedbackNote('');
+                                setPlanFeedbackNoteSent(false);
+                                showToast(t('aiPlanner', 'planFeedbackThanks'), 'success');
+                              }}
+                            >
+                              <Icon name="thumb_up" size={20} aria-hidden />
+                              <span className="ai-planner__sr-only">{t('aiPlanner', 'planFeedbackThanks')}</span>
+                            </button>
+                            <button
+                              type="button"
+                              className={`ai-planner__plan-feedback-btn${planFeedback === 'down' ? ' ai-planner__plan-feedback-btn--active' : ''}`}
+                              disabled={planFeedback != null}
+                              aria-pressed={planFeedback === 'down'}
+                              onClick={() => {
+                                setPlanFeedback('down');
+                                showToast(t('aiPlanner', 'planFeedbackDownNote'), 'info');
+                              }}
+                            >
+                              <Icon name="thumb_down" size={20} aria-hidden />
+                              <span className="ai-planner__sr-only">{t('aiPlanner', 'planFeedbackDownNote')}</span>
+                            </button>
+                          </div>
+                          {planFeedback === 'down' && !planFeedbackNoteSent ? (
+                            <div className="ai-planner__plan-feedback-detail">
+                              <label htmlFor="ai-planner-feedback-note" className="ai-planner__plan-feedback-detail-label">
+                                {t('aiPlanner', 'planFeedbackOptional')}
+                              </label>
+                              <textarea
+                                id="ai-planner-feedback-note"
+                                className="ai-planner__plan-feedback-textarea"
+                                rows={3}
+                                maxLength={600}
+                                value={planFeedbackNote}
+                                onChange={(e) => setPlanFeedbackNote(e.target.value)}
+                                placeholder={t('aiPlanner', 'planFeedbackPlaceholder')}
+                              />
+                              <button
+                                type="button"
+                                className="ai-planner__btn ai-planner__btn--ghost ai-planner__plan-feedback-send-note"
+                                disabled={!planFeedbackNote.trim()}
+                                onClick={() => {
+                                  setPlanFeedbackNoteSent(true);
+                                  showToast(t('aiPlanner', 'planFeedbackNoteThanks'), 'success');
+                                }}
+                              >
+                                {t('aiPlanner', 'planFeedbackSendNote')}
+                              </button>
+                            </div>
+                          ) : null}
+                          {planFeedback === 'down' && planFeedbackNoteSent ? (
+                            <p className="ai-planner__plan-feedback-note-done">{t('aiPlanner', 'planFeedbackNoteThanks')}</p>
+                          ) : null}
+                        </div>
                       </div>
                     )}
                 </div>
@@ -1720,7 +2317,9 @@ export default function AiPlanner() {
           {lastPlanMessageIndex >= 0 && (
             <button
               type="button"
-              className="ai-planner__day-dock-apply"
+              className={`ai-planner__day-dock-apply${
+                highlightFreshPlan && lastSlots?.length ? ' ai-planner__day-dock-apply--pulse' : ''
+              }`}
               disabled={
                 applying ||
                 planConflicts.size > 0 ||
@@ -1733,7 +2332,9 @@ export default function AiPlanner() {
                   ? t('aiPlanner', 'saveBlockedConflicts')
                   : !lastSlots?.length
                     ? t('aiPlanner', 'saveNeedStops')
-                    : undefined
+                    : highlightFreshPlan
+                      ? t('aiPlanner', 'planUpdatedBody')
+                      : undefined
               }
               onClick={() => void handleApplyTrip()}
             >
@@ -1971,6 +2572,31 @@ export default function AiPlanner() {
           <Icon name="expand_less" size={24} aria-hidden />
         </button>
       )}
+
+      {tourOpen ? (
+        <AiPlannerOnboarding
+          open={tourOpen}
+          stepIndex={tourStep}
+          stepCount={TOUR_STEP_COUNT}
+          title={tourStepMeta[tourStep]?.title ?? ''}
+          body={tourStepMeta[tourStep]?.body ?? ''}
+          highlightRect={tourHighlightRect}
+          onNext={() => {
+            if (tourStep >= TOUR_STEP_COUNT - 1) finishTour();
+            else setTourStep((s) => s + 1);
+          }}
+          onBack={() => setTourStep((s) => Math.max(0, s - 1))}
+          onSkip={finishTour}
+          isFirstStep={tourStep === 0}
+          isLastStep={tourStep === TOUR_STEP_COUNT - 1}
+          nextLabel={t('aiPlanner', 'onboardingNext')}
+          backLabel={t('aiPlanner', 'onboardingBack')}
+          skipLabel={t('aiPlanner', 'onboardingSkip')}
+          doneLabel={t('aiPlanner', 'onboardingDone')}
+          progressLabel={t('aiPlanner', 'onboardingProgress')}
+          dir={lang === 'ar' ? 'rtl' : 'ltr'}
+        />
+      ) : null}
     </div>
   );
 }

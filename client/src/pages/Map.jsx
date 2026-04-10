@@ -7,6 +7,7 @@ import Icon from '../components/Icon';
 import DeliveryImg from '../components/DeliveryImg';
 import GlobalSearchBar from '../components/GlobalSearchBar';
 import { filterPlacesByQuery } from '../utils/searchFilter';
+import { filterGeneralDirectoryPlaces } from '../utils/placeGuideExclusions';
 import { asyncPool } from '../utils/asyncPool';
 import { loadGoogleMapsScript } from '../utils/mapGoogleLoader';
 import { placeIdsFromDay, getDateForDayIndex } from '../utils/tripPlannerHelpers';
@@ -330,9 +331,15 @@ export default function MapPage() {
       setLoading(true);
       setTripFilterName(null);
       setTripDayLabel(null);
-      api.places
-        .list({ lang: langParam })
-        .then((r) => setPlaces(r.popular || r.locations || []))
+      Promise.all([
+        api.places.list({ lang: langParam }),
+        api.categories.list({ lang: langParam }).catch(() => ({ categories: [] })),
+      ])
+        .then(([rPlaces, rCat]) => {
+          const raw = rPlaces.popular || rPlaces.locations || [];
+          const cats = Array.isArray(rCat?.categories) ? rCat.categories : [];
+          setPlaces(filterGeneralDirectoryPlaces(Array.isArray(raw) ? raw : [], cats));
+        })
         .catch(() => setPlaces([]))
         .finally(() => setLoading(false));
     }

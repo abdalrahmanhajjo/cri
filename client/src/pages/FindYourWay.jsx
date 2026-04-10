@@ -10,7 +10,8 @@ import {
   FIND_YOUR_WAY_WAY_KEYS,
   formatFindYourWayThemeTitle,
 } from '../utils/findYourWayGrouping';
-import { COMMUNITY_PATH } from '../utils/discoverPaths';
+import { COMMUNITY_PATH, DINING_PATH, HOTELS_PATH } from '../utils/discoverPaths';
+import { filterGeneralDirectoryPlaces } from '../utils/placeGuideExclusions';
 import './Explore.css';
 
 function PlaceCard({ place }) {
@@ -65,8 +66,10 @@ export default function FindYourWay() {
       api.categories.list({ lang: langParam }).then((r) => r.categories || []),
     ])
       .then(([p, c]) => {
-        setPlaces(Array.isArray(p) ? p : []);
-        setCategories(Array.isArray(c) ? c : []);
+        const rawP = Array.isArray(p) ? p : [];
+        const rawC = Array.isArray(c) ? c : [];
+        setPlaces(filterGeneralDirectoryPlaces(rawP, rawC));
+        setCategories(rawC);
       })
       .catch((err) => setError(String(err?.message ?? err ?? 'Failed to load')))
       .finally(() => setLoading(false));
@@ -166,6 +169,13 @@ export default function FindYourWay() {
                       <PlaceCard key={p.id} place={p} />
                     ))}
                   </div>
+                ) : way.wayKey === 'food' || way.wayKey === 'stay' ? (
+                  <p className="vd-ways-empty vd-ways-empty--guide">
+                    <Link to={way.wayKey === 'food' ? DINING_PATH : HOTELS_PATH} className="vd-btn vd-btn--secondary">
+                      {way.wayKey === 'food' ? safeT('nav', 'diningNav') : safeT('nav', 'hotelsNav')}
+                      <Icon name="arrow_forward" size={20} />
+                    </Link>
+                  </p>
                 ) : (
                   <p className="vd-ways-empty">{safeT('home', 'noSpots')}</p>
                 )}

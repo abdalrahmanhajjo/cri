@@ -1,3 +1,10 @@
+/* Freeze in-page scroll regions while the coach tour is open (window scroll is locked in JS). */
+html[data-guided-tour='1'] .ai-planner__messages {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
 /* AI Trip Planner — new layout and modern card style */
 .ai-planner {
   min-height: calc(100dvh - 120px);
@@ -18,6 +25,39 @@
   justify-content: space-between;
   gap: 12px;
   padding: 14px 2px 2px;
+}
+
+.ai-planner__page-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ai-planner__tour-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(15, 118, 110, 0.35);
+  border-radius: 50%;
+  background: rgba(15, 118, 110, 0.09);
+  color: var(--color-primary-dark, #0d5c56);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.ai-planner__tour-btn:hover {
+  background: rgba(15, 118, 110, 0.14);
+  border-color: var(--color-primary, #0f766e);
+}
+
+.ai-planner__tour-btn:active {
+  transform: scale(0.96);
 }
 
 .ai-planner__back {
@@ -835,6 +875,293 @@
   border: 1px solid rgba(15, 118, 110, 0.18);
 }
 
+.ai-planner__plan--fresh {
+  border-color: rgba(15, 118, 110, 0.38);
+  box-shadow:
+    0 0 0 2px rgba(15, 118, 110, 0.12),
+    0 12px 32px rgba(15, 118, 110, 0.08);
+}
+
+.ai-planner__plan-alert {
+  margin: -4px -4px 16px;
+  padding: 14px 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.09) 0%, rgba(15, 118, 110, 0.03) 100%);
+  border: 1px solid rgba(15, 118, 110, 0.22);
+}
+
+.ai-planner__plan-alert-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.ai-planner__plan-alert-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--color-primary-dark, #0d5c56);
+}
+
+.ai-planner__plan-alert-copy {
+  min-width: 0;
+}
+
+.ai-planner__plan-alert-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary, #1c1917);
+}
+
+.ai-planner__plan-alert-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #57534e);
+}
+
+.ai-planner__plan-alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(15, 118, 110, 0.12);
+}
+
+.ai-planner__plan-changelog {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(15, 118, 110, 0.12);
+}
+
+.ai-planner__plan-changelog-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary, #57534e);
+}
+
+.ai-planner__plan-changelog-list {
+  margin: 0;
+  padding-inline-start: 1.1em;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-primary, #1c1917);
+}
+
+.ai-planner__plan-changelog-list li + li {
+  margin-top: 4px;
+}
+
+.ai-planner__route-overview {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e7e5e4);
+}
+
+.ai-planner__route-overview-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-planner__route-overview-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-sans, inherit);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-primary-dark, #0d5c56);
+  cursor: pointer;
+  text-align: start;
+}
+
+.ai-planner__route-overview-copy {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #e7e5e4);
+  background: var(--color-surface-elevated, #fafaf9);
+  color: var(--color-text-secondary, #57534e);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.ai-planner__route-overview-copy:hover {
+  border-color: rgba(15, 118, 110, 0.35);
+  color: var(--color-primary, #0f766e);
+  background: rgba(15, 118, 110, 0.06);
+}
+
+.ai-planner__route-overview-toggle .icon {
+  flex-shrink: 0;
+  color: var(--color-primary, #0f766e);
+}
+
+.ai-planner__route-overview-toggle :last-child.icon {
+  margin-inline-start: auto;
+}
+
+.ai-planner__route-overview-hint {
+  margin: 8px 0 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-tertiary, #78716c);
+}
+
+.ai-planner__route-overview-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-planner__route-overview-day {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-background, #fafaf9);
+  border: 1px solid var(--color-border, #e7e5e4);
+}
+
+.ai-planner__route-overview-day-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-primary, #1c1917);
+}
+
+.ai-planner__route-overview-stops {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-secondary, #57534e);
+  unicode-bidi: isolate;
+}
+
+.ai-planner__plan-feedback {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border, #e7e5e4);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-planner__plan-feedback-prompt {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #57534e);
+}
+
+.ai-planner__plan-feedback-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.ai-planner__plan-feedback-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border, #e7e5e4);
+  background: var(--color-surface, #fff);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.ai-planner__plan-feedback-btn:hover:not(:disabled) {
+  border-color: rgba(15, 118, 110, 0.35);
+  background: rgba(15, 118, 110, 0.06);
+}
+
+.ai-planner__plan-feedback-btn:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.ai-planner__plan-feedback-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ai-planner__plan-feedback-detail-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #57534e);
+}
+
+.ai-planner__plan-feedback-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border, #e7e5e4);
+  font-family: var(--font-sans, inherit);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-primary, #1c1917);
+  background: var(--color-surface, #fff);
+  resize: vertical;
+  min-height: 72px;
+}
+
+.ai-planner__plan-feedback-textarea:focus {
+  outline: 2px solid rgba(15, 118, 110, 0.28);
+  outline-offset: 1px;
+}
+
+.ai-planner__plan-feedback-send-note {
+  align-self: flex-start;
+}
+
+.ai-planner__plan-feedback-note-done {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-text-tertiary, #78716c);
+}
+
+.ai-planner__plan-feedback-btn--active {
+  border-color: var(--color-primary, #0f766e);
+  background: rgba(15, 118, 110, 0.1);
+}
+
 .ai-planner__plan-title {
   margin: 0 0 10px;
   font-size: 13px;
@@ -1020,6 +1347,28 @@
 
 .ai-planner__day-dock-apply:hover:not(:disabled) {
   filter: brightness(1.06);
+}
+
+@keyframes ai-planner-save-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(15, 118, 110, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(15, 118, 110, 0);
+  }
+}
+
+.ai-planner__day-dock-apply--pulse:not(:disabled) {
+  animation: ai-planner-save-pulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-planner__day-dock-apply--pulse:not(:disabled) {
+    animation: none;
+    outline: 2px solid rgba(255, 255, 255, 0.65);
+    outline-offset: 2px;
+  }
 }
 
 .ai-planner__stop-day-inline {

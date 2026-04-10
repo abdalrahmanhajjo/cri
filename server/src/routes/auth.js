@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const { getCollection, getMongoDb } = require('../mongo');
 const { validatePassword } = require('../utils/passwordValidator');
 const { validateUsername } = require('../utils/usernameValidator');
@@ -57,6 +58,35 @@ function sanitizeLoginInput(req, res, next) {
   if (!id || id.length > 254) return res.status(400).json({ error: 'Email or username and password required' });
   if (!password || password.length > 128) return res.status(400).json({ error: 'Invalid password' });
   next();
+}
+
+/** Allocate a unique @handle for a new Google sign-in user. */
+async function pickUsernameForGoogle(users, email) {
+  const localRaw = (String(email).split('@')[0] || 'user').toLowerCase();
+  let sanitized = localRaw
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+  if (!sanitized.length) sanitized = 'user';
+  if (!/^[a-z]/.test(sanitized)) sanitized = `u_${sanitized}`;
+  sanitized = sanitized.slice(0, 24);
+  if (sanitized.length < 3) sanitized = `${sanitized}usr`.slice(0, 3);
+
+  for (let i = 0; i < 80; i += 1) {
+    const candidate =
+      i === 0 ? sanitized : `${sanitized.slice(0, Math.min(18, sanitized.length))}_${i}`;
+    const u = validateUsername(candidate);
+    if (!u.ok) continue;
+    const taken = await users.findOne({ 'profile.username_normalized': u.handle });
+    if (!taken) return { handle: u.handle, stored: u.stored };
+  }
+  for (let j = 0; j < 30; j += 1) {
+    const u = validateUsername(`g_${crypto.randomBytes(4).toString('hex')}`);
+    if (!u.ok) continue;
+    const taken = await users.findOne({ 'profile.username_normalized': u.handle });
+    if (!taken) return { handle: u.handle, stored: u.stored };
+  }
+  throw new Error('Could not allocate username for Google sign-in');
 }
 
 /** GET /api/auth/check-username?username= — availability for sign-up (debounced on client). */
@@ -277,6 +307,123 @@ router.post('/login', sanitizeLoginInput, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+/** Google Identity Services (Sign in with Google): verify JWT `credential`, find-or-create user, return app JWT. */
+router.post('/google', async (req, res) => {
+  try {
+    const credential =
+      typeof req.body?.credential === 'string' ? req.body.credential.trim() : '';
+    if (!credential || credential.length > 12000) {
+      return res.status(400).json({ error: 'Missing Google credential' });
+    }
+    const clientId = process.env.GOOGLE_CLIENT_ID && String(process.env.GOOGLE_CLIENT_ID).trim();
+    if (!clientId) {
+      return res.status(503).json({
+        error: 'Google sign-in is not configured on this server.',
+        code: 'GOOGLE_DISABLED',
+      });
+    }
+
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    const rate = await checkLoginRateLimit(ip);
+    if (!rate.ok) {
+      return res.status(429).json({ error: 'Too many attempts.', retryAfter: rate.retryAfter });
+    }
+
+    let payload;
+    try {
+      const oAuth = new OAuth2Client(clientId);
+      const ticket = await oAuth.verifyIdToken({
+        idToken: credential,
+        audience: clientId,
+      });
+      payload = ticket.getPayload();
+    } catch (e) {
+      console.error('[auth/google] verifyIdToken:', e.message);
+      await recordFailedLoginAttempt(ip);
+      return res.status(401).json({ error: 'Google sign-in could not be verified. Try again.' });
+    }
+
+    const email = (payload.email || '').toLowerCase().trim();
+    const sub = payload.sub;
+    const name = typeof payload.name === 'string' ? payload.name.slice(0, 150) : null;
+    if (!email || !sub || payload.email_verified !== true) {
+      return res.status(400).json({ error: 'Google did not return a verified email.' });
+    }
+
+    const users = await getCollection('users');
+    let user = await users.findOne({ google_sub: sub });
+
+    if (!user) {
+      const byEmail = await users.findOne({ email });
+      if (byEmail) {
+        if (byEmail.auth_provider === 'google') {
+          user = byEmail;
+          if (byEmail.google_sub !== sub) {
+            await users.updateOne({ id: byEmail.id }, { $set: { google_sub: sub } });
+          }
+        } else {
+          return res.status(409).json({
+            error: `An account with this email already exists. Sign in with your password, or use "Forgot password".`,
+            code: 'USE_PASSWORD_LOGIN',
+          });
+        }
+      }
+    }
+
+    if (!user) {
+      const u = await pickUsernameForGoogle(users, email);
+      const userId = crypto.randomUUID();
+      const newUser = {
+        _id: userId,
+        id: userId,
+        email,
+        name,
+        auth_provider: 'google',
+        google_sub: sub,
+        email_verified: true,
+        password_hash: null,
+        is_admin: false,
+        is_business_owner: false,
+        is_blocked: false,
+        created_at: new Date(),
+        profile: {
+          username: u.stored,
+          username_normalized: u.handle,
+          onboarding_completed: false,
+          updated_at: new Date(),
+        },
+      };
+      await users.insertOne(newUser);
+      user = newUser;
+    }
+
+    if (user.is_blocked === true) {
+      return res.status(403).json({ error: 'This account has been disabled.', code: 'ACCOUNT_BLOCKED' });
+    }
+
+    const placeOwners = await getCollection('place_owners');
+    const ownedPlaceCount = await placeOwners.countDocuments({ user_id: user.id });
+
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        name: user.name || user.email.split('@')[0],
+        email: user.email,
+        emailVerified: true,
+        onboardingCompleted: user.profile?.onboarding_completed === true,
+        isBusinessOwner: user.is_business_owner === true,
+        isAdmin: user.is_admin === true,
+        ownedPlaceCount,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Google sign-in failed' });
   }
 });
 

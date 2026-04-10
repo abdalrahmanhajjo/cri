@@ -31,16 +31,16 @@ export const plannerQualityRules = `
 - Multi-day: set dayIndex on every slot; balance across days; never repeat the same placeId in one trip unless the user explicitly wants a return visit.
 - If the user message is vague ("ok", "yes", "do it"), infer from trip context and interests — still only use listed placeIds.
 - Short user typos (knefe, souk, citdel) — map intent to Tripoli places from the list, do not refuse.
-- Optionally add one short factual Tripoli tip before PLAN_JSON (heat, prayer times, Friday) when helpful — keep it brief.
+- When you output PLAN_JSON, do **not** add any prose, greeting, or summary before it — only the label line and JSON (slot **reason** fields carry narrative).
 - **Known visitor:** If the system prompt includes a "Known visitor" section, use it to personalize pacing, themes, and tone. Never invent preferences not listed there; do not read private notes aloud unless it helps the plan. Prefer subtle personalization over repeating their text verbatim.
 `;
 
 export const plannerReplyStyleRules = `
 **How to write (quality):**
-- Open with a short, warm line — then, if you output PLAN_JSON, add **one** compact paragraph (2–4 sentences) explaining the **flow** of the day (area clusters, morning vs afternoon, where to pause for food). Do not repeat every stop name before the JSON; the card UI already lists them.
-- Each slot **reason** must say **why this order makes sense**: link to the **previous** stop (walking distance, same quarter), **time of day** (morning citadel, midday food), or **user theme**. Avoid generic filler ("nice place").
+- If you output an itinerary, write **no** conversational paragraph before PLAN_JSON — go straight to \`PLAN_JSON:\` and the JSON array. The app only shows the structured itinerary card to the user.
+- For **chat-only** turns (questions, clarifications, Tripoli facts with no plan yet), reply with normal short prose and **do not** include PLAN_JSON.
+- Each slot **reason** must say **why this order makes sense**: link to the **previous** stop, **time of day**, or **user theme**. Avoid generic filler ("nice place").
 - If the user already chose **interests** or **trip settings** in the app, **prefer shipping a full PLAN_JSON** on the first useful turn instead of asking redundant questions — unless they are clearly only chatting or asked a factual question.
-- Keep the prose **scannable**: short sentences; no long bullet lists before PLAN_JSON unless the user asked for comparison or detail.
 `;
 
 const planningExamples = [

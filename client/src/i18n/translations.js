@@ -93,6 +93,15 @@ export const translations = {
       megaNeighbourhoods: 'Neighbourhoods',
       megaNeighbourhoodsDesc: 'Explore districts and areas of the city.',
     },
+    authPage: {
+      loginHeroTitle: 'Your Tripoli plans, saved and synced',
+      loginHeroSub:
+        'Save favourite spots, build itineraries, and continue on the web or in the app. Secure sign-in; we never post on your behalf.',
+      loginDividerOr: 'or',
+      emailPasswordSection: 'Email & password',
+      googleLoading: 'Connecting with Google...',
+      googleUnavailable: 'Google sign-in is not available on this build.',
+    },
     aboutTripoli: {
       title: 'Tripoli, Lebanon',
       intro:
@@ -246,6 +255,11 @@ export const translations = {
       aiTripSaved: 'Trip saved. Opening your plannerâ€¦',
       registerCheckEmail: 'Account created. Check your email to verify.',
       loginFailed: 'Sign in failed. Check your details.',
+      googleSignInFailed: 'Google sign-in failed. Try again.',
+      googleUsePassword:
+        'This email already has a password account. Sign in with email and password or use Forgot password.',
+      googleNotConfigured: 'Google sign-in is not set up on the server. Ask the administrator to add GOOGLE_CLIENT_ID.',
+      googleUnavailable: 'Google sign-in is not available (missing web client id).',
       actionFailed: 'Something went wrong. Try again.',
       resetCodeSent: 'If this email is registered, youâ€™ll receive a reset code shortly.',
       resetPasswordDone: 'Your password was updated. You can sign in now.',
@@ -302,6 +316,37 @@ export const translations = {
       examplePromptThree: 'I have 2 days and want old markets, sweets, and the most beautiful landmarks.',
       tripBriefTitle: 'Trip brief',
       tripBriefHint: 'These settings shape the first draft before you send your message.',
+      plannerFlowAria: 'Planner steps',
+      plannerFlow1: '1. Start',
+      plannerFlow2: '2. Set trip',
+      plannerFlow3: '3. Brief',
+      plannerFlow4: '4. Review',
+      sectionStepLabel: 'Step {n}',
+      briefComposerTitle: 'Your brief',
+      briefComposerSub: 'Write one clear sentence about the kind of trip you want.',
+      briefLatestReady: 'Latest brief ready',
+      generatePlan: 'Generate plan',
+      improvePlan: 'Improve current plan',
+      refreshPlan: 'Refresh plan',
+      quickStartOptional: 'Optional',
+      quickStartTitle: 'Quick start',
+      studioSectionSub: 'Check the result, adjust stops, then save the trip.',
+      tripBriefSummaryAria: 'Trip brief summary',
+      workspaceBriefLabel: 'Brief',
+      workspaceIssueLabel: 'Issue',
+      workspaceSummaryLabel: 'Summary',
+      guidedPromptDaysStops: 'Build a Tripoli plan for {days} day(s) with {ppd} stops per day.',
+      guidedPromptBudgetLine: 'Budget: {budget}.',
+      guidedPromptStartDate: 'Start date: {date}.',
+      guidedPromptFocusInterests: 'Focus interests: {list}.',
+      guidedPromptBalancedMix: 'Mix the best Tripoli highlights with a balanced pace.',
+      guidedPromptTravelerNote: 'Traveler note: {note}.',
+      guidedPromptDefaultClose:
+        'Return the strongest itinerary with efficient routing, good pacing, and variety across the day.',
+      guidedPromptRefineFlow:
+        'Refine the current itinerary with the same brief, but improve flow, variety, and day balance.',
+      guidedPromptRefreshQuality:
+        'Refresh the itinerary using the current brief, but improve routing and overall trip quality.',
       interests: 'Interests',
       send: 'Send',
       placeholder: 'e.g. I want a relaxed food day, or help planning my first Tripoli visit.',
@@ -318,6 +363,32 @@ export const translations = {
       composerTip:
         'Include your vibe, who you are with, how active you want the day to be, and any must-see or must-avoid ideas.',
       proposedPlan: 'Suggested itinerary',
+      planUpdatedToast:
+        'Itinerary updated — check the route overview, then save to your trips when it looks right.',
+      planUpdatedTitle: 'Your itinerary changed',
+      planUpdatedBody:
+        'Review the overview and stops below. Nothing is saved until you add it to My trips.',
+      planJumpToItinerary: 'Jump to stops',
+      planUpdatedDismiss: 'Dismiss',
+      routeOverviewTitle: 'Route overview',
+      routeOverviewHint: 'Each day in order — tap a day tab or scroll for full stop cards.',
+      planFeedbackPrompt: 'Was this itinerary helpful?',
+      planFeedbackThanks: 'Thanks — that helps us improve the planner.',
+      planFeedbackDownNote: 'Thanks for letting us know.',
+      planChangeTitle: 'What changed',
+      planChangeFreshStops: '{count} stops in this new itinerary.',
+      planChangeRescheduled: '{place}: rescheduled from {from} to {to}.',
+      planChangeRemovedStop: 'Removed {place} (was {when}).',
+      planChangeAddedStop: 'Added {place} ({when}).',
+      planChangeMore: '+{n} more updates.',
+      planOpenRouteOverview: 'Open route overview',
+      copyItinerary: 'Copy itinerary as text',
+      copyItineraryDone: 'Itinerary copied to clipboard.',
+      copyItineraryFail: 'Could not copy. Select and copy manually.',
+      planFeedbackOptional: 'Optional: what felt off?',
+      planFeedbackPlaceholder: 'e.g. pacing, places, or times…',
+      planFeedbackSendNote: 'Send note',
+      planFeedbackNoteThanks: 'Thanks for the detail — it helps.',
       applyTrip: 'Save to my trips',
       applying: 'Savingâ€¦',
       tryAgain: 'Try again',
@@ -385,6 +456,43 @@ export const translations = {
       visitorMemoryClear: 'Clear learned trip patterns',
       visitorMemoryClearConfirm:
         'Clear learned patterns (categories, recent places, plan count)? Your notes above will be cleared too.',
+      onboardingProgress: 'Step {current} of {total}',
+      onboardingWelcomeTitle: 'Welcome to the AI trip planner',
+      onboardingWelcomeBody:
+        'This quick tour walks the whole studio: trip chips, your brief, moods, the itinerary column, editing stops, and saving.\n\nSkip anytime (Esc). Replay from the sparkle button next to settings.',
+      onboardingSettingsTitle: 'Full trip settings',
+      onboardingSettingsBody:
+        'Use this for interests and more options. The chips under Trip brief are usually fastest for days, stops per day, date, and budget.',
+      onboardingChipsTitle: 'Shape the first draft',
+      onboardingChipsBody:
+        'Each chip opens a control: trip length, how many stops fit in a day, start date, and budget. The AI reads these before proposing times and places.',
+      onboardingBriefTitle: 'Your brief in plain language',
+      onboardingBriefBody:
+        'Describe travellers, pace, and must-see or avoid ideas. Tap Generate plan — or Improve / Refresh after you already have a draft.',
+      onboardingMoodsTitle: 'Quick mood prompts',
+      onboardingMoodsBody:
+        'Optional one-tap starters for culture, food, faith, souks, or a balanced day. Everything stays editable after the reply.',
+      onboardingStudioTitle: 'Itinerary studio',
+      onboardingStudioBody:
+        'Your brief, assistant messages, and the working plan scroll here. Keep this area in view while you adjust stops.',
+      onboardingPlanTitle: 'Stops and timeline',
+      onboardingPlanBody:
+        'Change times and days, edit or remove a stop, open map/trip actions, or replace one stop with AI. Fix time clashes before saving.',
+      onboardingPlanWaitTitle: 'Your plan lands here',
+      onboardingPlanWaitBody:
+        'After the first itinerary reply you will see the route overview and day cards. You can restart this tour from the header anytime.',
+      onboardingSaveTitle: 'Save, copy, and feedback',
+      onboardingSaveBody:
+        'Save to my trips stores the draft. Copy exports plain text. Thumbs and the note box are optional feedback. Multi-day trips also get the day bar at the bottom.',
+      onboardingSaveWaitTitle: 'Saving when you are ready',
+      onboardingSaveWaitBody:
+        'Once a plan exists, Save appears here and the bottom dock jumps between days. Nothing is stored in My trips until you save.',
+      onboardingNext: 'Next',
+      onboardingBack: 'Back',
+      onboardingSkip: 'Skip tour',
+      onboardingDone: 'Done',
+      onboardingRestart: 'Tour',
+      onboardingRestartAria: 'Open planner tour',
     },
     placeDiscover: {
       eyebrow: 'Places',
@@ -580,6 +688,36 @@ export const translations = {
       planToastSmartNeedDates: 'Set your trip start date first so we can match weather and prayer times.',
       planBuilderSectionHide: 'Hide',
       planBuilderSectionShow: 'Show',
+      manualCreateTourWelcomeTitle: 'Welcome to manual trip planning',
+      manualCreateTourWelcomeBody:
+        'This short tour walks you through creating a trip: open the form, set a name and dates, then save. Skip anytime (Esc). Replay from the sparkle button in My trips.\n\nIf you use the AI planner too, each tour is separate.',
+      manualCreateTourNewBtnTitle: 'Start here',
+      manualCreateTourNewBtnBody: 'Tap Create new trip to open the form. You can draft several trips with different dates.',
+      manualCreateTourFormTitle: 'New trip form',
+      manualCreateTourFormBody: 'Name your trip and add optional notes. Notes are private and help you remember details.',
+      manualCreateTourDatesTitle: 'Travel dates',
+      manualCreateTourDatesBody:
+        'Use quick chips or pick start and end on the calendar. Conflicts with another saved trip are blocked until you adjust dates.',
+      manualCreateTourSaveTitle: 'Create your trip',
+      manualCreateTourSaveBody:
+        'Save creates the trip and opens the builder so you can add places. Cancel closes the form without saving.',
+      manualBuilderTourWelcomeTitle: 'Build your itinerary',
+      manualBuilderTourWelcomeBody:
+        'Four builder steps sit in the bar above: basics, community directory, saved shortcuts, then your day-by-day plan. Skip anytime (Esc).',
+      manualBuilderTourNavTitle: 'Step navigation',
+      manualBuilderTourNavBody: 'Jump between sections or expand them from here. Each section can be collapsed to focus on one part.',
+      manualBuilderTourBasicsTitle: 'Trip basics',
+      manualBuilderTourBasicsBody: 'Rename your trip, edit notes, change dates, or open the map once you have stops.',
+      manualBuilderTourDiscoverTitle: 'Community & directory',
+      manualBuilderTourDiscoverBody:
+        'Search and filter places, then use day buttons on any card to add stops. Saving hearts is optional.',
+      manualBuilderTourFavouritesTitle: 'Saved places',
+      manualBuilderTourFavouritesBody: 'Quick-add from favourites if you already saved spots. Otherwise rely on the directory above.',
+      manualBuilderTourItineraryTitle: 'Itinerary & save',
+      manualBuilderTourItineraryBody:
+        'Arrange times, move stops between days, remove places, or run smart schedule. Save keeps edits to your account.',
+      manualTourRestart: 'Tour',
+      manualTourRestartAria: 'Replay planner tour',
       tripsFilterTitle: 'Filter trips',
       tripsFilterToggleShow: 'Show filters',
       tripsFilterToggleHide: 'Hide filters',
@@ -1490,6 +1628,15 @@ export const translations = {
       megaNeighbourhoods: 'Ø§Ù„Ø£Ø­ÙŠØ§Ø¡',
       megaNeighbourhoodsDesc: 'Ø§Ø³ØªÙƒØ´Ù Ø£Ø­ÙŠØ§Ø¡ ÙˆÙ…Ù†Ø§Ø·Ù‚ Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©.',
     },
+    authPage: {
+      loginHeroTitle: '\u062e\u0637\u0637\u0643 \u0644\u0632\u064a\u0627\u0631\u0629 \u0637\u0631\u0627\u0628\u0644\u0633 \u0645\u062d\u0641\u0648\u0638\u0629',
+      loginHeroSub:
+        '\u0627\u062d\u0641\u0638 \u0627\u0644\u0645\u0643\u0627\u0646 \u0648\u0627\u0628\u0646\u064e \u0627\u0644\u0631\u062d\u0644\u0627\u062a \u0648\u062a\u0627\u0628\u0639 \u0639\u0644\u0649 \u0627\u0644\u0648\u064a\u0628 \u0623\u0648 \u0627\u0644\u062a\u0637\u0628\u064a\u0642. \u062a\u0633\u062c\u064a\u0644 \u0622\u0645\u0646\u060c \u0648\u0644\u0646 \u0646\u0646\u0634\u0631 \u0646\u064a\u0627\u0628\u0629.',
+      loginDividerOr: '\u0623\u0648',
+      emailPasswordSection: '\u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631',
+      googleLoading: '\u062c\u0627\u0631\u064d \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0628\u0640Google\u2026',
+      googleUnavailable: '\u062a\u0633\u062c\u064a\u0644 Google \u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631.',
+    },
     aboutTripoli: {
       title: 'Ø·Ø±Ø§Ø¨Ù„Ø³ØŒ Ù„Ø¨Ù†Ø§Ù†',
       intro:
@@ -1642,6 +1789,12 @@ export const translations = {
       aiTripSaved: 'ØªÙ… Ø­ÙØ¸ Ø§Ù„Ø±Ø­Ù„Ø©. Ø¬Ø§Ø±Ù ÙØªØ­ Ø§Ù„Ù…Ø®Ø·Ø·â€¦',
       registerCheckEmail: 'ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ø­Ø³Ø§Ø¨. ØªØ­Ù‚Ù‘Ù‚ Ù…Ù† Ø¨Ø±ÙŠØ¯Ùƒ Ù„Ù„ØªÙØ¹ÙŠÙ„.',
       loginFailed: 'ÙØ´Ù„ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„. ØªØ­Ù‚Ù‘Ù‚ Ù…Ù† Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.',
+      googleSignInFailed: '\u0641\u0634\u0644 \u062a\u0633\u062c\u064a\u0644 Google. \u062d\u0627\u0648\u0644 \u0645\u0631\u0629.',
+      googleUsePassword:
+        '\u0647\u0630\u0627 \u0627\u0644\u0628\u0631\u064a\u062f \u0645\u0633\u062c\u0644 \u0628\u062d\u0633\u0627\u0628 \u0648\u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631. \u0633\u062c\u0644 \u062f\u062e\u0648\u0644\u0643 \u0628\u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631.',
+      googleNotConfigured:
+        '\u062a\u0633\u062c\u064a\u0644 Google \u063a\u064a\u0631 \u0645\u0641\u0639\u0644 \u0639\u0644\u0649 \u0627\u0644\u062e\u0627\u062f\u0645. \u0623\u0636\u0641 GOOGLE_CLIENT_ID.',
+      googleUnavailable: '\u062a\u0633\u062c\u064a\u0644 Google \u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631.',
       actionFailed: 'Ø­Ø¯Ø« Ø®Ø·Ø£. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.',
       resetCodeSent: 'Ø¥Ø°Ø§ ÙƒØ§Ù† Ø§Ù„Ø¨Ø±ÙŠØ¯ Ù…Ø³Ø¬Ù‘Ù„Ù‹Ø§ØŒ Ø³ØªØµÙ„Ùƒ Ø±Ø³Ø§Ù„Ø© Ø¨Ø±Ù…Ø² Ø§Ù„Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ù‚Ø±ÙŠØ¨Ù‹Ø§.',
       resetPasswordDone: 'ØªÙ… ØªØ­Ø¯ÙŠØ« ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±. ÙŠÙ…ÙƒÙ†Ùƒ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø§Ù„Ø¢Ù†.',
@@ -1698,6 +1851,38 @@ export const translations = {
       examplePromptThree: 'Ù„Ø¯ÙŠ ÙŠÙˆÙ…Ø§Ù† ÙˆØ£Ø±ÙŠØ¯ Ø§Ù„Ø£Ø³ÙˆØ§Ù‚ Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø© ÙˆØ§Ù„Ø­Ù„ÙˆÙŠØ§Øª ÙˆØ£Ø¬Ù…Ù„ Ø§Ù„Ù…Ø¹Ø§Ù„Ù….',
       tripBriefTitle: 'Ù…Ù„Ø®Øµ Ø§Ù„Ø±Ø­Ù„Ø©',
       tripBriefHint: 'Ù‡Ø°Ù‡ Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª ØªØ´ÙƒÙ„ Ø§Ù„Ø§Ù‚ØªØ±Ø§Ø­ Ø§Ù„Ø£ÙˆÙ„ÙŠ Ù‚Ø¨Ù„ Ø¥Ø±Ø³Ø§Ù„ Ø±Ø³Ø§Ù„ØªÙƒ.',
+      plannerFlowAria: 'Ø®Ø·ÙˆØ§Øª Ø§Ù„Ù…Ø®Ø·Ø·',
+      plannerFlow1: '1. \u0627\u0644\u0628\u062f\u0621',
+      plannerFlow2: '2. \u0636\u0628\u0637 \u0627\u0644\u0631\u062d\u0644\u0629',
+      plannerFlow3: '3. \u0627\u0644\u0648\u0635\u0641',
+      plannerFlow4: '4. \u0627\u0644\u0645\u0631\u0627\u062c\u0639\u0629',
+      sectionStepLabel: 'Ø§Ù„Ø®Ø·ÙˆØ© {n}',
+      briefComposerTitle: 'ÙˆØµÙÙƒ',
+      briefComposerSub: 'Ø§ÙƒØªØ¨ Ø¬Ù…Ù„Ø© ÙˆØ§Ø­Ø¯Ø© ÙˆØ§Ø¶Ø­Ø© Ø¹Ù† Ù†ÙˆØ¹ Ø§Ù„Ø±Ø­Ù„Ø© Ø§Ù„ØªÙŠ ØªØ±ÙŠØ¯Ù‡Ø§.',
+      briefLatestReady: 'Ø¢Ø®Ø± ÙˆØµÙ Ø¬Ø§Ù‡Ø²',
+      generatePlan: 'Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ø®Ø·Ø©',
+      improvePlan: 'ØªØ­Ø³ÙŠÙ† Ø§Ù„Ø®Ø·Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ©',
+      refreshPlan: 'ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø®Ø·Ø©',
+      quickStartOptional: 'Ø§Ø®ØªÙŠØ§Ø±ÙŠ',
+      quickStartTitle: 'Ø¨Ø¯Ø¡ Ø³Ø±ÙŠØ¹',
+      studioSectionSub: 'Ø±Ø§Ø¬Ø¹ Ø§Ù„Ù†ØªÙŠØ¬Ø©ØŒ Ø¹Ø¯Ù‘Ù„ Ø§Ù„Ù…Ø­Ø·Ø§ØªØŒ Ø«Ù… Ø§Ø­ÙØ¸ Ø§Ù„Ø±Ø­Ù„Ø©.',
+      tripBriefSummaryAria: 'Ù…Ù„Ø®Øµ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø±Ø­Ù„Ø©',
+      workspaceBriefLabel: 'Ø§Ù„ÙˆØµÙ',
+      workspaceIssueLabel: 'Ù…Ù„Ø§Ø­Ø¸Ø©',
+      workspaceSummaryLabel: 'Ø§Ù„Ù…Ù„Ø®Øµ',
+      guidedPromptDaysStops:
+        'Ø§Ø®Ø·Ø· Ù„Ø±Ø­Ù„Ø© ÙÙŠ Ø·Ø±Ø§Ø¨Ù„Ø³ Ù„Ù…Ø¯Ø© {days} ÙŠÙˆÙ…/Ø£ÙŠØ§Ù… Ù…Ø¹ {ppd} Ù…Ø­Ø·Ø§Øª ÙÙŠ Ø§Ù„ÙŠÙˆÙ….',
+      guidedPromptBudgetLine: 'Ø§Ù„Ù…ÙŠØ²Ø§Ù†ÙŠØ©: {budget}.',
+      guidedPromptStartDate: 'ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¨Ø¯Ø¡: {date}.',
+      guidedPromptFocusInterests: 'Ø§Ù„Ø§Ù‡ØªÙ…Ø§Ù…Ø§Øª: {list}.',
+      guidedPromptBalancedMix: 'Ø§Ù…Ø²Ø¬ Ø£Ø¨Ø±Ø² Ù…Ø¹Ø§Ù„Ù… Ø·Ø±Ø§Ø¨Ù„Ø³ Ø¨Ø¥ÙŠÙ‚Ø§Ø¹ Ù…ØªÙˆØ§Ø²Ù†.',
+      guidedPromptTravelerNote: 'Ù…Ù„Ø§Ø­Ø¸Ø© Ø§Ù„Ù…Ø³Ø§ÙØ±: {note}.',
+      guidedPromptDefaultClose:
+        'Ø£Ø¹Ø¯ Ø£Ù‚ÙˆÙ‰ Ù…Ø³Ø§Ø± Ø¨ØªÙˆØ¬ÙŠÙ‡ ÙØ¹Ø§Ù„ ÙˆØ¥ÙŠÙ‚Ø§Ø¹ Ù…Ù†Ø§Ø³Ø¨ ÙˆØªÙ†ÙˆÙ‘Ø¹ Ø®Ù„Ø§Ù„ Ø§Ù„ÙŠÙˆÙ….',
+      guidedPromptRefineFlow:
+        'Ø­Ø³Ù‘Ù† Ø§Ù„Ù…Ø³Ø§Ø± Ø§Ù„Ø­Ø§Ù„ÙŠ Ù…Ø¹ Ù†ÙØ³ Ø§Ù„ÙˆØµÙØŒ Ù„ÙƒÙ† Ø­Ø³Ù‘Ù† Ø§Ù„ØªØ¯ÙÙ‚ ÙˆØ§Ù„ØªÙ†ÙˆÙŠØ¹ ÙˆØ§Ù„ØªÙˆØ§Ø²Ù† Ø¨ÙŠÙ† Ø§Ù„Ø£ÙŠØ§Ù….',
+      guidedPromptRefreshQuality:
+        'Ø­Ø¯Ù‘Ø« Ø§Ù„Ù…Ø³Ø§Ø± Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„ÙˆØµÙ Ø§Ù„Ø­Ø§Ù„ÙŠØŒ Ù„ÙƒÙ† Ø­Ø³Ù‘Ù† Ø§Ù„ØªÙˆØ¬ÙŠÙ‡ ÙˆØ¬ÙˆØ¯Ø© Ø§Ù„Ø±Ø­Ù„Ø© Ø¥Ø¬Ù…Ø§Ù„Ù‹Ø§.',
       interests: 'Ø§Ù„Ø§Ù‡ØªÙ…Ø§Ù…Ø§Øª',
       send: 'Ø¥Ø±Ø³Ø§Ù„',
       placeholder: 'Ù…Ø«Ù„Ù‹Ø§: Â«Ù†ØµÙ ÙŠÙˆÙ…: Ø£Ø³ÙˆØ§Ù‚ Ø«Ù… Ø­Ù„ÙˆÙŠØ§ØªÂ» Ø£Ùˆ Â«Ø¨Ø¯Ù‘Ù„ Ù…Ø­Ø·Ø© Ø§Ù„ØºØ¯Ø§Ø¡ Ø¨Ù…Ø£ÙƒÙˆÙ„Ø§Øª Ø¨Ø­Ø±ÙŠØ©Â»',
@@ -1714,6 +1899,32 @@ export const translations = {
       composerTip:
         'Ø§Ø°ÙƒØ± Ø§Ù„Ø·Ø§Ø¨Ø¹ Ø§Ù„Ø°ÙŠ ØªØ±ÙŠØ¯Ù‡ØŒ Ù…Ù† Ø³ÙŠÙƒÙˆÙ† Ù…Ø¹ÙƒØŒ ÙˆÙ…Ø¯Ù‰ Ø§Ù„Ù†Ø´Ø§Ø· Ø§Ù„Ù…Ù†Ø§Ø³Ø¨ØŒ ÙˆØ£ÙŠ Ø£Ù…Ø§ÙƒÙ† Ù„Ø§ ØªØ±ÙŠØ¯ ÙÙˆØªÙ‡Ø§ Ø£Ùˆ Ù…ÙƒØ§Ù†Ø§Øª ØªØªØ¬Ù†Ø¨Ù‡Ø§.',
       proposedPlan: 'Ø¨Ø±Ù†Ø§Ù…Ø¬ Ù…Ù‚ØªØ±Ø­',
+      planUpdatedToast:
+        'ØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø¨Ø±Ù†Ø§Ù…Ø¬ â€” Ø±Ø§Ø¬Ø¹ Ø§Ù„Ù…Ù„Ø®ØµØŒ Ø«Ù… Ø§Ø­ÙØ¸ ÙÙŠ Ø±Ø­Ù„Ø§ØªÙƒ Ø¹Ù†Ø¯Ù…Ø§ ÙŠÙ†Ø§Ø³Ø¨Ùƒ.',
+      planUpdatedTitle: 'ØªÙ… ØªØºÙŠÙŠØ± Ø§Ù„Ø¨Ø±Ù†Ø§Ù…Ø¬',
+      planUpdatedBody:
+        'Ø±Ø§Ø¬Ø¹ Ø§Ù„Ù…Ù„Ø®Øµ ÙˆØ§Ù„Ù…Ø­Ø·Ø§Øª Ø£Ø¯Ù†Ø§Ù‡. Ù„Ù† ÙŠØªÙ… Ø§Ù„Ø­ÙØ¸ Ø­ØªÙ‰ ØªØ¶ÙŠÙÙ‡ Ø¥Ù„Ù‰ Ø±Ø­Ù„Ø§ØªÙƒ.',
+      planJumpToItinerary: 'Ø§Ù„Ø§Ù†ØªÙ‚Ø§Ù„ Ù„Ù„Ù…Ø­Ø·Ø§Øª',
+      planUpdatedDismiss: 'Ø­Ø³Ù†Ø§Ù‹',
+      routeOverviewTitle: 'Ù†Ø¸Ø±Ø© Ø¹Ù„Ù‰ Ø§Ù„Ù…Ø³Ø§Ø±',
+      routeOverviewHint: 'ÙƒÙ„ ÙŠÙˆÙ… Ø¨Ø§Ù„ØªØ±ØªÙŠØ¨ â€” Ù„Ù„ØªÙØ§ØµÙŠÙ„ Ø§Ù„ÙƒØ§Ù…Ù„Ø© Ø§Ù„ØªÙ…Ù„ Ù„Ø£Ø³ÙÙ„.',
+      planFeedbackPrompt: 'Ù‡Ù„ ÙƒØ§Ù† Ø§Ù„Ø¨Ø±Ù†Ø§Ù…Ø¬ Ù…ÙÙŠØ¯Ù‹Ø§ØŸ',
+      planFeedbackThanks: 'Ø´ÙƒØ±Ø§Ù‹ â€” ÙŠØ³Ø§Ø¹Ø¯Ù†Ø§ Ø¹Ù„Ù‰ ØªØ­Ø³ÙŠÙ† Ø§Ù„Ù…Ø®Ø·Ø·.',
+      planFeedbackDownNote: 'Ø´ÙƒØ±Ø§Ù‹ Ù„Ù…Ø´Ø§Ø±ÙƒØªÙƒ Ø±Ø£ÙŠÙƒ.',
+      planChangeTitle: 'Ù…Ø§ Ø§Ù„Ø°ÙŠ ØªØºÙŠÙ‘Ø±',
+      planChangeFreshStops: '{count} Ù…Ø­Ø·Ù‘Ø© ÙÙŠ Ù‡Ø°Ø§ Ø§Ù„Ø¨Ø±Ù†Ø§Ù…Ø¬ Ø§Ù„Ø¬Ø¯ÙŠØ¯.',
+      planChangeRescheduled: '{place}: ØªÙ… ØªØºÙŠÙŠØ± Ø§Ù„ÙˆÙ‚Øª Ù…Ù† {from} Ø¥Ù„Ù‰ {to}.',
+      planChangeRemovedStop: 'ØªÙ… Ø­Ø°Ù {place} (ÙƒØ§Ù† {when}).',
+      planChangeAddedStop: 'ØªÙ…Øª Ø¥Ø¶Ø§ÙØ© {place} ({when}).',
+      planChangeMore: '+{n} ØªØ­Ø¯ÙŠØ«Ø§Øª Ø£Ø®Ø±Ù‰.',
+      planOpenRouteOverview: 'ÙØªØ­ Ù†Ø¸Ø±Ø© Ø§Ù„Ù…Ø³Ø§Ø±',
+      copyItinerary: 'Ù†Ø³Ø® Ø§Ù„Ø¨Ø±Ù†Ø§Ù…Ø¬ ÙƒÙ†Øµ',
+      copyItineraryDone: 'ØªÙ… Ù†Ø³Ø® Ø§Ù„Ø¨Ø±Ù†Ø§Ù…Ø¬.',
+      copyItineraryFail: 'ØªØ¹Ø°Ù‘Ø± Ø§Ù„Ù†Ø³Ø®. Ø­Ø¯Ø¯ Ø§Ù„Ù†Øµ ÙŠØ¯ÙˆÙŠÙ‹Ø§.',
+      planFeedbackOptional: 'Ø§Ø®ØªÙŠØ§Ø±ÙŠ: Ù…Ø§ Ø§Ù„Ø°ÙŠ Ù„Ù… ÙŠÙ†Ø§Ø³Ø¨ÙƒØŸ',
+      planFeedbackPlaceholder: 'Ù…Ø«Ù„ Ø§Ù„Ø¥ÙŠÙ‚Ø§Ø¹ Ø£Ùˆ Ø§Ù„Ù…ÙƒØ§Ù† Ø£Ùˆ Ø§Ù„Ø£ÙˆÙ‚Ø§Øªâ€¦',
+      planFeedbackSendNote: 'Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø©',
+      planFeedbackNoteThanks: 'Ø´ÙƒØ±Ø§Ù‹ Ù„Ù„ØªÙØµÙŠÙ„ â€” ÙŠØ³Ø§Ø¹Ø¯Ù†Ø§.',
       applyTrip: 'Ø§Ø­ÙØ¸ ÙÙŠ Ø±Ø­Ù„Ø§ØªÙŠ',
       applying: 'Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­ÙØ¸â€¦',
       tryAgain: 'Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©',
@@ -1779,6 +1990,43 @@ export const translations = {
       visitorMemoryClear: 'Ù…Ø³Ø­ Ø£Ù†Ù…Ø§Ø· Ø§Ù„Ø±Ø­Ù„Ø§Øª Ø§Ù„Ù…ÙØªØ¹Ù„Ù‘ÙŽÙ…Ø©',
       visitorMemoryClearConfirm:
         'Ù‡Ù„ ØªØ±ÙŠØ¯ Ù…Ø³Ø­ Ø§Ù„Ø£Ù†Ù…Ø§Ø· Ø§Ù„Ù…ÙØªØ¹Ù„Ù‘ÙŽÙ…Ø© (Ø§Ù„ÙØ¦Ø§ØªØŒ Ø§Ù„Ø£Ù…Ø§ÙƒÙ† Ø§Ù„Ø£Ø®ÙŠØ±Ø©ØŒ Ø¹Ø¯Ø¯ Ø§Ù„Ø®Ø·Ø·)ØŸ Ø³ØªÙÙ…Ø³Ø­ Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ø£Ø¹Ù„Ø§Ù‡ Ø£ÙŠØ¶Ù‹Ø§.',
+      onboardingProgress: 'Ø§Ù„Ø®Ø·ÙˆØ© {current} Ù…Ù† {total}',
+      onboardingWelcomeTitle: 'Ù…Ø±Ø­Ø¨Ø§Ù‹ Ø¨Ù…Ø®Ø·Ø· Ø§Ù„Ø±Ø­Ù„Ø© Ø¨Ø§Ù„Ø°ÙƒØ§Ø¡',
+      onboardingWelcomeBody:
+        'Ù‡Ø°Ù‡ Ø¬ÙˆÙ„Ø© Ø³Ø±ÙŠØ¹Ø© Ù„Ø­Ø¨ÙŠØ¨Ø© Ø§Ù„Ù…Ù‚Ù„ØŒ ÙˆÙˆØµÙÙƒØŒ ÙˆØ§Ù„Ø£Ø¯ÙˆØ§Ø±ØŒ ÙˆØ¹Ù…ÙˆØ¯ Ø§Ù„Ø¹Ù…Ù„ØŒ ÙˆØ§Ù„Ø­ÙØ¸.\n\nØªØ®Ø·Ù‰ Ø¨Ø£ÙŠ ÙˆÙ‚Øª (Esc). Ù…Ù† Ø²Ø± Ø§Ù„Ù„Ù…Ø¹Ø© Ø¨Ø¬Ø§Ù†Ø¨ Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª.',
+      onboardingSettingsTitle: 'Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø±Ø­Ù„Ø©',
+      onboardingSettingsBody:
+        'Ù„Ù„Ø§Ù‡ØªÙ…Ø§Ù…Ø§Øª ÙˆØ®ÙŠØ§Ø±Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ©. Ø£Ø³Ø±Ø¹ ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ù…Ù„Ø®Øµ ØªØ¹Ø¯Ù„ Ø§Ù„Ø£ÙŠØ§Ù… ÙˆØ¹Ø¯Ø¯ Ø§Ù„Ù…Ø­Ø·Ø§Øª ÙˆØ§Ù„ØªØ§Ø±ÙŠØ® ÙˆØ§Ù„Ù…ÙŠØ²Ø§Ù†ÙŠØ©.',
+      onboardingChipsTitle: 'ØªÙ‡ÙŠØ¦Ø© Ø§Ù„Ù…Ø³ÙˆØ¯Ø© Ø§Ù„Ø£ÙˆÙ„Ù‰',
+      onboardingChipsBody:
+        'ÙƒÙ„ Ù‚Ø±Øµ Ø§Ù„Ø¶ØºØ· ÙŠÙØªØ­ Ù‚ÙŠÙ…Ø©: Ù…Ø¯Ø© Ø§Ù„Ø¥Ù‚Ø§Ù…Ø©ØŒ ÙƒØ«Ø§ÙØ© Ø§Ù„Ù…Ø­Ø·Ø§ØªØŒ ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¨Ø¯Ø¡ØŒ Ù…Ø³ØªÙˆÙ‰ Ø§Ù„Ù…ÙŠØ²Ø§Ù†ÙŠØ©. ÙŠÙ‚Ø±Ø£Ù‡Ø§ Ø§Ù„Ù…Ø³Ø§Ø¹Ø¯ Ù‚Ø¨Ù„ Ø§Ù‚ØªØ±Ø§Ø­ Ø§Ù„Ù…Ø±Ø§Ø­Ù„.',
+      onboardingBriefTitle: 'ÙˆØµÙÙƒ Ù†ØµÙŠÙ‘Ø§Ù‹',
+      onboardingBriefBody:
+        'Ø§Ø°ÙƒØ± Ù…Ù† Ù…Ø¹ÙƒØŒ ÙˆØ§Ù„Ù†Ø´Ø§Ø·ØŒ ÙˆÙ…Ø§ ØªÙØ¶Ù„ Ø£Ùˆ ØªØªØ¬Ù†Ø¨Ù‡. Ø§Ø¶ØºØ· Â«Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ø®Ø·Ø©Â» Ø£Ùˆ Ø­Ø³Ù‘Ù† Ø§Ù„Ø®Ø·Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ©.',
+      onboardingMoodsTitle: 'Ø¨Ø¯Ø§ÙŠØ§Øª Ø³Ø±ÙŠØ¹Ø©',
+      onboardingMoodsBody:
+        'Ø£Ø²Ø±Ø§Ø± Ø¬Ø§Ù‡Ø²Ø© Ù„Ù„Ø«Ù‚Ø§ÙØ© ÙˆØ§Ù„Ø·Ø¹Ø§Ù… ÙˆØºÙŠØ±Ù‡Ø§. ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ Ø¨Ø¹Ø¯ Ø§Ù„Ø±Ø¯.',
+      onboardingStudioTitle: 'Ø³ØªÙˆØ¯ÙŠÙˆ Ø§Ù„Ø¨Ø±Ù†Ø§Ù…Ø¬',
+      onboardingStudioBody:
+        'ØªØ¸Ù‡Ø± Ø§Ù„Ù…Ù„Ø®Øµ ÙˆØ±Ø³Ø§Ø¦Ù„ Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø© ÙˆØ§Ù„Ù…Ø³ÙˆØ¯Ø© ÙÙŠ Ù‡Ø°Ø§ Ø§Ù„Ø¹Ù…ÙˆØ¯.',
+      onboardingPlanTitle: 'Ø§Ù„Ù…Ø­Ø·Ø§Øª ÙˆØ§Ù„Ø¬Ø¯ÙˆÙ„',
+      onboardingPlanBody:
+        'ØºÙŠÙ‘Ø± Ø§Ù„ÙˆÙ‚Øª Ø£Ùˆ Ø§Ù„ÙŠÙˆÙ…ØŒ Ø­Ø±Ù‘Ø± Ø§Ù„Ù…ÙƒØ§Ù†ØŒ Ø§Ø³ØªØ¨Ø¯Ù„ Ù…Ø­Ø·Ø© Ø¨Ø§Ù„Ø°ÙƒØ§Ø¡. Ø£ØµÙ„Ø­ Ø§Ù„ØªØ¹Ø§Ø±Ø¶Ø§Øª ÙÙŠ Ø§Ù„ÙˆÙ‚Øª Ù‚Ø¨Ù„ Ø§Ù„Ø­ÙØ¸.',
+      onboardingPlanWaitTitle: 'Ø³ÙŠØ¸Ù‡Ø± Ø§Ù„Ø¨Ø±Ù†Ø§Ù…Ø¬ Ù‡Ù†Ø§',
+      onboardingPlanWaitBody:
+        'Ø¨Ø¹Ø¯ Ø£ÙˆÙ„ Ø±Ø¯ Ø³ØªØ±Ù‰ Ù…Ù„Ø®Øµ Ø§Ù„Ù…Ø³Ø§Ø± ÙˆØ¨Ø·Ø§Ù‚Ø§Øª Ø§Ù„Ø£ÙŠØ§Ù…. Ø£Ø¹Ø¯ Ø§Ù„Ø¬ÙˆÙ„Ø© Ù…Ù† Ø§Ù„Ø±Ø£Ø³.',
+      onboardingSaveTitle: 'Ø§Ù„Ø­ÙØ¸ ÙˆØ§Ù„Ù†Ø³Ø® ÙˆØ§Ù„Ø±Ø£ÙŠ',
+      onboardingSaveBody:
+        'Â«Ø­ÙØ¸ ÙÙŠ Ø±Ø­Ù„Ø§ØªÙŠÂ» ÙŠØ®Ø²Ù‘Ù† Ø§Ù„Ù…Ø³ÙˆØ¯Ø©. Ù†Ø³Ø® Ø§Ù„Ù†Øµ. Ø§Ù„Ø¥Ø¨Ù‡Ø§Ù… ÙˆØ§Ù„Ù…Ù„Ø§Ø­Ø¸Ø© Ø§Ø®ØªÙŠØ§Ø±ÙŠØ©. Ù„ÙØªØ±Ø© Ø£ÙŠØ§Ù… ÙŠØ¸Ù‡Ø± Ø´Ø±ÙŠØ· Ø§Ù„Ø£ÙŠØ§Ù… Ø£Ø³ÙÙ„.',
+      onboardingSaveWaitTitle: 'Ø§Ù„Ø­ÙØ¸ Ø¹Ù†Ø¯ Ø§Ù„Ø¬Ø¯Ø§ÙˆØ©',
+      onboardingSaveWaitBody:
+        'Ù…Ø¹ Ù…ÙˆØ¬ÙˆØ¯ Ø®Ø·Ø© ÙŠØ¸Ù‡Ø± Ø²Ø± Ø§Ù„Ø­ÙØ¸ ÙˆØ´Ø±ÙŠØ· Ù„Ù„ØªÙ†Ù‚Ù„ Ø¨ÙŠÙ† Ø§Ù„Ø£ÙŠØ§Ù…. Ø§Ù„Ø­ÙØ¸ ÙÙŠ Â«Ø±Ø­Ù„Ø§ØªÙŠÂ» ÙŠØ¤ÙƒØ¯ Ø§Ù„ØªØ®Ø²ÙŠÙ†.',
+      onboardingNext: 'Ø§Ù„ØªØ§Ù„ÙŠ',
+      onboardingBack: 'Ø§Ù„Ø³Ø§Ø¨Ù‚',
+      onboardingSkip: 'ØªØ®Ø·Ù‰ Ø§Ù„Ø¬ÙˆÙ„Ø©',
+      onboardingDone: 'ØªÙ…',
+      onboardingRestart: 'Ø¬ÙˆÙ„Ø©',
+      onboardingRestartAria: 'ÙØªØ­ Ø¬ÙˆÙ„Ø© Ø§Ù„Ù…Ø®Ø·Ø·',
     },
     placeDiscover: {
       eyebrow: 'Ø§Ù„Ø£Ù…Ø§ÙƒÙ†',
@@ -1970,6 +2218,41 @@ export const translations = {
       planToastSmartNeedDates: 'Ø­Ø¯Ø¯ ØªØ§Ø±ÙŠØ® Ø¨Ø¯Ø§ÙŠØ© Ø§Ù„Ø±Ø­Ù„Ø© Ø£ÙˆÙ„Ø§Ù‹ Ù„ÙŠØªÙˆØ§ÙÙ‚ Ø§Ù„Ø·Ù‚Ø³ ÙˆÙ…ÙˆØ§Ù‚ÙŠØª Ø§Ù„ØµÙ„Ø§Ø©.',
       planBuilderSectionHide: 'Ø¥Ø®ÙØ§Ø¡',
       planBuilderSectionShow: 'Ø¥Ø¸Ù‡Ø§Ø±',
+      manualCreateTourWelcomeTitle: '\u062a\u062e\u0637\u064a\u0637 \u0627\u0644\u0631\u062d\u0644\u0629 \u064a\u062f\u0648\u064a\u064b\u0627',
+      manualCreateTourWelcomeBody:
+        '\u0647\u0630\u0647 \u062c\u0648\u0644\u0629 \u0642\u0635\u064a\u0631\u0629 \u0644\u0625\u0646\u0634\u0627\u0621 \u0631\u062d\u0644\u0629: \u0627\u0641\u062a\u062d \u0627\u0644\u0646\u0645\u0648\u0630\u062c\u060c \u0627\u062f\u062e\u0644 \u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u062a\u0648\u0627\u0631\u064a\u062e\u060c \u062b\u0645 \u0627\u062d\u0641\u0638.\n\n\u0627\u0636\u063a\u0637 Esc \u0644\u0644\u062a\u062e\u0637\u064a. \u0623\u0639\u062f \u0627\u0644\u062c\u0648\u0644\u0629 \u0645\u0646 \u0632\u0631 \u0627\u0644\u0644\u0645\u0639\u0629 \u0641\u064a \u00ab\u0631\u062d\u0644\u0627\u062a\u064a\u00bb.\n\n\u0633\u064a\u0627\u0631\u0629 \u0645\u062e\u0637\u0637 \u0627\u0644\u0630\u0643\u0627\u0621 \u0645\u0633\u062a\u0642\u0644\u0629.',
+      manualCreateTourNewBtnTitle: '\u0627\u0628\u062f\u0623 \u0645\u0646 \u0647\u0646\u0627',
+      manualCreateTourNewBtnBody:
+        '\u0627\u0636\u063a\u0637 \u00ab\u0625\u0646\u0634\u0627\u0621 \u0631\u062d\u0644\u0629 \u062c\u062f\u064a\u062f\u0629\u00bb \u0644\u0641\u062a\u062d \u0627\u0644\u0646\u0645\u0648\u0630\u062c. \u064a\u0645\u0643\u0646\u0643 \u0639\u062f\u0629 \u0645\u0633\u0648\u062f\u0627\u062a \u0628\u062a\u0648\u0627\u0631\u064a\u062e \u0645\u062e\u062a\u0644\u0641\u0629.',
+      manualCreateTourFormTitle: '\u0646\u0645\u0648\u0630\u062c \u0631\u062d\u0644\u0629 \u062c\u062f\u064a\u062f\u0629',
+      manualCreateTourFormBody:
+        '\u0633\u0645\u0651 \u0631\u062d\u0644\u062a\u0643 \u0648\u0623\u0636\u0641 \u0645\u0644\u0627\u062d\u0638\u0627\u062a \u0627\u062e\u062a\u064a\u0627\u0631\u064a\u0629. \u0627\u0644\u0645\u0644\u0627\u062d\u0638\u0627\u062a \u062e\u0627\u0635\u0629 \u0628\u0643.',
+      manualCreateTourDatesTitle: '\u062a\u0648\u0627\u0631\u064a\u062e \u0627\u0644\u0633\u0641\u0631',
+      manualCreateTourDatesBody:
+        '\u0627\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0633\u0631\u064a\u0639\u0629 \u0623\u0648 \u062d\u062f\u062f \u0627\u0644\u0628\u062f\u0627\u064a\u0629 \u0648\u0627\u0644\u0646\u0647\u0627\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u062a\u0642\u0648\u064a\u0645. \u0627\u0644\u062a\u0636\u0627\u0631\u0628 \u0645\u0639 \u0631\u062d\u0644\u0629 \u0645\u062d\u0641\u0648\u0638\u0629 \u064a\u0645\u0646\u0639 \u062d\u062a\u0649 \u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u062a\u0648\u0627\u0631\u064a\u062e.',
+      manualCreateTourSaveTitle: '\u0623\u0646\u0634\u0626 \u0627\u0644\u0631\u062d\u0644\u0629',
+      manualCreateTourSaveBody:
+        '\u0627\u0644\u062d\u0641\u0638 \u064a\u0646\u0634\u0626 \u0627\u0644\u0631\u062d\u0644\u0629 \u0648\u064a\u0641\u062a\u062d \u0627\u0644\u0628\u0627\u0634\u0631 \u0644\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0643\u0627\u0646. \u0625\u0644\u063a\u0627\u0621 \u064a\u063a\u0644\u0642 \u0627\u0644\u0646\u0645\u0648\u0630\u062c \u062f\u0648\u0646 \u062d\u0641\u0638.',
+      manualBuilderTourWelcomeTitle: '\u0627\u0628\u0646\u064e \u0628\u0631\u0646\u0627\u0645\u062c\u0643',
+      manualBuilderTourWelcomeBody:
+        '\u0623\u0631\u0628\u0639\u0629 \u062e\u0637\u0648\u0627\u062a \u0641\u064a \u0627\u0644\u0634\u0631\u064a\u0637 \u0623\u0639\u0644\u0647: \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0627\u062a\u060c \u062f\u0644\u064a\u0644 \u0627\u0644\u0645\u062c\u062a\u0645\u0639\u060c \u0627\u0644\u0627\u062e\u062a\u0635\u0627\u0631\u0627\u062a \u0627\u0644\u0645\u062d\u0641\u0648\u0638\u0629\u060c \u062b\u0645 \u0627\u0644\u062e\u0637\u0629 \u064a\u0648\u0645\u0627\u064b \u0628\u064a\u0648\u0645. Esc \u0644\u0644\u062a\u062e\u0637\u064a.',
+      manualBuilderTourNavTitle: '\u062a\u0646\u0642\u0644 \u0628\u064a\u0646 \u0627\u0644\u0645\u0631\u0627\u062d\u0644',
+      manualBuilderTourNavBody:
+        '\u0627\u0646\u062a\u0642\u0644 \u0628\u064a\u0646 \u0627\u0644\u0623\u0642\u0633\u0627\u0645 \u0623\u0648 \u0648\u0633\u0651\u0639\u0647\u0627 \u0645\u0646 \u0647\u0646\u0627. \u064a\u0645\u0643\u0646 \u0637\u064a\u0632 \u0643\u0644 \u0642\u0633\u0645 \u0644\u0644\u062a\u0631\u0643\u064a\u0632.',
+      manualBuilderTourBasicsTitle: '\u0623\u0633\u0627\u0633\u064a\u0627\u062a \u0627\u0644\u0631\u062d\u0644\u0629',
+      manualBuilderTourBasicsBody:
+        '\u063a\u064a\u0651\u0631 \u0627\u0644\u0627\u0633\u0645\u060c \u0627\u0644\u0645\u0644\u0627\u062d\u0638\u0627\u062a\u060c \u0627\u0644\u062a\u0648\u0627\u0631\u064a\u062e\u060c \u0623\u0648 \u0627\u0641\u062a\u062d \u0627\u0644\u062e\u0631\u064a\u0637\u0629 \u0628\u0639\u062f \u0627\u0636\u0627\u0641\u0629 \u0645\u062d\u0637\u0627\u062a.',
+      manualBuilderTourDiscoverTitle: '\u0627\u0644\u0645\u062c\u062a\u0645\u0639 \u0648\u0627\u0644\u062f\u0644\u064a\u0644',
+      manualBuilderTourDiscoverBody:
+        '\u0627\u0628\u062d\u062b \u0648\u0635\u0646\u0651 \u0627\u0644\u0645\u0643\u0627\u0646\u060c \u062b\u0645 \u0627\u0633\u062a\u062e\u062f\u0645 \u0623\u0632\u0631\u0627\u0631 \u0627\u0644\u0623\u064a\u0627\u0645 \u0639\u0644\u0649 \u0623\u064a \u0628\u0637\u0627\u0642\u0629. \u062d\u0641\u0638 \u0627\u0644\u0642\u0644\u0628 \u0627\u062e\u062a\u064a\u0627\u0631\u064a.',
+      manualBuilderTourFavouritesTitle: '\u0627\u0644\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062d\u0641\u0648\u0638\u0629',
+      manualBuilderTourFavouritesBody:
+        '\u0625\u0636\u0627\u0641\u0629 \u0633\u0631\u064a\u0639\u0629 \u0645\u0646 \u0627\u0644\u0645\u0641\u0636\u0644\u0629 \u0625\u0630\u0627 \u0643\u0627\u0646\u062a \u0645\u062d\u0641\u0648\u0638\u0629 \u0645\u0633\u0628\u0642\u064b\u0627. \u0648\u0625\u0644\u0627 \u0627\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u062f\u0644\u064a\u0644 \u0641\u0648\u0642.',
+      manualBuilderTourItineraryTitle: '\u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062c \u0648\u0627\u0644\u062d\u0641\u0638',
+      manualBuilderTourItineraryBody:
+        '\u0631\u062a\u0651\u0628 \u0627\u0644\u0623\u0648\u0642\u0627\u062a\u060c \u0646\u0642\u0644 \u0627\u0644\u0645\u062d\u0637\u0627\u062a \u0628\u064a\u0646 \u0627\u0644\u0623\u064a\u0627\u0645\u060c \u0623\u0648 \u062c\u062f\u0648\u0644\u0629 \u0630\u0643\u064a\u0629. \u0627\u0644\u062d\u0641\u0638 \u064a\u062e\u0632\u0646 \u0627\u0644\u062a\u0639\u062f\u064a\u0644\u0627\u062a \u0641\u064a \u062d\u0633\u0627\u0628\u0643.',
+      manualTourRestart: '\u062c\u0648\u0644\u0629',
+      manualTourRestartAria: '\u0625\u0639\u0627\u062f\u0629 \u062c\u0648\u0644\u0629 \u0627\u0644\u062a\u062e\u0637\u064a\u0637',
       tripsFilterTitle: 'ØªØµÙÙŠØ© Ø§Ù„Ø±Ø­Ù„Ø§Øª',
       tripsFilterToggleShow: 'Ø¥Ø¸Ù‡Ø§Ø± Ø§Ù„ØªØµÙÙŠØ©',
       tripsFilterToggleHide: 'Ø¥Ø®ÙØ§Ø¡ Ø§Ù„ØªØµÙÙŠØ©',
@@ -2868,6 +3151,15 @@ export const translations = {
       megaNeighbourhoods: 'Quartiers',
       megaNeighbourhoodsDesc: 'Explorez les quartiers et zones de la ville.',
     },
+    authPage: {
+      loginHeroTitle: 'Vos id\u00e9es de voyage \u00e0 Tripoli, sauvegard\u00e9es',
+      loginHeroSub:
+        'Enregistrez des lieux, cr\u00e9ez des itin\u00e9raires et poursuivez sur le site ou dans l\u2019app. Connexion s\u00e9curis\u00e9e \u2014 nous ne publions jamais en votre nom.',
+      loginDividerOr: 'ou',
+      emailPasswordSection: 'E-mail et mot de passe',
+      googleLoading: 'Connexion \u00e0 Google\u2026',
+      googleUnavailable: 'Connexion Google indisponible sur cette version.',
+    },
     aboutTripoli: {
       title: 'Tripoli, Liban',
       intro:
@@ -3021,6 +3313,12 @@ export const translations = {
       aiTripSaved: 'Voyage enregistrÃ©. Ouverture du planificateurâ€¦',
       registerCheckEmail: 'Compte crÃ©Ã©. VÃ©rifiez votre e-mail.',
       loginFailed: 'Connexion impossible. VÃ©rifiez vos identifiants.',
+      googleSignInFailed: 'Connexion Google impossible. R\u00e9essayez.',
+      googleUsePassword:
+        'Cet e-mail a d\u00e9j\u00e0 un compte mot de passe. Connectez-vous avec l\u2019e-mail et le mot de passe ou utilisez Mot de passe oubli\u00e9.',
+      googleNotConfigured:
+        'La connexion Google n\u2019est pas configur\u00e9e sur le serveur. Ajoutez GOOGLE_CLIENT_ID.',
+      googleUnavailable: 'Connexion Google indisponible (identifiant client manquant).',
       actionFailed: 'Une erreur sâ€™est produite. RÃ©essayez.',
       resetCodeSent: 'Si ce compte existe, vous recevrez un code par e-mail.',
       resetPasswordDone: 'Mot de passe mis Ã  jour. Vous pouvez vous connecter.',
@@ -3075,8 +3373,42 @@ export const translations = {
       examplePromptOne: 'Planifie une premiÃ¨re journÃ©e tranquille Ã  Tripoli pour un couple, avec cafÃ©, balade et coucher de soleil.',
       examplePromptTwo: 'Fais-moi une journÃ©e familiale avec marche facile, bon repas et un lieu historique.',
       examplePromptThree: 'J\u2019ai 2 jours et je veux les vieux souks, les douceurs locales et les plus beaux monuments.',
-      tripBriefTitle: 'RÃ©sumÃ© du voyage',
-      tripBriefHint: 'Ces rÃ©glages orientent le premier brouillon avant votre message.',
+      tripBriefTitle: 'R\u00e9sum\u00e9 du voyage',
+      tripBriefHint: 'Ces r\u00e9glages orientent le premier brouillon avant votre message.',
+      plannerFlowAria: 'Étapes du planificateur',
+      plannerFlow1: '1. Démarrage',
+      plannerFlow2: '2. Réglages du voyage',
+      plannerFlow3: '3. Brief',
+      plannerFlow4: '4. Vérification',
+      sectionStepLabel: 'Étape {n}',
+      briefComposerTitle: 'Votre brief',
+      briefComposerSub: 'Écrivez une phrase claire sur le voyage souhaité.',
+      briefLatestReady: 'Brief prêt',
+      generatePlan: 'Générer le plan',
+      improvePlan: 'Améliorer le plan actuel',
+      refreshPlan: 'Actualiser le plan',
+      quickStartOptional: 'Optionnel',
+      quickStartTitle: 'Démarrage rapide',
+      studioSectionSub:
+        'Vérifiez le résultat, ajustez les étapes, puis enregistrez le voyage.',
+      tripBriefSummaryAria: 'Résumé du brief voyage',
+      workspaceBriefLabel: 'Brief',
+      workspaceIssueLabel: 'Problème',
+      workspaceSummaryLabel: 'Résumé',
+      guidedPromptDaysStops:
+        'Planifiez un séjour à Tripoli de {days} jour(s) avec {ppd} étapes par jour.',
+      guidedPromptBudgetLine: 'Budget : {budget}.',
+      guidedPromptStartDate: 'Date de début : {date}.',
+      guidedPromptFocusInterests: "Centres d'intérêt : {list}.",
+      guidedPromptBalancedMix:
+        'Mélangez les incontournables de Tripoli avec un rythme équilibré.',
+      guidedPromptTravelerNote: 'Note du voyageur : {note}.',
+      guidedPromptDefaultClose:
+        "Proposez l'itinéraire le plus solide avec un bon enchaînement, un rythme adapté et de la variété.",
+      guidedPromptRefineFlow:
+        "Affinez l'itinéraire actuel avec le même brief, mais améliorez le flux, la variété et l'équilibre des jours.",
+      guidedPromptRefreshQuality:
+        "Actualisez l'itinéraire avec le brief actuel, mais améliorez le parcours et la qualité globale.",
       interests: 'Centres dâ€™intÃ©rÃªt',
       send: 'Envoyer',
       placeholder: 'ex. Â«Demi-journÃ©e : souks puis pÃ¢tisseriesÂ» ou Â«Remplacez le dÃ©jeuner par des fruits de merÂ»',
@@ -3093,6 +3425,33 @@ export const translations = {
       composerTip:
         'Indiquez l\u2019ambiance souhaitÃ©e, avec qui vous voyagez, le rythme de la journÃ©e et les lieux Ã  voir absolument ou Ã  Ã©viter.',
       proposedPlan: 'ItinÃ©raire proposÃ©',
+      planUpdatedToast:
+        'ItinÃ©raire mis Ã  jour â€” consultez lâ€™aperÃ§u du parcours, puis enregistrez quand câ€™est bon.',
+      planUpdatedTitle: 'ItinÃ©raire modifiÃ©',
+      planUpdatedBody:
+        'VÃ©rifiez lâ€™aperÃ§u et les Ã©tapes ci-dessous. Rien nâ€™est enregistrÃ© tant que vous nâ€™ajoutez pas le voyage.',
+      planJumpToItinerary: 'Aller aux Ã©tapes',
+      planUpdatedDismiss: 'Compris',
+      routeOverviewTitle: 'AperÃ§u du parcours',
+      routeOverviewHint:
+        'Chaque jour dans lâ€™ordre â€” onglets ou dÃ©filement pour le dÃ©tail de chaque Ã©tape.',
+      planFeedbackPrompt: 'Cet itinÃ©raire vous a-t-il Ã©tÃ© utile ?',
+      planFeedbackThanks: 'Merci â€” Ã§a nous aide Ã  amÃ©liorer le planificateur.',
+      planFeedbackDownNote: 'Merci pour votre retour.',
+      planChangeTitle: 'Ce qui a changÃ©',
+      planChangeFreshStops: '{count} Ã©tapes dans ce nouvel itinÃ©raire.',
+      planChangeRescheduled: '{place} : horaire dÃ©placÃ© de {from} Ã  {to}.',
+      planChangeRemovedStop: 'Retrait de {place} (Ã©tait {when}).',
+      planChangeAddedStop: 'Ajout de {place} ({when}).',
+      planChangeMore: '+{n} autres changements.',
+      planOpenRouteOverview: 'Voir le parcours',
+      copyItinerary: 'Copier l\'itinÃ©raire (texte)',
+      copyItineraryDone: 'ItinÃ©raire copiÃ©.',
+      copyItineraryFail: 'Copie impossible. SÃ©lectionnez le texte manuellement.',
+      planFeedbackOptional: 'Optionnel : qu\'est-ce qui posait problÃ¨me ?',
+      planFeedbackPlaceholder: 'rythme, lieux, horairesâ€¦',
+      planFeedbackSendNote: 'Envoyer la note',
+      planFeedbackNoteThanks: 'Merci pour le dÃ©tail â€” c\'est utile.',
       applyTrip: 'Enregistrer dans mes voyages',
       applying: 'Enregistrementâ€¦',
       tryAgain: 'RÃ©essayer',
@@ -3159,6 +3518,43 @@ export const translations = {
       visitorMemoryClear: 'Effacer les habitudes apprises',
       visitorMemoryClearConfirm:
         'Effacer les habitudes (catÃ©gories, lieux rÃ©cents, nombre de plans) ? Vos notes ci-dessus seront aussi supprimÃ©es.',
+      onboardingProgress: 'Étape {current} sur {total}',
+      onboardingWelcomeTitle: 'Bienvenue dans le planificateur IA',
+      onboardingWelcomeBody:
+        'Cette visite rapide présente les puces de voyage, votre brief, les ambiances, la colonne itinéraire, l’édition des étapes et l’enregistrement.\n\nÉchap pour quitter. Relancez depuis le bouton à côté des réglages.',
+      onboardingSettingsTitle: 'Réglages du voyage',
+      onboardingSettingsBody:
+        'Ici : centres d’intérêt et options. Les puces sous « Mise en place » restent le plus rapide pour jours, étapes, date et budget.',
+      onboardingChipsTitle: 'Mise en place du brouillon',
+      onboardingChipsBody:
+        'Chaque puce ouvre durée, densité par jour, date de début et budget. L’IA s’en sert avant de proposer horaires et lieux.',
+      onboardingBriefTitle: 'Votre brief',
+      onboardingBriefBody:
+        'Décrivez voyageurs, rythme, incontournables ou à éviter. Générez le plan — ou améliorez / actualisez quand un brouillon existe.',
+      onboardingMoodsTitle: 'Ambiances en un toucher',
+      onboardingMoodsBody:
+        'Raccourcis optionnels pour culture, gastronomie, foi, souks ou journée équilibrée. Tout reste modifiable après la réponse.',
+      onboardingStudioTitle: 'Studio d’itinéraire',
+      onboardingStudioBody:
+        'Brief, messages et plan défilent ici. Gardez cette zone visible pendant vos ajustements.',
+      onboardingPlanTitle: 'Étapes et horaires',
+      onboardingPlanBody:
+        'Modifiez heures et jours, changez ou supprimez un lieu, carte / voyage, ou remplacez une étape par l’IA. Corrigez les chevauchements avant d’enregistrer.',
+      onboardingPlanWaitTitle: 'Le plan apparaît ici',
+      onboardingPlanWaitBody:
+        'Après la première réponse : aperçu d’itinéraire et cartes par jour. Relancez la visite depuis l’en-tête quand vous voulez.',
+      onboardingSaveTitle: 'Enregistrer, copier, avis',
+      onboardingSaveBody:
+        'Enregistrer dans mes voyages sauvegarde le brouillon. Copier exporte du texte. Les pouces et la note sont optionnels. Voyages multi-jours : barre du bas.',
+      onboardingSaveWaitTitle: 'Enregistrement plus tard',
+      onboardingSaveWaitBody:
+        'Avec un plan, le bouton principal et le dock des jours apparaissent. Rien n’est enregistré tant que vous n’avez pas confirmé.',
+      onboardingNext: 'Suivant',
+      onboardingBack: 'Retour',
+      onboardingSkip: 'Quitter la visite',
+      onboardingDone: 'Terminé',
+      onboardingRestart: 'Visite',
+      onboardingRestartAria: 'Ouvrir la visite guidée du planificateur',
     },
     placeDiscover: {
       eyebrow: 'Lieux',
@@ -3351,6 +3747,40 @@ export const translations = {
       planToastSmartNeedDates: 'Indiquez dâ€™abord la date de dÃ©but du voyage pour la mÃ©tÃ©o et les priÃ¨res.',
       planBuilderSectionHide: 'Masquer',
       planBuilderSectionShow: 'Afficher',
+      manualCreateTourWelcomeTitle: 'Planifier un voyage manuel',
+      manualCreateTourWelcomeBody:
+        'Cette visite rapide montre comment créer un voyage : ouvrez le formulaire, donnez un nom et des dates, puis enregistrez. Échap pour quitter. Relancez depuis le bouton près de Mes voyages.\n\nLe tour du planificateur IA est indépendant.',
+      manualCreateTourNewBtnTitle: 'Commencer ici',
+      manualCreateTourNewBtnBody:
+        'Touchez Créer un nouveau voyage pour ouvrir le formulaire. Vous pouvez préparer plusieurs voyages.',
+      manualCreateTourFormTitle: 'Formulaire du nouveau voyage',
+      manualCreateTourFormBody: 'Nommez le voyage et ajoutez des notes facultatives. Les notes restent privées.',
+      manualCreateTourDatesTitle: 'Dates du séjour',
+      manualCreateTourDatesBody:
+        'Utilisez les raccourcis ou choisissez le début et la fin sur le calendrier. Un chevauchement avec un autre voyage bloque tant que vous n’ajustez pas.',
+      manualCreateTourSaveTitle: 'Créer le voyage',
+      manualCreateTourSaveBody:
+        'Enregistrer crée le voyage et ouvre le mode édition pour ajouter des lieux. Annuler ferme sans sauver.',
+      manualBuilderTourWelcomeTitle: 'Construire l’itinéraire',
+      manualBuilderTourWelcomeBody:
+        'Quatre étapes se trouvent dans la barre : infos du voyage, annuaire, raccourcis enregistrés, puis vos journées. Échap pour quitter.',
+      manualBuilderTourNavTitle: 'Navigation',
+      manualBuilderTourNavBody:
+        'Sautez d’une section à l’autre ou développez-en une pour vous concentrer.',
+      manualBuilderTourBasicsTitle: 'Infos du voyage',
+      manualBuilderTourBasicsBody:
+        'Modifiez le nom, les notes, les dates, ou ouvrez la carte une fois que vous avez des arrêts.',
+      manualBuilderTourDiscoverTitle: 'Communauté & annuaire',
+      manualBuilderTourDiscoverBody:
+        'Recherchez et filtrez ; utilisez les boutons jour sur chaque fiche pour ajouter des lieux. Les favoris sont facultatifs.',
+      manualBuilderTourFavouritesTitle: 'Lieux enregistrés',
+      manualBuilderTourFavouritesBody:
+        'Ajoutez vite depuis vos favoris, ou utilisez uniquement l’annuaire ci-dessus.',
+      manualBuilderTourItineraryTitle: 'Itinéraire & enregistrement',
+      manualBuilderTourItineraryBody:
+        'Réglez les horaires, déplacez ou retirez des lieux, lancez le planning intelligent. Enregistrer enregistre dans votre compte.',
+      manualTourRestart: 'Visite',
+      manualTourRestartAria: 'Relancer la visite guidée du plan',
       tripsFilterTitle: 'Filtrer les voyages',
       tripsFilterToggleShow: 'Afficher les filtres',
       tripsFilterToggleHide: 'Masquer les filtres',
