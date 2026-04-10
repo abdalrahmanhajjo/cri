@@ -224,6 +224,22 @@
   color: var(--color-text-secondary);
 }
 
+.auth-google-missing-wrap {
+  margin: 0 0 16px;
+}
+
+.auth-google-missing-wrap .auth-google-missing {
+  margin-bottom: 0;
+}
+
+.auth-google-missing-hint {
+  margin: 10px 0 0;
+  padding: 0 2px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-tertiary);
+}
+
 .auth-google-missing {
   margin: 0 0 16px;
   padding: 12px 14px;

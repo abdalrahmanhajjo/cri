@@ -201,6 +201,23 @@ export default function AdminSettings() {
                       </label>
                     </div>
                   </div>
+                  <div className="admin-form-group">
+                    <label htmlFor="as-google-web-client-id">Google Sign-In — Web client ID</label>
+                    <input
+                      id="as-google-web-client-id"
+                      type="text"
+                      value={form.googleWebClientId ?? ''}
+                      onChange={(e) => setForm((f) => ({ ...f, googleWebClientId: e.target.value }))}
+                      placeholder="123456789-xxxx.apps.googleusercontent.com"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <span className="admin-form-hint">
+                      Same value as server <code>GOOGLE_CLIENT_ID</code>. Saving here updates <code>GET /api/site-settings</code>
+                      immediately so the login page can show &quot;Continue with Google&quot; without redeploying the static site.
+                      This ID is public (not a secret).
+                    </span>
+                  </div>
                   <div className="admin-form-row">
                     <div className="admin-form-group">
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>

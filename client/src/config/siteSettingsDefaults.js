@@ -162,6 +162,11 @@ const siteSettingsDefaultsBase = {
   sponsorshipDurationDays: 30,
   sponsorshipAmountCents: 4999,
   sponsorshipCurrency: 'usd',
+  /**
+   * OAuth 2.0 Web client id for Google Sign-In (same as server GOOGLE_CLIENT_ID).
+   * Stored in site_settings in DB; public GET /api/site-settings returns it — no frontend rebuild needed.
+   */
+  googleWebClientId: '',
 };
 
 export const siteSettingsDefaults = siteSettingsDefaultsBase;

@@ -86,6 +86,24 @@ export default function Login() {
     Boolean(googleClientIdImmediate) ||
     (!siteSettingsLoading && dedicatedGoogleConfigDone);
 
+  /** GIS load / render — shown under the button so users know what failed */
+  const [googleGsiFeedback, setGoogleGsiFeedback] = useState('');
+
+  useEffect(() => {
+    setGoogleGsiFeedback('');
+  }, [googleClientId]);
+
+  useEffect(() => {
+    if (!googleClientId || !googleClientIdResolved) return undefined;
+    const checkMs = 6500;
+    const timer = window.setTimeout(() => {
+      const host = googleBtnRef.current;
+      if (!host || host.childElementCount > 0) return;
+      setGoogleGsiFeedback((prev) => prev || t('feedback', 'googleButtonDidNotRender'));
+    }, checkMs);
+    return () => window.clearTimeout(timer);
+  }, [googleClientId, googleClientIdResolved, t]);
+
   const handleGoogleCredentialRef = useRef(
     /** @param {{ credential?: string }} response */
     (_response) => {}
@@ -158,6 +176,7 @@ export default function Login() {
         });
       } catch (e) {
         console.error(e);
+        setGoogleGsiFeedback(t('feedback', 'googleGsiInitFailed'));
       }
     };
 
@@ -179,6 +198,7 @@ export default function Login() {
       script.defer = true;
       script.dataset.tripoliGsi = '1';
       script.onload = runWhenLaidOut;
+      script.onerror = () => setGoogleGsiFeedback(t('feedback', 'googleGsiScriptBlocked'));
       document.head.appendChild(script);
     }
 
@@ -203,7 +223,7 @@ export default function Login() {
       }
       if (googleBtnRef.current) googleBtnRef.current.innerHTML = '';
     };
-  }, [googleClientId, lang]);
+  }, [googleClientId, lang, t]);
 
   const showFieldError = Boolean(error && errorKind === 'error');
 
@@ -287,11 +307,21 @@ export default function Login() {
                       {t('authPage', 'googleLoading')}
                     </p>
                   ) : null}
+                  {googleGsiFeedback ? (
+                    <p className="auth-google-missing" role="alert">
+                      {googleGsiFeedback}
+                    </p>
+                  ) : null}
                 </div>
               ) : googleClientIdResolved ? (
-                <p className="auth-google-missing" role="note">
-                  {t('feedback', 'googleUnavailable')}
-                </p>
+                <div className="auth-google-missing-wrap">
+                  <p className="auth-google-missing" role="note">
+                    {t('feedback', 'googleUnavailable')}
+                  </p>
+                  <p className="auth-google-missing-hint" role="note">
+                    {t('feedback', 'googleUnavailableHint')}
+                  </p>
+                </div>
               ) : (
                 <p className="auth-google-status" role="status">
                   {t('authPage', 'googleLoading')}

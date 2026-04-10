@@ -19,8 +19,10 @@ export function SiteSettingsProvider({ children }) {
       .then((r) => {
         const s = r?.settings && typeof r.settings === 'object' ? r.settings : {};
         setSettings(mergeWithSiteSettingsDefaults(s));
-        const gid = typeof r?.googleWebClientId === 'string' ? r.googleWebClientId.trim() : '';
-        setGoogleWebClientId(gid);
+        const fromTop = typeof r?.googleWebClientId === 'string' ? r.googleWebClientId.trim() : '';
+        const fromSettings =
+          typeof s.googleWebClientId === 'string' ? s.googleWebClientId.trim() : '';
+        setGoogleWebClientId(fromTop || fromSettings);
         setError(null);
       })
       .catch((e) => {

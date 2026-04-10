@@ -260,6 +260,14 @@ export const translations = {
         'This email already has a password account. Sign in with email and password or use Forgot password.',
       googleNotConfigured: 'Google sign-in is not set up on the server. Ask the administrator to add GOOGLE_CLIENT_ID.',
       googleUnavailable: 'Google sign-in is not available (missing web client id).',
+      googleUnavailableHint:
+        'Admin: open Site settings → Features and paste your Google OAuth Web client ID (same as GOOGLE_CLIENT_ID), then Save. Or set VITE_GOOGLE_CLIENT_ID when building the web app.',
+      googleGsiInitFailed:
+        'Google sign-in could not start. Check the Web client ID and in Google Cloud add this exact site URL under Authorized JavaScript origins (e.g. https://visit-tripoli.com).',
+      googleGsiScriptBlocked:
+        'The Google sign-in script could not load (blocked network, ad blocker, or firewall). Try email sign-in below or another network.',
+      googleButtonDidNotRender:
+        'The Google button did not appear. Try disabling blockers, use another browser, or sign in with email below.',
       actionFailed: 'Something went wrong. Try again.',
       resetCodeSent: 'If this email is registered, youâ€™ll receive a reset code shortly.',
       resetPasswordDone: 'Your password was updated. You can sign in now.',
@@ -1795,6 +1803,14 @@ export const translations = {
       googleNotConfigured:
         '\u062a\u0633\u062c\u064a\u0644 Google \u063a\u064a\u0631 \u0645\u0641\u0639\u0644 \u0639\u0644\u0649 \u0627\u0644\u062e\u0627\u062f\u0645. \u0623\u0636\u0641 GOOGLE_CLIENT_ID.',
       googleUnavailable: '\u062a\u0633\u062c\u064a\u0644 Google \u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631.',
+      googleUnavailableHint:
+        '\u0644\u0644\u0645\u0634\u0631\u0641: \u0625\u0639\u062f\u0627\u062f\u0627\u062a \u0627\u0644\u0645\u0648\u0642\u0639 \u2192 \u0627\u0644\u0645\u064a\u0632\u0627\u062a \u2192 \u0627\u0644\u0635\u0642 \u0645\u0639\u0631\u0641 \u0639\u0645\u064a\u0644 OAuth \u0644\u0644\u0648\u064a\u0628 \u0645\u0646 Google \u0648\u0627\u062d\u0641\u0638.',
+      googleGsiInitFailed:
+        '\u062a\u0639\u0630\u0631 \u062a\u0634\u063a\u064a\u0644 Google. \u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u0645\u0639\u0631\u0641 \u0648\u0623\u0636\u0641 \u0627\u0644\u0645\u0648\u0642\u0639 \u062a\u062d\u062a JavaScript \u0645\u0635\u0631\u062d \u0645\u0646 Google.',
+      googleGsiScriptBlocked:
+        '\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0633\u0643\u0631\u064a\u0628\u062a Google (\u062d\u0627\u062c\u0628 \u0623\u0648 \u0634\u0628\u0643\u0629). \u062c\u0631\u0628 \u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631.',
+      googleButtonDidNotRender:
+        '\u0644\u0645 \u064a\u0638\u0647\u0631 \u0632\u0631 Google. \u062c\u0631\u0628 \u062a\u0639\u0637\u064a\u0644 \u0627\u0644\u062d\u0627\u062c\u0628\u0627\u062a \u0623\u0648 \u0627\u0644\u0628\u0631\u064a\u062f.',
       actionFailed: 'Ø­Ø¯Ø« Ø®Ø·Ø£. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.',
       resetCodeSent: 'Ø¥Ø°Ø§ ÙƒØ§Ù† Ø§Ù„Ø¨Ø±ÙŠØ¯ Ù…Ø³Ø¬Ù‘Ù„Ù‹Ø§ØŒ Ø³ØªØµÙ„Ùƒ Ø±Ø³Ø§Ù„Ø© Ø¨Ø±Ù…Ø² Ø§Ù„Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ù‚Ø±ÙŠØ¨Ù‹Ø§.',
       resetPasswordDone: 'ØªÙ… ØªØ­Ø¯ÙŠØ« ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±. ÙŠÙ…ÙƒÙ†Ùƒ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø§Ù„Ø¢Ù†.',
@@ -3319,6 +3335,14 @@ export const translations = {
       googleNotConfigured:
         'La connexion Google n\u2019est pas configur\u00e9e sur le serveur. Ajoutez GOOGLE_CLIENT_ID.',
       googleUnavailable: 'Connexion Google indisponible (identifiant client manquant).',
+      googleUnavailableHint:
+        'Admin : Param\u00e8tres du site \u2192 Fonctionnalit\u00e9s \u2192 collez l\u2019ID client Web Google (comme GOOGLE_CLIENT_ID), puis Enregistrez. Ou d\u00e9finissez VITE_GOOGLE_CLIENT_ID au build.',
+      googleGsiInitFailed:
+        'Google ne d\u00e9marre pas. V\u00e9rifiez l\u2019ID client et dans Google Cloud ajoutez l\u2019URL exacte du site dans Origines JavaScript autoris\u00e9es.',
+      googleGsiScriptBlocked:
+        'Le script Google est bloqu\u00e9 (r\u00e9seau, bloqueur ou pare-feu). Utilisez l\u2019e-mail ci-dessous ou un autre r\u00e9seau.',
+      googleButtonDidNotRender:
+        'Le bouton Google n\u2019appara\u00eet pas. D\u00e9sactivez les bloqueurs ou connectez-vous par e-mail.',
       actionFailed: 'Une erreur sâ€™est produite. RÃ©essayez.',
       resetCodeSent: 'Si ce compte existe, vous recevrez un code par e-mail.',
       resetPasswordDone: 'Mot de passe mis Ã  jour. Vous pouvez vous connecter.',
