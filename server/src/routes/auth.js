@@ -307,15 +307,17 @@ router.post('/login', sanitizeLoginInput, async (req, res) => {
     const placeOwners = await getCollection('place_owners');
     const ownedPlaceCount = await placeOwners.countDocuments({ user_id: user.id });
 
+    const profile = user.profile || {};
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({
       token,
       user: {
         id: user.id,
         name: user.name || user.email.split('@')[0],
+        username: profile.username || '',
         email: user.email,
         emailVerified: true,
-        onboardingCompleted: user.profile?.onboarding_completed === true,
+        onboardingCompleted: profile.onboarding_completed === true,
         isBusinessOwner: user.is_business_owner === true,
         isAdmin: user.is_admin === true,
         ownedPlaceCount: ownedPlaceCount,
@@ -326,6 +328,15 @@ router.post('/login', sanitizeLoginInput, async (req, res) => {
     res.status(500).json({ error: 'Login failed' });
   }
 });
+
+/** HTTPS profile image URL from Google ID token `picture` claim (bounded length). */
+function googleIdTokenPictureUrl(payload) {
+  const p = payload?.picture;
+  if (typeof p !== 'string') return null;
+  const t = p.trim();
+  if (!/^https:\/\//i.test(t)) return null;
+  return t.length > 2048 ? t.slice(0, 2048) : t;
+}
 
 /** Google Identity Services (Sign in with Google): verify JWT `credential`, find-or-create user, return app JWT. */
 router.post('/google', async (req, res) => {
@@ -365,13 +376,19 @@ router.post('/google', async (req, res) => {
 
     const email = (payload.email || '').toLowerCase().trim();
     const sub = payload.sub;
-    const name = typeof payload.name === 'string' ? payload.name.slice(0, 150) : null;
-    if (!email || !sub || payload.email_verified !== true) {
+    const emailVerifiedClaim = payload.email_verified === true || payload.email_verified === 'true';
+    const displayNameFromToken =
+      typeof payload.name === 'string' && payload.name.trim()
+        ? payload.name.trim().slice(0, 150)
+        : null;
+    if (!email || !sub || !emailVerifiedClaim) {
       return res.status(400).json({ error: 'Google did not return a verified email.' });
     }
 
+    const pictureUrl = googleIdTokenPictureUrl(payload);
     const users = await getCollection('users');
     let user = await users.findOne({ google_sub: sub });
+    let createdViaGoogle = false;
 
     if (!user) {
       const byEmail = await users.findOne({ email });
@@ -380,6 +397,7 @@ router.post('/google', async (req, res) => {
           user = byEmail;
           if (byEmail.google_sub !== sub) {
             await users.updateOne({ id: byEmail.id }, { $set: { google_sub: sub } });
+            user = await users.findOne({ id: byEmail.id });
           }
         } else {
           return res.status(409).json({
@@ -397,7 +415,7 @@ router.post('/google', async (req, res) => {
         _id: userId,
         id: userId,
         email,
-        name,
+        name: displayNameFromToken || null,
         auth_provider: 'google',
         google_sub: sub,
         email_verified: true,
@@ -413,16 +431,37 @@ router.post('/google', async (req, res) => {
           updated_at: new Date(),
         },
       };
+      if (pictureUrl) newUser.avatar_url = pictureUrl;
       await users.insertOne(newUser);
       user = newUser;
+      createdViaGoogle = true;
     }
 
     if (user.is_blocked === true) {
       return res.status(403).json({ error: 'This account has been disabled.', code: 'ACCOUNT_BLOCKED' });
     }
 
+    if (!createdViaGoogle) {
+      const syncSet = {
+        email_verified: true,
+        'profile.updated_at': new Date(),
+      };
+      if (user.auth_provider === 'google') {
+        if (displayNameFromToken) syncSet.name = displayNameFromToken;
+        const canSyncAvatar =
+          pictureUrl &&
+          (!user.avatar_url || /googleusercontent\.com/i.test(String(user.avatar_url)));
+        if (canSyncAvatar) syncSet.avatar_url = pictureUrl;
+      }
+      await users.updateOne({ id: user.id }, { $set: syncSet });
+      user = await users.findOne({ id: user.id });
+    }
+
     const placeOwners = await getCollection('place_owners');
     const ownedPlaceCount = await placeOwners.countDocuments({ user_id: user.id });
+
+    const profile = user.profile || {};
+    const username = profile.username || '';
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({
@@ -430,9 +469,10 @@ router.post('/google', async (req, res) => {
       user: {
         id: user.id,
         name: user.name || user.email.split('@')[0],
+        username,
         email: user.email,
         emailVerified: true,
-        onboardingCompleted: user.profile?.onboarding_completed === true,
+        onboardingCompleted: profile.onboarding_completed === true,
         isBusinessOwner: user.is_business_owner === true,
         isAdmin: user.is_admin === true,
         ownedPlaceCount,
@@ -603,6 +643,7 @@ router.post('/verify-email', async (req, res) => {
     const placeOwners = await getCollection('place_owners');
     const ownedPlaceCount = await placeOwners.countDocuments({ user_id: user.id });
 
+    const vProfile = user.profile || {};
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({
       token,
@@ -610,9 +651,10 @@ router.post('/verify-email', async (req, res) => {
       user: {
         id: user.id,
         name: user.name || emailRaw.split('@')[0],
+        username: vProfile.username || '',
         email: user.email,
         emailVerified: true,
-        onboardingCompleted: user.profile?.onboarding_completed === true,
+        onboardingCompleted: vProfile.onboarding_completed === true,
         isBusinessOwner: user.is_business_owner === true,
         isAdmin: user.is_admin === true,
         ownedPlaceCount: ownedPlaceCount,
