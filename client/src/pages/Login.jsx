@@ -43,17 +43,13 @@ export default function Login() {
   const googleClientIdBuild = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim?.() || '';
   const { loading: siteSettingsLoading, googleWebClientId: googleFromSiteSettings } = useSiteSettings();
   const [googleClientIdFromDedicated, setGoogleClientIdFromDedicated] = useState('');
+  /** GET /api/auth/google-public-config finished (ok or error). Runs in parallel with site-settings. */
   const [dedicatedGoogleConfigDone, setDedicatedGoogleConfigDone] = useState(() =>
     Boolean(googleClientIdBuild)
   );
 
   useEffect(() => {
     if (googleClientIdBuild) return undefined;
-    if (siteSettingsLoading) return undefined;
-    if (googleFromSiteSettings) {
-      setDedicatedGoogleConfigDone(true);
-      return undefined;
-    }
     let cancelled = false;
     (async () => {
       try {
@@ -69,13 +65,14 @@ export default function Login() {
     return () => {
       cancelled = true;
     };
-  }, [googleClientIdBuild, siteSettingsLoading, googleFromSiteSettings]);
+  }, [googleClientIdBuild]);
 
   const googleClientId =
     googleClientIdBuild || googleFromSiteSettings || googleClientIdFromDedicated;
+  /** Wait for site-settings + dedicated endpoint so we never show an empty gap above "OR". */
   const googleClientIdResolved =
     Boolean(googleClientIdBuild) ||
-    (!siteSettingsLoading && (Boolean(googleFromSiteSettings) || dedicatedGoogleConfigDone));
+    (!siteSettingsLoading && dedicatedGoogleConfigDone);
 
   const handleGoogleCredentialRef = useRef(
     /** @param {{ credential?: string }} response */
@@ -283,7 +280,11 @@ export default function Login() {
                 <p className="auth-google-missing" role="note">
                   {t('feedback', 'googleUnavailable')}
                 </p>
-              ) : null}
+              ) : (
+                <p className="auth-google-status" role="status">
+                  {t('authPage', 'googleLoading')}
+                </p>
+              )}
 
               <div className="auth-divider" role="separator">
                 <span>{t('authPage', 'loginDividerOr')}</span>
