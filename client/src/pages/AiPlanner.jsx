@@ -13,6 +13,7 @@ import {
   normalizeSuggestedTime,
   getSlotConflictIndices,
   suggestedTimeToMinutes,
+  inferTargetedReplaceSlotIndex,
 } from '../services/aiPlannerService';
 import {
   tripHasDateConflict,
@@ -987,9 +988,22 @@ export default function AiPlanner() {
       try {
         const draftCtx =
           lastSlots?.length > 0 ? buildDraftPlanContextLine(lastSlots, placeById, durationDays) : '';
+        const targetedReplace =
+          Array.isArray(lastSlots) && lastSlots.length > 0
+            ? inferTargetedReplaceSlotIndex(trimmed, lastSlots, durationDays, placeById)
+            : null;
+        const focusSlot =
+          targetedReplace != null && lastSlots[targetedReplace]
+            ? placeById[String(lastSlots[targetedReplace].placeId)]
+            : null;
+        const singleStopFocusCtx =
+          targetedReplace != null && focusSlot
+            ? ` Focused edit: change only itinerary slot index ${targetedReplace} (currently "${focusSlot.name}"); all other slots must stay the same unless the user clearly asked to replan everything.`
+            : '';
         const activityContext = [
           interestNames.length > 0 ? `User selected interest themes: ${interestNames.join(', ')}.` : '',
           draftCtx,
+          singleStopFocusCtx,
         ]
           .filter(Boolean)
           .join(' ');
@@ -1007,7 +1021,7 @@ export default function AiPlanner() {
           responseLanguage: langParam,
           previousSlots: lastSlots,
           previousPlaces: lastPlaces,
-          singleReplaceSlotIndex: null,
+          singleReplaceSlotIndex: targetedReplace,
           userFamiliarityBlock,
           learnedCategoryHints,
         });

@@ -27,7 +27,9 @@ export default function AiPlannerOnboarding({
 }) {
   const panelRef = useRef(null);
   const onSkipRef = useRef(onSkip);
-  onSkipRef.current = onSkip;
+  useEffect(() => {
+    onSkipRef.current = onSkip;
+  }, [onSkip]);
   const headingId = useId();
   const reduceMotion =
     typeof window !== 'undefined' &&

@@ -233,6 +233,15 @@
   z-index: 0;
 }
 
+/*
+ * Global img { max-width: 100% } (index.css) shrinks Maps raster tiles and causes
+ * gray bands / partial loads. Reset inside the map root only.
+ */
+.fym-map-canvas img {
+  max-width: none !important;
+  max-height: none !important;
+}
+
 .fym-map-overlay {
   position: absolute;
   left: 0;

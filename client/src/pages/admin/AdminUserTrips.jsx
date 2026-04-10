@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 import './Admin.css';
 
 function formatDate(str) {

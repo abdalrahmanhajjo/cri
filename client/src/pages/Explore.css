@@ -2377,6 +2377,11 @@ a.vd-top-picks-card-bg--hit {
   padding: clamp(22px, 2.6vw, 30px) clamp(20px, 2.4vw, 28px);
 }
 
+.vd-find-your-way-areas-card .fym {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .vd-find-your-way-areas-card .vd-plan-trip-block-desc {
   margin-bottom: 14px;
 }

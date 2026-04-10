@@ -730,18 +730,6 @@ export default function MapPage() {
     [addingTripStop, commitAddStop, focusMapOnPlace]
   );
 
-  const peekPlaceOnMap = useCallback(
-    (place) => {
-      if (!place || addingTripStop) return;
-      setSelectedPlaceId((curr) => (curr === place.id ? curr : place.id));
-      const map = mapInstanceRef.current;
-      const infoWindow = infoWindowRef.current;
-      const maps = window.google?.maps;
-      if (map && infoWindow && maps) focusMapOnPlace(place, maps, map, infoWindow);
-    },
-    [addingTripStop, focusMapOnPlace]
-  );
-
   // NOTE: Auto-sync between selected place, swipe index, and map focus can create
   // feedback loops in some browser/render timing paths. Keep this flow explicit via
   // user actions (card arrows / map marker clicks) to avoid maximum update depth errors.

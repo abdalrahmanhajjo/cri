@@ -383,10 +383,6 @@ export default function PlaceHotels() {
     return () => window.removeEventListener('keydown', onKey);
   }, [tripPickPlace, closeTripModal]);
 
-  const scrollToFilters = useCallback(() => {
-    toolbarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
-
   const countLabel = (t('placeDiscover', 'resultCount') || '{count} places').replace(
     '{count}',
     String(mainListPlaces.length)

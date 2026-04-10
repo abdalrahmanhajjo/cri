@@ -4,12 +4,21 @@ const THEME_STORAGE_KEY = 'tripoli-theme';
 const DEFAULT_THEME = 'light';
 
 function getInitialTheme() {
-  return 'light';
+  if (typeof window === 'undefined') return DEFAULT_THEME;
+  try {
+    const fromDom = document.documentElement.dataset.theme;
+    if (fromDom === 'dark' || fromDom === 'light') return fromDom;
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === 'dark' || stored === 'light') return stored;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  } catch {
+    return DEFAULT_THEME;
+  }
 }
 
 function applyTheme(theme) {
   if (typeof document === 'undefined') return;
-  document.documentElement.dataset.theme = 'light';
+  document.documentElement.dataset.theme = theme;
 }
 
 const ThemeContext = createContext({
@@ -32,11 +41,11 @@ export function ThemeProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      theme: 'light',
-      setTheme: () => {},
-      toggleTheme: () => {},
+      theme,
+      setTheme,
+      toggleTheme: () => setTheme((t) => (t === 'dark' ? 'light' : 'dark')),
     }),
-    [],
+    [theme],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

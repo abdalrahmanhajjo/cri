@@ -335,6 +335,12 @@
   background: #e8eaed;
 }
 
+/* Same as FindYourWayMap: site-wide img max-width breaks tile layers */
+.map-canvas img {
+  max-width: none !important;
+  max-height: none !important;
+}
+
 /* Trip filter banner – when viewing a trip's places from Plan */
 .map-trip-banner {
   position: absolute;

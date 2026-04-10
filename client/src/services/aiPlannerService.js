@@ -311,7 +311,7 @@ function resolvePlaceId(rawValue, placeIdSet, resolver = null) {
 }
 
 function parsePlanJson(rawText, placeIdSet, resolver = null) {
-  const tryParse = (text, beforeText) => {
+  const tryParse = (text, _beforeText) => {
     const jsonBlock = extractJsonBlock(text);
     if (!jsonBlock) return null;
     let parsed;
@@ -757,6 +757,134 @@ export function mergeSingleReplaceFromRawPlan(rawText, previousSlots, replaceInd
   return { ok: true, slots };
 }
 
+/**
+ * When the model was asked for a single-slot replace but returned a PLAN_JSON array that
+ * does not match the previous length, still apply the new placeId from row `replaceIndex`
+ * if present — all other slots stay frozen from the previous plan.
+ */
+export function mergeSingleReplaceAtIndexFromRawPlan(
+  rawText,
+  previousSlots,
+  replaceIndex,
+  placeIdSet,
+  resolver = null
+) {
+  if (
+    !Array.isArray(previousSlots) ||
+    previousSlots.length === 0 ||
+    replaceIndex < 0 ||
+    replaceIndex >= previousSlots.length
+  ) {
+    return { ok: false, slots: previousSlots };
+  }
+  const rawList = extractPlanJsonArray(rawText);
+  if (!rawList || !Array.isArray(rawList) || replaceIndex >= rawList.length) {
+    return { ok: false, slots: previousSlots.map(freezeSlotFromPrevious) };
+  }
+  const item = rawList[replaceIndex];
+  const newPid = resolvePlaceId(item?.placeId ?? item?.place_id, placeIdSet, resolver);
+  if (!newPid) {
+    return { ok: false, slots: previousSlots.map(freezeSlotFromPrevious) };
+  }
+  const slots = previousSlots.map((s, i) => {
+    if (i !== replaceIndex) return freezeSlotFromPrevious(s);
+    return {
+      placeId: newPid,
+      suggestedTime: normalizeSuggestedTime(previousSlots[replaceIndex].suggestedTime),
+      dayIndex: previousSlots[replaceIndex].dayIndex ?? 0,
+      reason: item?.reason != null ? String(item.reason) : previousSlots[replaceIndex].reason,
+    };
+  });
+  return { ok: true, slots };
+}
+
+function plannerMatchNormalize(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const FULL_REPLAN_HINT_RE =
+  /\b(new\s+plan|replan|re-plan|start\s+over|from\s+scratch|scratch\s+that|redo\s+(?:the\s+)?(?:whole\s+|entire\s+|full\s+)?(?:plan|itinerary|trip)|replace\s+(?:the\s+)?(?:whole|entire|full)\s+plan|change\s+everything|completely\s+different|fresh\s+itinerary|another\s+(?:full\s+)?plan|regenerate\s+(?:the\s+)?plan)\b/i;
+
+const EDIT_INTENT_RE =
+  /\b(replace|swap|change|instead|rather\s+than|substitute|remove|drop|skip|not\s+.+\s+anymore|different\s+(?:stop|place)|something\s+else|prefer\s+.+\s+(?:over|to)|swap\s+out|exchange|remplacer|changer|au\s+lieu|plutot\s+que|بدل|بدلا|استبدل|استبدال)\b/i;
+
+const CHAT_QUESTION_ONLY_RE =
+  /^\s*(what|when|where|how|why|who|which|is\s+there|are\s+there|can\s+i|could\s+i|tell\s+me\s+about|explain|describe|meaning|hours|open)\b/i;
+
+/**
+ * Infer 0-based slot index for a single-stop edit from free-form chat, using the same
+ * slot ordering as CURRENT PLAN in the prompt (normalizeSlotsForDuration order).
+ * Returns null when the user likely wants a full replan or intent is ambiguous.
+ */
+export function inferTargetedReplaceSlotIndex(userMessage, previousSlots, durationDays, placeById) {
+  const raw = String(userMessage || '').trim();
+  if (!raw || !Array.isArray(previousSlots) || previousSlots.length === 0) return null;
+  if (FULL_REPLAN_HINT_RE.test(raw)) return null;
+
+  const slots = normalizeSlotsForDuration(previousSlots, durationDays);
+  const entries = slots.map((s, i) => {
+    const name = placeById[String(s.placeId)]?.name != null ? String(placeById[String(s.placeId)].name) : '';
+    return { i, placeId: String(s.placeId), name, nameNorm: plannerMatchNormalize(name) };
+  }).filter((e) => e.nameNorm.length >= 2);
+
+  if (entries.length === 0) return null;
+
+  const msgNorm = plannerMatchNormalize(raw);
+
+  const bestIndexForFragment = (fragment) => {
+    const fragNorm = plannerMatchNormalize(fragment);
+    if (fragNorm.length < 2) return null;
+    let bestIdx = null;
+    let bestScore = 0;
+    for (const e of entries) {
+      if (fragNorm.includes(e.nameNorm) && e.nameNorm.length >= bestScore) {
+        bestScore = e.nameNorm.length;
+        bestIdx = e.i;
+      }
+    }
+    if (bestIdx != null) return bestIdx;
+    for (const e of entries) {
+      if (e.nameNorm.includes(fragNorm) && fragNorm.length >= 4 && fragNorm.length >= bestScore) {
+        bestScore = fragNorm.length;
+        bestIdx = e.i;
+      }
+    }
+    return bestIdx;
+  };
+
+  const structuredPatterns = [
+    /(?:instead\s+of|rather\s+than|replace|swap(?:\s+out)?)\s+(.+?)(?=\s+with\b|\s+for\b|\s+by\b|\.|!|\n|$)/is,
+    /(?:change|swap)\s+(.+?)\s+to\b/is,
+    /(?:remove|drop|skip)\s+(.+?)(?=\s+from\b|\.|!|\n|$)/is,
+  ];
+  for (const re of structuredPatterns) {
+    const m = raw.match(re);
+    if (m?.[1]) {
+      const idx = bestIndexForFragment(m[1]);
+      if (idx != null) return idx;
+    }
+  }
+
+  const contained = entries.filter((e) => e.nameNorm.length >= 3 && msgNorm.includes(e.nameNorm));
+  contained.sort((a, b) => b.nameNorm.length - a.nameNorm.length);
+
+  if (contained.length === 1) {
+    if (!EDIT_INTENT_RE.test(raw) || CHAT_QUESTION_ONLY_RE.test(raw)) return null;
+    return contained[0].i;
+  }
+
+  /* Several plan stops mentioned — avoid locking a single slot unless a future parser resolves which one. */
+  if (contained.length > 1) return null;
+
+  return null;
+}
+
 function buildSingleReplaceFallbackText(lang) {
   if (lang === 'ar') {
     return 'I kept your itinerary the same because that stop could not be updated yet.';
@@ -966,6 +1094,8 @@ Your itinerary must be efficient. Group places by nearby areas when possible, ke
     }
     let replaceOneStopNote = `
 When the user asks to add a place, remove one, reorder, or "do the plan again", output an updated PLAN_JSON that applies their requested change and adjusts times/order as needed. Keep as much of the current plan as they did not ask to change.
+If they name **one stop from the CURRENT PLAN list above** and ask to replace, swap, or substitute it (e.g. "instead of X…", "replace X with…"), you MUST change only that stop: every other slot must keep the **exact same** placeId, suggestedTime, dayIndex, and reason as in the current plan. Only the targeted slot gets a new placeId (and reason).
+If they ask to redo the **whole** trip, change many stops, add/remove days, or reschedule **everything**, output a full revised PLAN_JSON.
 If the user asks to change or replace ONLY ONE stop, output a full PLAN_JSON array where every slot is identical to the current plan except that single slot: only that slot's placeId (and reason) may change. Keep the same suggestedTime and dayIndex for all slots unless they explicitly asked to change a time.`;
 
     if (
@@ -1184,21 +1314,35 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
       singleReplaceSlotIndex >= 0 &&
       singleReplaceSlotIndex < previousSlots.length
     ) {
-      const { ok, slots: merged } = mergeSingleReplaceFromRawPlan(
+      const strict = mergeSingleReplaceFromRawPlan(
         rawForPlan,
         previousSlots,
         singleReplaceSlotIndex,
         placeIdSet,
         placeResolver
       );
-      if (ok) {
+      if (strict.ok) {
         return {
           text: outText,
-          slots: await finalizeTripSlots(merged),
+          slots: await finalizeTripSlots(strict.slots),
           tripSettings,
         };
       }
-      slots = merged;
+      const loose = mergeSingleReplaceAtIndexFromRawPlan(
+        rawForPlan,
+        previousSlots,
+        singleReplaceSlotIndex,
+        placeIdSet,
+        placeResolver
+      );
+      if (loose.ok) {
+        return {
+          text: outText,
+          slots: await finalizeTripSlots(loose.slots),
+          tripSettings,
+        };
+      }
+      slots = strict.slots?.length ? strict.slots : loose.slots;
       return {
         text: buildSingleReplaceFallbackText(lang),
         slots: slots?.length ? await finalizeTripSlots(slots) : slots,

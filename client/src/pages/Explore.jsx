@@ -673,7 +673,7 @@ function BrowseMapByThemeSection({
 }
 
 /** Areas map + transport/stay/tips — below featured picks and community on the home page. */
-function FindYourWayPracticalSection({ t, places = [], showMap = true, showTips = true }) {
+function FindYourWayPracticalSection({ t, places = [], showMap = true, showTips: _showTips = true }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   return (
     <section

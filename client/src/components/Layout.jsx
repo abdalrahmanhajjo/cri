@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
-import { useTheme } from '../context/ThemeContext';
 import Icon from './Icon';
 import GlobalSearchBar from './GlobalSearchBar';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH, DINING_PATH } from '../utils/discoverPaths';
@@ -30,7 +29,6 @@ export default function Layout() {
     }
   });
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const { theme } = useTheme();
   /** One-time banner after email verification (set from VerifyEmail via sessionStorage). */
   const [verifyWelcomeBanner, setVerifyWelcomeBanner] = useState(null);
   const langRef = useRef(null);
@@ -47,7 +45,6 @@ export default function Layout() {
   const isDiningPage = location.pathname === DINING_PATH;
   const isHotelsPage = location.pathname === '/hotels';
   const isAboutTripoliPage = location.pathname === '/about-tripoli';
-  const diningGuideEnabled = settings?.diningGuide?.enabled !== false;
   const handleLogout = () => {
     logout();
     setMenuOpen(false);
