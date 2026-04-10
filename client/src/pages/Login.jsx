@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
+import { FALLBACK_GOOGLE_WEB_CLIENT_ID } from '../config/googleSignIn';
+import { readGoogleWebClientIdFromPage } from '../utils/googleWebClientId';
 import { api } from '../api/client';
 import Icon from '../components/Icon';
 import './Auth.css';
@@ -41,16 +43,24 @@ export default function Login() {
   const from = typeof rawFrom === 'string' && rawFrom.startsWith('/') && !rawFrom.startsWith('//') ? rawFrom : '/';
 
   const googleClientIdBuild = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim?.() || '';
+  const googleClientIdFallback = String(FALLBACK_GOOGLE_WEB_CLIENT_ID || '').trim();
+  const googleClientIdFromPage = readGoogleWebClientIdFromPage();
+  const googleClientIdImmediate =
+    googleClientIdBuild || googleClientIdFallback || googleClientIdFromPage;
   const { loading: siteSettingsLoading, googleWebClientId: googleFromSiteSettings } = useSiteSettings();
   const [googleClientIdFromDedicated, setGoogleClientIdFromDedicated] = useState('');
   /** GET /api/auth/google-public-config finished (ok or error). Runs in parallel with site-settings. */
   const [dedicatedGoogleConfigDone, setDedicatedGoogleConfigDone] = useState(() =>
-    Boolean(googleClientIdBuild)
+    Boolean(googleClientIdImmediate)
   );
 
   useEffect(() => {
-    if (googleClientIdBuild) return undefined;
+    if (googleClientIdImmediate) return undefined;
     let cancelled = false;
+    const safetyMs = 15000;
+    const safety = window.setTimeout(() => {
+      if (!cancelled) setDedicatedGoogleConfigDone(true);
+    }, safetyMs);
     (async () => {
       try {
         const data = await api.auth.googlePublicConfig();
@@ -59,19 +69,21 @@ export default function Login() {
       } catch {
         /* 404 if server not updated, CORS, etc. */
       } finally {
+        window.clearTimeout(safety);
         if (!cancelled) setDedicatedGoogleConfigDone(true);
       }
     })();
     return () => {
       cancelled = true;
+      window.clearTimeout(safety);
     };
-  }, [googleClientIdBuild]);
+  }, [googleClientIdImmediate]);
 
   const googleClientId =
-    googleClientIdBuild || googleFromSiteSettings || googleClientIdFromDedicated;
+    googleClientIdImmediate || googleFromSiteSettings || googleClientIdFromDedicated;
   /** Wait for site-settings + dedicated endpoint so we never show an empty gap above "OR". */
   const googleClientIdResolved =
-    Boolean(googleClientIdBuild) ||
+    Boolean(googleClientIdImmediate) ||
     (!siteSettingsLoading && dedicatedGoogleConfigDone);
 
   const handleGoogleCredentialRef = useRef(

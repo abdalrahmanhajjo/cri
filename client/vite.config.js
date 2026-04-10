@@ -89,6 +89,13 @@ export default defineConfig(({ mode }) => {
             }
             const { imagesrcset, imagesizes } = cityHeroPreloadLinkAttrs()
             const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+            const googleCid = (env.VITE_GOOGLE_CLIENT_ID || '').trim()
+            if (googleCid) {
+              out = out.replace(
+                /<head>/i,
+                `<head>\n      <meta name="tripoli-google-client-id" content="${esc(googleCid)}" />`
+              )
+            }
             out = out.replace(
               /<link rel="preload" as="image" href="\/city\.png" fetchpriority="high" \/>/i,
               `<link rel="preload" as="image" imagesrcset="${esc(imagesrcset)}" imagesizes="${esc(imagesizes)}" fetchpriority="high" />`
