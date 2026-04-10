@@ -104,6 +104,8 @@ app.use(
           "'unsafe-inline'",
           'https://maps.googleapis.com',
           'https://www.googletagmanager.com',
+          /** Google Identity Services — https://accounts.google.com/gsi/client */
+          'https://accounts.google.com',
         ],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         imgSrc: ["'self'", 'data:', 'https:', 'http:'],
@@ -116,9 +118,11 @@ app.use(
           'https://www.googletagmanager.com',
           'https://www.google-analytics.com',
           'https://*.google-analytics.com',
+          /** GIS token / FedCM may connect to accounts.google.com */
+          'https://accounts.google.com',
         ],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-        frameSrc: ["'self'", 'https://www.googletagmanager.com'],
+        frameSrc: ["'self'", 'https://www.googletagmanager.com', 'https://accounts.google.com'],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
       },
