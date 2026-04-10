@@ -256,6 +256,8 @@ export const translations = {
       registerCheckEmail: 'Account created. Check your email to verify.',
       loginFailed: 'Sign in failed. Check your details.',
       googleSignInFailed: 'Google sign-in failed. Try again.',
+      googleAccountMismatch:
+        'This email is linked to a different Google account. Sign in with that Google account or use email and password.',
       googleUsePassword:
         'This email already has a password account. Sign in with email and password or use Forgot password.',
       googleNotConfigured: 'Google sign-in is not set up on the server. Ask the administrator to add GOOGLE_CLIENT_ID.',
@@ -1798,6 +1800,8 @@ export const translations = {
       registerCheckEmail: 'ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ø­Ø³Ø§Ø¨. ØªØ­Ù‚Ù‘Ù‚ Ù…Ù† Ø¨Ø±ÙŠØ¯Ùƒ Ù„Ù„ØªÙØ¹ÙŠÙ„.',
       loginFailed: 'ÙØ´Ù„ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„. ØªØ­Ù‚Ù‘Ù‚ Ù…Ù† Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.',
       googleSignInFailed: '\u0641\u0634\u0644 \u062a\u0633\u062c\u064a\u0644 Google. \u062d\u0627\u0648\u0644 \u0645\u0631\u0629.',
+      googleAccountMismatch:
+        '\u0647\u0630\u0627 \u0627\u0644\u0628\u0631\u064a\u062f \u0645\u0631\u062a\u0628\u0637 \u0628\u062d\u0633\u0627\u0628 Google \u0622\u062e\u0631. \u0633\u062c\u0644 \u062f\u062e\u0648\u0644 \u0628\u0630\u0644\u0643 \u0627\u0644\u062d\u0633\u0627\u0628 \u0623\u0648 \u0628\u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631.',
       googleUsePassword:
         '\u0647\u0630\u0627 \u0627\u0644\u0628\u0631\u064a\u062f \u0645\u0633\u062c\u0644 \u0628\u062d\u0633\u0627\u0628 \u0648\u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631. \u0633\u062c\u0644 \u062f\u062e\u0648\u0644\u0643 \u0628\u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631.',
       googleNotConfigured:
@@ -3330,6 +3334,8 @@ export const translations = {
       registerCheckEmail: 'Compte crÃ©Ã©. VÃ©rifiez votre e-mail.',
       loginFailed: 'Connexion impossible. VÃ©rifiez vos identifiants.',
       googleSignInFailed: 'Connexion Google impossible. R\u00e9essayez.',
+      googleAccountMismatch:
+        'Cet e-mail est associ\u00e9 \u00e0 un autre compte Google. Connectez-vous avec ce compte Google ou avec l\u2019e-mail et le mot de passe.',
       googleUsePassword:
         'Cet e-mail a d\u00e9j\u00e0 un compte mot de passe. Connectez-vous avec l\u2019e-mail et le mot de passe ou utilisez Mot de passe oubli\u00e9.',
       googleNotConfigured:

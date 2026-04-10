@@ -13,6 +13,7 @@ import './Auth.css';
 /** @param {unknown} v */
 function mapGoogleErrorMessage(err, v, t) {
   const code = err?.data?.code;
+  if (code === 'GOOGLE_ACCOUNT_MISMATCH') return t('feedback', 'googleAccountMismatch');
   if (code === 'USE_PASSWORD_LOGIN') return t('feedback', 'googleUsePassword');
   if (code === 'GOOGLE_DISABLED') return t('feedback', 'googleNotConfigured');
   if (typeof v === 'string' && v.trim()) return v;

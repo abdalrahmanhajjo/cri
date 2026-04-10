@@ -400,10 +400,25 @@ router.post('/google', async (req, res) => {
             user = await users.findOne({ id: byEmail.id });
           }
         } else {
-          return res.status(409).json({
-            error: `An account with this email already exists. Sign in with your password, or use "Forgot password".`,
-            code: 'USE_PASSWORD_LOGIN',
-          });
+          /** Same verified email as an existing password account — link Google so either login method works. */
+          if (byEmail.google_sub && byEmail.google_sub !== sub) {
+            return res.status(409).json({
+              error:
+                'This email is already linked to a different Google account. Sign in with that Google account, or use email and password.',
+              code: 'GOOGLE_ACCOUNT_MISMATCH',
+            });
+          }
+          await users.updateOne(
+            { id: byEmail.id },
+            {
+              $set: {
+                google_sub: sub,
+                email_verified: true,
+                'profile.updated_at': new Date(),
+              },
+            }
+          );
+          user = await users.findOne({ id: byEmail.id });
         }
       }
     }
@@ -446,7 +461,9 @@ router.post('/google', async (req, res) => {
         email_verified: true,
         'profile.updated_at': new Date(),
       };
-      if (user.auth_provider === 'google') {
+      const useGoogleProfile =
+        user.auth_provider === 'google' || (user.google_sub && user.google_sub === sub);
+      if (useGoogleProfile) {
         if (displayNameFromToken) syncSet.name = displayNameFromToken;
         const canSyncAvatar =
           pictureUrl &&
