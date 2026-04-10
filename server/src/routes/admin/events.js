@@ -15,6 +15,13 @@ router.post('/', async (req, res) => {
     const startDate = body.startDate || body.start_date ? new Date(body.startDate || body.start_date) : new Date();
     const endDate = body.endDate || body.end_date ? new Date(body.endDate || body.end_date) : new Date(Date.now() + 3600000);
 
+    const latRaw = body.latitude ?? body.lat;
+    const lngRaw = body.longitude ?? body.lng;
+    const latitude =
+      latRaw != null && latRaw !== '' && Number.isFinite(Number(latRaw)) ? Number(latRaw) : null;
+    const longitude =
+      lngRaw != null && lngRaw !== '' && Number.isFinite(Number(lngRaw)) ? Number(lngRaw) : null;
+
     const eventsColl = await getCollection('events');
     const doc = {
       id,
@@ -29,7 +36,9 @@ router.post('/', async (req, res) => {
       price: body.price != null ? parseFloat(body.price) : null,
       price_display: (body.priceDisplay || body.price_display || '').toString() || null,
       status: (body.status || 'active').toString(),
-      place_id: (body.placeId || body.place_id || '').toString() || null,
+      place_id: (body.placeId || body.place_id || '').toString().trim() || null,
+      latitude,
+      longitude,
       updated_at: new Date()
     };
 
@@ -66,9 +75,20 @@ router.put('/:id', async (req, res) => {
     }
     if (body.status !== undefined) setObj.status = String(body.status);
     if (body.placeId !== undefined || body.place_id !== undefined) {
-      setObj.place_id = String(body.placeId ?? body.place_id);
+      const pid = String(body.placeId ?? body.place_id ?? '').trim();
+      setObj.place_id = pid || null;
     }
-    
+    if (body.latitude !== undefined || body.lat !== undefined) {
+      const v = body.latitude ?? body.lat;
+      setObj.latitude =
+        v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null;
+    }
+    if (body.longitude !== undefined || body.lng !== undefined) {
+      const v = body.longitude ?? body.lng;
+      setObj.longitude =
+        v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null;
+    }
+
     setObj.updated_at = new Date();
 
     const eventsColl = await getCollection('events');

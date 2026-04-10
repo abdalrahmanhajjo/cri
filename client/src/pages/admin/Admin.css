@@ -988,6 +988,126 @@
   color: #6b7280;
 }
 
+/* Admin modals: place search pickers (tours / events) */
+.admin-place-search-wrap {
+  position: relative;
+}
+
+.admin-place-search-wrap input[type="search"] {
+  width: 100%;
+}
+
+.admin-place-search-results {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin: 4px 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.admin-place-search-results li {
+  margin: 0;
+  padding: 0;
+}
+
+.admin-place-search-meta {
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.admin-place-search-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.55rem 1rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: #111827;
+}
+
+.admin-place-search-item:hover,
+.admin-place-search-item:focus-visible {
+  background: #f3f4f6;
+  outline: none;
+}
+
+.admin-place-search-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.admin-place-search-id {
+  font-size: 0.78rem;
+  color: #6b7280;
+  font-family: ui-monospace, monospace;
+}
+
+.admin-picked-places {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-picked-place-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.65rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.admin-picked-place-order {
+  color: #166534;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.admin-picked-place-id {
+  font-size: 0.8rem;
+  color: #14532d;
+}
+
+.admin-picked-place-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #166534;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.admin-picked-place-remove:hover {
+  background: rgba(22, 101, 52, 0.12);
+}
+
 .admin-image-list {
   display: flex;
   flex-wrap: wrap;

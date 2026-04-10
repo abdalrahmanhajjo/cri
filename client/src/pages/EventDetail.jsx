@@ -125,6 +125,11 @@ export default function EventDetail() {
     String(event.category || '').trim().toLowerCase() === 'live' &&
     String(event.location || '').trim().toLowerCase().startsWith('http');
 
+  const hasEventMapPin =
+    event &&
+    Number.isFinite(Number(event.latitude)) &&
+    Number.isFinite(Number(event.longitude));
+
   const openVenueOnMap = useCallback(() => {
     if (!event?.placeId && !venue) return;
     const returnTo = `${location.pathname}${location.search}${location.hash || ''}`;
@@ -143,6 +148,25 @@ export default function EventDetail() {
     });
   }, [navigate, event, venue, t, user, location.pathname, location.search, location.hash]);
 
+  const openEventPinOnMap = useCallback(() => {
+    if (!event || !hasEventMapPin) return;
+    const returnTo = `${location.pathname}${location.search}${location.hash || ''}`;
+    if (!user) {
+      navigate('/login', { state: { from: returnTo } });
+      return;
+    }
+    navigate('/map', {
+      state: {
+        mapFocus: {
+          lat: Number(event.latitude),
+          lng: Number(event.longitude),
+          label: event.name || event.location || 'Event',
+          zoom: 15,
+        },
+      },
+    });
+  }, [navigate, event, user, location.pathname, location.search, location.hash, hasEventMapPin]);
+
   const openSiteMapBrowse = useCallback(() => {
     const returnTo = `${location.pathname}${location.search}${location.hash || ''}`;
     if (!user) {
@@ -151,6 +175,16 @@ export default function EventDetail() {
     }
     navigate('/map');
   }, [navigate, user, location.pathname, location.search, location.hash]);
+
+  const openPrimaryMap = useCallback(() => {
+    if (event?.placeId || venue) {
+      openVenueOnMap();
+    } else if (hasEventMapPin) {
+      openEventPinOnMap();
+    } else {
+      openSiteMapBrowse();
+    }
+  }, [event?.placeId, venue, hasEventMapPin, openVenueOnMap, openEventPinOnMap, openSiteMapBrowse]);
 
   const handleShare = useCallback(() => {
     if (typeof navigator !== 'undefined' && navigator.share && event) {
@@ -285,13 +319,8 @@ export default function EventDetail() {
               )}
 
               <div className="place-detail-actions detail-tab-actions">
-                {(event.placeId || venue) && (
-                  <button type="button" className="place-detail-btn place-detail-btn--primary" onClick={openVenueOnMap}>
-                    <Icon name="map" size={20} /> {t('detail', 'viewOnMap')}
-                  </button>
-                )}
-                {!event.placeId && !venue && event.location && !isLiveUrl && (
-                  <button type="button" className="place-detail-btn place-detail-btn--primary" onClick={openSiteMapBrowse}>
+                {(event.placeId || venue || hasEventMapPin || (event.location && !isLiveUrl)) && (
+                  <button type="button" className="place-detail-btn place-detail-btn--primary" onClick={openPrimaryMap}>
                     <Icon name="map" size={20} /> {t('detail', 'viewOnMap')}
                   </button>
                 )}
@@ -390,18 +419,13 @@ export default function EventDetail() {
             <div className="detail-tab-panel" role="tabpanel">
               <p className="detail-map-intro">{t('detail', 'eventMapIntro')}</p>
               <div className="place-detail-actions">
-                {(event.placeId || venue) && (
-                  <button type="button" className="place-detail-btn place-detail-btn--primary" onClick={openVenueOnMap}>
-                    <Icon name="map" size={20} /> {t('detail', 'viewOnMap')}
-                  </button>
-                )}
-                {!event.placeId && !venue && event.location && !isLiveUrl && (
-                  <button type="button" className="place-detail-btn place-detail-btn--primary" onClick={openSiteMapBrowse}>
+                {(event.placeId || venue || hasEventMapPin || (event.location && !isLiveUrl)) && (
+                  <button type="button" className="place-detail-btn place-detail-btn--primary" onClick={openPrimaryMap}>
                     <Icon name="map" size={20} /> {t('detail', 'viewOnMap')}
                   </button>
                 )}
               </div>
-              {!event.placeId && !venue && (!event.location || isLiveUrl) && (
+              {!event.placeId && !venue && !hasEventMapPin && (!event.location || isLiveUrl) && (
                 <p className="detail-empty-tab">{t('detail', 'eventNoVenueMap')}</p>
               )}
             </div>

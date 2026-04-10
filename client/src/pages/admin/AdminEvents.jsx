@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { suggestPublicId } from '../../utils/adminContentHelpers';
+import MapPicker from '../../components/MapPicker';
+import { AdminCoverImageField, AdminSinglePlacePicker } from './AdminFormPickers';
 import './Admin.css';
 
 const EVENT_CATEGORY_QUICK = ['Festival', 'Concert', 'Culture', 'Food & drink', 'Family', 'Sports', 'Workshop'];
@@ -32,9 +34,12 @@ function EventFormModal({ event, onClose, onSaved }) {
   const [form, setForm] = useState({
     id: '', name: '', description: '', startDate: '', endDate: '', location: '', image: '',
     category: '', organizer: '', price: '', priceDisplay: '', status: 'active', placeId: '',
+    latitude: '', longitude: '',
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
+  const [mapPickerOpen, setMapPickerOpen] = useState(false);
+  const [placeLinkBusy, setPlaceLinkBusy] = useState(false);
 
   useEffect(() => {
     if (event) {
@@ -52,6 +57,8 @@ function EventFormModal({ event, onClose, onSaved }) {
         priceDisplay: event.priceDisplay || event.price_display || '',
         status: event.status || 'active',
         placeId: event.placeId || event.place_id || '',
+        latitude: event.latitude != null && event.latitude !== '' ? String(event.latitude) : '',
+        longitude: event.longitude != null && event.longitude !== '' ? String(event.longitude) : '',
       });
     } else {
       const now = new Date();
@@ -59,6 +66,7 @@ function EventFormModal({ event, onClose, onSaved }) {
       setForm({
         id: '', name: '', description: '', startDate: toISOLocal(now), endDate: toISOLocal(end),
         location: '', image: '', category: '', organizer: '', price: '', priceDisplay: '', status: 'draft', placeId: '',
+        latitude: '', longitude: '',
       });
     }
   }, [event]);
@@ -70,6 +78,8 @@ function EventFormModal({ event, onClose, onSaved }) {
     try {
       const customId = (form.id || '').trim();
       const resolvedId = !event && !customId ? suggestPublicId('event', form.name) : customId || undefined;
+      const latStr = (form.latitude || '').trim();
+      const lngStr = (form.longitude || '').trim();
       const payload = {
         id: resolvedId || undefined,
         name: form.name,
@@ -84,6 +94,8 @@ function EventFormModal({ event, onClose, onSaved }) {
         priceDisplay: form.priceDisplay || null,
         status: form.status,
         placeId: form.placeId || null,
+        latitude: latStr && Number.isFinite(parseFloat(latStr)) ? parseFloat(latStr) : null,
+        longitude: lngStr && Number.isFinite(parseFloat(lngStr)) ? parseFloat(lngStr) : null,
       };
       if (event) {
         await api.admin.events.update(event.id, payload);
@@ -96,6 +108,30 @@ function EventFormModal({ event, onClose, onSaved }) {
       setErr(e.message || 'Failed to save');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const applyLinkedPlace = async () => {
+    const pid = (form.placeId || '').trim();
+    if (!pid) {
+      setErr('Link a place first (search above), then apply its address and map pin.');
+      return;
+    }
+    setErr(null);
+    setPlaceLinkBusy(true);
+    try {
+      const p = await api.places.get(pid);
+      if (!p) throw new Error('Place not found');
+      setForm((f) => ({
+        ...f,
+        location: p.location || p.name || f.location,
+        latitude: p.latitude != null && p.latitude !== '' ? String(p.latitude) : f.latitude,
+        longitude: p.longitude != null && p.longitude !== '' ? String(p.longitude) : f.longitude,
+      }));
+    } catch (e) {
+      setErr(e.message || 'Could not load place');
+    } finally {
+      setPlaceLinkBusy(false);
     }
   };
 
@@ -173,19 +209,66 @@ function EventFormModal({ event, onClose, onSaved }) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                 Location & media
               </div>
-              <div className="admin-form-group">
-                <label>Location</label>
-                <input value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} placeholder="e.g. Al-Mina Port, Tripoli" />
+              <AdminSinglePlacePicker
+                value={form.placeId}
+                onChange={(placeId) => setForm((f) => ({ ...f, placeId }))}
+                onError={(msg) => setErr(msg)}
+              />
+              <div className="admin-row-actions" style={{ marginBottom: '1rem' }}>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn--secondary"
+                  onClick={() => void applyLinkedPlace()}
+                  disabled={placeLinkBusy || !(form.placeId || '').trim()}
+                >
+                  {placeLinkBusy ? 'Loading place…' : 'Use linked place for address & map pin'}
+                </button>
               </div>
-              {form.image && (
-                <div className="admin-form-preview-wrap">
-                  <img src={form.image} alt="Preview" className="admin-form-preview" onError={(e) => { e.target.style.display = 'none'; }} />
+              <div className="admin-form-group">
+                <label>Location label</label>
+                <input value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} placeholder="Shown to visitors — e.g. Al-Mina Port, Tripoli" />
+                <span className="admin-form-hint">Filled automatically when you use a linked place, or type your own.</span>
+              </div>
+              <div className="admin-form-row">
+                <div className="admin-form-group">
+                  <label>Latitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={form.latitude}
+                    onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))}
+                    placeholder="34.4367"
+                  />
                 </div>
-              )}
-              <div className="admin-form-group">
-                <label>Cover image URL</label>
-                <input value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="Optional — paste image URL" />
+                <div className="admin-form-group">
+                  <label>Longitude</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={form.longitude}
+                    onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))}
+                    placeholder="35.8497"
+                  />
+                </div>
               </div>
+              <div className="admin-row-actions" style={{ marginBottom: '1rem' }}>
+                <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setMapPickerOpen(true)}>
+                  Pick on map
+                </button>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn--sm admin-btn--secondary"
+                  onClick={() => setForm((f) => ({ ...f, latitude: '', longitude: '' }))}
+                >
+                  Clear map pin
+                </button>
+              </div>
+              <AdminCoverImageField
+                inputId="admin-event-cover-upload"
+                value={form.image}
+                onChange={(url) => setForm((f) => ({ ...f, image: url }))}
+                onError={(msg) => setErr(msg)}
+              />
             </div>
 
             <details className="admin-advanced-details">
@@ -217,11 +300,6 @@ function EventFormModal({ event, onClose, onSaved }) {
                       <option value="cancelled">Cancelled</option>
                     </select>
                   </div>
-                  <div className="admin-form-group">
-                    <label>Linked place ID</label>
-                    <input value={form.placeId} onChange={(e) => setForm((f) => ({ ...f, placeId: e.target.value }))} placeholder="Optional venue id from Places" />
-                    <span className="admin-form-hint">Optional — ties the event to a place page</span>
-                  </div>
                 </div>
               </div>
             </details>
@@ -251,6 +329,17 @@ function EventFormModal({ event, onClose, onSaved }) {
             <button type="submit" className="admin-btn admin-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save Event'}</button>
           </div>
         </form>
+        {mapPickerOpen && (
+          <MapPicker
+            lat={form.latitude}
+            lng={form.longitude}
+            onSelect={(lat, lng) => {
+              setForm((f) => ({ ...f, latitude: String(lat), longitude: String(lng) }));
+              setErr(null);
+            }}
+            onClose={() => setMapPickerOpen(false)}
+          />
+        )}
       </div>
     </div>
   );

@@ -255,9 +255,12 @@ export default function MapPage() {
   /** One-place-at-a-time carousel index in the drawer (ordered by nearby / center). */
   const [swipeDeckIndex, setSwipeDeckIndex] = useState(0);
   const [showMapOnboarding, setShowMapOnboarding] = useState(false);
+  /** From navigate state (e.g. event detail pin without a venue place id). */
+  const [mapFocusFromNav, setMapFocusFromNav] = useState(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
+  const mapFocusMarkerRef = useRef(null);
   const markersByPlaceIdRef = useRef(new Map());
   const infoWindowRef = useRef(null);
   const directionsRendererRef = useRef(null);
@@ -301,6 +304,7 @@ export default function MapPage() {
     const state = location.state;
     const tripIds = state?.tripPlaceIds;
     const days = state?.tripDays;
+    const mf = state?.mapFocus;
     const qParam = (searchParams.get('q') || '').trim();
     setLiveNavigation(false);
     setLiveNavError(null);
@@ -313,6 +317,7 @@ export default function MapPage() {
     setTripDayLabel(state?.tripDayLabel || null);
     setSelectedDayIndex(0);
     if (Array.isArray(tripIds) && tripIds.length > 0) {
+      setMapFocusFromNav(null);
       setSearchQuery('');
       setLoading(true);
       setTripFilterName(state.tripName || 'Trip');
@@ -327,6 +332,22 @@ export default function MapPage() {
         .catch(() => setPlaces([]))
         .finally(() => setLoading(false));
     } else {
+      if (
+        mf &&
+        mf.lat != null &&
+        mf.lng != null &&
+        Number.isFinite(Number(mf.lat)) &&
+        Number.isFinite(Number(mf.lng))
+      ) {
+        setMapFocusFromNav({
+          lat: Number(mf.lat),
+          lng: Number(mf.lng),
+          label: typeof mf.label === 'string' ? mf.label : '',
+          zoom: mf.zoom != null && Number.isFinite(Number(mf.zoom)) ? Number(mf.zoom) : undefined,
+        });
+      } else {
+        setMapFocusFromNav(null);
+      }
       setSearchQuery(qParam);
       setLoading(true);
       setTripFilterName(null);
@@ -894,10 +915,51 @@ export default function MapPage() {
     };
   }, [apiKey, markersVisibleOnMap, mapDisplayPlaces, tripFilterName, infoWindowStrings, addingTripStop, commitAddStop]);
 
+  /* Deep link / event pin: center map on coordinates that are not a directory place. */
+  useEffect(() => {
+    if (mapFocusMarkerRef.current) {
+      try {
+        mapFocusMarkerRef.current.setMap(null);
+      } catch (_e) {
+        /* ignore */
+      }
+      mapFocusMarkerRef.current = null;
+    }
+    const map = mapInstanceRef.current;
+    const maps = window.google?.maps;
+    if (!map || !maps || !mapFocusFromNav) return undefined;
+    const pos = { lat: mapFocusFromNav.lat, lng: mapFocusFromNav.lng };
+    const marker = new maps.Marker({
+      position: pos,
+      map,
+      title: mapFocusFromNav.label || '',
+      zIndex: 9999,
+    });
+    mapFocusMarkerRef.current = marker;
+    map.panTo(pos);
+    map.setZoom(mapFocusFromNav.zoom != null ? mapFocusFromNav.zoom : DETAIL_MAP_ZOOM);
+    return () => {
+      try {
+        marker.setMap(null);
+      } catch (_e) {
+        /* ignore */
+      }
+      if (mapFocusMarkerRef.current === marker) mapFocusMarkerRef.current = null;
+    };
+  }, [mapFocusFromNav, markersVisibleOnMap]);
+
   useEffect(() => {
     return () => {
       markersRef.current.forEach((m) => m?.marker?.setMap?.(null));
       markersRef.current = [];
+      if (mapFocusMarkerRef.current) {
+        try {
+          mapFocusMarkerRef.current.setMap(null);
+        } catch (_e) {
+          /* ignore */
+        }
+        mapFocusMarkerRef.current = null;
+      }
       if (directionsRendererRef.current) {
         directionsRendererRef.current.setMap(null);
         directionsRendererRef.current.setDirections(null);

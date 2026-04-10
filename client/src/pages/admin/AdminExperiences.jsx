@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { suggestPublicId } from '../../utils/adminContentHelpers';
+import { AdminCoverImageField, AdminPlaceIdsPicker } from './AdminFormPickers';
 import './Admin.css';
 
 const CURRENCY_OPTIONS = ['USD', 'EUR', 'LBP'];
@@ -208,20 +209,17 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
                 Media & route
               </div>
-              {form.image && (
-                <div className="admin-form-preview-wrap">
-                  <img src={form.image} alt="Preview" className="admin-form-preview" onError={(e) => { e.target.style.display = 'none'; }} />
-                </div>
-              )}
-              <div className="admin-form-group">
-                <label>Cover image URL</label>
-                <input value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="Optional — paste image URL" />
-              </div>
-              <div className="admin-form-group">
-                <label>Place IDs (comma-separated)</label>
-                <input value={form.placeIds} onChange={(e) => setForm((f) => ({ ...f, placeIds: e.target.value }))} placeholder="hallab_sweets, clock_tower, souk" />
-                <span className="admin-form-hint">If set, the number of stops matches this list; otherwise use “Manual stop count” under More options.</span>
-              </div>
+              <AdminCoverImageField
+                inputId="admin-experience-cover-upload"
+                value={form.image}
+                onChange={(url) => setForm((f) => ({ ...f, image: url }))}
+                onError={(msg) => setErr(msg)}
+              />
+              <AdminPlaceIdsPicker
+                value={form.placeIds}
+                onChange={(idsStr) => setForm((f) => ({ ...f, placeIds: idsStr }))}
+                onError={(msg) => setErr(msg)}
+              />
             </div>
 
             <details className="admin-advanced-details">
