@@ -198,6 +198,7 @@ router.get('/sitemap.xml', async (req, res) => {
     add('/tripoli-travel-tips');
     add('/about-tripoli');
     add('/partner-link-kit');
+    add('/login');
 
     try {
       const placesColl = await getCollection('places');
@@ -234,6 +235,7 @@ router.get('/sitemap.xml', async (req, res) => {
       `  <url><loc>${safeUrlJoin(baseUrl, '/')}</loc></url>\n` +
       `  <url><loc>${safeUrlJoin(baseUrl, '/discover')}</loc></url>\n` +
       `  <url><loc>${safeUrlJoin(baseUrl, '/activities')}</loc></url>\n` +
+      `  <url><loc>${safeUrlJoin(baseUrl, '/login')}</loc></url>\n` +
       `</urlset>\n`;
     return res.type('application/xml').send(xml);
   }
@@ -404,6 +406,7 @@ function makeSeoResponder({ clientDistPath }) {
           ]);
         }
       } else if (
+        p === '/login' ||
         p === '/things-to-do-in-tripoli-lebanon' ||
         p === '/tripoli-old-city-guide' ||
         p === '/tripoli-souks-guide' ||
@@ -413,6 +416,11 @@ function makeSeoResponder({ clientDistPath }) {
         p === '/partner-link-kit'
       ) {
         const metaByPath = {
+          '/login': {
+            title: 'Sign in | Visit Tripoli',
+            description:
+              'Sign in to Visit Tripoli to save places, build trips, and sync with the app. Use email or Google — Tripoli, Lebanon.',
+          },
           '/things-to-do-in-tripoli-lebanon': {
             title: 'Things to do in Tripoli, Lebanon | Visit Tripoli',
             description:
@@ -454,13 +462,15 @@ function makeSeoResponder({ clientDistPath }) {
         title = info.title;
         description = info.description;
         if (info.ogImagePath) ogImage = safeUrlJoin(baseUrl, info.ogImagePath);
-        canonical = safeUrlJoin(baseUrl, p);
-        alternates = buildAlternates(baseUrl, p);
+        const pathForCanon = info.pathForBreadcrumb != null ? info.pathForBreadcrumb : p;
+        canonical = safeUrlJoin(baseUrl, pathForCanon);
+        alternates = buildAlternates(baseUrl, pathForCanon);
+        const crumbLabel = info.breadcrumbName != null ? info.breadcrumbName : info.title.replace(/\s*\|\s*Visit Tripoli$/, '');
         const crumbs = jsonLdBreadcrumb({
           baseUrl,
           items: [
             { name: 'Home', path: '/' },
-            { name: info.title.replace(/\s*\|\s*Visit Tripoli$/, ''), path: p },
+            { name: crumbLabel, path: pathForCanon },
           ],
         });
         const webPage = {
