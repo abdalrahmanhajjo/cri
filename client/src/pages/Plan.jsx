@@ -657,26 +657,101 @@ export default function Plan() {
     });
   }, []);
 
-  /** Open the target builder section and scroll it into view (manual plan steps). */
-  const advancePlanBuilderStep = useCallback((targetKey) => {
-    const scrollTargetIds = {
-      basics: 'plan-basics',
-      discover: 'plan-discover',
-      favourites: 'plan-favourites',
-      itinerary: 'plan-itinerary',
-    };
-    const id = scrollTargetIds[targetKey];
-    if (!id) return;
-    flushSync(() => {
-      setBuilderSectionCollapsed((prev) => ({
-        ...prev,
-        [targetKey]: false,
-      }));
-    });
-    window.requestAnimationFrame(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+  /** Next-step target for the floating skip FAB (null = hide, e.g. on last section). */
+  const [planSkipFabTarget, setPlanSkipFabTarget] = useState(null);
+
+  const updatePlanSkipFabTarget = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    const vh = window.innerHeight;
+    const probeY = vh * 0.22;
+
+    const itineraryEl = document.getElementById('plan-itinerary');
+    if (itineraryEl) {
+      const ir = itineraryEl.getBoundingClientRect();
+      if (probeY >= ir.top && probeY <= ir.bottom) {
+        setPlanSkipFabTarget(null);
+        return;
+      }
+    }
+
+    const chain = [
+      ['plan-basics', 'discover'],
+      ['plan-discover', 'favourites'],
+      ['plan-favourites', 'itinerary'],
+    ];
+
+    for (const [sectionId, nextKey] of chain) {
+      const el = document.getElementById(sectionId);
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (probeY >= r.top && probeY <= r.bottom) {
+        setPlanSkipFabTarget(nextKey);
+        return;
+      }
+    }
+
+    let bestNext = 'discover';
+    let bestVis = 0;
+    for (const [sectionId, nextKey] of chain) {
+      const el = document.getElementById(sectionId);
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      const vis = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+      if (vis > bestVis) {
+        bestVis = vis;
+        bestNext = nextKey;
+      }
+    }
+    if (itineraryEl) {
+      const ir = itineraryEl.getBoundingClientRect();
+      const visI = Math.max(0, Math.min(ir.bottom, vh) - Math.max(ir.top, 0));
+      if (visI > bestVis) {
+        setPlanSkipFabTarget(null);
+        return;
+      }
+    }
+    setPlanSkipFabTarget(bestVis > 48 ? bestNext : null);
   }, []);
+
+  /** Open the target builder section and scroll it into view (manual plan steps). */
+  const advancePlanBuilderStep = useCallback(
+    (targetKey) => {
+      const scrollTargetIds = {
+        basics: 'plan-basics',
+        discover: 'plan-discover',
+        favourites: 'plan-favourites',
+        itinerary: 'plan-itinerary',
+      };
+      const id = scrollTargetIds[targetKey];
+      if (!id) return;
+      flushSync(() => {
+        setBuilderSectionCollapsed((prev) => ({
+          ...prev,
+          [targetKey]: false,
+        }));
+      });
+      window.requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.setTimeout(updatePlanSkipFabTarget, 480);
+      });
+    },
+    [updatePlanSkipFabTarget]
+  );
+
+  useEffect(() => {
+    if (!editingTripId) {
+      setPlanSkipFabTarget(null);
+      return undefined;
+    }
+    updatePlanSkipFabTarget();
+    const onScroll = () => updatePlanSkipFabTarget();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [editingTripId, builderSectionCollapsed, updatePlanSkipFabTarget]);
 
   useEffect(() => {
     if (!editingTrip || editStart === '' || editEnd === '') return;
@@ -1550,7 +1625,7 @@ export default function Plan() {
             title={t('home', 'manualTourRestart')}
             aria-label={t('home', 'manualTourRestartAria')}
           >
-            <Icon name="zap" size={22} ariaHidden />
+            <Icon name="menu_book" size={22} ariaHidden />
           </button>
           </div>
           <div className="plan-unified" id="plan">
@@ -1648,16 +1723,6 @@ export default function Plan() {
                   hintStart={t('home', 'selectStartDate')}
                   hintEnd={t('home', 'selectEndDate')}
                 />
-              </div>
-              <div className="plan-builder-step-footer">
-                <button
-                  type="button"
-                  className="plan-skip-next-btn"
-                  onClick={() => advancePlanBuilderStep('discover')}
-                >
-                  {t('home', 'planSkipToNextStep')}
-                  <Icon name="arrow_forward" size={20} ariaHidden />
-                </button>
               </div>
               </div>
               )}
@@ -1785,16 +1850,6 @@ export default function Plan() {
               {placeSections.length === 0 && (
                 <p className="plan-empty-msg">{t('home', 'noSpots')}</p>
               )}
-              <div className="plan-builder-step-footer">
-                <button
-                  type="button"
-                  className="plan-skip-next-btn"
-                  onClick={() => advancePlanBuilderStep('favourites')}
-                >
-                  {t('home', 'planSkipToNextStep')}
-                  <Icon name="arrow_forward" size={20} ariaHidden />
-                </button>
-              </div>
               </div>
               )}
             </section>
@@ -1859,16 +1914,6 @@ export default function Plan() {
                   )}
                 </>
               )}
-              <div className="plan-builder-step-footer">
-                <button
-                  type="button"
-                  className="plan-skip-next-btn"
-                  onClick={() => advancePlanBuilderStep('itinerary')}
-                >
-                  {t('home', 'planSkipToNextStep')}
-                  <Icon name="arrow_forward" size={20} ariaHidden />
-                </button>
-              </div>
               </div>
               )}
             </section>
@@ -2009,40 +2054,55 @@ export default function Plan() {
               </div>
             </section>
           </div>
+          {planSkipFabTarget ? (
+            <button
+              type="button"
+              className="plan-skip-next-fab"
+              onClick={() => advancePlanBuilderStep(planSkipFabTarget)}
+              title={t('home', 'planSkipToNextStep')}
+              aria-label={t('home', 'planSkipToNextStep')}
+            >
+              <Icon name="arrow_forward" size={26} ariaHidden />
+            </button>
+          ) : null}
           </>
         ) : (
           <>
             <section id="plan" style={{ scrollMarginTop: '100px' }}>
               <div className="plan-section-head">
                 <h2 className="plan-section-title">{t('nav', 'myTrips')}</h2>
-                <div className="plan-section-head-actions">
-                  <button
-                    type="button"
-                    className="plan-manual-tour-btn"
-                    onClick={startCreateTour}
-                    title={t('home', 'manualTourRestart')}
-                    aria-label={t('home', 'manualTourRestartAria')}
-                  >
-                    <Icon name="zap" size={22} ariaHidden />
-                  </button>
-                  {settings.aiPlannerEnabled !== false && (
-                    <Link to="/plan/ai" className="plan-btn-ai">
-                      <Icon name="auto_awesome" size={22} /> {t('nav', 'aiPlanBannerCta')}
-                    </Link>
-                  )}
-                  {!showCreateForm && (
-                    <button
-                      type="button"
-                      className="plan-btn-create"
-                      ref={tourCreateBtnRef}
-                      onClick={() => {
-                        setShowCreateForm(true);
-                        showToast(t('home', 'planToastNewTripForm'), 'info');
-                      }}
-                    >
-                      <Icon name="add" size={24} /> {t('home', 'createTrip')}
-                    </button>
-                  )}
+                <div className="plan-section-head-actions plan-section-head-actions--my-trips">
+                  <div className="plan-mytrips-actions">
+                    <div className="plan-mytrips-actions-tools">
+                      <button
+                        type="button"
+                        className="plan-manual-tour-btn"
+                        onClick={startCreateTour}
+                        title={t('home', 'manualTourRestart')}
+                        aria-label={t('home', 'manualTourRestartAria')}
+                      >
+                        <Icon name="menu_book" size={22} ariaHidden />
+                      </button>
+                      {settings.aiPlannerEnabled !== false && (
+                        <Link to="/plan/ai" className="plan-btn-ai">
+                          <Icon name="auto_awesome" size={22} ariaHidden /> {t('nav', 'aiPlanBannerCta')}
+                        </Link>
+                      )}
+                    </div>
+                    {!showCreateForm && (
+                      <button
+                        type="button"
+                        className="plan-btn-create plan-btn-create--my-trips-primary"
+                        ref={tourCreateBtnRef}
+                        onClick={() => {
+                          setShowCreateForm(true);
+                          showToast(t('home', 'planToastNewTripForm'), 'info');
+                        }}
+                      >
+                        <Icon name="add" size={24} ariaHidden /> {t('home', 'createTrip')}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 

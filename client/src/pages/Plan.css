@@ -103,6 +103,68 @@
   gap: 10px 12px;
 }
 
+/* My Trips: tutorial + AI on one row, create trip prominent below on narrow screens */
+.plan-page .plan-section-head-actions--my-trips {
+  flex: 1 1 280px;
+  justify-content: flex-end;
+}
+
+.plan-page .plan-mytrips-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  max-width: 440px;
+}
+
+.plan-page .plan-mytrips-actions-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (min-width: 640px) {
+  .plan-page .plan-section-head-actions--my-trips {
+    max-width: min(100%, 520px);
+  }
+
+  .plan-page .plan-mytrips-actions {
+    align-items: flex-end;
+  }
+
+  .plan-page .plan-mytrips-actions-tools {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 639px) {
+  .plan-page .plan-section-head:has(.plan-mytrips-actions) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .plan-page .plan-section-head-actions--my-trips {
+    justify-content: stretch;
+    flex: 1 1 auto;
+    max-width: none;
+  }
+
+  .plan-page .plan-mytrips-actions {
+    max-width: none;
+  }
+
+  .plan-page .plan-btn-create--my-trips-primary {
+    width: 100%;
+    justify-content: center;
+    min-height: 52px;
+    box-shadow:
+      0 4px 14px color-mix(in srgb, var(--plan-accent, #0f766e) 35%, transparent),
+      0 1px 0 rgba(255, 255, 255, 0.12) inset;
+  }
+}
+
 .plan-page .plan-share-requests-panel {
   margin-bottom: 22px;
   padding: 14px;
@@ -395,22 +457,50 @@
 .plan-page .plan-btn-ai {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
+  min-height: 46px;
+  padding: 10px 18px;
   border-radius: 999px;
-  border: 1px solid rgba(15, 118, 110, 0.35);
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.1), rgba(15, 118, 110, 0.04));
-  color: var(--color-primary, #0f766e);
+  border: 1px solid rgba(15, 118, 110, 0.4);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--plan-accent, #0f766e) 16%, transparent),
+    color-mix(in srgb, var(--plan-accent, #0f766e) 6%, transparent)
+  );
+  color: var(--color-primary-dark, #0d5c56);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: 0.01em;
   text-decoration: none;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.45) inset,
+    0 2px 10px rgba(15, 118, 110, 0.12);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(15, 118, 110, 0.15);
 }
 
 .plan-page .plan-btn-ai:hover {
-  background: rgba(15, 118, 110, 0.16);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--plan-accent, #0f766e) 22%, transparent),
+    color-mix(in srgb, var(--plan-accent, #0f766e) 10%, transparent)
+  );
   border-color: var(--color-primary, #0f766e);
-  color: var(--color-primary-dark, #0d5c56);
+  color: var(--color-primary-dark, #0a524d);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 4px 16px rgba(15, 118, 110, 0.16);
+}
+
+.plan-page .plan-btn-ai:active {
+  transform: scale(0.98);
 }
 
 /* ----- My trips: filters ----- */
@@ -738,22 +828,40 @@
 .plan-page .plan-btn-create {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
+  min-height: 48px;
   padding: 14px 24px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 650;
   font-family: inherit;
+  letter-spacing: 0.02em;
   color: #fff;
-  background: var(--plan-accent);
+  background: linear-gradient(165deg, var(--plan-accent) 0%, color-mix(in srgb, var(--plan-accent) 88%, #041e1c) 100%);
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18) inset,
+    0 6px 20px color-mix(in srgb, var(--plan-accent, #0f766e) 28%, transparent);
+  transition:
+    filter 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.12);
 }
 
 .plan-page .plan-btn-create:hover {
-  background: #0a5c56;
+  filter: brightness(1.06);
   transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 10px 28px color-mix(in srgb, var(--plan-accent, #0f766e) 32%, transparent);
+}
+
+.plan-page .plan-btn-create:active {
+  transform: translateY(0) scale(0.99);
 }
 
 .plan-page .plan-btn-create:disabled {
@@ -1564,23 +1672,40 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 46px;
+  height: 46px;
   flex-shrink: 0;
-  border: 1px solid rgba(15, 118, 110, 0.35);
+  border: 1px solid rgba(15, 118, 110, 0.42);
   border-radius: 50%;
-  background: rgba(15, 118, 110, 0.09);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--plan-accent, #0f766e) 14%, transparent) 0%,
+    color-mix(in srgb, var(--plan-accent, #0f766e) 7%, transparent) 100%
+  );
   color: var(--color-primary-dark, #0d5c56);
   cursor: pointer;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 2px 10px rgba(15, 118, 110, 0.1);
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
-    transform 0.12s ease;
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(15, 118, 110, 0.15);
 }
 
 .plan-page .plan-manual-tour-btn:hover {
-  background: rgba(15, 118, 110, 0.14);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--plan-accent, #0f766e) 20%, transparent) 0%,
+    color-mix(in srgb, var(--plan-accent, #0f766e) 10%, transparent) 100%
+  );
   border-color: var(--color-primary, #0f766e);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 4px 14px rgba(15, 118, 110, 0.14);
 }
 
 .plan-page .plan-manual-tour-btn:active {
@@ -1719,48 +1844,68 @@
   margin-top: 0;
 }
 
-.plan-page .plan-builder-step-footer {
-  display: flex;
-  justify-content: center;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--plan-border, rgba(15, 23, 42, 0.08));
-}
-
-.plan-page .plan-skip-next-btn {
+/* Floating circular “next step” control (manual trip builder) */
+.plan-page .plan-skip-next-fab {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  z-index: 9990;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  width: 100%;
-  max-width: 400px;
-  min-height: 48px;
-  padding: 0 20px;
-  font-size: 15px;
-  font-weight: 650;
-  font-family: inherit;
-  color: #fff;
-  background: var(--plan-accent, #0f766e);
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  margin: 0;
   border: none;
-  border-radius: 12px;
+  border-radius: 50%;
   cursor: pointer;
-  transition: filter 0.15s ease, transform 0.12s ease;
+  color: #fff;
+  background: linear-gradient(
+    165deg,
+    var(--plan-accent, #0f766e) 0%,
+    color-mix(in srgb, var(--plan-accent) 82%, #05302c) 100%
+  );
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 8px 28px color-mix(in srgb, var(--plan-accent, #0f766e) 38%, transparent),
+    0 2px 8px rgba(15, 23, 42, 0.12);
+  transition:
+    filter 0.15s ease,
+    transform 0.14s ease,
+    box-shadow 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.12);
 }
 
-.plan-page .plan-skip-next-btn:hover {
-  filter: brightness(1.06);
+.plan-page .plan-skip-next-fab:hover {
+  filter: brightness(1.07);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.28) inset,
+    0 12px 36px color-mix(in srgb, var(--plan-accent, #0f766e) 42%, transparent),
+    0 4px 12px rgba(15, 23, 42, 0.14);
 }
 
-.plan-page .plan-skip-next-btn:active {
-  transform: scale(0.98);
+.plan-page .plan-skip-next-fab:active {
+  transform: scale(0.94);
 }
 
-.plan-page .plan-skip-next-btn .icon {
+.plan-page .plan-skip-next-fab .icon {
   flex-shrink: 0;
 }
 
-[dir='rtl'] .plan-page .plan-skip-next-btn .icon {
+[dir='rtl'] .plan-page .plan-skip-next-fab {
+  right: auto;
+  left: max(16px, env(safe-area-inset-left, 0px));
+}
+
+[dir='rtl'] .plan-page .plan-skip-next-fab .icon {
   transform: scaleX(-1);
+}
+
+html[data-guided-tour='1'] .plan-page .plan-skip-next-fab {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .plan-page .plan-section-nav-link--collapsed .plan-section-nav-num {
@@ -2805,7 +2950,7 @@
 
 :root[data-theme="dark"] .plan-page .plan-btn-ai,
 :root[data-theme="dark"] .plan-page .plan-builder-map-btn,
-:root[data-theme="dark"] .plan-page .plan-skip-next-btn,
+:root[data-theme="dark"] .plan-page .plan-skip-next-fab,
 :root[data-theme="dark"] .plan-page .plan-add-place-btn,
 :root[data-theme="dark"] .plan-page .plan-trip-card-btn--primary,
 :root[data-theme="dark"] .plan-page .plan-btn-create,
@@ -2819,7 +2964,7 @@
 
 :root[data-theme="dark"] .plan-page .plan-btn-ai:hover,
 :root[data-theme="dark"] .plan-page .plan-builder-map-btn:hover,
-:root[data-theme="dark"] .plan-page .plan-skip-next-btn:hover,
+:root[data-theme="dark"] .plan-page .plan-skip-next-fab:hover,
 :root[data-theme="dark"] .plan-page .plan-add-place-btn:hover,
 :root[data-theme="dark"] .plan-page .plan-trip-card-btn--primary:hover,
 :root[data-theme="dark"] .plan-page .plan-btn-create:hover,

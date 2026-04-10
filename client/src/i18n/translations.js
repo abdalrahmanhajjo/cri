@@ -727,8 +727,8 @@ export const translations = {
       manualBuilderTourItineraryTitle: 'Itinerary & save',
       manualBuilderTourItineraryBody:
         'Arrange times, move stops between days, remove places, or run smart schedule. Save keeps edits to your account.',
-      manualTourRestart: 'Tour',
-      manualTourRestartAria: 'Replay planner tour',
+      manualTourRestart: 'Guide',
+      manualTourRestartAria: 'Open step-by-step planner guide',
       tripsFilterTitle: 'Filter trips',
       tripsFilterToggleShow: 'Show filters',
       tripsFilterToggleHide: 'Hide filters',
@@ -2276,8 +2276,8 @@ export const translations = {
       manualBuilderTourItineraryTitle: '\u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062c \u0648\u0627\u0644\u062d\u0641\u0638',
       manualBuilderTourItineraryBody:
         '\u0631\u062a\u0651\u0628 \u0627\u0644\u0623\u0648\u0642\u0627\u062a\u060c \u0646\u0642\u0644 \u0627\u0644\u0645\u062d\u0637\u0627\u062a \u0628\u064a\u0646 \u0627\u0644\u0623\u064a\u0627\u0645\u060c \u0623\u0648 \u062c\u062f\u0648\u0644\u0629 \u0630\u0643\u064a\u0629. \u0627\u0644\u062d\u0641\u0638 \u064a\u062e\u0632\u0646 \u0627\u0644\u062a\u0639\u062f\u064a\u0644\u0627\u062a \u0641\u064a \u062d\u0633\u0627\u0628\u0643.',
-      manualTourRestart: '\u062c\u0648\u0644\u0629',
-      manualTourRestartAria: '\u0625\u0639\u0627\u062f\u0629 \u062c\u0648\u0644\u0629 \u0627\u0644\u062a\u062e\u0637\u064a\u0637',
+      manualTourRestart: '\u062f\u0644\u064a\u0644',
+      manualTourRestartAria: '\u0641\u062a\u062d \u062f\u0644\u064a\u0644 \u0627\u0644\u062a\u062e\u0637\u064a\u0637 \u062d\u0637\u0648\u0629 \u0628\u062d\u0637\u0648\u0629',
       tripsFilterTitle: 'ØªØµÙÙŠØ© Ø§Ù„Ø±Ø­Ù„Ø§Øª',
       tripsFilterToggleShow: 'Ø¥Ø¸Ù‡Ø§Ø± Ø§Ù„ØªØµÙÙŠØ©',
       tripsFilterToggleHide: 'Ø¥Ø®ÙØ§Ø¡ Ø§Ù„ØªØµÙÙŠØ©',
@@ -3818,8 +3818,8 @@ export const translations = {
       manualBuilderTourItineraryTitle: 'Itinéraire & enregistrement',
       manualBuilderTourItineraryBody:
         'Réglez les horaires, déplacez ou retirez des lieux, lancez le planning intelligent. Enregistrer enregistre dans votre compte.',
-      manualTourRestart: 'Visite',
-      manualTourRestartAria: 'Relancer la visite guidée du plan',
+      manualTourRestart: 'Guide',
+      manualTourRestartAria: 'Ouvrir le guide du planificateur étape par étape',
       tripsFilterTitle: 'Filtrer les voyages',
       tripsFilterToggleShow: 'Afficher les filtres',
       tripsFilterToggleHide: 'Masquer les filtres',

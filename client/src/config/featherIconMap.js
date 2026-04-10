@@ -63,6 +63,7 @@ export const MATERIAL_TO_FEATHER = {
   mail: 'mail',
   map: 'map',
   mark_email_read: 'inbox',
+  menu_book: 'book-open',
   movie: 'film',
   mosque: 'home',
   more_horiz: 'more-horizontal',

@@ -309,6 +309,11 @@ export const ICON_DOCS = {
     description: 'Discover tab icon for short reels/video feed.',
     flaticonAnimated: 'Clapperboard or film strip animation from Flaticon (video / reel).',
   },
+  menu_book: {
+    variant: 'education',
+    description: 'Manual planner guided tour / teaching walkthrough — open book, learn the steps.',
+    flaticonAnimated: '',
+  },
   mosque: {
     variant: 'discover',
     description: 'AI planner mood chip for faith / spirituality themed itineraries.',
