@@ -23,8 +23,18 @@ function matchesQuery(obj, fields, qRaw) {
   return blob.includes(q);
 }
 
+function clipDescription(raw, maxLen = 110) {
+  const s = String(raw || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!s) return '';
+  if (s.length <= maxLen) return s;
+  return `${s.slice(0, maxLen).trim()}…`;
+}
+
 function TourCard({ tour }) {
   const img = getPlaceImageUrl(tour.image) || null;
+  const tourDesc = clipDescription(tour.description, 100);
   return (
     <Link to={`/tour/${tour.id}`} className="vd-card vd-card--tour activities-hub-card">
       <div className="vd-card-media">
@@ -34,6 +44,7 @@ function TourCard({ tour }) {
       <div className="vd-card-content">
         <h3 className="vd-card-title vd-card-title--dark">{tour.name}</h3>
         {tour.priceDisplay && <p className="vd-card-meta vd-card-price">{tour.priceDisplay}</p>}
+        {tourDesc ? <p className="activities-hub-card-snippet">{tourDesc}</p> : null}
       </div>
     </Link>
   );
@@ -53,13 +64,14 @@ function EventCard({ event }) {
   const status = event.status || '';
   const organizer = event.organizer || '';
   const price = event.priceDisplay || event.price || '';
+  const desc = clipDescription(event.description, 118);
 
   return (
     <Link to={`/event/${event.id}`} className="vd-card vd-card--event events-card activities-hub-card">
       <div className="vd-card-media">
         {img ? <DeliveryImg url={img} preset="gridCard" alt="" /> : <span className="vd-card-fallback">Event</span>}
+        {status && <span className="events-status-pill events-status-pill--corner">{status}</span>}
         {date && <span className="vd-card-badge vd-card-date">{date}</span>}
-        {status && <span className="events-status-pill">{status}</span>}
       </div>
       <div className="vd-card-content events-card-content">
         <h3 className="vd-card-title vd-card-title--dark events-card-title">{event.name}</h3>
@@ -69,6 +81,7 @@ function EventCard({ event }) {
           </p>
         )}
         {event.location && <p className="events-card-location">{event.location}</p>}
+        {desc ? <p className="events-card-desc">{desc}</p> : null}
         <div className="events-card-meta-row">
           {organizer && (
             <span className="events-card-meta">
@@ -435,11 +448,6 @@ export default function ActivitiesHub() {
                 {t('nav', 'megaEvents')}
               </h2>
               <p className="activities-hub-panel-desc">{t('nav', 'megaEventsDesc')}</p>
-              <div className="events-summary-bar activities-hub-summary">
-                <p className="events-summary-text">
-                  <strong>{events.length}</strong> {t('home', 'eventsList').toLowerCase()}
-                </p>
-              </div>
             </div>
 
             <div className="activities-hub-toolbar" role="search">
@@ -515,7 +523,7 @@ export default function ActivitiesHub() {
             ) : filteredEvents.length === 0 ? (
               <p className="vd-empty">{t('home', 'activitiesHubNoMatches')}</p>
             ) : (
-              <div className="events-grid activities-hub-events-grid">
+              <div className="vd-grid vd-grid--4 activities-hub-grid activities-hub-events-grid">
                 {filteredEvents.map((e) => (
                   <EventCard key={e.id} event={e} />
                 ))}

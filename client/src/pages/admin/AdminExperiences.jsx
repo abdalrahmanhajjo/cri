@@ -1,7 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
+import { suggestPublicId } from '../../utils/adminContentHelpers';
 import './Admin.css';
+
+const CURRENCY_OPTIONS = ['USD', 'EUR', 'LBP'];
+const DIFFICULTY_OPTIONS = ['Easy', 'Moderate', 'Challenging'];
 
 function ExperienceFormModal({ tour, onClose, onSaved }) {
   useEffect(() => {
@@ -40,9 +44,22 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
       });
     } else {
       setForm({
-        id: '', name: '', duration: '', durationHours: '0', locations: '0', rating: '0', reviews: '0',
-        price: '0', currency: 'USD', priceDisplay: '', badge: '', badgeColor: '', description: '', image: '',
-        difficulty: 'Easy', placeIds: '',
+        id: '',
+        name: '',
+        duration: '3 hours',
+        durationHours: '3',
+        locations: '1',
+        rating: '0',
+        reviews: '0',
+        price: '',
+        currency: 'USD',
+        priceDisplay: '',
+        badge: '',
+        badgeColor: '',
+        description: '',
+        image: '',
+        difficulty: 'Easy',
+        placeIds: '',
       });
     }
   }, [tour]);
@@ -53,21 +70,25 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
     setSaving(true);
     try {
       const placeIds = form.placeIds.trim() ? form.placeIds.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : [];
+      const customId = (form.id || '').trim();
+      const resolvedId = !tour && !customId ? suggestPublicId('tour', form.name) : customId || undefined;
+      const fromPlaces = placeIds.length;
+      const locationsCount = fromPlaces > 0 ? fromPlaces : Math.max(1, parseInt(form.locations, 10) || 1);
       const payload = {
-        id: form.id || undefined,
+        id: resolvedId || undefined,
         name: form.name,
-        duration: form.duration,
-        durationHours: parseInt(form.durationHours, 10) || 0,
-        locations: parseInt(form.locations, 10) || 0,
+        duration: form.duration || '3 hours',
+        durationHours: parseInt(form.durationHours, 10) || 3,
+        locations: locationsCount,
         rating: parseFloat(form.rating) || 0,
         reviews: parseInt(form.reviews, 10) || 0,
-        price: parseFloat(form.price) || 0,
+        price: form.price === '' || form.price == null ? 0 : parseFloat(form.price) || 0,
         currency: form.currency,
-        priceDisplay: form.priceDisplay,
+        priceDisplay: form.priceDisplay || (form.price === '' || form.price == null ? 'On request' : String(form.price)),
         badge: form.badge || null,
         badgeColor: form.badgeColor || null,
         description: form.description,
-        image: form.image || 'https://via.placeholder.com/400',
+        image: form.image.trim() || 'https://via.placeholder.com/400',
         difficulty: form.difficulty,
         placeIds,
       };
@@ -104,26 +125,25 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
         <form onSubmit={handleSubmit}>
           <div className="admin-modal-body">
             {err && <div className="admin-error">{err}</div>}
+            {!tour && (
+              <p className="admin-modal-lead">
+                <strong>Quick add:</strong> title and duration are enough — a URL id is generated on save. Price is optional (saved as &quot;On request&quot; if you leave it blank).
+                Add <strong>place IDs</strong> to link stops; the stop count follows the list. Open <strong>More options</strong> for ratings, badges, or a manual stop count.
+              </p>
+            )}
 
             <div className="admin-form-section">
               <div className="admin-form-section-title">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" /></svg>
                 Basic info
               </div>
-              {!tour && (
-                <div className="admin-form-group">
-                  <label>ID (slug)</label>
-                  <input value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))} placeholder="e.g. tour_food" />
-                  <span className="admin-form-hint">Unique identifier used in URLs</span>
-                </div>
-              )}
               <div className="admin-form-group">
                 <label>Name *</label>
                 <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required placeholder="e.g. Food Tour of Tripoli" />
               </div>
               <div className="admin-form-group">
                 <label>Description</label>
-                <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Describe the experience…" rows={3} />
+                <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Short public description (you can expand later)…" rows={3} />
               </div>
             </div>
 
@@ -135,63 +155,50 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
               <div className="admin-form-row">
                 <div className="admin-form-group">
                   <label>Duration (text)</label>
-                  <input value={form.duration} onChange={(e) => setForm((f) => ({ ...f, duration: e.target.value }))} placeholder="4-5 hours" />
+                  <input value={form.duration} onChange={(e) => setForm((f) => ({ ...f, duration: e.target.value }))} placeholder="e.g. 3 hours" />
                 </div>
                 <div className="admin-form-group">
                   <label>Duration (hours)</label>
-                  <input type="number" value={form.durationHours} onChange={(e) => setForm((f) => ({ ...f, durationHours: e.target.value }))} placeholder="4" />
+                  <input type="number" min="1" value={form.durationHours} onChange={(e) => setForm((f) => ({ ...f, durationHours: e.target.value }))} placeholder="3" />
                 </div>
               </div>
               <div className="admin-form-group">
                 <label>Difficulty</label>
-                <input value={form.difficulty} onChange={(e) => setForm((f) => ({ ...f, difficulty: e.target.value }))} placeholder="Easy, Moderate, or Challenging" />
+                <select value={form.difficulty} onChange={(e) => setForm((f) => ({ ...f, difficulty: e.target.value }))}>
+                  {form.difficulty && !DIFFICULTY_OPTIONS.includes(form.difficulty) && (
+                    <option value={form.difficulty}>{form.difficulty} (custom)</option>
+                  )}
+                  {DIFFICULTY_OPTIONS.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <div className="admin-form-section">
               <div className="admin-form-section-title">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-                Price & availability
+                Price
               </div>
               <div className="admin-form-row admin-form-row--3">
                 <div className="admin-form-group">
-                  <label>Price</label>
-                  <input type="number" step="0.01" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="25" />
+                  <label>Amount (optional)</label>
+                  <input type="number" step="0.01" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="Leave empty for “on request”" />
                 </div>
                 <div className="admin-form-group">
                   <label>Currency</label>
-                  <input value={form.currency} onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))} placeholder="USD" />
+                  <select value={form.currency} onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}>
+                    {form.currency && !CURRENCY_OPTIONS.includes(form.currency) && (
+                      <option value={form.currency}>{form.currency} (custom)</option>
+                    )}
+                    {CURRENCY_OPTIONS.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="admin-form-group">
                   <label>Price display</label>
-                  <input value={form.priceDisplay} onChange={(e) => setForm((f) => ({ ...f, priceDisplay: e.target.value }))} placeholder="$25" />
-                </div>
-              </div>
-            </div>
-
-            <div className="admin-form-section">
-              <div className="admin-form-section-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
-                Ratings & badge
-              </div>
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Rating (0–5)</label>
-                  <input type="number" step="0.1" value={form.rating} onChange={(e) => setForm((f) => ({ ...f, rating: e.target.value }))} placeholder="4.5" />
-                </div>
-                <div className="admin-form-group">
-                  <label>Review count</label>
-                  <input type="number" value={form.reviews} onChange={(e) => setForm((f) => ({ ...f, reviews: e.target.value }))} placeholder="0" />
-                </div>
-              </div>
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Badge</label>
-                  <input value={form.badge} onChange={(e) => setForm((f) => ({ ...f, badge: e.target.value }))} placeholder="Popular, New, Best value" />
-                </div>
-                <div className="admin-form-group">
-                  <label>Badge color</label>
-                  <input value={form.badgeColor} onChange={(e) => setForm((f) => ({ ...f, badgeColor: e.target.value }))} placeholder="#0F766E" />
+                  <input value={form.priceDisplay} onChange={(e) => setForm((f) => ({ ...f, priceDisplay: e.target.value }))} placeholder="e.g. $25, From $40" />
                 </div>
               </div>
             </div>
@@ -199,7 +206,7 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
             <div className="admin-form-section">
               <div className="admin-form-section-title">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
-                Media & places
+                Media & route
               </div>
               {form.image && (
                 <div className="admin-form-preview-wrap">
@@ -208,18 +215,65 @@ function ExperienceFormModal({ tour, onClose, onSaved }) {
               )}
               <div className="admin-form-group">
                 <label>Cover image URL</label>
-                <input value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="https://..." />
-              </div>
-              <div className="admin-form-group">
-                <label>Locations count</label>
-                <input type="number" value={form.locations} onChange={(e) => setForm((f) => ({ ...f, locations: e.target.value }))} placeholder="e.g. 5" />
+                <input value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="Optional — paste image URL" />
               </div>
               <div className="admin-form-group">
                 <label>Place IDs (comma-separated)</label>
                 <input value={form.placeIds} onChange={(e) => setForm((f) => ({ ...f, placeIds: e.target.value }))} placeholder="hallab_sweets, clock_tower, souk" />
-                <span className="admin-form-hint">Places included in this experience</span>
+                <span className="admin-form-hint">If set, the number of stops matches this list; otherwise use “Manual stop count” under More options.</span>
               </div>
             </div>
+
+            <details className="admin-advanced-details">
+              <summary>More options — ratings, badge &amp; stop count</summary>
+              <div className="admin-form-section" style={{ border: 'none', paddingBottom: 0 }}>
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
+                    <label>Rating (0–5)</label>
+                    <input type="number" step="0.1" min="0" max="5" value={form.rating} onChange={(e) => setForm((f) => ({ ...f, rating: e.target.value }))} placeholder="0" />
+                  </div>
+                  <div className="admin-form-group">
+                    <label>Review count</label>
+                    <input type="number" min="0" value={form.reviews} onChange={(e) => setForm((f) => ({ ...f, reviews: e.target.value }))} placeholder="0" />
+                  </div>
+                </div>
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
+                    <label>Badge</label>
+                    <input value={form.badge} onChange={(e) => setForm((f) => ({ ...f, badge: e.target.value }))} placeholder="Popular, New, Best value" />
+                  </div>
+                  <div className="admin-form-group">
+                    <label>Badge color</label>
+                    <input value={form.badgeColor} onChange={(e) => setForm((f) => ({ ...f, badgeColor: e.target.value }))} placeholder="#0F766E" />
+                  </div>
+                </div>
+                <div className="admin-form-group">
+                  <label>Manual stop count</label>
+                  <input type="number" min="1" value={form.locations} onChange={(e) => setForm((f) => ({ ...f, locations: e.target.value }))} placeholder="Used when place IDs are empty" />
+                  <span className="admin-form-hint">Ignored when you list place IDs above.</span>
+                </div>
+              </div>
+            </details>
+
+            {!tour && (
+              <details className="admin-advanced-details">
+                <summary>Custom URL id (optional)</summary>
+                <div className="admin-form-group" style={{ marginTop: '0.75rem' }}>
+                  <label>Id slug</label>
+                  <input value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))} placeholder="Leave blank to auto-generate from the name" />
+                  <div className="admin-row-actions">
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--sm admin-btn--secondary"
+                      onClick={() => setForm((f) => ({ ...f, id: suggestPublicId('tour', f.name) }))}
+                    >
+                      Suggest from title
+                    </button>
+                  </div>
+                  <span className="admin-form-hint">Used in /tour/your-id — only change if you need a fixed link</span>
+                </div>
+              </details>
+            )}
           </div>
           <div className="admin-modal-footer">
             <button type="button" className="admin-btn admin-btn--secondary" onClick={onClose}>Cancel</button>

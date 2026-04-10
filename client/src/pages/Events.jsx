@@ -8,6 +8,15 @@ import DeliveryImg from '../components/DeliveryImg';
 import './Explore.css';
 import './Events.css';
 
+function clipDescription(raw, maxLen = 110) {
+  const s = String(raw || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!s) return '';
+  if (s.length <= maxLen) return s;
+  return `${s.slice(0, maxLen).trim()}…`;
+}
+
 function EventCard({ event }) {
   const img = getPlaceImageUrl(event.image) || null;
   const date = event.startDate
@@ -22,13 +31,14 @@ function EventCard({ event }) {
   const status = event.status || '';
   const organizer = event.organizer || '';
   const price = event.priceDisplay || event.price || '';
+  const desc = clipDescription(event.description, 118);
 
   return (
     <Link to={`/event/${event.id}`} className="vd-card vd-card--event events-card">
       <div className="vd-card-media">
         {img ? <DeliveryImg url={img} preset="gridCard" alt="" /> : <span className="vd-card-fallback">Event</span>}
+        {status && <span className="events-status-pill events-status-pill--corner">{status}</span>}
         {date && <span className="vd-card-badge vd-card-date">{date}</span>}
-        {status && <span className="events-status-pill">{status}</span>}
       </div>
       <div className="vd-card-content events-card-content">
         <h3 className="vd-card-title vd-card-title--dark events-card-title">{event.name}</h3>
@@ -38,6 +48,7 @@ function EventCard({ event }) {
           </p>
         )}
         {event.location && <p className="events-card-location">{event.location}</p>}
+        {desc ? <p className="events-card-desc">{desc}</p> : null}
         <div className="events-card-meta-row">
           {organizer && (
             <span className="events-card-meta">
@@ -103,11 +114,6 @@ export default function Events() {
         </div>
       </header>
       <div className="vd-container">
-        <div className="events-summary-bar">
-          <p className="events-summary-text">
-            <strong>{events.length}</strong> {t('home', 'eventsFestivals').toLowerCase()}
-          </p>
-        </div>
         {EVENT_SECTIONS.map((sec, idx) => (
           <section key={sec.id} id={sec.id} className="vd-section vd-events-section" style={{ scrollMarginTop: '100px' }}>
             <h2 className="vd-section-title">{t('nav', sec.titleKey)}</h2>
@@ -116,7 +122,7 @@ export default function Events() {
               events.length === 0 ? (
                 <p className="vd-empty">{t('home', 'noEvents')}</p>
               ) : (
-                <div className="events-grid">
+                <div className="events-grid events-grid--hub">
                   {events.map((e) => (
                     <EventCard key={e.id} event={e} />
                   ))}

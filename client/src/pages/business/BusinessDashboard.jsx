@@ -1,14 +1,17 @@
 import { useEffect } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { getPlaceImageUrl } from '../../api/client';
 import './Business.css';
 
 const BASE_TITLE = 'Business — Visit Tripoli';
 
 export default function BusinessDashboard() {
+  const { user } = useAuth();
   const ctx = useOutletContext();
   const data = ctx?.me;
   const loadErr = ctx?.loadErr;
+  const isAdmin = user?.isAdmin === true;
 
   useEffect(() => {
     document.title = `Dashboard · ${BASE_TITLE}`;
@@ -30,6 +33,15 @@ export default function BusinessDashboard() {
           Update how your place appears on Visit Tripoli: copy, photos, map pin, hours, and language-specific text.
           Use <Link to="/business/places">Feed</Link> to publish community posts for your venues. User and platform
           administration stay in the separate admin console.
+          {isAdmin && (
+            <>
+              {' '}As an admin you can add{' '}
+              <Link to="/admin/experiences">experiences / tours</Link>
+              {' '}and{' '}
+              <Link to="/admin/events">events</Link>
+              {' '}from the admin area (quick-add forms, optional pricing).
+            </>
+          )}
         </p>
       </header>
 

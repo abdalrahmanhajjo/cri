@@ -1,4 +1,4 @@
-/* Events page – elegant, government-style layout */
+/* Events — card grid and vertical tiles (Activities hub + standalone /events) */
 
 .events-page .vd-container {
   max-width: 1100px;
@@ -25,19 +25,31 @@
 
 .events-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 272px), 1fr));
+  gap: clamp(14px, 2.4vw, 22px);
+  align-items: stretch;
 }
 
+.events-grid--hub {
+  margin-top: 4px;
+}
+
+/* Vertical card: hero image on top, title + meta below (avoids full-width “letterbox” rows) */
 .events-card {
   display: flex;
-  flex-direction: row;
-  height: 140px;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--color-border);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
-  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  text-decoration: none !important;
+  color: inherit;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .events-card:hover {
@@ -47,20 +59,33 @@
 }
 
 .events-card .vd-card-media {
-  width: 38%;
-  min-width: 110px;
-  max-width: 150px;
-  min-height: 100%;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  min-height: 156px;
+  max-height: 220px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .events-card-content {
-  padding: 8px 12px 10px;
+  padding: 14px 16px 16px;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
 }
 
 .events-card-title {
-  margin-bottom: 4px;
-  font-size: 13px;
+  margin: 0 0 6px;
+  font-size: clamp(14px, 2vw, 16px);
+  font-weight: 700;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .events-card-category {
@@ -74,9 +99,21 @@
 }
 
 .events-card-location {
-  margin: 0 0 6px 0;
-  font-size: 11px;
+  margin: 0 0 4px 0;
+  font-size: 12px;
   color: var(--color-text-secondary);
+  line-height: 1.35;
+}
+
+.events-card-desc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .events-card-meta-row {
@@ -84,6 +121,8 @@
   flex-wrap: wrap;
   gap: 8px;
   font-size: 11px;
+  margin-top: auto;
+  padding-top: 10px;
 }
 
 .events-card-meta {
@@ -103,16 +142,31 @@
 
 .events-status-pill {
   position: absolute;
-  left: 10px;
-  bottom: 10px;
   z-index: 2;
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.68);
   color: #fff;
 }
 
+.events-status-pill--corner {
+  left: auto;
+  right: 10px;
+  top: 10px;
+  bottom: auto;
+}
+
+@media (max-width: 480px) {
+  .events-card .vd-card-media {
+    min-height: 140px;
+    max-height: 200px;
+  }
+
+  .events-card-content {
+    padding: 12px 14px 14px;
+  }
+}

@@ -1,7 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
+import { suggestPublicId } from '../../utils/adminContentHelpers';
 import './Admin.css';
+
+const EVENT_CATEGORY_QUICK = ['Festival', 'Concert', 'Culture', 'Food & drink', 'Family', 'Sports', 'Workshop'];
 
 function formatDate(str) {
   if (!str) return '—';
@@ -55,7 +58,7 @@ function EventFormModal({ event, onClose, onSaved }) {
       const end = new Date(now.getTime() + 3600000);
       setForm({
         id: '', name: '', description: '', startDate: toISOLocal(now), endDate: toISOLocal(end),
-        location: '', image: '', category: '', organizer: '', price: '', priceDisplay: '', status: 'active', placeId: '',
+        location: '', image: '', category: '', organizer: '', price: '', priceDisplay: '', status: 'draft', placeId: '',
       });
     }
   }, [event]);
@@ -65,8 +68,10 @@ function EventFormModal({ event, onClose, onSaved }) {
     setErr(null);
     setSaving(true);
     try {
+      const customId = (form.id || '').trim();
+      const resolvedId = !event && !customId ? suggestPublicId('event', form.name) : customId || undefined;
       const payload = {
-        id: form.id || undefined,
+        id: resolvedId || undefined,
         name: form.name,
         description: form.description,
         startDate: form.startDate ? new Date(form.startDate).toISOString() : null,
@@ -113,26 +118,36 @@ function EventFormModal({ event, onClose, onSaved }) {
         <form onSubmit={handleSubmit}>
           <div className="admin-modal-body">
             {err && <div className="admin-error">{err}</div>}
+            {!event && (
+              <p className="admin-modal-lead">
+                <strong>Quick add:</strong> name and dates are enough — a URL id is generated on save. Use “More options” for pricing and publishing,
+                and open “Custom URL id” only if you need a fixed link.
+              </p>
+            )}
 
             <div className="admin-form-section">
               <div className="admin-form-section-title">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" /></svg>
                 Basic info
               </div>
-              {!event && (
-                <div className="admin-form-group">
-                  <label>ID (slug)</label>
-                  <input value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))} placeholder="e.g. event_1" />
-                  <span className="admin-form-hint">Unique identifier used in URLs</span>
-                </div>
-              )}
               <div className="admin-form-group">
                 <label>Name *</label>
                 <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required placeholder="e.g. Tripoli Food Festival" />
               </div>
               <div className="admin-form-group">
                 <label>Description</label>
-                <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Describe the event…" rows={3} />
+                <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Short public description (you can expand later)…" rows={3} />
+              </div>
+              <div className="admin-form-group">
+                <label>Category</label>
+                <input value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} placeholder="Type or pick a tag below" />
+                <div className="admin-chip-row" role="group" aria-label="Quick category tags">
+                  {EVENT_CATEGORY_QUICK.map((c) => (
+                    <button key={c} type="button" className="admin-chip-btn" onClick={() => setForm((f) => ({ ...f, category: c }))}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -169,59 +184,67 @@ function EventFormModal({ event, onClose, onSaved }) {
               )}
               <div className="admin-form-group">
                 <label>Cover image URL</label>
-                <input value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="https://..." />
+                <input value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="Optional — paste image URL" />
               </div>
             </div>
 
-            <div className="admin-form-section">
-              <div className="admin-form-section-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-                Organizer & pricing
+            <details className="admin-advanced-details">
+              <summary>More options — organizer, pricing, status & venue</summary>
+              <div className="admin-form-section" style={{ border: 'none', paddingBottom: 0 }}>
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
+                    <label>Organizer</label>
+                    <input value={form.organizer} onChange={(e) => setForm((f) => ({ ...f, organizer: e.target.value }))} placeholder="e.g. Tripoli Municipality" />
+                  </div>
+                </div>
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
+                    <label>Price (number)</label>
+                    <input type="number" step="0.01" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="Leave empty if free" />
+                  </div>
+                  <div className="admin-form-group">
+                    <label>Price display</label>
+                    <input value={form.priceDisplay} onChange={(e) => setForm((f) => ({ ...f, priceDisplay: e.target.value }))} placeholder="e.g. Free, From $10, LL 50,000" />
+                  </div>
+                </div>
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
+                    <label>Status</label>
+                    <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
+                      <option value="draft">Draft — not highlighted on the site</option>
+                      <option value="active">Active</option>
+                      <option value="published">Published</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                  <div className="admin-form-group">
+                    <label>Linked place ID</label>
+                    <input value={form.placeId} onChange={(e) => setForm((f) => ({ ...f, placeId: e.target.value }))} placeholder="Optional venue id from Places" />
+                    <span className="admin-form-hint">Optional — ties the event to a place page</span>
+                  </div>
+                </div>
               </div>
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Category</label>
-                  <input value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} placeholder="e.g. Festival, Concert" />
-                </div>
-                <div className="admin-form-group">
-                  <label>Organizer</label>
-                  <input value={form.organizer} onChange={(e) => setForm((f) => ({ ...f, organizer: e.target.value }))} placeholder="e.g. Tripoli Municipality" />
-                </div>
-              </div>
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Price</label>
-                  <input type="number" step="0.01" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" />
-                </div>
-                <div className="admin-form-group">
-                  <label>Price display</label>
-                  <input value={form.priceDisplay} onChange={(e) => setForm((f) => ({ ...f, priceDisplay: e.target.value }))} placeholder="Free or $10" />
-                </div>
-              </div>
-            </div>
+            </details>
 
-            <div className="admin-form-section">
-              <div className="admin-form-section-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-                Status & linked place
-              </div>
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Status</label>
-                  <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
-                    <option value="active">Active</option>
-                    <option value="published">Published</option>
-                    <option value="draft">Draft</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
+            {!event && (
+              <details className="admin-advanced-details">
+                <summary>Custom URL id (optional)</summary>
+                <div className="admin-form-group" style={{ marginTop: '0.75rem' }}>
+                  <label>Id slug</label>
+                  <input value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))} placeholder="Leave blank to auto-generate from the name" />
+                  <div className="admin-row-actions">
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--sm admin-btn--secondary"
+                      onClick={() => setForm((f) => ({ ...f, id: suggestPublicId('event', f.name) }))}
+                    >
+                      Suggest from title
+                    </button>
+                  </div>
+                  <span className="admin-form-hint">Used in /event/your-id — only change if you need a fixed link</span>
                 </div>
-                <div className="admin-form-group">
-                  <label>Linked place ID</label>
-                  <input value={form.placeId} onChange={(e) => setForm((f) => ({ ...f, placeId: e.target.value }))} placeholder="hallab_sweets" />
-                  <span className="admin-form-hint">Optional – related venue</span>
-                </div>
-              </div>
-            </div>
+              </details>
+            )}
           </div>
           <div className="admin-modal-footer">
             <button type="button" className="admin-btn admin-btn--secondary" onClick={onClose}>Cancel</button>
