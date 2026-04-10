@@ -48,6 +48,7 @@ export default function TripDetail() {
   const [shareMessage, setShareMessage] = useState('');
   const [sendingShareRequest, setSendingShareRequest] = useState(false);
   const [shareRequestError, setShareRequestError] = useState(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,26 +132,60 @@ export default function TripDetail() {
     });
   }, [trip, dayBlocks, navigate, t, showToast]);
 
-  const handleShare = useCallback(() => {
+  const copyTripUrl = useCallback(
+    async (url) => {
+      if (!url) return false;
+      try {
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(url);
+          showToast(t('feedback', 'tripLinkCopied'), 'success');
+          return true;
+        }
+      } catch {
+        /* fall through to legacy copy */
+      }
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = url;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) {
+          showToast(t('feedback', 'tripLinkCopied'), 'success');
+          return true;
+        }
+      } catch {
+        /* noop */
+      }
+      return false;
+    },
+    [showToast, t]
+  );
+
+  const handleShare = useCallback(async () => {
     if (!trip) return;
     const name = trip.name || t('home', 'planTitle');
     const url = typeof window !== 'undefined' ? window.location.href : '';
     if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator
-        .share({ title: name, text: name, url })
-        .then(() => showToast(t('feedback', 'tripShareOpened'), 'success'))
-        .catch(() => {});
-    } else {
-      navigator.clipboard
-        ?.writeText(url)
-        .then(() => showToast(t('feedback', 'tripLinkCopied'), 'success'))
-        .catch(() => showToast(t('feedback', 'actionFailed'), 'error'));
+      try {
+        await navigator.share({ title: name, text: name, url });
+        showToast(t('feedback', 'tripShareOpened'), 'success');
+        return;
+      } catch {
+        // Some mobile webviews reject/cancel silently; fallback to copy.
+      }
     }
-  }, [trip, t, showToast]);
+    const copied = await copyTripUrl(url);
+    if (!copied) showToast(t('feedback', 'actionFailed'), 'error');
+  }, [trip, t, showToast, copyTripUrl]);
 
   const handleDeleteTrip = useCallback(() => {
     if (!trip || deleting) return;
-    if (!window.confirm(t('home', 'deleteTrip') + '?')) return;
+    setConfirmDeleteOpen(false);
     setDeleting(true);
     setDeleteError(null);
     api.user
@@ -326,7 +361,10 @@ export default function TripDetail() {
               <button
                 type="button"
                 className="trip-detail-btn trip-detail-btn--danger trip-detail-btn--icon-only"
-                onClick={handleDeleteTrip}
+                onClick={() => {
+                  setDeleteError(null);
+                  setConfirmDeleteOpen(true);
+                }}
                 disabled={deleting}
                 aria-busy={deleting}
                 aria-label={deleting ? t('home', 'loading') : t('home', 'deleteTrip')}
@@ -339,6 +377,28 @@ export default function TripDetail() {
             <p className="trip-detail-delete-error" role="alert">
               {deleteError}
             </p>
+          )}
+          {confirmDeleteOpen && (
+            <div className="trip-detail-confirm-delete" role="alertdialog" aria-live="assertive">
+              <p>{t('home', 'deleteTrip')}?</p>
+              <div className="trip-detail-confirm-delete-actions">
+                <button
+                  type="button"
+                  className="trip-detail-btn trip-detail-btn--outline"
+                  onClick={() => setConfirmDeleteOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="trip-detail-btn trip-detail-btn--danger"
+                  onClick={handleDeleteTrip}
+                  disabled={deleting}
+                >
+                  {deleting ? t('home', 'loading') : t('home', 'deleteTrip')}
+                </button>
+              </div>
+            </div>
           )}
           {shareRequestOpen && (
             <form className="trip-share-request-form" onSubmit={handleSendShareRequest}>

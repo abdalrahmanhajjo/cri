@@ -129,6 +129,27 @@
   color: #b91c1c;
 }
 
+.trip-detail-confirm-delete {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(185, 28, 28, 0.25);
+  border-radius: 12px;
+  background: rgba(185, 28, 28, 0.06);
+}
+
+.trip-detail-confirm-delete p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #7f1d1d;
+}
+
+.trip-detail-confirm-delete-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .trip-detail-actions {
   display: flex;
   flex-wrap: wrap;

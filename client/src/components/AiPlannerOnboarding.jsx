@@ -67,7 +67,6 @@ export default function AiPlannerOnboarding({
     const prevBodyLeft = body.style.left;
     const prevBodyRight = body.style.right;
     const prevBodyWidth = body.style.width;
-    const prevBodyTouchAction = body.style.touchAction;
 
     html.setAttribute('data-guided-tour', '1');
     html.style.overflow = 'hidden';
@@ -79,7 +78,6 @@ export default function AiPlannerOnboarding({
     body.style.left = '0';
     body.style.right = '0';
     body.style.width = '100%';
-    body.style.touchAction = 'none';
 
     return () => {
       document.removeEventListener('keydown', onKeyDown);
@@ -93,7 +91,6 @@ export default function AiPlannerOnboarding({
       body.style.left = prevBodyLeft;
       body.style.right = prevBodyRight;
       body.style.width = prevBodyWidth;
-      body.style.touchAction = prevBodyTouchAction;
       window.scrollTo(0, scrollY);
     };
   }, [open]);
@@ -124,7 +121,10 @@ export default function AiPlannerOnboarding({
           const horizontalPad = isWide ? 32 : 24;
           const cardW = Math.min(isWide ? 460 : 400, vw - horizontalPad);
           const safeBottom = 20;
-          const cardEstimateH = Math.min(isWide ? 320 : 300, Math.round(vh * 0.72));
+          const cardEstimateH = Math.min(
+            isWide ? 420 : Math.round(vh * 0.86),
+            Math.max(220, vh - safeBottom - 12)
+          );
           let top = hole.top + hole.height + 16;
           if (top + cardEstimateH > vh - safeBottom) {
             top = Math.max(safeBottom, hole.top - 16 - cardEstimateH);
