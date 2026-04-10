@@ -128,6 +128,8 @@ app.use(
       },
     },
     crossOriginEmbedderPolicy: false,
+    /** Default Helmet COOP is `same-origin`, which breaks Google Sign-In popups (blank gsi/transform). */
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
     noSniff: true,
