@@ -277,6 +277,8 @@ export default function Plan() {
   const [nameError, setNameError] = useState('');
   const [duplicatingId, setDuplicatingId] = useState(null);
   const [deletingTripId, setDeletingTripId] = useState(null);
+  /** Set when user taps delete — in-app sheet (mobile-friendly); avoid window.confirm on phones. */
+  const [tripDeleteConfirmId, setTripDeleteConfirmId] = useState(null);
   const [schedulingDayIndex, setSchedulingDayIndex] = useState(null);
   const [builderSectionCollapsed, setBuilderSectionCollapsed] = useState(() => ({
     ...INITIAL_BUILDER_SECTION_COLLAPSED,
@@ -655,6 +657,27 @@ export default function Plan() {
     });
   }, []);
 
+  /** Open the target builder section and scroll it into view (manual plan steps). */
+  const advancePlanBuilderStep = useCallback((targetKey) => {
+    const scrollTargetIds = {
+      basics: 'plan-basics',
+      discover: 'plan-discover',
+      favourites: 'plan-favourites',
+      itinerary: 'plan-itinerary',
+    };
+    const id = scrollTargetIds[targetKey];
+    if (!id) return;
+    flushSync(() => {
+      setBuilderSectionCollapsed((prev) => ({
+        ...prev,
+        [targetKey]: false,
+      }));
+    });
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
   useEffect(() => {
     if (!editingTrip || editStart === '' || editEnd === '') return;
     const count = getDayCount(editStart, editEnd);
@@ -801,14 +824,27 @@ export default function Plan() {
       .finally(() => setSaving(false));
   };
 
-  const handleDeleteTrip = (id) => {
+  const cancelTripDeleteConfirm = useCallback(() => {
+    setTripDeleteConfirmId(null);
+  }, []);
+
+  const beginDeleteTrip = useCallback(
+    (id) => {
+      if (!id || deletingTripId) return;
+      const trip = trips.find((x) => x.id === id);
+      if (trip?.isHost === false) {
+        showToast('Only the host can delete this trip.', 'error');
+        return;
+      }
+      setTripDeleteConfirmId(id);
+    },
+    [trips, deletingTripId]
+  );
+
+  const executeDeleteTrip = useCallback(() => {
+    const id = tripDeleteConfirmId;
     if (!id || deletingTripId) return;
-    const trip = trips.find((x) => x.id === id);
-    if (trip?.isHost === false) {
-      showToast('Only the host can delete this trip.', 'error');
-      return;
-    }
-    if (!window.confirm(t('home', 'deleteTrip') + '?')) return;
+    setTripDeleteConfirmId(null);
     setDeletingTripId(id);
     api.user
       .deleteTrip(id)
@@ -819,7 +855,19 @@ export default function Plan() {
       })
       .catch((err) => showToast(err.message || t('home', 'tripDeleteFailed'), 'error'))
       .finally(() => setDeletingTripId(null));
-  };
+  }, [tripDeleteConfirmId, deletingTripId, loadTrips, t]);
+
+  useEffect(() => {
+    if (!tripDeleteConfirmId) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setTripDeleteConfirmId(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [tripDeleteConfirmId]);
 
   const handleCancelEdit = () => {
     if (hasUnsavedChanges && !window.confirm(t('home', 'unsavedChanges'))) return;
@@ -1440,6 +1488,9 @@ export default function Plan() {
   };
 
   const isInBuilder = !!editingTrip;
+  const pendingDeleteTrip = tripDeleteConfirmId
+    ? trips.find((x) => x.id === tripDeleteConfirmId) ?? null
+    : null;
 
   return (
     <div className="vd plan-page" role="main" aria-label={t('home', 'planTitle')}>
@@ -1598,6 +1649,16 @@ export default function Plan() {
                   hintEnd={t('home', 'selectEndDate')}
                 />
               </div>
+              <div className="plan-builder-step-footer">
+                <button
+                  type="button"
+                  className="plan-skip-next-btn"
+                  onClick={() => advancePlanBuilderStep('discover')}
+                >
+                  {t('home', 'planSkipToNextStep')}
+                  <Icon name="arrow_forward" size={20} ariaHidden />
+                </button>
+              </div>
               </div>
               )}
             </section>
@@ -1724,6 +1785,16 @@ export default function Plan() {
               {placeSections.length === 0 && (
                 <p className="plan-empty-msg">{t('home', 'noSpots')}</p>
               )}
+              <div className="plan-builder-step-footer">
+                <button
+                  type="button"
+                  className="plan-skip-next-btn"
+                  onClick={() => advancePlanBuilderStep('favourites')}
+                >
+                  {t('home', 'planSkipToNextStep')}
+                  <Icon name="arrow_forward" size={20} ariaHidden />
+                </button>
+              </div>
               </div>
               )}
             </section>
@@ -1788,6 +1859,16 @@ export default function Plan() {
                   )}
                 </>
               )}
+              <div className="plan-builder-step-footer">
+                <button
+                  type="button"
+                  className="plan-skip-next-btn"
+                  onClick={() => advancePlanBuilderStep('itinerary')}
+                >
+                  {t('home', 'planSkipToNextStep')}
+                  <Icon name="arrow_forward" size={20} ariaHidden />
+                </button>
+              </div>
               </div>
               )}
             </section>
@@ -1913,7 +1994,7 @@ export default function Plan() {
                   <button
                     type="button"
                     className="vd-btn plan-delete-btn plan-delete-btn--icon-only"
-                    onClick={() => handleDeleteTrip(editingTripId)}
+                    onClick={() => beginDeleteTrip(editingTripId)}
                     disabled={saving || deletingTripId === editingTripId}
                     aria-busy={deletingTripId === editingTripId}
                     aria-label={
@@ -2322,7 +2403,7 @@ export default function Plan() {
                               className="plan-trip-card-btn plan-trip-card-btn--danger plan-trip-card-btn--icon-only"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteTrip(tr.id);
+                                beginDeleteTrip(tr.id);
                               }}
                               disabled={deletingTripId === tr.id || duplicatingId === tr.id}
                               aria-busy={deletingTripId === tr.id}
@@ -2417,6 +2498,50 @@ export default function Plan() {
         progressLabel={t('aiPlanner', 'onboardingProgress')}
         dir={lang === 'ar' ? 'rtl' : 'ltr'}
       />
+
+      {tripDeleteConfirmId ? (
+        <div className="plan-delete-confirm-root">
+          <button
+            type="button"
+            className="plan-delete-confirm-backdrop"
+            aria-label={t('home', 'cancel')}
+            onClick={cancelTripDeleteConfirm}
+          />
+          <div
+            className="plan-delete-confirm-sheet"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="plan-delete-confirm-title"
+            aria-describedby="plan-delete-confirm-desc"
+          >
+            <p id="plan-delete-confirm-title" className="plan-delete-confirm-title">
+              {t('home', 'deleteTripConfirmTitle')}
+            </p>
+            <p id="plan-delete-confirm-desc" className="plan-delete-confirm-desc">
+              {t('home', 'deleteTripConfirmDetail')}
+              {pendingDeleteTrip ? (
+                <span className="plan-delete-confirm-name">
+                  {' '}
+                  — {pendingDeleteTrip.name?.trim() || t('home', 'planTitle')}
+                </span>
+              ) : null}
+            </p>
+            <div className="plan-delete-confirm-actions">
+              <button type="button" className="plan-delete-confirm-btn plan-delete-confirm-btn--ghost" onClick={cancelTripDeleteConfirm}>
+                {t('home', 'cancel')}
+              </button>
+              <button
+                type="button"
+                className="plan-delete-confirm-btn plan-delete-confirm-btn--danger"
+                onClick={executeDeleteTrip}
+                disabled={!!deletingTripId}
+              >
+                {deletingTripId ? t('home', 'loading') : t('home', 'deleteTrip')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {toast && (
         <div className={`plan-toast plan-toast--${toast.type}`} role="status" aria-live="polite">

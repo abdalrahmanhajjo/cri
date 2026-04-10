@@ -671,6 +671,9 @@
   cursor: pointer;
   overflow: hidden;
   border-radius: var(--plan-card-radius) var(--plan-card-radius) 0 0;
+  position: relative;
+  z-index: 1;
+  touch-action: manipulation;
 }
 
 .plan-page .plan-trip-card h3 {
@@ -1312,6 +1315,8 @@
   gap: 8px;
   padding: 12px 24px 20px;
   border-top: 1px solid var(--plan-border);
+  position: relative;
+  z-index: 2;
 }
 
 @media (max-width: 639px) {
@@ -1344,6 +1349,8 @@
   border: none;
   border-radius: 8px;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(15, 118, 110, 0.2);
 }
 
 .plan-page .plan-trip-card-btn:hover {
@@ -1371,10 +1378,117 @@
 }
 
 .plan-page .plan-trip-card-btn--icon-only {
-  min-width: 40px;
-  min-height: 40px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0;
   justify-content: center;
+}
+
+/* ----- Delete trip confirmation (mobile-safe; no window.confirm) ----- */
+.plan-page .plan-delete-confirm-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.plan-page .plan-delete-confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.plan-page .plan-delete-confirm-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: var(--plan-surface, #fff);
+  border-radius: 20px 20px 0 0;
+  border: 1px solid var(--plan-border);
+  border-bottom: none;
+  box-shadow: 0 -12px 48px rgba(15, 23, 42, 0.18);
+  pointer-events: auto;
+  text-align: start;
+}
+
+.plan-page .plan-delete-confirm-title {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--plan-text);
+}
+
+.plan-page .plan-delete-confirm-desc {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--plan-muted);
+}
+
+.plan-page .plan-delete-confirm-name {
+  font-weight: 650;
+  color: var(--plan-text);
+}
+
+.plan-page .plan-delete-confirm-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.plan-page .plan-delete-confirm-btn {
+  min-height: 48px;
+  padding: 0 18px;
+  font-size: 15px;
+  font-weight: 650;
+  font-family: inherit;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.plan-page .plan-delete-confirm-btn--ghost {
+  background: var(--plan-accent-dim);
+  color: var(--plan-text);
+  border: 1px solid var(--plan-border);
+}
+
+.plan-page .plan-delete-confirm-btn--danger {
+  background: var(--color-error, #b91c1c);
+  color: #fff;
+}
+
+.plan-page .plan-delete-confirm-btn--danger:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@media (min-width: 640px) {
+  .plan-page .plan-delete-confirm-root {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .plan-page .plan-delete-confirm-sheet {
+    border-radius: 20px;
+    border-bottom: 1px solid var(--plan-border);
+    padding-bottom: 20px;
+  }
 }
 
 /* ----- Toast ----- */
@@ -1603,6 +1717,50 @@
 
 .plan-page .plan-builder-section-body > .plan-section-sub:first-child {
   margin-top: 0;
+}
+
+.plan-page .plan-builder-step-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--plan-border, rgba(15, 23, 42, 0.08));
+}
+
+.plan-page .plan-skip-next-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 400px;
+  min-height: 48px;
+  padding: 0 20px;
+  font-size: 15px;
+  font-weight: 650;
+  font-family: inherit;
+  color: #fff;
+  background: var(--plan-accent, #0f766e);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.12s ease;
+}
+
+.plan-page .plan-skip-next-btn:hover {
+  filter: brightness(1.06);
+}
+
+.plan-page .plan-skip-next-btn:active {
+  transform: scale(0.98);
+}
+
+.plan-page .plan-skip-next-btn .icon {
+  flex-shrink: 0;
+}
+
+[dir='rtl'] .plan-page .plan-skip-next-btn .icon {
+  transform: scaleX(-1);
 }
 
 .plan-page .plan-section-nav-link--collapsed .plan-section-nav-num {
@@ -2647,6 +2805,7 @@
 
 :root[data-theme="dark"] .plan-page .plan-btn-ai,
 :root[data-theme="dark"] .plan-page .plan-builder-map-btn,
+:root[data-theme="dark"] .plan-page .plan-skip-next-btn,
 :root[data-theme="dark"] .plan-page .plan-add-place-btn,
 :root[data-theme="dark"] .plan-page .plan-trip-card-btn--primary,
 :root[data-theme="dark"] .plan-page .plan-btn-create,
@@ -2660,6 +2819,7 @@
 
 :root[data-theme="dark"] .plan-page .plan-btn-ai:hover,
 :root[data-theme="dark"] .plan-page .plan-builder-map-btn:hover,
+:root[data-theme="dark"] .plan-page .plan-skip-next-btn:hover,
 :root[data-theme="dark"] .plan-page .plan-add-place-btn:hover,
 :root[data-theme="dark"] .plan-page .plan-trip-card-btn--primary:hover,
 :root[data-theme="dark"] .plan-page .plan-btn-create:hover,

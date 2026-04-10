@@ -663,6 +663,9 @@ export const translations = {
       dayLabel: 'Day',
       removePlace: 'Remove',
       deleteTrip: 'Delete trip',
+      deleteTripConfirmTitle: 'Delete this trip?',
+      deleteTripConfirmDetail:
+        'This cannot be undone. Anyone you shared the trip with will lose access.',
       saveTrip: 'Save',
       cancel: 'Cancel',
       noSavedPlaces: 'No saved places yet. Save places from the map first.',
@@ -686,6 +689,7 @@ export const translations = {
       planTimeAfternoon: 'Afternoon',
       planTimeEvening: 'Evening',
       planAddToDay: 'Add to day',
+      planSkipToNextStep: 'Skip to next step',
       planOptimizeOrder: 'Smart schedule',
       planSmartScheduleHint:
         'Reorders stops and suggests times using weather, prayer windows for mosques, and natural spacing. The AI planner applies this automatically; use the button in the trip editor to refresh.',
@@ -2203,6 +2207,9 @@ export const translations = {
       dayLabel: 'Ø§Ù„ÙŠÙˆÙ…',
       removePlace: 'Ø¥Ø²Ø§Ù„Ø©',
       deleteTrip: 'Ø­Ø°Ù Ø§Ù„Ø±Ø­Ù„Ø©',
+      deleteTripConfirmTitle: 'Ø­Ø°Ù Ù‡Ø°Ù‡ Ø§Ù„Ø±Ø­Ù„Ø©ØŸ',
+      deleteTripConfirmDetail:
+        'Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ù„ØªØ±Ø§Ø¬Ø¹. Ù…Ù† Ø´Ø§Ø±ÙƒØª Ø§Ù„Ø±Ø­Ù„Ø© Ø³ÙŠÙÙ‚Ø¯ÙˆÙ† Ø§Ù„ÙˆØµÙˆÙ„.',
       saveTrip: 'Ø­ÙØ¸',
       cancel: 'Ø¥Ù„ØºØ§Ø¡',
       noSavedPlaces: 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ù…Ø§ÙƒÙ† Ù…Ø­ÙÙˆØ¸Ø©. Ø§Ø­ÙØ¸ Ø£Ù…Ø§ÙƒÙ† Ù…Ù† Ø§Ù„Ø®Ø±ÙŠØ·Ø© Ø£ÙˆÙ„Ø§Ù‹.',
@@ -2226,6 +2233,7 @@ export const translations = {
       planTimeAfternoon: 'Ø¨Ø¹Ø¯ Ø§Ù„Ø¸Ù‡Ø±',
       planTimeEvening: 'Ù…Ø³Ø§Ø¡Ù‹',
       planAddToDay: 'Ø£Ø¶Ù Ø¥Ù„Ù‰ Ø§Ù„ÙŠÙˆÙ…',
+      planSkipToNextStep: 'ØªØ®Ø·Ù‰ Ø¥Ù„Ù‰ Ø§Ù„Ø®Ø·ÙˆØ© Ø§Ù„ØªØ§Ù„ÙŠØ©',
       planOptimizeOrder: 'Ø¬Ø¯ÙˆÙ„Ø© Ø°ÙƒÙŠØ©',
       planSmartScheduleHint:
         'Ø¥Ø¹Ø§Ø¯Ø© ØªØ±ØªÙŠØ¨ Ø§Ù„Ù…Ø­Ø·Ø§Øª ÙˆØ£ÙˆÙ‚Ø§Øª Ù…Ù‚ØªØ±Ø­Ø© Ø­Ø³Ø¨ Ø§Ù„Ø·Ù‚Ø³ ÙˆÙ†ÙˆØ§ÙØ° Ø§Ù„ØµÙ„Ø§Ø© Ù„Ù„Ù…Ø³Ø§Ø¬Ø¯ ÙˆØ§Ù„ØªÙˆÙ‚ÙŠØª Ø§Ù„Ø·Ø¨ÙŠØ¹ÙŠ. Ù…Ø®Ø·Ø· Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ ÙŠØ·Ø¨Ù‚ Ø°Ù„Ùƒ ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹Ø› Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø²Ø± ÙÙŠ Ø§Ù„Ù…Ø­Ø±Ø± Ù„Ù„ØªØ­Ø¯ÙŠØ«.',
@@ -3742,6 +3750,9 @@ export const translations = {
       dayLabel: 'Jour',
       removePlace: 'Retirer',
       deleteTrip: 'Supprimer le voyage',
+      deleteTripConfirmTitle: 'Supprimer ce voyage ?',
+      deleteTripConfirmDetail:
+        'Cette action est irréversible. Les personnes avec qui vous l’avez partagé n’y auront plus accès.',
       saveTrip: 'Enregistrer',
       cancel: 'Annuler',
       noSavedPlaces: 'Aucun lieu enregistrÃ©. Enregistrez des lieux depuis la carte d\'abord.',
@@ -3765,6 +3776,7 @@ export const translations = {
       planTimeAfternoon: 'AprÃ¨s-midi',
       planTimeEvening: 'Soir',
       planAddToDay: 'Ajouter au jour',
+      planSkipToNextStep: 'Passer à l\'étape suivante',
       planOptimizeOrder: 'Planning intelligent',
       planSmartScheduleHint:
         'RÃ©organise les Ã©tapes et propose des horaires (mÃ©tÃ©o, crÃ©neaux entre priÃ¨res pour les mosquÃ©es, espacement). Le planificateur IA applique cela automatiquement ; utilisez le bouton dans lâ€™Ã©diteur pour rafraÃ®chir.',
