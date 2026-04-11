@@ -45,6 +45,16 @@ function normalizeHm(value) {
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 }
 
+/** Stable id for API calls (favourites, trips) when the list payload uses id vs place_id. */
+function resolveDiscoverPlaceId(place) {
+  if (!place || typeof place !== 'object') return '';
+  const raw = place.id ?? place.place_id ?? place.placeId;
+  if (raw == null) return '';
+  const s = String(raw).trim();
+  if (!s || s === 'undefined') return '';
+  return s;
+}
+
 function DiscoverCard({
   place,
   viewMode,
@@ -61,10 +71,11 @@ function DiscoverCard({
   const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
   const rating = place.rating != null ? Number(place.rating).toFixed(1) : null;
   const isList = viewMode === 'list';
+  const placeId = resolveDiscoverPlaceId(place);
 
   return (
     <div className={`pd-card pd-card--${viewMode}`}>
-      <Link to={`/place/${place.id}`} className="pd-card-main">
+      <Link to={placeId ? `/place/${encodeURIComponent(placeId)}` : '#'} className="pd-card-main">
         <div className="pd-card-media">
           {img ? (
             <DeliveryImg url={img} preset="discoverCard" alt="" />
@@ -310,7 +321,8 @@ export default function PlaceDiscover() {
   const placeMap = useMemo(() => {
     const m = {};
     (places || []).forEach((p) => {
-      if (p && p.id != null) m[String(p.id)] = p;
+      const id = resolveDiscoverPlaceId(p);
+      if (id) m[id] = p;
     });
     return m;
   }, [places]);
@@ -336,7 +348,7 @@ export default function PlaceDiscover() {
 
   const filteredPlaces = useMemo(() => {
     let base = places.filter((p) => {
-      if (hiddenRestaurantIds.has(String(p?.id))) return false;
+      if (hiddenRestaurantIds.has(resolveDiscoverPlaceId(p))) return false;
       if (isDedicatedGuideListing(p, foodCategoryIds, stayCategoryIds)) return false;
       return true;
     });
@@ -352,8 +364,8 @@ export default function PlaceDiscover() {
     const sorted = sortDiscoverPlaces(base, { query: qParam, sort: sortParam === 'rating' || sortParam === 'name' ? sortParam : 'recommended' });
     if (sponsoredPlaceIdSet.size === 0) return sorted;
     return sorted.slice().sort((a, b) => {
-      const sa = sponsoredPlaceIdSet.has(String(a?.id)) ? 1 : 0;
-      const sb = sponsoredPlaceIdSet.has(String(b?.id)) ? 1 : 0;
+      const sa = sponsoredPlaceIdSet.has(resolveDiscoverPlaceId(a)) ? 1 : 0;
+      const sb = sponsoredPlaceIdSet.has(resolveDiscoverPlaceId(b)) ? 1 : 0;
       if (sa !== sb) return sb - sa;
       return 0;
     });
@@ -396,8 +408,10 @@ export default function PlaceDiscover() {
         navigate('/login', { state: { from: returnTo } });
         return;
       }
+      const pid = resolveDiscoverPlaceId(place);
+      if (!pid) return;
       navigate('/map', {
-        state: { tripPlaceIds: [place.id], tripDays: [{ placeIds: [place.id] }], tripName: place.name },
+        state: { tripPlaceIds: [pid], tripDays: [{ placeIds: [pid] }], tripName: place.name },
       });
     },
     [navigate, user, location.pathname, location.search, location.hash]
@@ -430,7 +444,7 @@ export default function PlaceDiscover() {
         navigate('/login', { state: { from: returnTo } });
         return;
       }
-      const placeId = place?.id != null ? String(place.id) : '';
+      const placeId = resolveDiscoverPlaceId(place);
       if (!placeId) return;
       if (favouriteBusyIds.has(placeId)) return;
 
@@ -452,7 +466,7 @@ export default function PlaceDiscover() {
               return;
             }
             setFavouriteIds((prev) => new Set(prev).add(placeId));
-            showToast(err?.message || t('feedback', 'favouriteUpdateFailed'), 'error');
+            showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
           })
           .finally(async () => {
             try {
@@ -482,7 +496,7 @@ export default function PlaceDiscover() {
             next.delete(placeId);
             return next;
           });
-          showToast(err?.message || t('feedback', 'favouriteUpdateFailed'), 'error');
+          showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
         })
         .finally(async () => {
           try {
@@ -544,7 +558,8 @@ export default function PlaceDiscover() {
     const safeDayIndex = Math.min(Math.max(0, tripDayIndex), Math.max(0, dayCount - 1));
     const days = ensureDaysWithSlots(selectedTrip.days, dayCount);
     const daySlots = days[safeDayIndex]?.slots || [];
-    const placeId = String(tripPickPlace.id);
+    const placeId = resolveDiscoverPlaceId(tripPickPlace);
+    if (!placeId) return 'This place could not be identified.';
     if (daySlots.some((slot) => String(slot.placeId) === placeId)) return 'This place is already in the selected day.';
 
     const nextSlot = { placeId, startTime: `${startHm}:00`, endTime: `${endHm}:00`, notes: null };
@@ -570,7 +585,11 @@ export default function PlaceDiscover() {
       slots: Array.isArray(day?.slots) ? day.slots.map((slot) => ({ ...slot })) : [],
     }));
 
-    const idStr = String(tripPickPlace.id);
+    const idStr = resolveDiscoverPlaceId(tripPickPlace);
+    if (!idStr) {
+      setTripAddError('This place could not be identified.');
+      return;
+    }
     const daySlots = days[safeDayIndex]?.slots || [];
     const nextSlot = { placeId: idStr, startTime: `${startHm}:00`, endTime: `${endHm}:00`, notes: null };
 
@@ -803,28 +822,31 @@ export default function PlaceDiscover() {
                 </div>
               </div>
             ) : null}
-            {filteredPlaces.map((p) => (
-              <DiscoverCard
-                key={p.id}
-                place={p}
-                viewMode={viewMode}
-                onMapClick={handleViewOnMap}
-                onAddToTrip={openAddToTrip}
-                onToggleFavourite={toggleFavourite}
-                isFavourite={favouriteIds.has(String(p.id))}
-                favouriteBusy={favouriteBusyIds.has(String(p.id))}
-                viewDetailsLabel={t('home', 'viewDetails')}
-                mapAriaLabel={t('placeDiscover', 'viewOnMap')}
-                addToTripLabel={t('placeDiscover', 'addToTrip')}
-                favouriteLabel={
-                  favouriteIds.has(String(p.id))
-                    ? t('home', 'removeFromFavourites')
-                    : user
-                      ? t('home', 'addToFavourites')
-                      : t('home', 'signInToSave')
-                }
-              />
-            ))}
+            {filteredPlaces.map((p) => {
+              const rowId = resolveDiscoverPlaceId(p) || String(p.id ?? '');
+              return (
+                <DiscoverCard
+                  key={rowId}
+                  place={p}
+                  viewMode={viewMode}
+                  onMapClick={handleViewOnMap}
+                  onAddToTrip={openAddToTrip}
+                  onToggleFavourite={toggleFavourite}
+                  isFavourite={favouriteIds.has(rowId)}
+                  favouriteBusy={favouriteBusyIds.has(rowId)}
+                  viewDetailsLabel={t('home', 'viewDetails')}
+                  mapAriaLabel={t('placeDiscover', 'viewOnMap')}
+                  addToTripLabel={t('placeDiscover', 'addToTrip')}
+                  favouriteLabel={
+                    favouriteIds.has(rowId)
+                      ? t('home', 'removeFromFavourites')
+                      : user
+                        ? t('home', 'addToFavourites')
+                        : t('home', 'signInToSave')
+                  }
+                />
+              );
+            })}
           </section>
         )}
       </div>

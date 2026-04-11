@@ -576,17 +576,25 @@ router.get('/favourites', async (req, res) => {
 
 router.post('/favourites', async (req, res) => {
   const userId = req.user.userId;
-  const placeId = req.body && (req.body.placeId ?? req.body.place_id);
-  if (!placeId) return res.status(400).json({ error: 'placeId required' });
+  const raw = req.body && (req.body.placeId ?? req.body.place_id);
+  const parsed = parsePlaceId(raw);
+  if (!parsed.valid) return res.status(400).json({ error: 'Invalid or missing place id' });
+  const placeId = parsed.value;
   try {
     const favsColl = await getCollection('saved_places');
     await favsColl.updateOne(
-      { user_id: userId, place_id: String(placeId) },
-      { $set: { user_id: userId, place_id: String(placeId), created_at: new Date() } },
+      { user_id: userId, place_id: placeId },
+      {
+        $set: { user_id: userId, place_id: placeId },
+        $setOnInsert: { created_at: new Date() },
+      },
       { upsert: true }
     );
     res.json({ ok: true });
   } catch (err) {
+    if (err && err.code === 11000) {
+      return res.json({ ok: true });
+    }
     console.error(err);
     res.status(500).json({ error: 'Failed to add favourite' });
   }
@@ -594,10 +602,12 @@ router.post('/favourites', async (req, res) => {
 
 router.delete('/favourites/:placeId', async (req, res) => {
   const userId = req.user.userId;
-  const placeId = req.params.placeId;
+  const parsed = parsePlaceId(req.params.placeId);
+  if (!parsed.valid) return res.status(400).json({ error: 'Invalid place id' });
+  const placeId = parsed.value;
   try {
     const favsColl = await getCollection('saved_places');
-    await favsColl.deleteOne({ user_id: userId, place_id: String(placeId) });
+    await favsColl.deleteOne({ user_id: userId, place_id: placeId });
     res.json({ ok: true });
   } catch (err) {
     console.error(err);

@@ -1043,13 +1043,26 @@
 .pd-card-action--trip {
   flex: 1;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.95);
-  color: var(--pd-teal-deep);
+  background: linear-gradient(145deg, #0d9488 0%, #0f766e 55%, #0f766e 100%);
+  color: #f8fafc;
+  border-color: rgba(15, 118, 110, 0.55);
+  box-shadow: 0 2px 12px rgba(15, 118, 110, 0.28);
 }
 
 .pd-card-action--trip:hover {
-  background: rgba(15, 118, 110, 0.1);
-  border-color: rgba(15, 118, 110, 0.3);
+  background: linear-gradient(145deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%);
+  border-color: rgba(13, 148, 136, 0.65);
+  color: #fff;
+}
+
+.pd-card-action--trip .icon,
+.pd-card-action--trip .icon--feather {
+  color: inherit;
+}
+
+.pd-card-action--trip:focus-visible {
+  outline: 2px solid rgba(248, 250, 252, 0.95);
+  outline-offset: 2px;
 }
 
 .pd-card-action-text {
