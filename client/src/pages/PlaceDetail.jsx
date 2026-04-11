@@ -973,7 +973,7 @@ export default function PlaceDetail() {
     return (
       <div className="place-detail place-detail--error">
         <div className="place-detail-container">
-          <Link to="/" className="place-detail-back">
+          <Link to="/discover" className="place-detail-back">
             <Icon name="arrow_back" size={20} /> {t('detail', 'backToExplore')}
           </Link>
           <div className="place-detail-error">
@@ -1684,12 +1684,12 @@ export default function PlaceDetail() {
         <nav className="place-detail-breadcrumb" aria-label="Breadcrumb">
           <ol className="place-detail-breadcrumb-list">
             <li><Link to="/">{t('nav', 'home')}</Link></li>
-            <li><Link to="/">{t('detail', 'discoverTripoli')}</Link></li>
+            <li><Link to="/discover">{t('nav', 'discoverPlaces')}</Link></li>
             <li aria-current="page">{place.name}</li>
           </ol>
         </nav>
 
-        <Link to="/" className="place-detail-back">
+        <Link to="/discover" className="place-detail-back">
           <Icon name="arrow_back" size={20} /> {t('detail', 'backToExplore')}
         </Link>
 
