@@ -106,13 +106,7 @@ export default defineConfig(({ mode }) => {
     <link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/dmserifdisplay/v17/-nFnOHM81r4j6k0gjAW3mujVU2B2G_Bx0g.woff2" />
     <link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.gstatic.com/s/plusjakartasans/v12/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_d0n9TR_V.woff2" />`
             out = out.replace(/<link rel="preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin \/>/i, (m) => `${m}${fontPreloads}`)
-            // Remove render-blocking on the main Vite CSS (same pattern as Google Fonts).
-            out = out.replace(
-              /<link rel="stylesheet" crossorigin href="(\/assets\/index-[^"]+\.css)">/,
-              (_, href) =>
-                `<link rel="stylesheet" crossorigin href="${href}" media="print" onload="this.media='all'" />` +
-                `<noscript><link rel="stylesheet" href="${href}" crossorigin /></noscript>`
-            )
+            // Keep the main app CSS render-blocking so styles apply immediately on slow networks.
             return out
           },
         },

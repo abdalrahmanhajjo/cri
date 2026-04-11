@@ -1943,289 +1943,6 @@
   }
 }
 
-:root[data-theme="dark"] .map-page--google,
-:root[data-theme="dark"] .map-full-bleed,
-:root[data-theme="dark"] .map-canvas {
-  background: #071116;
-}
-
-:root[data-theme="dark"] .map-live-nav-exit,
-:root[data-theme="dark"] .map-trip-banner,
-:root[data-theme="dark"] .map-type-pill,
-:root[data-theme="dark"] .map-zoom-controls,
-:root[data-theme="dark"] .map-drawer,
-:root[data-theme="dark"] .map-geo-toast,
-:root[data-theme="dark"] .map-error-card-inner,
-:root[data-theme="dark"] .map-trip-route-panel.gm-directions-panel .map-trip-route-panel-inner,
-:root[data-theme="dark"] .map-trip-route-panel-inner,
-:root[data-theme="dark"] .map-live-nav-peek {
-  background: #111b24;
-  color: #eef2ff;
-  border-color: #24303f;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
-}
-
-:root[data-theme="dark"] .map-live-nav-start-wrap,
-:root[data-theme="dark"] .map-trip-route-days,
-:root[data-theme="dark"] .map-trip-route-modes,
-:root[data-theme="dark"] .map-trip-route-options,
-:root[data-theme="dark"] .map-trip-route-details-wrap,
-:root[data-theme="dark"] .map-live-nav-collapse-bar,
-:root[data-theme="dark"] .map-drawer-header,
-:root[data-theme="dark"] .gm-summary-card,
-:root[data-theme="dark"] .gm-roads-to-pass,
-:root[data-theme="dark"] .map-live-nav-error {
-  border-color: #24303f;
-}
-
-:root[data-theme="dark"] .map-trip-banner-label,
-:root[data-theme="dark"] .map-drawer-title,
-:root[data-theme="dark"] .map-drawer-item-name,
-:root[data-theme="dark"] .gm-summary-primary,
-:root[data-theme="dark"] .gm-roads-to-pass-title,
-:root[data-theme="dark"] .map-trip-route-waypoint-name,
-:root[data-theme="dark"] .map-error-title,
-:root[data-theme="dark"] .map-geo-toast-text,
-:root[data-theme="dark"] .map-live-next-turn,
-:root[data-theme="dark"] .map-live-nav-peek-eta,
-:root[data-theme="dark"] .map-live-nav-peek-turn {
-  color: #eef2ff;
-}
-
-:root[data-theme="dark"] .map-live-nav-start-hint,
-:root[data-theme="dark"] .map-live-nav-permission-note,
-:root[data-theme="dark"] .map-live-nav-peek-hint,
-:root[data-theme="dark"] .map-live-nav-peek-chevron,
-:root[data-theme="dark"] .map-drawer-sub,
-:root[data-theme="dark"] .map-drawer-nearby-hint,
-:root[data-theme="dark"] .map-drawer-item-loc,
-:root[data-theme="dark"] .map-drawer-item-rating,
-:root[data-theme="dark"] .gm-summary-time-label,
-:root[data-theme="dark"] .gm-summary-sep,
-:root[data-theme="dark"] .map-trip-route-leave-now,
-:root[data-theme="dark"] .gm-roads-to-pass-list,
-:root[data-theme="dark"] .map-trip-route-day-btn,
-:root[data-theme="dark"] .map-trip-route-mode-btn,
-:root[data-theme="dark"] .map-trip-route-waypoint-address,
-:root[data-theme="dark"] .map-error-message,
-:root[data-theme="dark"] .map-error-steps,
-:root[data-theme="dark"] .map-error-console,
-:root[data-theme="dark"] .map-loading-overlay span,
-:root[data-theme="dark"] .map-no-key {
-  color: #cbd5e1;
-}
-
-:root[data-theme="dark"] .map-drawer-nearby-btn {
-  color: #cbd5e1;
-  background: #1a2632;
-  border-color: #24303f;
-}
-
-:root[data-theme="dark"] .map-drawer-nearby-btn:hover:not(:disabled) {
-  background: #24303f;
-  color: #eef2ff;
-}
-
-:root[data-theme="dark"] .map-drawer-nearby-btn--active {
-  color: #7dd3fc;
-  background: rgba(125, 211, 252, 0.12);
-  border-color: rgba(125, 211, 252, 0.35);
-}
-
-:root[data-theme="dark"] .map-drawer-item-distance {
-  color: #7dd3fc;
-}
-
-:root[data-theme="dark"] .map-drawer-swipe:focus-visible {
-  box-shadow: inset 0 0 0 2px rgba(125, 211, 252, 0.65);
-}
-
-:root[data-theme="dark"] .map-drawer-swipe-hint,
-:root[data-theme="dark"] .map-drawer-swipe-counter {
-  color: #94a3b8;
-}
-
-:root[data-theme="dark"] .map-drawer-swipe-arrow {
-  background: #1a2632;
-  color: #cbd5e1;
-}
-
-:root[data-theme="dark"] .map-drawer-swipe-arrow:hover:not(:disabled) {
-  background: #24303f;
-  color: #eef2ff;
-}
-
-:root[data-theme="dark"] .map-drawer-swipe-media {
-  background: #1a2632;
-}
-
-:root[data-theme="dark"] .map-drawer-swipe-name {
-  color: #eef2ff;
-}
-
-:root[data-theme="dark"] .map-drawer-swipe-loc,
-:root[data-theme="dark"] .map-drawer-swipe-rating {
-  color: #cbd5e1;
-}
-
-:root[data-theme="dark"] .map-drawer-swipe-distance,
-:root[data-theme="dark"] .map-drawer-swipe-details {
-  color: #7dd3fc;
-}
-
-:root[data-theme="dark"] .map-drawer-swipe-media-fallback {
-  color: #64748b;
-  background: linear-gradient(145deg, #1a2632, #111b24);
-}
-
-:root[data-theme="dark"] .map-live-nav-start-btn,
-:root[data-theme="dark"] .map-error-dismiss,
-:root[data-theme="dark"] .map-add-stop-done {
-  background: #30c5b6;
-  color: #071116;
-}
-
-:root[data-theme="dark"] .map-live-nav-start-btn:hover,
-:root[data-theme="dark"] .map-error-dismiss:hover,
-:root[data-theme="dark"] .map-add-stop-done:hover {
-  background: #52d6ca;
-}
-
-:root[data-theme="dark"] .map-trip-banner-btn,
-:root[data-theme="dark"] .map-geo-toast-dismiss,
-:root[data-theme="dark"] .map-trip-route-day-btn--active,
-:root[data-theme="dark"] .map-trip-route-mode-btn--active,
-:root[data-theme="dark"] .map-add-stop-panel,
-:root[data-theme="dark"] .map-search-wrap--add-stop .global-search-bar__inner {
-  background: rgba(48, 197, 182, 0.14);
-  color: #a7f3eb;
-  border-color: rgba(48, 197, 182, 0.3);
-  box-shadow: none;
-}
-
-:root[data-theme="dark"] .map-trip-route-waypoint,
-:root[data-theme="dark"] .map-drawer-item:hover,
-:root[data-theme="dark"] .map-live-nav-exit:hover,
-:root[data-theme="dark"] .map-type-btn:hover,
-:root[data-theme="dark"] .map-zoom-btn:hover,
-:root[data-theme="dark"] .map-drawer-close:hover,
-:root[data-theme="dark"] .map-trip-route-mode-btn:hover,
-:root[data-theme="dark"] .map-trip-route-add-dest:hover,
-:root[data-theme="dark"] .map-live-nav-collapse-bar:hover {
-  background: #162431;
-}
-
-:root[data-theme="dark"] .map-drawer-item--selected {
-  background: rgba(48, 197, 182, 0.16);
-  border-left-color: #30c5b6;
-}
-
-:root[data-theme="dark"] .map-type-btn--active {
-  background: rgba(48, 197, 182, 0.16);
-  color: #a7f3eb;
-}
-
-:root[data-theme="dark"] .map-fab,
-:root[data-theme="dark"] .map-zoom-btn,
-:root[data-theme="dark"] .map-type-btn,
-:root[data-theme="dark"] .map-drawer-close {
-  background: #111b24;
-  color: #eef2ff;
-}
-
-:root[data-theme="dark"] .map-fab:hover {
-  background: #162431;
-}
-
-:root[data-theme="dark"] .map-loading-overlay {
-  background: rgba(7, 17, 22, 0.86);
-}
-
-:root[data-theme="dark"] .map-loading-spinner {
-  border-color: #24303f;
-  border-top-color: #30c5b6;
-}
-
-:root[data-theme="dark"] .map-drawer-backdrop--visible {
-  background: transparent;
-}
-
-:root[data-theme="dark"] .gm-info-content {
-  min-width: 220px;
-  max-width: 280px;
-  padding: 0;
-  font-size: 14px;
-}
-
-:root[data-theme="dark"] .gm-info-image {
-  width: 100%;
-  height: 100px;
-  object-fit: cover;
-  border-radius: 10px 10px 0 0;
-  display: block;
-  margin: -8px -8px 10px -8px;
-}
-
-:root[data-theme="dark"] .gm-info-title {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 15px;
-  color: #eef2ff;
-}
-
-:root[data-theme="dark"] .gm-info-address,
-:root[data-theme="dark"] .gm-info-rating {
-  margin: 0 0 6px 0;
-  color: #cbd5e1;
-  font-size: 13px;
-}
-
-:root[data-theme="dark"] .gm-info-open {
-  margin: 0 0 8px 0;
-  font-size: 12px;
-}
-
-:root[data-theme="dark"] .gm-info-open--yes {
-  color: #86efac;
-}
-
-:root[data-theme="dark"] .gm-info-open--no {
-  color: #fca5a5;
-}
-
-:root[data-theme="dark"] .gm-info-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  align-items: center;
-  line-height: 1.35;
-}
-
-:root[data-theme="dark"] .map-info-link,
-:root[data-theme="dark"] .map-info-directions {
-  color: #7dd3fc;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-:root[data-theme="dark"] .gm-style .gm-style-iw-c,
-:root[data-theme="dark"] .gm-style .gm-style-iw-d {
-  background: #111b24 !important;
-  color: #eef2ff !important;
-  border-radius: 12px !important;
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42) !important;
-}
-
-:root[data-theme="dark"] .gm-style .gm-ui-hover-effect {
-  background: #162431 !important;
-  border-radius: 10px !important;
-  opacity: 1 !important;
-}
-
-:root[data-theme="dark"] .gm-style .gm-ui-hover-effect span {
-  filter: invert(1) brightness(1.2);
-}
 
 /* Final close-button placement fix for map popup */
 .gm-style .gm-ui-hover-effect {
@@ -2262,16 +1979,6 @@
   font-weight: 400;
   color: #0f172a;
   text-shadow: none;
-}
-
-:root[data-theme="dark"] .gm-style .gm-ui-hover-effect::before {
-  color: #e2e8f0;
-}
-
-:root[data-theme="dark"] .gm-style .gm-ui-hover-effect {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
 }
 
 /* Keep card clipping clean now that button is inside */
@@ -2467,36 +2174,17 @@
   }
 }
 
-:root[data-theme="dark"] .map-drawer-header {
-  background: rgba(10, 22, 33, 0.78);
-  border-color: rgba(46, 64, 82, 0.86);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
-}
 
-:root[data-theme="dark"] .map-drawer-swipe-arrow {
-  background: rgba(12, 24, 35, 0.86);
-  border-color: #2a3b4f;
-}
 
-:root[data-theme="dark"] .map-drawer-swipe-slide {
-  background: #0f1d2a;
-  border-color: #2a3b4f;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
-}
 
-:root[data-theme="dark"] .map-drawer-swipe-body {
-  border-top-color: #2f445b;
-}
 
-:root[data-theme="dark"] .map-drawer-swipe-body::before,
-:root[data-theme="dark"] .map-drawer-swipe-body::after {
-  background: #0b1621;
-}
 
-:root[data-theme="dark"] .map-drawer-swipe-counter {
-  color: #cbd5e1;
-  text-shadow: none;
-}
+
+
+
+
+
+
 
 /* Map-first compact mode: keep maximum map visible */
 .map-drawer {
@@ -2631,12 +2319,7 @@
   }
 }
 
-:root[data-theme="dark"] .map-drawer-header,
-:root[data-theme="dark"] .map-drawer-nearby-btn,
-:root[data-theme="dark"] .map-drawer-close {
-  background: rgba(12, 24, 35, 0.9);
-  border-color: #2a3b4f;
-}
+
 
 /* Nearby tabs in a dedicated floating rail (separate from bottom selector) */
 .map-nearby-tabs-floating {
@@ -2892,20 +2575,11 @@
   }
 }
 
-:root[data-theme="dark"] .map-nearby-tabs-floating {
-  background: rgba(12, 24, 35, 0.88);
-  border-color: #2a3b4f;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.44);
-}
 
-:root[data-theme="dark"] .gm-info-content {
-  background: #0f1d2a !important;
-  border-color: #2a3b4f;
-}
 
-:root[data-theme="dark"] .gm-style .gm-ui-hover-effect {
-  background: rgba(12, 24, 35, 0.92) !important;
-}
+
+
+
 
 /* Google Maps info window hardening for light + dark mode */
 .gm-info-content {
@@ -3011,56 +2685,27 @@
   margin: 6px !important;
 }
 
-:root[data-theme="dark"] .gm-info-content {
-  color: #eef2ff;
-  background: #111b24 !important;
-}
 
-:root[data-theme="dark"] .gm-info-image {
-  background: #0f1720;
-}
 
-:root[data-theme="dark"] .gm-info-title {
-  color: #eef2ff;
-}
 
-:root[data-theme="dark"] .gm-info-address,
-:root[data-theme="dark"] .gm-info-rating {
-  color: #cbd5e1;
-}
 
-:root[data-theme="dark"] .gm-info-open--yes {
-  color: #86efac;
-}
 
-:root[data-theme="dark"] .gm-info-open--no {
-  color: #fca5a5;
-}
 
-:root[data-theme="dark"] .map-info-link,
-:root[data-theme="dark"] .map-info-directions {
-  color: #7dd3fc;
-}
 
-:root[data-theme="dark"] .gm-style .gm-style-iw-c,
-:root[data-theme="dark"] .gm-style .gm-style-iw-d {
-  background: #111b24 !important;
-  color: #eef2ff !important;
-  border-radius: 14px !important;
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42) !important;
-}
 
-:root[data-theme="dark"] .gm-style .gm-style-iw-tc::after {
-  background: #111b24 !important;
-}
 
-:root[data-theme="dark"] .gm-style .gm-ui-hover-effect {
-  background: #162431 !important;
-}
 
-:root[data-theme="dark"] .gm-style .gm-ui-hover-effect span {
-  filter: invert(1) brightness(1.2);
-}
+
+
+
+
+
+
+
+
+
+
+
 
 /* Final cleanup override: balanced map UI */
 .map-search-wrap {

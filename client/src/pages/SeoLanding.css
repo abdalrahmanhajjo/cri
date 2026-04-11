@@ -1140,218 +1140,55 @@
 }
 
 /* ----- Dark mode: full About / SEO landing treatment ----- */
-:root[data-theme="dark"] .seo-landing {
-  background:
-    radial-gradient(circle at top, rgba(43, 212, 192, 0.08), transparent 22%),
-    linear-gradient(180deg, #071116 0%, #0b141c 22%, #081017 100%);
-  color: #eef4fa;
-}
 
-:root[data-theme="dark"] .seo-landing__container,
-:root[data-theme="dark"] .seo-landing__title,
-:root[data-theme="dark"] .seo-landing__h2,
-:root[data-theme="dark"] .seo-landing__sideTitle,
-:root[data-theme="dark"] .seo-landing__sideTitleSm,
-:root[data-theme="dark"] .seo-landing__aboutSectionH,
-:root[data-theme="dark"] .seo-landing__aboutSectionH3,
-:root[data-theme="dark"] .seo-landing__aboutInfoboxTitle,
-:root[data-theme="dark"] .seo-landing__aboutTocTitle,
-:root[data-theme="dark"] .seo-landing__aboutVisualBody h2,
-:root[data-theme="dark"] .seo-landing__aboutCard h2,
-:root[data-theme="dark"] .seo-landing__timelineTitle,
-:root[data-theme="dark"] .seo-landing__dbBody h3 {
-  color: #f5f8fc;
-}
 
-:root[data-theme="dark"] .seo-landing__intro,
-:root[data-theme="dark"] .seo-landing__p,
-:root[data-theme="dark"] .seo-landing__sideP,
-:root[data-theme="dark"] .seo-landing__footerP,
-:root[data-theme="dark"] .seo-landing__aboutVisualBody p,
-:root[data-theme="dark"] .seo-landing__aboutCard p,
-:root[data-theme="dark"] .seo-landing__aboutQuizMeta,
-:root[data-theme="dark"] .seo-landing__aboutChecklistMeta,
-:root[data-theme="dark"] .seo-landing__dbHead p,
-:root[data-theme="dark"] .seo-landing__dbBody p,
-:root[data-theme="dark"] .seo-landing__timelineRange {
-  color: #9eb0c3;
-}
 
-:root[data-theme="dark"] .seo-landing__section,
-:root[data-theme="dark"] .seo-landing__card,
-:root[data-theme="dark"] .seo-landing__aboutLeadBody,
-:root[data-theme="dark"] .seo-landing__aboutInfobox,
-:root[data-theme="dark"] .seo-landing__aboutToc,
-:root[data-theme="dark"] .seo-landing__aboutSection--visit,
-:root[data-theme="dark"] .seo-landing__aboutVisualCard,
-:root[data-theme="dark"] .seo-landing__aboutCard,
-:root[data-theme="dark"] .seo-landing__aboutNarrative,
-:root[data-theme="dark"] .seo-landing__aboutFacts,
-:root[data-theme="dark"] .seo-landing__aboutTimeline,
-:root[data-theme="dark"] .seo-landing__timelineDetails,
-:root[data-theme="dark"] .seo-landing__aboutPlay,
-:root[data-theme="dark"] .seo-landing__aboutPlayCard,
-:root[data-theme="dark"] .seo-landing__dbSection,
-:root[data-theme="dark"] .seo-landing__dbCard,
-:root[data-theme="dark"] .seo-landing__aboutHistoryDetails {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 26%),
-    #101b24;
-  border-color: rgba(148, 163, 184, 0.16);
-  box-shadow:
-    0 20px 42px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
-}
 
-:root[data-theme="dark"] .seo-landing__btn--primary,
-:root[data-theme="dark"] .seo-landing__aboutHeroBtn,
-:root[data-theme="dark"] .seo-landing__aboutMiniBtn {
-  background: linear-gradient(135deg, #24cdb9 0%, #148b80 100%);
-  color: #061215;
-  border-color: transparent;
-  box-shadow: 0 12px 24px rgba(43, 212, 192, 0.2);
-}
 
-:root[data-theme="dark"] .seo-landing__btn--ghost,
-:root[data-theme="dark"] .seo-landing__aboutHeroBtn--ghost,
-:root[data-theme="dark"] .seo-landing__aboutNextLink,
-:root[data-theme="dark"] .seo-landing__aboutMiniBtn--ghost,
-:root[data-theme="dark"] .seo-landing__aboutChecklistReset,
-:root[data-theme="dark"] .seo-landing__link,
-:root[data-theme="dark"] .seo-landing__aboutJumpLink,
-:root[data-theme="dark"] .seo-landing__aboutQuizBtn {
-  background: #13212d;
-  color: #eef4fa;
-  border-color: rgba(148, 163, 184, 0.16);
-}
 
-:root[data-theme="dark"] .seo-landing__btn--ghost:hover,
-:root[data-theme="dark"] .seo-landing__aboutHeroBtn--ghost:hover,
-:root[data-theme="dark"] .seo-landing__aboutNextLink:hover,
-:root[data-theme="dark"] .seo-landing__aboutMiniBtn--ghost:hover,
-:root[data-theme="dark"] .seo-landing__aboutChecklistReset:hover,
-:root[data-theme="dark"] .seo-landing__link:hover,
-:root[data-theme="dark"] .seo-landing__aboutJumpLink:hover,
-:root[data-theme="dark"] .seo-landing__aboutQuizBtn:hover {
-  background: #1a2a39;
-  color: #f6fbff;
-  border-color: rgba(43, 212, 192, 0.28);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutGlow {
-  background-image:
-    linear-gradient(to right, rgba(79, 114, 140, 0.12) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(79, 114, 140, 0.12) 1px, transparent 1px);
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.42), transparent 75%);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutEyebrow {
-  color: #9ffbf0;
-  background: rgba(43, 212, 192, 0.12);
-  border-color: rgba(43, 212, 192, 0.24);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutHeroBtn:hover,
-:root[data-theme="dark"] .seo-landing__aboutMiniBtn:hover,
-:root[data-theme="dark"] .seo-landing__btn--primary:hover {
-  filter: brightness(1.05);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutLeadMedia {
-  border-color: rgba(43, 212, 192, 0.2);
-  background: #0d1820;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 24px 52px rgba(0, 0, 0, 0.3),
-    0 10px 28px rgba(43, 212, 192, 0.12);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutLeadMedia::after {
-  box-shadow: inset 0 0 110px rgba(2, 8, 12, 0.34);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutInfoboxTitle,
-:root[data-theme="dark"] .seo-landing__aboutTocList a,
-:root[data-theme="dark"] .seo-landing__aboutInfoboxLink,
-:root[data-theme="dark"] .seo-landing__dbCta {
-  color: #8af7ea;
-}
 
-:root[data-theme="dark"] .seo-landing__aboutInfoboxTable th,
-:root[data-theme="dark"] .seo-landing__aboutInfoboxTable td,
-:root[data-theme="dark"] .seo-landing__aboutHistoryBody,
-:root[data-theme="dark"] .seo-landing__timelineBody,
-:root[data-theme="dark"] .seo-landing__footer {
-  border-color: rgba(148, 163, 184, 0.14);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutSectionH {
-  border-bottom-color: rgba(43, 212, 192, 0.32);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutMetric,
-:root[data-theme="dark"] .seo-landing__aboutCheck:has(input:checked),
-:root[data-theme="dark"] .seo-landing__aboutVibe.is-active {
-  background:
-    radial-gradient(120px 60px at 10% 0%, rgba(43, 212, 192, 0.14), transparent 72%),
-    #13212d;
-  border-color: rgba(43, 212, 192, 0.22);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutMetric strong,
-:root[data-theme="dark"] .seo-landing__aboutVibeTitle,
-:root[data-theme="dark"] .seo-landing__aboutPlayTop h3 {
-  color: #f2f8fd;
-}
 
-:root[data-theme="dark"] .seo-landing__aboutMetric span,
-:root[data-theme="dark"] .seo-landing__aboutVibeKicker,
-:root[data-theme="dark"] .seo-landing__aboutPlayTop p,
-:root[data-theme="dark"] .seo-landing__aboutQuizDone p {
-  color: #9eb0c3;
-}
 
-:root[data-theme="dark"] .seo-landing__timeline::before {
-  background: linear-gradient(
-    to bottom,
-    rgba(43, 212, 192, 0.56),
-    rgba(148, 163, 184, 0.18)
-  );
-}
 
-:root[data-theme="dark"] .seo-landing__timelineItem::before {
-  background: rgba(43, 212, 192, 0.18);
-  border-color: rgba(43, 212, 192, 0.3);
-  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutVisualMedia,
-:root[data-theme="dark"] .seo-landing__dbMedia {
-  background-color: #0f1b25;
-}
 
-:root[data-theme="dark"] .seo-landing__aboutVibe,
-:root[data-theme="dark"] .seo-landing__aboutCheck {
-  background: #13212d;
-  border-color: rgba(148, 163, 184, 0.16);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutVibe:hover,
-:root[data-theme="dark"] .seo-landing__aboutQuizBtn:hover {
-  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.24);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutQuizBar {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(148, 163, 184, 0.14);
-}
 
-:root[data-theme="dark"] .seo-landing__aboutQuizBar > span {
-  background: linear-gradient(90deg, #148b80, #24cdb9);
-}
 
-:root[data-theme="dark"] .seo-landing__dbState--err {
-  color: #fca5a5;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

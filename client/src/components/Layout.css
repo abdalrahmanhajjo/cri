@@ -62,18 +62,6 @@
   border-bottom: 1px solid #7dd3fc;
 }
 
-:root[data-theme="dark"] .site-settings-banner--maintenance {
-  background: rgba(15, 118, 110, 0.14);
-  color: var(--color-primary);
-  border-bottom-color: rgba(15, 118, 110, 0.3);
-}
-
-:root[data-theme="dark"] .site-settings-banner--announcement {
-  background: rgba(15, 118, 110, 0.14);
-  color: var(--color-primary);
-  border-bottom-color: rgba(15, 118, 110, 0.32);
-}
-
 .site-settings-banner-link {
   font-weight: 700;
   color: inherit;
