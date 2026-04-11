@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import api, { getPlaceImageUrl } from '../api/client';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
 import DeliveryImg from '../components/DeliveryImg';
 import GlobalSearchBar from '../components/GlobalSearchBar';
@@ -159,12 +160,25 @@ function buildChromeAppUrl(url) {
   return '';
 }
 
-function tryOpenCurrentPageInChrome() {
-  if (typeof window === 'undefined') return false;
-  const chromeUrl = buildChromeAppUrl(window.location.href);
-  if (!chromeUrl) return false;
-  window.location.assign(chromeUrl);
-  return true;
+function buildChromeMapHandoffUrl({
+  baseUrl,
+  handoffCode,
+  tripIds,
+  tripName,
+  travelMode,
+  autoStart = true,
+}) {
+  const url = new URL(baseUrl);
+  if (handoffCode) url.searchParams.set('handoff', handoffCode);
+  if (Array.isArray(tripIds) && tripIds.length > 0) {
+    url.searchParams.set('tripIds', tripIds.map(String).join(','));
+    if (tripName) url.searchParams.set('tripName', tripName);
+    if (travelMode === 'WALKING' || travelMode === 'DRIVING') {
+      url.searchParams.set('mode', travelMode);
+    }
+  }
+  if (autoStart) url.searchParams.set('autostart', '1');
+  return url.toString();
 }
 
 function getDateForDayLabel(startDate, dayIndex) {
@@ -308,6 +322,7 @@ function escapeHtml(s) {
 
 export default function MapPage() {
   const { lang, t } = useLanguage();
+  const { applySession } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -399,8 +414,48 @@ export default function MapPage() {
   }, []);
 
   useEffect(() => {
+    const mode = searchParams.get('mode');
+    if (mode === 'WALKING' || mode === 'DRIVING') {
+      setTravelMode(mode);
+    }
+  }, [searchParams.toString()]);
+
+  useEffect(() => {
+    const handoff = (searchParams.get('handoff') || '').trim();
+    if (!handoff) return;
+    let cancelled = false;
+    api.auth
+      .consumeChromeHandoff(handoff)
+      .then((payload) => {
+        if (!cancelled && payload?.token && payload?.user) {
+          applySession(payload);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (cancelled) return;
+        const next = new URLSearchParams(searchParams);
+        next.delete('handoff');
+        navigate(
+          {
+            pathname: location.pathname,
+            search: next.toString() ? `?${next.toString()}` : '',
+          },
+          { replace: true, state: location.state }
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams.toString(), applySession, navigate, location.pathname, location.state]);
+
+  useEffect(() => {
     const state = location.state;
     const tripIds = state?.tripPlaceIds;
+    const tripIdsFromQuery = (searchParams.get('tripIds') || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     const days = state?.tripDays;
     const mf = state?.mapFocus;
     const qParam = (searchParams.get('q') || '').trim();
@@ -427,6 +482,17 @@ export default function MapPage() {
           : [{ placeIds: tripIds }];
       setTripDays(normalizedDays);
       Promise.all(tripIds.map((id) => api.places.get(id).catch(() => null)))
+        .then((results) => setPlaces(results.filter(Boolean)))
+        .catch(() => setPlaces([]))
+        .finally(() => setLoading(false));
+    } else if (tripIdsFromQuery.length > 0) {
+      setMapFocusFromNav(null);
+      setSearchQuery('');
+      setLoading(true);
+      setTripFilterName(searchParams.get('tripName') || 'Trip');
+      setTripPlaceIds(tripIdsFromQuery);
+      setTripDays([{ placeIds: tripIdsFromQuery }]);
+      Promise.all(tripIdsFromQuery.map((id) => api.places.get(id).catch(() => null)))
         .then((results) => setPlaces(results.filter(Boolean)))
         .catch(() => setPlaces([]))
         .finally(() => setLoading(false));
@@ -820,9 +886,26 @@ export default function MapPage() {
     }
   }, [tripFilterName, t]);
 
-  const handleOpenInChrome = useCallback(() => {
-    tryOpenCurrentPageInChrome();
-  }, []);
+  const handleOpenInChrome = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    let handoffCode = '';
+    try {
+      const handoff = await api.auth.createChromeHandoff();
+      if (handoff?.code) handoffCode = String(handoff.code);
+    } catch {
+      handoffCode = '';
+    }
+    const targetUrl = buildChromeMapHandoffUrl({
+      baseUrl: window.location.href,
+      handoffCode,
+      tripIds: currentDayPlaceIds,
+      tripName: tripFilterName || '',
+      travelMode,
+      autoStart: true,
+    });
+    const chromeUrl = buildChromeAppUrl(targetUrl);
+    if (chromeUrl) window.location.assign(chromeUrl);
+  }, [currentDayPlaceIds, tripFilterName, travelMode]);
 
   const canRedirectToChrome = useMemo(() => isLikelySafari() && isIosDevice(), []);
   const startButtonOpensChrome = canRedirectToChrome && liveNavError === 'denied';
@@ -1397,15 +1480,42 @@ export default function MapPage() {
         setLiveNavErrorDebug(formatGeoErrorDebug(err));
         if (denied) {
           if (canRedirectToChrome) {
-            // No extra manual steps: jump to the same page in Chrome immediately.
-            tryOpenCurrentPageInChrome();
+            // No extra manual steps: jump to the same trip + live nav in Chrome.
+            void handleOpenInChrome();
           }
           setLiveNavError('denied');
         } else {
           setLiveNavError('unavailable');
         }
       });
-  }, [canRedirectToChrome]);
+  }, [canRedirectToChrome, handleOpenInChrome]);
+
+  useEffect(() => {
+    const shouldAutoStart = searchParams.get('autostart') === '1';
+    if (!shouldAutoStart) return;
+    if (liveNavigation || liveNavRequestingPermission) return;
+    if (!tripFilterName || placesInTripOrder.length < 1) return;
+    startLiveNavigation();
+    const next = new URLSearchParams(searchParams);
+    next.delete('autostart');
+    navigate(
+      {
+        pathname: location.pathname,
+        search: next.toString() ? `?${next.toString()}` : '',
+      },
+      { replace: true, state: location.state }
+    );
+  }, [
+    searchParams.toString(),
+    liveNavigation,
+    liveNavRequestingPermission,
+    tripFilterName,
+    placesInTripOrder.length,
+    startLiveNavigation,
+    navigate,
+    location.pathname,
+    location.state,
+  ]);
 
   const stopLiveNavigation = useCallback(() => {
     setLiveNavigation(false);

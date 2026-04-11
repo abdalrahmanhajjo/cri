@@ -25,9 +25,11 @@ const {
   canSendVerificationEmailNow,
  markVerificationEmailSent,
 } = require('../utils/authAbuseTracking');
+const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-dev-only';
+const CHROME_HANDOFF_TTL_MS = 2 * 60 * 1000;
 
 /** Inserts a new token row and sends mail when SMTP is configured. @returns {Promise<boolean>} true if SMTP accepted the message */
 async function issueEmailVerification(userId, email) {
@@ -89,6 +91,31 @@ async function pickUsernameForGoogle(users, email) {
   throw new Error('Could not allocate username for Google sign-in');
 }
 
+function chromeHandoffCodeHash(code) {
+  return crypto.createHash('sha256').update(String(code || '')).digest('hex');
+}
+
+async function buildAuthSessionPayload(user) {
+  const placeOwners = await getCollection('place_owners');
+  const ownedPlaceCount = await placeOwners.countDocuments({ user_id: user.id });
+  const profile = user.profile || {};
+  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+  return {
+    token,
+    user: {
+      id: user.id,
+      name: user.name || user.email.split('@')[0],
+      username: profile.username || '',
+      email: user.email,
+      emailVerified: user.email_verified === true,
+      onboardingCompleted: profile.onboarding_completed === true,
+      isBusinessOwner: user.is_business_owner === true,
+      isAdmin: user.is_admin === true,
+      ownedPlaceCount,
+    },
+  };
+}
+
 /**
  * GET /api/auth/google-public-config
  * Public OAuth web client id for Google Identity Services (same value as VITE_GOOGLE_CLIENT_ID).
@@ -103,6 +130,61 @@ router.get('/google-public-config', (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Could not load Google config' });
+  }
+});
+
+/** POST /api/auth/chrome-handoff — create one-time short-lived code for cross-browser session handoff. */
+router.post('/chrome-handoff', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+    const handoffs = await getCollection('auth_handoff_tokens');
+    const code = crypto.randomBytes(24).toString('hex');
+    await handoffs.deleteMany({ user_id: userId });
+    await handoffs.insertOne({
+      user_id: userId,
+      code_hash: chromeHandoffCodeHash(code),
+      expires_at: new Date(Date.now() + CHROME_HANDOFF_TTL_MS),
+      created_at: new Date(),
+    });
+    res.json({ code, expiresInMs: CHROME_HANDOFF_TTL_MS });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not create handoff code' });
+  }
+});
+
+/** POST /api/auth/chrome-handoff/consume — one-time code => normal JWT session payload. */
+router.post('/chrome-handoff/consume', async (req, res) => {
+  try {
+    const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
+    if (!code || code.length < 16 || code.length > 128) {
+      return res.status(400).json({ error: 'Invalid handoff code' });
+    }
+    const handoffs = await getCollection('auth_handoff_tokens');
+    const doc = await handoffs.findOne({
+      code_hash: chromeHandoffCodeHash(code),
+      expires_at: { $gt: new Date() },
+    });
+    if (!doc) return res.status(400).json({ error: 'Handoff code expired or invalid' });
+    await handoffs.deleteOne({ _id: doc._id });
+    const users = await getCollection('users');
+    const user = await users.findOne({ id: doc.user_id });
+    if (!user) return res.status(401).json({ error: 'Account not found' });
+    if (user.is_blocked === true) {
+      return res.status(403).json({ error: 'This account has been disabled.', code: 'ACCOUNT_BLOCKED' });
+    }
+    if (user.auth_provider === 'email' && user.email_verified !== true) {
+      return res.status(403).json({
+        error: 'Please verify your email before continuing.',
+        code: 'EMAIL_NOT_VERIFIED',
+      });
+    }
+    const payload = await buildAuthSessionPayload(user);
+    res.json(payload);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not consume handoff code' });
   }
 });
 

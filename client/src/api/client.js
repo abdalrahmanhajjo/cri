@@ -341,6 +341,10 @@ export const api = {
     verifyEmail: (email, code) => api.post('/api/auth/verify-email', { email, code }),
     forgotPassword: (email) => api.post('/api/auth/forgot-password', { email }),
     resetPassword: (email, code, newPassword) => api.post('/api/auth/reset-password', { email, code, newPassword }),
+    /** Create a one-time cross-browser auth handoff code (Safari -> Chrome). */
+    createChromeHandoff: () => api.post('/api/auth/chrome-handoff', {}),
+    /** Consume one-time handoff code and receive a normal app session payload. */
+    consumeChromeHandoff: (code) => api.post('/api/auth/chrome-handoff/consume', { code }),
   },
   places: {
     list: (params) => {
