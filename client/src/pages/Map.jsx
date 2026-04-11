@@ -108,6 +108,16 @@ function getFirstWatchPosition(options = {}, timeoutMs = 25000) {
   });
 }
 
+function formatGeoErrorDebug(err) {
+  if (!err) return '';
+  const code = err?.code != null ? String(err.code) : '';
+  const msg = err?.message ? String(err.message).trim() : '';
+  if (code && msg) return `code ${code}: ${msg}`;
+  if (code) return `code ${code}`;
+  if (msg) return msg;
+  return '';
+}
+
 function stripHtml(html) {
   if (!html || typeof html !== 'string') return '';
   const div = document.createElement('div');
@@ -302,6 +312,7 @@ export default function MapPage() {
   const [liveNavDirectionsExpanded, setLiveNavDirectionsExpanded] = useState(false);
   const [routeRefreshTick, setRouteRefreshTick] = useState(0);
   const [liveNavError, setLiveNavError] = useState(null);
+  const [liveNavErrorDebug, setLiveNavErrorDebug] = useState('');
   /** True while waiting for the browser geolocation prompt / first fix. */
   const [liveNavRequestingPermission, setLiveNavRequestingPermission] = useState(false);
   const [addingTripStop, setAddingTripStop] = useState(false);
@@ -368,6 +379,7 @@ export default function MapPage() {
     const qParam = (searchParams.get('q') || '').trim();
     setLiveNavigation(false);
     setLiveNavError(null);
+    setLiveNavErrorDebug('');
     setLiveNavRequestingPermission(false);
     setAddingTripStop(false);
     setGooglePlaceData({});
@@ -1306,6 +1318,7 @@ export default function MapPage() {
 
   const startLiveNavigation = useCallback(() => {
     setLiveNavError(null);
+    setLiveNavErrorDebug('');
     if (!navigator.geolocation) {
       setLiveNavError('noGeolocation');
       return;
@@ -1347,6 +1360,7 @@ export default function MapPage() {
       .catch((err) => {
         setLiveNavRequestingPermission(false);
         const code = err?.code;
+        setLiveNavErrorDebug(formatGeoErrorDebug(err));
         if (code === 1) {
           // In Safari, treat most code=1 cases as unavailable to avoid false "blocked" messaging.
           setLiveNavError(isLikelySafari() ? 'unavailable' : 'denied');
@@ -1360,6 +1374,7 @@ export default function MapPage() {
     setLiveNavigation(false);
     setLiveNavDirectionsExpanded(false);
     setLiveNavError(null);
+    setLiveNavErrorDebug('');
     setLiveNavRequestingPermission(false);
     prevWatchPositionRef.current = null;
     setRouteRefreshTick((t) => t + 1);
@@ -1383,6 +1398,7 @@ export default function MapPage() {
     const watchId = navigator.geolocation.watchPosition(
       onPosition,
       (err) => {
+        setLiveNavErrorDebug(formatGeoErrorDebug(err));
         if (err?.code === 1) setLiveNavError(isLikelySafari() ? 'unavailable' : 'denied');
         else if (err?.code != null) setLiveNavError('unavailable');
       },
@@ -1712,6 +1728,7 @@ export default function MapPage() {
                         : liveNavError === 'insecureContext'
                           ? t('home', 'liveNavInsecureContext')
                           : t('home', 'liveNavLocationFailed')}
+                  {liveNavErrorDebug ? ` (${liveNavErrorDebug})` : ''}
                 </p>
               )}
 

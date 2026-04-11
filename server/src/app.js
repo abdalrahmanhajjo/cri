@@ -134,6 +134,15 @@ app.use(
     hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
     noSniff: true,
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    /**
+     * Safari is strict with geolocation + Permissions-Policy. Explicitly allow this origin
+     * to request location for live map directions.
+     */
+    permissionsPolicy: {
+      directives: {
+        geolocation: ['self'],
+      },
+    },
     xssFilter: true,
   })
 );
