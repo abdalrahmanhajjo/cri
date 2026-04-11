@@ -19,6 +19,42 @@ function generateTripShareRequestId() {
 const router = express.Router();
 router.use(authMiddleware);
 
+/** Sort saved-place docs: most recently saved first; stable tie-break on place_id. */
+function savedAtMs(doc) {
+  if (!doc || doc.created_at == null) return 0;
+  const t = new Date(doc.created_at).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+function sortSavedPlaceDocs(rows) {
+  const list = Array.isArray(rows) ? [...rows] : [];
+  list.sort(
+    (a, b) =>
+      savedAtMs(b) - savedAtMs(a) || String(a.place_id || '').localeCompare(String(b.place_id || ''))
+  );
+  return list;
+}
+
+let savedPlacesIndexesPromise = null;
+function ensureSavedPlacesIndexes(favsColl) {
+  if (!savedPlacesIndexesPromise) {
+    savedPlacesIndexesPromise = (async () => {
+      try {
+        await favsColl.createIndex({ user_id: 1, place_id: 1 }, { unique: true, background: true });
+      } catch (err) {
+        console.warn('saved_places compound index (unique):', err.message);
+        await favsColl.createIndex({ user_id: 1, place_id: 1 }, { background: true }).catch(() => {});
+      }
+      try {
+        await favsColl.createIndex({ user_id: 1, created_at: -1 }, { background: true });
+      } catch (err) {
+        console.warn('saved_places created_at index:', err.message);
+      }
+    })();
+  }
+  return savedPlacesIndexesPromise;
+}
+
 function toYmdDb(val) {
   if (val == null) return '';
   if (typeof val === 'string') return val.trim().slice(0, 10);
@@ -566,11 +602,18 @@ router.get('/favourites', async (req, res) => {
   try {
     const userId = req.user.userId;
     const favsColl = await getCollection('saved_places');
+    await ensureSavedPlacesIndexes(favsColl);
     const rows = await favsColl.find({ user_id: userId }).toArray();
-    res.json({ placeIds: rows.map((r) => r.place_id) });
+    const sorted = sortSavedPlaceDocs(rows);
+    const placeIds = sorted.map((r) => r.place_id);
+    const items = sorted.map((r) => ({
+      placeId: r.place_id,
+      savedAt: r.created_at ? new Date(r.created_at).toISOString() : null,
+    }));
+    res.json({ placeIds, items });
   } catch (err) {
     console.error(err);
-    res.json({ placeIds: [] });
+    res.json({ placeIds: [], items: [] });
   }
 });
 
@@ -582,6 +625,7 @@ router.post('/favourites', async (req, res) => {
   const placeId = parsed.value;
   try {
     const favsColl = await getCollection('saved_places');
+    await ensureSavedPlacesIndexes(favsColl);
     await favsColl.updateOne(
       { user_id: userId, place_id: placeId },
       {
@@ -607,6 +651,7 @@ router.delete('/favourites/:placeId', async (req, res) => {
   const placeId = parsed.value;
   try {
     const favsColl = await getCollection('saved_places');
+    await ensureSavedPlacesIndexes(favsColl);
     await favsColl.deleteOne({ user_id: userId, place_id: placeId });
     res.json({ ok: true });
   } catch (err) {

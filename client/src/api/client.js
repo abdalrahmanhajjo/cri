@@ -765,7 +765,8 @@ export const api = {
       api.get(`/api/user/trip-share-users?q=${encodeURIComponent(String(q || ''))}`),
     favourites: () => api.get('/api/user/favourites'),
     addFavourite: (placeId) => api.post('/api/user/favourites', { placeId }),
-    removeFavourite: (placeId) => api.delete(`/api/user/favourites/${placeId}`),
+    removeFavourite: (placeId) =>
+      api.delete(`/api/user/favourites/${encodeURIComponent(String(placeId))}`),
   },
 };
 

@@ -10,6 +10,7 @@ import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import { DateRangeCalendar } from '../components/Calendar';
 import { filterPlacesByQuery } from '../utils/searchFilter';
+import { orderPlacesByIds } from '../utils/orderPlacesByIds';
 import {
   getDayCount,
   isValidDateRange,
@@ -441,15 +442,20 @@ export default function Plan() {
         }
         Promise.all(ids.map((id) => api.places.get(id).catch(() => null))).then((results) => {
           const list = results.filter(Boolean);
-          setFavouritePlaces(list);
+          const ordered = orderPlacesByIds(ids, list);
+          setFavouritePlaces(ordered);
           setPlaceMap((prev) => {
             const next = { ...prev };
-            list.forEach((p) => { next[String(p.id)] = p; });
+            ordered.forEach((p) => {
+              next[String(p.id)] = p;
+            });
             return next;
           });
           setPlaceNames((prev) => {
             const next = { ...prev };
-            list.forEach((p) => { next[String(p.id)] = p.name || p.id; });
+            ordered.forEach((p) => {
+              next[String(p.id)] = p.name || p.id;
+            });
             return next;
           });
         });

@@ -601,7 +601,7 @@ export default function PlaceDetail() {
             return;
           }
           setIsFavourite(wasFavourite);
-          showToast(err?.message || t('feedback', 'favouriteUpdateFailed'), 'error');
+          showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
         })
         .finally(async () => {
           try {
@@ -623,7 +623,7 @@ export default function PlaceDetail() {
             return;
           }
           setIsFavourite(wasFavourite);
-          showToast(err?.message || t('feedback', 'favouriteUpdateFailed'), 'error');
+          showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
         })
         .finally(async () => {
           try {
