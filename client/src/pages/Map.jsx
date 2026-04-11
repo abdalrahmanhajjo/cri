@@ -54,6 +54,12 @@ function isLikelySafari() {
   return /safari/i.test(ua) && !/(chrome|chromium|crios|android|edg|opr|opera|fxios|firefox)/i.test(ua);
 }
 
+function isIosDevice() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/i.test(ua);
+}
+
 function getCurrentPositionAsync(options) {
   return new Promise((resolve, reject) => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -118,6 +124,12 @@ function formatGeoErrorDebug(err) {
   return '';
 }
 
+function isPermissionDeniedError(err) {
+  const code = err?.code;
+  const msg = String(err?.message || '').toLowerCase();
+  return code === 1 || msg.includes('denied') || msg.includes('permission');
+}
+
 function stripHtml(html) {
   if (!html || typeof html !== 'string') return '';
   const div = document.createElement('div');
@@ -145,6 +157,14 @@ function buildChromeAppUrl(url) {
   if (url.startsWith('https://')) return `googlechromes://${url.slice('https://'.length)}`;
   if (url.startsWith('http://')) return `googlechrome://${url.slice('http://'.length)}`;
   return '';
+}
+
+function tryOpenCurrentPageInChrome() {
+  if (typeof window === 'undefined') return false;
+  const chromeUrl = buildChromeAppUrl(window.location.href);
+  if (!chromeUrl) return false;
+  window.location.assign(chromeUrl);
+  return true;
 }
 
 function getDateForDayLabel(startDate, dayIndex) {
@@ -801,11 +821,11 @@ export default function MapPage() {
   }, [tripFilterName, t]);
 
   const handleOpenInChrome = useCallback(() => {
-    const currentUrl = window.location.href;
-    const chromeUrl = buildChromeAppUrl(currentUrl);
-    if (!chromeUrl) return;
-    window.location.assign(chromeUrl);
+    tryOpenCurrentPageInChrome();
   }, []);
+
+  const canRedirectToChrome = useMemo(() => isLikelySafari() && isIosDevice(), []);
+  const startButtonOpensChrome = canRedirectToChrome && liveNavError === 'denied';
 
   const focusMapOnPlace = useCallback((place, maps, map, infoWindow) => {
     if (!place || !map) return;
@@ -1373,16 +1393,19 @@ export default function MapPage() {
       })
       .catch((err) => {
         setLiveNavRequestingPermission(false);
-        const code = err?.code;
+        const denied = isPermissionDeniedError(err);
         setLiveNavErrorDebug(formatGeoErrorDebug(err));
-        if (code === 1) {
-          // In Safari, treat most code=1 cases as unavailable to avoid false "blocked" messaging.
-          setLiveNavError(isLikelySafari() ? 'unavailable' : 'denied');
+        if (denied) {
+          if (canRedirectToChrome) {
+            // No extra manual steps: jump to the same page in Chrome immediately.
+            tryOpenCurrentPageInChrome();
+          }
+          setLiveNavError('denied');
         } else {
           setLiveNavError('unavailable');
         }
       });
-  }, []);
+  }, [canRedirectToChrome]);
 
   const stopLiveNavigation = useCallback(() => {
     setLiveNavigation(false);
@@ -1413,7 +1436,7 @@ export default function MapPage() {
       onPosition,
       (err) => {
         setLiveNavErrorDebug(formatGeoErrorDebug(err));
-        if (err?.code === 1) setLiveNavError(isLikelySafari() ? 'unavailable' : 'denied');
+        if (isPermissionDeniedError(err)) setLiveNavError('denied');
         else if (err?.code != null) setLiveNavError('unavailable');
       },
       {
@@ -1732,30 +1755,18 @@ export default function MapPage() {
 
               {/* Route summary: time to drive + distance + roads to pass */}
               {liveNavError && (
-                <>
-                  <p className="map-live-nav-error" role="alert">
-                    {liveNavError === 'denied'
-                      ? t('home', 'liveNavDenied')
-                      : liveNavError === 'unavailable'
-                        ? t('home', 'liveNavLocationFailed')
-                        : liveNavError === 'noGeolocation'
-                          ? t('home', 'liveNavNoGeo')
-                          : liveNavError === 'insecureContext'
-                            ? t('home', 'liveNavInsecureContext')
-                            : t('home', 'liveNavLocationFailed')}
-                    {liveNavErrorDebug ? ` (${liveNavErrorDebug})` : ''}
-                  </p>
-                  {placesInTripOrder.length >= 1 && (
-                    <button
-                      type="button"
-                      className="map-trip-route-opt-btn"
-                      onClick={handleOpenInChrome}
-                    >
-                      <Icon name="open_in_new" size={20} />
-                      <span>Open in Chrome</span>
-                    </button>
-                  )}
-                </>
+                <p className="map-live-nav-error" role="alert">
+                  {liveNavError === 'denied'
+                    ? t('home', 'liveNavDenied')
+                    : liveNavError === 'unavailable'
+                      ? t('home', 'liveNavLocationFailed')
+                      : liveNavError === 'noGeolocation'
+                        ? t('home', 'liveNavNoGeo')
+                        : liveNavError === 'insecureContext'
+                          ? t('home', 'liveNavInsecureContext')
+                          : t('home', 'liveNavLocationFailed')}
+                  {liveNavErrorDebug ? ` (${liveNavErrorDebug})` : ''}
+                </p>
               )}
 
               {placesInTripOrder.length >= 1 && !liveNavigation && (
@@ -1763,12 +1774,14 @@ export default function MapPage() {
                   <button
                     type="button"
                     className="map-live-nav-start-btn"
-                    onClick={startLiveNavigation}
+                    onClick={startButtonOpensChrome ? handleOpenInChrome : startLiveNavigation}
                     disabled={liveNavRequestingPermission}
                     aria-busy={liveNavRequestingPermission}
                   >
-                    <Icon name="navigation" size={22} />
-                    <span>{t('home', 'liveNavStart')}</span>
+                    <Icon name={startButtonOpensChrome ? 'open_in_new' : 'navigation'} size={22} />
+                    <span>
+                      {startButtonOpensChrome ? t('home', 'liveNavOpenInChrome') : t('home', 'liveNavStart')}
+                    </span>
                   </button>
                   <p className="map-live-nav-start-hint">
                     {liveNavRequestingPermission
@@ -1776,7 +1789,11 @@ export default function MapPage() {
                       : t('home', 'liveNavStartHint')}
                   </p>
                   {!liveNavRequestingPermission ? (
-                    <p className="map-live-nav-permission-note">{t('home', 'liveNavAllowInBrowser')}</p>
+                    <p className="map-live-nav-permission-note">
+                      {startButtonOpensChrome
+                        ? t('home', 'liveNavDeniedOpenChromeHint')
+                        : t('home', 'liveNavAllowInBrowser')}
+                    </p>
                   ) : null}
                 </div>
               )}

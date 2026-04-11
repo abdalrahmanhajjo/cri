@@ -1019,6 +1019,9 @@ export const translations = {
       liveNavTracking: 'Live â€” route updates as you move',
       liveNavUpdatingHint: 'Time and route refresh automatically along the way.',
       liveNavDenied: 'Location permission is needed for live directions. Allow access in the browser, then try again.',
+      liveNavOpenInChrome: 'Open in Chrome',
+      liveNavDeniedOpenChromeHint:
+        'Location is blocked in Safari. Allow location in Safari site settings, or open this same page in Chrome.',
       liveNavNoGeo: 'This device or browser does not support location for live directions.',
       liveNavPeekExpand: 'Show full directions',
       liveNavPeekUpdating: 'Updating routeâ€¦',
@@ -2568,6 +2571,9 @@ export const translations = {
       liveNavTracking: 'Ù…Ø¨Ø§Ø´Ø± â€” Ø§Ù„Ù…Ø³Ø§Ø± ÙŠØªØ­Ø¯Ø« Ù…Ø¹ ØªØ­Ø±ÙƒÙƒ',
       liveNavUpdatingHint: 'ÙŠÙØ­Ø¯Ù‘ÙŽØ« Ø§Ù„ÙˆÙ‚Øª ÙˆØ§Ù„Ù…Ø³Ø§Ø± ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø·Ø±ÙŠÙ‚.',
       liveNavDenied: 'ÙŠÙ„Ø²Ù… Ø§Ù„Ø¥Ø°Ù† Ø¨Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ù„Ù„Ø§ØªØ¬Ø§Ù‡Ø§Øª Ø§Ù„Ù…Ø¨Ø§Ø´Ø±Ø©. Ø§Ø³Ù…Ø­ Ù„Ù„Ù…ØªØµÙØ­ Ø¨Ø§Ù„ÙˆØµÙˆÙ„ Ø«Ù… Ø£Ø¹Ø¯ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©.',
+      liveNavOpenInChrome: 'Open in Chrome',
+      liveNavDeniedOpenChromeHint:
+        'Location is blocked in Safari. Allow location in Safari site settings, or open this same page in Chrome.',
       liveNavNoGeo: 'Ù‡Ø°Ø§ Ø§Ù„Ø¬Ù‡Ø§Ø² Ø£Ùˆ Ø§Ù„Ù…ØªØµÙØ­ Ù„Ø§ ÙŠØ¯Ø¹Ù… Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ù„Ù„Ø§ØªØ¬Ø§Ù‡Ø§Øª Ø§Ù„Ù…Ø¨Ø§Ø´Ø±Ø©.',
       liveNavPeekExpand: 'Ø¹Ø±Ø¶ Ø§Ù„Ø§ØªØ¬Ø§Ù‡Ø§Øª ÙƒØ§Ù…Ù„Ø©',
       liveNavPeekUpdating: 'Ø¬Ø§Ø±ÙŠ ØªØ­Ø¯ÙŠØ« Ø§Ù„Ù…Ø³Ø§Ø±â€¦',
@@ -4111,6 +4117,9 @@ export const translations = {
       liveNavUpdatingHint: 'DurÃ©e et itinÃ©raire se mettent Ã  jour automatiquement en chemin.',
       liveNavDenied:
         'Lâ€™accÃ¨s Ã  la position est nÃ©cessaire pour la navigation en direct. Autorisez le navigateur, puis rÃ©essayez.',
+      liveNavOpenInChrome: 'Open in Chrome',
+      liveNavDeniedOpenChromeHint:
+        'Location is blocked in Safari. Allow location in Safari site settings, or open this same page in Chrome.',
       liveNavNoGeo: 'Cet appareil ou ce navigateur ne prend pas en charge la gÃ©olocalisation pour la navigation.',
       liveNavPeekExpand: 'Afficher tout lâ€™itinÃ©raire',
       liveNavPeekUpdating: 'Mise Ã  jour de lâ€™itinÃ©raireâ€¦',
