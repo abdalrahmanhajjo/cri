@@ -360,6 +360,7 @@ export default function PlaceDetail() {
   const [tripStartTime, setTripStartTime] = useState('');
   const [tripEndTime, setTripEndTime] = useState('');
   const [tripAddError, setTripAddError] = useState('');
+  const [tripSearchQuery, setTripSearchQuery] = useState('');
   const [favouriteBusy, setFavouriteBusy] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [bookingDate, setBookingDate] = useState('');
@@ -570,6 +571,13 @@ export default function PlaceDetail() {
     setInquiryIntent(isDiningPlace(place) ? 'booking' : 'general');
   }, [place?.id, place?.category, place?.categoryId, place?.tags]);
 
+  const syncFavouriteState = useCallback(async () => {
+    if (!user || !place) return;
+    const res = await api.user.favourites();
+    const ids = new Set((Array.isArray(res?.placeIds) ? res.placeIds : []).map(String));
+    setIsFavourite(ids.has(String(place.id)));
+  }, [user, place]);
+
   const toggleFavourite = useCallback(() => {
     if (!user) {
       navigate('/login', { state: { from: 'place' } });
@@ -586,24 +594,46 @@ export default function PlaceDetail() {
         .then(() => {
           showToast(t('feedback', 'favouriteRemoved'), 'success');
         })
-        .catch(() => {
+        .catch((err) => {
+          if (err?.status === 404) {
+            showToast(t('feedback', 'favouriteRemoved'), 'success');
+            return;
+          }
           setIsFavourite(wasFavourite);
-          showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
+          showToast(err?.message || t('feedback', 'favouriteUpdateFailed'), 'error');
         })
-        .finally(() => setFavouriteBusy(false));
+        .finally(async () => {
+          try {
+            await syncFavouriteState();
+          } catch {
+            // ignore
+          }
+          setFavouriteBusy(false);
+        });
     } else {
       api.user
         .addFavourite(placeId)
         .then(() => {
           showToast(t('feedback', 'favouriteAdded'), 'success');
         })
-        .catch(() => {
+        .catch((err) => {
+          if (err?.status === 409) {
+            showToast(t('feedback', 'favouriteAdded'), 'success');
+            return;
+          }
           setIsFavourite(wasFavourite);
-          showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
+          showToast(err?.message || t('feedback', 'favouriteUpdateFailed'), 'error');
         })
-        .finally(() => setFavouriteBusy(false));
+        .finally(async () => {
+          try {
+            await syncFavouriteState();
+          } catch {
+            // ignore
+          }
+          setFavouriteBusy(false);
+        });
     }
-  }, [user, place, favouriteBusy, isFavourite, navigate, showToast, t]);
+  }, [user, place, favouriteBusy, isFavourite, navigate, showToast, t, syncFavouriteState]);
 
   const handleShare = useCallback(() => {
     if (typeof navigator !== 'undefined' && navigator.share && place) {
@@ -851,6 +881,7 @@ export default function PlaceDetail() {
       return;
     }
     setTripPickPlace(place);
+    setTripSearchQuery('');
   }, [place, user, navigate, location.pathname, location.search, location.hash]);
 
   const closeTripModal = useCallback(() => {
@@ -860,6 +891,7 @@ export default function PlaceDetail() {
     setTripStartTime('');
     setTripEndTime('');
     setTripAddError('');
+    setTripSearchQuery('');
   }, []);
 
   const selectedTrip = useMemo(
@@ -874,19 +906,45 @@ export default function PlaceDetail() {
     return getDayCount(start || selectedTrip.startDate, end || selectedTrip.endDate);
   }, [selectedTrip]);
 
+  const filteredTripOptions = useMemo(() => {
+    const q = tripSearchQuery.trim().toLowerCase();
+    if (!q) return tripModalTrips;
+    return tripModalTrips.filter((trip) => {
+      const haystack = `${trip?.name || ''} ${formatTripRange(trip.startDate, trip.endDate)}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [tripModalTrips, tripSearchQuery]);
+
+  const liveTripValidationError = useMemo(() => {
+    if (!tripPickPlace || !selectedTrip) return 'Select a trip first.';
+    const startHm = normalizeHm(tripStartTime);
+    const endHm = normalizeHm(tripEndTime);
+    if (!startHm || !endHm) return 'Select start and end time.';
+    if (endHm <= startHm) return 'End time must be after start time.';
+
+    const start = toDateOnly(selectedTrip.startDate);
+    const end = toDateOnly(selectedTrip.endDate);
+    const dayCount = getDayCount(start || selectedTrip.startDate, end || selectedTrip.endDate);
+    const safeDayIndex = Math.min(Math.max(0, tripDayIndex), Math.max(0, dayCount - 1));
+    const days = ensureDaysWithSlots(selectedTrip.days, dayCount);
+    const daySlots = days[safeDayIndex]?.slots || [];
+    const placeId = String(tripPickPlace.id);
+    if (daySlots.some((slot) => String(slot.placeId) === placeId)) return 'This place is already in the selected day.';
+
+    const nextSlot = { placeId, startTime: `${startHm}:00`, endTime: `${endHm}:00`, notes: null };
+    if (hasOverlappingTimeSlots([...daySlots, nextSlot])) return 'Selected time conflicts with another place in this day.';
+    return '';
+  }, [tripPickPlace, selectedTrip, tripStartTime, tripEndTime, tripDayIndex]);
+
   const addPlaceToTrip = useCallback(async () => {
     if (!tripPickPlace || !selectedTrip || tripAddSaving) return;
+    if (liveTripValidationError) {
+      setTripAddError(liveTripValidationError);
+      return;
+    }
     setTripAddError('');
     const startHm = normalizeHm(tripStartTime);
     const endHm = normalizeHm(tripEndTime);
-    if (!startHm || !endHm) {
-      setTripAddError('Select both start and end time.');
-      return;
-    }
-    if (endHm <= startHm) {
-      setTripAddError('End time must be after start time.');
-      return;
-    }
 
     const start = toDateOnly(selectedTrip.startDate);
     const end = toDateOnly(selectedTrip.endDate);
@@ -898,11 +956,6 @@ export default function PlaceDetail() {
 
     const idStr = String(tripPickPlace.id);
     const daySlots = days[safeDayIndex]?.slots || [];
-    const alreadyExists = daySlots.some((slot) => String(slot.placeId) === idStr);
-    if (alreadyExists) {
-      setTripAddError('This place is already in the selected day.');
-      return;
-    }
     const candidate = {
       placeId: idStr,
       startTime: `${startHm}:00`,
@@ -910,10 +963,6 @@ export default function PlaceDetail() {
       notes: null,
     };
     const withCandidate = [...daySlots, candidate];
-    if (hasOverlappingTimeSlots(withCandidate)) {
-      setTripAddError('Selected time conflicts with another place in this day.');
-      return;
-    }
     days[safeDayIndex] = { slots: withCandidate };
     const payloadDays = buildTripDaysApiPayload(days, start || toDateOnly(selectedTrip.startDate));
 
@@ -927,7 +976,7 @@ export default function PlaceDetail() {
     } finally {
       setTripAddSaving(false);
     }
-  }, [tripPickPlace, selectedTrip, tripAddSaving, tripStartTime, tripEndTime, tripDayIndex, showToast, t, closeTripModal]);
+  }, [tripPickPlace, selectedTrip, tripAddSaving, tripStartTime, tripEndTime, tripDayIndex, liveTripValidationError, showToast, t, closeTripModal]);
 
   useEffect(() => {
     if (!tripPickPlace) return;
@@ -1662,6 +1711,7 @@ export default function PlaceDetail() {
               </div>
               <p className="place-detail-app-modal-place">{tripPickPlace.name}</p>
               <p className="place-detail-app-modal-hint">{t('placeDiscover', 'addToTripHint')}</p>
+              <p className="place-detail-app-modal-step">Step 1: Choose trip</p>
               {tripModalLoading ? (
                 <p className="place-detail-app-modal-loading">{t('placeDiscover', 'tripsLoading')}</p>
               ) : tripModalTrips.length === 0 ? (
@@ -1672,8 +1722,19 @@ export default function PlaceDetail() {
                   </Link>
                 </div>
               ) : (
-                <div className="place-detail-app-trip-list">
-                  {tripModalTrips.map((trip) => (
+                <>
+                  <div className="place-detail-app-trip-search-wrap">
+                    <input
+                      type="search"
+                      className="place-detail-app-trip-search"
+                      value={tripSearchQuery}
+                      onChange={(e) => setTripSearchQuery(e.target.value)}
+                      placeholder="Search trip..."
+                      aria-label="Search trip"
+                    />
+                  </div>
+                  <div className="place-detail-app-trip-list">
+                  {filteredTripOptions.map((trip) => (
                     <button
                       key={trip.id}
                       type="button"
@@ -1695,10 +1756,15 @@ export default function PlaceDetail() {
                       </span>
                     </button>
                   ))}
-                </div>
+                  </div>
+                  {!tripModalLoading && filteredTripOptions.length === 0 ? (
+                    <p className="place-detail-app-modal-loading">No trips match your search.</p>
+                  ) : null}
+                </>
               )}
               {selectedTrip ? (
                 <div className="place-detail-app-trip-editor">
+                  <p className="place-detail-app-modal-step">Step 2: Pick day and time</p>
                   <div className="place-detail-app-booking-grid">
                     <label className="place-detail-app-booking-field">
                       <span>Day</span>
@@ -1732,13 +1798,17 @@ export default function PlaceDetail() {
                         type="button"
                         className="place-detail-app-modal-primary"
                         onClick={addPlaceToTrip}
-                        disabled={tripAddSaving}
+                        disabled={tripAddSaving || !!liveTripValidationError}
                       >
                         {tripAddSaving ? 'Saving...' : 'Add to selected trip'}
                       </button>
                     </div>
                   </div>
-                  {tripAddError ? <p className="place-detail-error-inline" role="alert">{tripAddError}</p> : null}
+                  {(tripAddError || liveTripValidationError) ? (
+                    <p className="place-detail-error-inline" role="alert">{tripAddError || liveTripValidationError}</p>
+                  ) : (
+                    <p className="place-detail-toast-inline" role="status">Timing looks good.</p>
+                  )}
                 </div>
               ) : null}
             </div>

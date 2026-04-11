@@ -164,6 +164,7 @@ export default function PlaceDiscover() {
   const [tripStartTime, setTripStartTime] = useState('');
   const [tripEndTime, setTripEndTime] = useState('');
   const [tripAddError, setTripAddError] = useState('');
+  const [tripSearchQuery, setTripSearchQuery] = useState('');
   const [toast, setToast] = useState(null);
   const [sponsoredDiscover, setSponsoredDiscover] = useState([]);
   const [favouriteIds, setFavouriteIds] = useState(new Set());
@@ -410,9 +411,17 @@ export default function PlaceDiscover() {
         return;
       }
       setTripPickPlace(place);
+      setTripSearchQuery('');
     },
     [user, navigate, location.pathname, location.search, location.hash]
   );
+
+  const syncFavouriteIds = useCallback(async () => {
+    if (!user) return;
+    const res = await api.user.favourites();
+    const ids = Array.isArray(res?.placeIds) ? res.placeIds.map(String) : [];
+    setFavouriteIds(new Set(ids));
+  }, [user]);
 
   const toggleFavourite = useCallback(
     (place) => {
@@ -437,11 +446,20 @@ export default function PlaceDiscover() {
         api.user
           .removeFavourite(placeId)
           .then(() => showToast(t('feedback', 'favouriteRemoved'), 'success'))
-          .catch(() => {
+          .catch((err) => {
+            if (err?.status === 404) {
+              showToast(t('feedback', 'favouriteRemoved'), 'success');
+              return;
+            }
             setFavouriteIds((prev) => new Set(prev).add(placeId));
-            showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
+            showToast(err?.message || t('feedback', 'favouriteUpdateFailed'), 'error');
           })
-          .finally(() => {
+          .finally(async () => {
+            try {
+              await syncFavouriteIds();
+            } catch {
+              // ignore
+            }
             setFavouriteBusyIds((prev) => {
               const next = new Set(prev);
               next.delete(placeId);
@@ -454,15 +472,24 @@ export default function PlaceDiscover() {
       api.user
         .addFavourite(placeId)
         .then(() => showToast(t('feedback', 'favouriteAdded'), 'success'))
-        .catch(() => {
+        .catch((err) => {
+          if (err?.status === 409) {
+            showToast(t('feedback', 'favouriteAdded'), 'success');
+            return;
+          }
           setFavouriteIds((prev) => {
             const next = new Set(prev);
             next.delete(placeId);
             return next;
           });
-          showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
+          showToast(err?.message || t('feedback', 'favouriteUpdateFailed'), 'error');
         })
-        .finally(() => {
+        .finally(async () => {
+          try {
+            await syncFavouriteIds();
+          } catch {
+            // ignore
+          }
           setFavouriteBusyIds((prev) => {
             const next = new Set(prev);
             next.delete(placeId);
@@ -470,7 +497,7 @@ export default function PlaceDiscover() {
           });
         });
     },
-    [favouriteIds, favouriteBusyIds, location.hash, location.pathname, location.search, navigate, showToast, t, user]
+    [favouriteIds, favouriteBusyIds, location.hash, location.pathname, location.search, navigate, showToast, t, user, syncFavouriteIds]
   );
 
   const closeTripModal = useCallback(() => {
@@ -480,6 +507,7 @@ export default function PlaceDiscover() {
     setTripStartTime('');
     setTripEndTime('');
     setTripAddError('');
+    setTripSearchQuery('');
   }, []);
 
   const selectedTrip = useMemo(
@@ -494,19 +522,45 @@ export default function PlaceDiscover() {
     return getDayCount(start || selectedTrip.startDate, end || selectedTrip.endDate);
   }, [selectedTrip]);
 
+  const filteredTripOptions = useMemo(() => {
+    const q = tripSearchQuery.trim().toLowerCase();
+    if (!q) return tripModalTrips;
+    return tripModalTrips.filter((trip) => {
+      const haystack = `${trip?.name || ''} ${formatTripRange(trip, locale)}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [tripModalTrips, tripSearchQuery, locale]);
+
+  const liveTripValidationError = useMemo(() => {
+    if (!tripPickPlace || !selectedTrip) return 'Select a trip first.';
+    const startHm = normalizeHm(tripStartTime);
+    const endHm = normalizeHm(tripEndTime);
+    if (!startHm || !endHm) return 'Select start and end time.';
+    if (endHm <= startHm) return 'End time must be after start time.';
+
+    const start = toDateOnly(selectedTrip.startDate);
+    const end = toDateOnly(selectedTrip.endDate);
+    const dayCount = getDayCount(start || selectedTrip.startDate, end || selectedTrip.endDate);
+    const safeDayIndex = Math.min(Math.max(0, tripDayIndex), Math.max(0, dayCount - 1));
+    const days = ensureDaysWithSlots(selectedTrip.days, dayCount);
+    const daySlots = days[safeDayIndex]?.slots || [];
+    const placeId = String(tripPickPlace.id);
+    if (daySlots.some((slot) => String(slot.placeId) === placeId)) return 'This place is already in the selected day.';
+
+    const nextSlot = { placeId, startTime: `${startHm}:00`, endTime: `${endHm}:00`, notes: null };
+    if (hasOverlappingTimeSlots([...daySlots, nextSlot])) return 'Selected time conflicts with another place in this day.';
+    return '';
+  }, [tripPickPlace, selectedTrip, tripStartTime, tripEndTime, tripDayIndex]);
+
   const addPlaceToTrip = useCallback(async () => {
     if (!tripPickPlace || !selectedTrip || tripAddSaving) return;
+    if (liveTripValidationError) {
+      setTripAddError(liveTripValidationError);
+      return;
+    }
     setTripAddError('');
     const startHm = normalizeHm(tripStartTime);
     const endHm = normalizeHm(tripEndTime);
-    if (!startHm || !endHm) {
-      setTripAddError('Select both start and end time.');
-      return;
-    }
-    if (endHm <= startHm) {
-      setTripAddError('End time must be after start time.');
-      return;
-    }
 
     const start = toDateOnly(selectedTrip.startDate);
     const end = toDateOnly(selectedTrip.endDate);
@@ -518,15 +572,7 @@ export default function PlaceDiscover() {
 
     const idStr = String(tripPickPlace.id);
     const daySlots = days[safeDayIndex]?.slots || [];
-    if (daySlots.some((slot) => String(slot.placeId) === idStr)) {
-      setTripAddError('This place is already in the selected day.');
-      return;
-    }
     const nextSlot = { placeId: idStr, startTime: `${startHm}:00`, endTime: `${endHm}:00`, notes: null };
-    if (hasOverlappingTimeSlots([...daySlots, nextSlot])) {
-      setTripAddError('Selected time conflicts with another place in this day.');
-      return;
-    }
 
     days[safeDayIndex] = { slots: [...daySlots, nextSlot] };
     const payloadDays = buildTripDaysApiPayload(days, start || toDateOnly(selectedTrip.startDate));
@@ -541,7 +587,7 @@ export default function PlaceDiscover() {
     } finally {
       setTripAddSaving(false);
     }
-  }, [tripPickPlace, selectedTrip, tripAddSaving, tripStartTime, tripEndTime, tripDayIndex, showToast, t, closeTripModal]);
+  }, [tripPickPlace, selectedTrip, tripAddSaving, tripStartTime, tripEndTime, tripDayIndex, liveTripValidationError, showToast, t, closeTripModal]);
 
   useEffect(() => {
     if (!tripPickPlace) return;
@@ -802,6 +848,7 @@ export default function PlaceDiscover() {
             </div>
             <p className="pd-modal-place-name">{tripPickPlace.name}</p>
             <p className="pd-modal-hint">{t('placeDiscover', 'addToTripHint')}</p>
+            <p className="pd-modal-step-title">Step 1: Choose trip</p>
 
             {tripModalLoading ? (
               <p className="pd-modal-loading">{t('placeDiscover', 'tripsLoading')}</p>
@@ -813,8 +860,19 @@ export default function PlaceDiscover() {
                 </Link>
               </div>
             ) : (
-              <ul className="pd-modal-trip-list">
-                {tripModalTrips.map((tr) => (
+              <>
+                <div className="pd-modal-search-wrap">
+                  <input
+                    type="search"
+                    className="pd-modal-search"
+                    value={tripSearchQuery}
+                    onChange={(e) => setTripSearchQuery(e.target.value)}
+                    placeholder="Search trip..."
+                    aria-label="Search trip"
+                  />
+                </div>
+                <ul className="pd-modal-trip-list">
+                  {filteredTripOptions.map((tr) => (
                   <li key={tr.id}>
                     <button
                       type="button"
@@ -834,12 +892,17 @@ export default function PlaceDiscover() {
                         : <Icon name="chevron_right" size={22} className="pd-modal-trip-chev" aria-hidden />}
                     </button>
                   </li>
-                ))}
-              </ul>
+                  ))}
+                </ul>
+                {!tripModalLoading && filteredTripOptions.length === 0 ? (
+                  <p className="pd-modal-loading">No trips match your search.</p>
+                ) : null}
+              </>
             )}
 
             {selectedTrip ? (
               <div className="pd-modal-trip-editor">
+                <p className="pd-modal-step-title">Step 2: Pick day and time</p>
                 <div className="pd-modal-grid">
                   <label className="pd-modal-field">
                     <span>Day</span>
@@ -869,12 +932,21 @@ export default function PlaceDiscover() {
                     <input type="time" value={tripEndTime} onChange={(e) => setTripEndTime(e.target.value)} required />
                   </label>
                   <div className="pd-modal-add-wrap">
-                    <button type="button" className="pd-modal-primary pd-modal-primary--full" onClick={addPlaceToTrip} disabled={tripAddSaving}>
+                    <button
+                      type="button"
+                      className="pd-modal-primary pd-modal-primary--full"
+                      onClick={addPlaceToTrip}
+                      disabled={tripAddSaving || !!liveTripValidationError}
+                    >
                       {tripAddSaving ? 'Saving...' : 'Add to selected trip'}
                     </button>
                   </div>
                 </div>
-                {tripAddError ? <p className="pd-modal-error" role="alert">{tripAddError}</p> : null}
+                {(tripAddError || liveTripValidationError) ? (
+                  <p className="pd-modal-error" role="alert">{tripAddError || liveTripValidationError}</p>
+                ) : (
+                  <p className="pd-modal-valid">Timing looks good.</p>
+                )}
               </div>
             ) : null}
 

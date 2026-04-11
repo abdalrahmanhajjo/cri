@@ -3156,6 +3156,15 @@
   margin: 0 0 14px;
   color: #666;
 }
+
+.place-detail-app-modal-step {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #0f766e;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 .place-detail-app-modal-empty {
   display: flex;
   flex-direction: column;
@@ -3219,6 +3228,22 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.place-detail-app-trip-search-wrap {
+  margin-bottom: 10px;
+}
+
+.place-detail-app-trip-search {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #1a1a1a;
+  font: inherit;
+  font-size: 13px;
+  padding: 0 12px;
 }
 .place-detail-app-trip-item {
   width: 100%;
