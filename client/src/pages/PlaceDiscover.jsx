@@ -176,6 +176,8 @@ export default function PlaceDiscover() {
   const [tripEndTime, setTripEndTime] = useState('');
   const [tripAddError, setTripAddError] = useState('');
   const [tripSearchQuery, setTripSearchQuery] = useState('');
+  /** 1 = choose trip only; 2 = day & time only (clearer UX). */
+  const [tripModalStep, setTripModalStep] = useState(1);
   const [toast, setToast] = useState(null);
   const [sponsoredDiscover, setSponsoredDiscover] = useState([]);
   const [favouriteIds, setFavouriteIds] = useState(new Set());
@@ -426,6 +428,7 @@ export default function PlaceDiscover() {
       }
       setTripPickPlace(place);
       setTripSearchQuery('');
+      setTripModalStep(1);
     },
     [user, navigate, location.pathname, location.search, location.hash]
   );
@@ -522,12 +525,20 @@ export default function PlaceDiscover() {
     setTripEndTime('');
     setTripAddError('');
     setTripSearchQuery('');
+    setTripModalStep(1);
   }, []);
 
   const selectedTrip = useMemo(
     () => tripModalTrips.find((trip) => String(trip.id) === String(tripActiveId)) || null,
     [tripModalTrips, tripActiveId]
   );
+
+  useEffect(() => {
+    if (tripModalStep !== 2 || !tripPickPlace) return;
+    if (tripModalLoading) return;
+    if (tripModalTrips.length === 0) return;
+    if (!tripActiveId || !selectedTrip) setTripModalStep(1);
+  }, [tripModalStep, tripPickPlace, tripModalLoading, tripModalTrips.length, tripActiveId, selectedTrip]);
 
   const selectedTripDayCount = useMemo(() => {
     if (!selectedTrip) return 1;
@@ -868,63 +879,99 @@ export default function PlaceDiscover() {
                 <Icon name="close" size={22} />
               </button>
             </div>
-            <p className="pd-modal-place-name">{tripPickPlace.name}</p>
-            <p className="pd-modal-hint">{t('placeDiscover', 'addToTripHint')}</p>
-            <p className="pd-modal-step-title">Step 1: Choose trip</p>
-
-            {tripModalLoading ? (
-              <p className="pd-modal-loading">{t('placeDiscover', 'tripsLoading')}</p>
-            ) : tripModalTrips.length === 0 ? (
-              <div className="pd-modal-empty">
-                <p>{t('placeDiscover', 'addToTripEmpty')}</p>
-                <Link to="/plan" className="pd-modal-primary">
-                  {t('home', 'createTrip')}
-                </Link>
-              </div>
-            ) : (
+            {tripModalStep === 1 ? (
               <>
-                <div className="pd-modal-search-wrap">
-                  <input
-                    type="search"
-                    className="pd-modal-search"
-                    value={tripSearchQuery}
-                    onChange={(e) => setTripSearchQuery(e.target.value)}
-                    placeholder="Search trip..."
-                    aria-label="Search trip"
-                  />
-                </div>
-                <ul className="pd-modal-trip-list">
-                  {filteredTripOptions.map((tr) => (
-                  <li key={tr.id}>
-                    <button
-                      type="button"
-                      className={`pd-modal-trip-row ${String(tr.id) === String(tripActiveId) ? 'is-active' : ''}`}
-                      disabled={tripAddSaving}
-                      onClick={() => {
-                        setTripActiveId(String(tr.id));
-                        setTripAddError('');
-                      }}
-                    >
-                      <span className="pd-modal-trip-text">
-                        <span className="pd-modal-trip-name">{tr.name}</span>
-                        <span className="pd-modal-trip-dates">{formatTripRange(tr, locale)}</span>
-                      </span>
-                      {String(tr.id) === String(tripActiveId)
-                        ? <Icon name="check" size={20} className="pd-modal-trip-chev" aria-hidden />
-                        : <Icon name="chevron_right" size={22} className="pd-modal-trip-chev" aria-hidden />}
-                    </button>
-                  </li>
-                  ))}
-                </ul>
-                {!tripModalLoading && filteredTripOptions.length === 0 ? (
-                  <p className="pd-modal-loading">No trips match your search.</p>
-                ) : null}
-              </>
-            )}
+                <p className="pd-modal-place-name">{tripPickPlace.name}</p>
+                <p className="pd-modal-hint">{t('placeDiscover', 'addToTripHint')}</p>
+                <p className="pd-modal-step-title">{t('placeDiscover', 'addToTripStepChoose')}</p>
 
-            {selectedTrip ? (
-              <div className="pd-modal-trip-editor">
-                <p className="pd-modal-step-title">Step 2: Pick day and time</p>
+                {tripModalLoading ? (
+                  <p className="pd-modal-loading">{t('placeDiscover', 'tripsLoading')}</p>
+                ) : tripModalTrips.length === 0 ? (
+                  <div className="pd-modal-empty">
+                    <p>{t('placeDiscover', 'addToTripEmpty')}</p>
+                    <Link to="/plan" className="pd-modal-primary">
+                      {t('home', 'createTrip')}
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    <div className="pd-modal-search-wrap">
+                      <input
+                        type="search"
+                        className="pd-modal-search"
+                        value={tripSearchQuery}
+                        onChange={(e) => setTripSearchQuery(e.target.value)}
+                        placeholder="Search trip..."
+                        aria-label="Search trip"
+                      />
+                    </div>
+                    <ul className="pd-modal-trip-list">
+                      {filteredTripOptions.map((tr) => (
+                        <li key={tr.id}>
+                          <button
+                            type="button"
+                            className={`pd-modal-trip-row ${String(tr.id) === String(tripActiveId) ? 'is-active' : ''}`}
+                            disabled={tripAddSaving}
+                            onClick={() => {
+                              setTripActiveId(String(tr.id));
+                              setTripAddError('');
+                            }}
+                          >
+                            <span className="pd-modal-trip-text">
+                              <span className="pd-modal-trip-name">{tr.name}</span>
+                              <span className="pd-modal-trip-dates">{formatTripRange(tr, locale)}</span>
+                            </span>
+                            {String(tr.id) === String(tripActiveId) ? (
+                              <Icon name="check" size={20} className="pd-modal-trip-chev" aria-hidden />
+                            ) : (
+                              <Icon name="chevron_right" size={22} className="pd-modal-trip-chev" aria-hidden />
+                            )}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    {!tripModalLoading && filteredTripOptions.length === 0 ? (
+                      <p className="pd-modal-loading">No trips match your search.</p>
+                    ) : null}
+                    <div className="pd-modal-step-footer">
+                      <button
+                        type="button"
+                        className="pd-modal-primary pd-modal-primary--full"
+                        disabled={!tripActiveId || tripAddSaving}
+                        onClick={() => {
+                          setTripAddError('');
+                          setTripModalStep(2);
+                        }}
+                      >
+                        {t('placeDiscover', 'addToTripContinue')}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : null}
+
+            {tripModalStep === 2 && selectedTrip ? (
+              <div className="pd-modal-trip-editor pd-modal-trip-editor--solo">
+                <button
+                  type="button"
+                  className="pd-modal-back"
+                  onClick={() => {
+                    setTripAddError('');
+                    setTripModalStep(1);
+                  }}
+                  disabled={tripAddSaving}
+                >
+                  <Icon name="arrow_back" size={20} aria-hidden />
+                  <span>{t('placeDiscover', 'addToTripBack')}</span>
+                </button>
+                <p className="pd-modal-place-name">{tripPickPlace.name}</p>
+                <p className="pd-modal-trip-picked">
+                  <span className="pd-modal-trip-picked-name">{selectedTrip.name}</span>
+                  <span className="pd-modal-trip-picked-dates">{formatTripRange(selectedTrip, locale)}</span>
+                </p>
+                <p className="pd-modal-step-title">{t('placeDiscover', 'addToTripStepTiming')}</p>
                 <div className="pd-modal-grid">
                   <label className="pd-modal-field">
                     <span>Day</span>
@@ -964,8 +1011,10 @@ export default function PlaceDiscover() {
                     </button>
                   </div>
                 </div>
-                {(tripAddError || liveTripValidationError) ? (
-                  <p className="pd-modal-error" role="alert">{tripAddError || liveTripValidationError}</p>
+                {tripAddError || liveTripValidationError ? (
+                  <p className="pd-modal-error" role="alert">
+                    {tripAddError || liveTripValidationError}
+                  </p>
                 ) : (
                   <p className="pd-modal-valid">Timing looks good.</p>
                 )}

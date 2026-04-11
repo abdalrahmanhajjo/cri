@@ -361,6 +361,7 @@ export default function PlaceDetail() {
   const [tripEndTime, setTripEndTime] = useState('');
   const [tripAddError, setTripAddError] = useState('');
   const [tripSearchQuery, setTripSearchQuery] = useState('');
+  const [tripModalStep, setTripModalStep] = useState(1);
   const [favouriteBusy, setFavouriteBusy] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [bookingDate, setBookingDate] = useState('');
@@ -882,6 +883,7 @@ export default function PlaceDetail() {
     }
     setTripPickPlace(place);
     setTripSearchQuery('');
+    setTripModalStep(1);
   }, [place, user, navigate, location.pathname, location.search, location.hash]);
 
   const closeTripModal = useCallback(() => {
@@ -892,12 +894,20 @@ export default function PlaceDetail() {
     setTripEndTime('');
     setTripAddError('');
     setTripSearchQuery('');
+    setTripModalStep(1);
   }, []);
 
   const selectedTrip = useMemo(
     () => tripModalTrips.find((trip) => String(trip.id) === String(tripActiveId)) || null,
     [tripModalTrips, tripActiveId]
   );
+
+  useEffect(() => {
+    if (tripModalStep !== 2 || !tripPickPlace) return;
+    if (tripModalLoading) return;
+    if (tripModalTrips.length === 0) return;
+    if (!tripActiveId || !selectedTrip) setTripModalStep(1);
+  }, [tripModalStep, tripPickPlace, tripModalLoading, tripModalTrips.length, tripActiveId, selectedTrip]);
 
   const selectedTripDayCount = useMemo(() => {
     if (!selectedTrip) return 1;
@@ -1709,62 +1719,102 @@ export default function PlaceDetail() {
                   <Icon name="close" size={22} />
                 </button>
               </div>
-              <p className="place-detail-app-modal-place">{tripPickPlace.name}</p>
-              <p className="place-detail-app-modal-hint">{t('placeDiscover', 'addToTripHint')}</p>
-              <p className="place-detail-app-modal-step">Step 1: Choose trip</p>
-              {tripModalLoading ? (
-                <p className="place-detail-app-modal-loading">{t('placeDiscover', 'tripsLoading')}</p>
-              ) : tripModalTrips.length === 0 ? (
-                <div className="place-detail-app-modal-empty">
-                  <p>{t('placeDiscover', 'addToTripEmpty')}</p>
-                  <Link to="/plan" className="place-detail-app-modal-primary" onClick={closeTripModal}>
-                    {t('home', 'createTrip')}
-                  </Link>
-                </div>
-              ) : (
+              {tripModalStep === 1 ? (
                 <>
-                  <div className="place-detail-app-trip-search-wrap">
-                    <input
-                      type="search"
-                      className="place-detail-app-trip-search"
-                      value={tripSearchQuery}
-                      onChange={(e) => setTripSearchQuery(e.target.value)}
-                      placeholder="Search trip..."
-                      aria-label="Search trip"
-                    />
-                  </div>
-                  <div className="place-detail-app-trip-list">
-                  {filteredTripOptions.map((trip) => (
-                    <button
-                      key={trip.id}
-                      type="button"
-                      className={`place-detail-app-trip-item ${String(trip.id) === String(tripActiveId) ? 'is-active' : ''}`}
-                      onClick={() => {
-                        setTripActiveId(String(trip.id));
-                        setTripAddError('');
-                      }}
-                      disabled={tripAddSaving}
-                    >
-                      <span className="place-detail-app-trip-name">
-                        {trip.name}
-                        {trip.startDate && trip.endDate ? (
-                          <small>{formatTripRange(trip.startDate, trip.endDate)}</small>
-                        ) : null}
-                      </span>
-                      <span className="place-detail-app-trip-arrow">
-                        {String(trip.id) === String(tripActiveId) ? <Icon name="check" size={18} /> : <Icon name="chevron_right" size={18} />}
-                      </span>
-                    </button>
-                  ))}
-                  </div>
-                  {!tripModalLoading && filteredTripOptions.length === 0 ? (
-                    <p className="place-detail-app-modal-loading">No trips match your search.</p>
-                  ) : null}
+                  <p className="place-detail-app-modal-place">{tripPickPlace.name}</p>
+                  <p className="place-detail-app-modal-hint">{t('placeDiscover', 'addToTripHint')}</p>
+                  <p className="place-detail-app-modal-step">{t('placeDiscover', 'addToTripStepChoose')}</p>
+                  {tripModalLoading ? (
+                    <p className="place-detail-app-modal-loading">{t('placeDiscover', 'tripsLoading')}</p>
+                  ) : tripModalTrips.length === 0 ? (
+                    <div className="place-detail-app-modal-empty">
+                      <p>{t('placeDiscover', 'addToTripEmpty')}</p>
+                      <Link to="/plan" className="place-detail-app-modal-primary" onClick={closeTripModal}>
+                        {t('home', 'createTrip')}
+                      </Link>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="place-detail-app-trip-search-wrap">
+                        <input
+                          type="search"
+                          className="place-detail-app-trip-search"
+                          value={tripSearchQuery}
+                          onChange={(e) => setTripSearchQuery(e.target.value)}
+                          placeholder="Search trip..."
+                          aria-label="Search trip"
+                        />
+                      </div>
+                      <div className="place-detail-app-trip-list">
+                        {filteredTripOptions.map((trip) => (
+                          <button
+                            key={trip.id}
+                            type="button"
+                            className={`place-detail-app-trip-item ${String(trip.id) === String(tripActiveId) ? 'is-active' : ''}`}
+                            onClick={() => {
+                              setTripActiveId(String(trip.id));
+                              setTripAddError('');
+                            }}
+                            disabled={tripAddSaving}
+                          >
+                            <span className="place-detail-app-trip-name">
+                              {trip.name}
+                              {trip.startDate && trip.endDate ? (
+                                <small>{formatTripRange(trip.startDate, trip.endDate)}</small>
+                              ) : null}
+                            </span>
+                            <span className="place-detail-app-trip-arrow">
+                              {String(trip.id) === String(tripActiveId) ? (
+                                <Icon name="check" size={18} />
+                              ) : (
+                                <Icon name="chevron_right" size={18} />
+                              )}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      {!tripModalLoading && filteredTripOptions.length === 0 ? (
+                        <p className="place-detail-app-modal-loading">No trips match your search.</p>
+                      ) : null}
+                      <div className="place-detail-app-trip-step-footer">
+                        <button
+                          type="button"
+                          className="place-detail-app-modal-primary place-detail-app-modal-primary--full"
+                          disabled={!tripActiveId || tripAddSaving}
+                          onClick={() => {
+                            setTripAddError('');
+                            setTripModalStep(2);
+                          }}
+                        >
+                          {t('placeDiscover', 'addToTripContinue')}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </>
-              )}
-              {selectedTrip ? (
-                <div className="place-detail-app-trip-editor">
-                  <p className="place-detail-app-modal-step">Step 2: Pick day and time</p>
+              ) : null}
+              {tripModalStep === 2 && selectedTrip ? (
+                <div className="place-detail-app-trip-editor place-detail-app-trip-editor--solo">
+                  <button
+                    type="button"
+                    className="place-detail-app-modal-back"
+                    onClick={() => {
+                      setTripAddError('');
+                      setTripModalStep(1);
+                    }}
+                    disabled={tripAddSaving}
+                  >
+                    <Icon name="arrow_back" size={20} aria-hidden />
+                    <span>{t('placeDiscover', 'addToTripBack')}</span>
+                  </button>
+                  <p className="place-detail-app-modal-place">{tripPickPlace.name}</p>
+                  <p className="place-detail-app-trip-picked">
+                    <span className="place-detail-app-trip-picked-name">{selectedTrip.name}</span>
+                    <span className="place-detail-app-trip-picked-dates">
+                      {formatTripRange(selectedTrip.startDate, selectedTrip.endDate)}
+                    </span>
+                  </p>
+                  <p className="place-detail-app-modal-step">{t('placeDiscover', 'addToTripStepTiming')}</p>
                   <div className="place-detail-app-booking-grid">
                     <label className="place-detail-app-booking-field">
                       <span>Day</span>
@@ -1796,7 +1846,7 @@ export default function PlaceDetail() {
                     <div className="place-detail-app-trip-actions">
                       <button
                         type="button"
-                        className="place-detail-app-modal-primary"
+                        className="place-detail-app-modal-primary place-detail-app-modal-primary--full"
                         onClick={addPlaceToTrip}
                         disabled={tripAddSaving || !!liveTripValidationError}
                       >
@@ -1804,10 +1854,14 @@ export default function PlaceDetail() {
                       </button>
                     </div>
                   </div>
-                  {(tripAddError || liveTripValidationError) ? (
-                    <p className="place-detail-error-inline" role="alert">{tripAddError || liveTripValidationError}</p>
+                  {tripAddError || liveTripValidationError ? (
+                    <p className="place-detail-error-inline" role="alert">
+                      {tripAddError || liveTripValidationError}
+                    </p>
                   ) : (
-                    <p className="place-detail-toast-inline" role="status">Timing looks good.</p>
+                    <p className="place-detail-toast-inline" role="status">
+                      Timing looks good.
+                    </p>
                   )}
                 </div>
               ) : null}

@@ -3280,12 +3280,81 @@
   display: inline-flex;
   align-items: center;
 }
+.place-detail-app-modal-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 6px 4px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f766e;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.place-detail-app-modal-back:hover:not(:disabled) {
+  background: rgba(39, 174, 96, 0.1);
+}
+
+.place-detail-app-modal-back:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.place-detail-app-trip-picked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f0fff4;
+  border: 1px solid #c6f6d5;
+}
+
+.place-detail-app-trip-picked-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.place-detail-app-trip-picked-dates {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.place-detail-app-trip-step-footer {
+  margin-top: 14px;
+}
+
+.place-detail-app-modal-primary.place-detail-app-modal-primary--full {
+  width: 100%;
+}
+
+button.place-detail-app-modal-primary {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
 .place-detail-app-trip-editor {
   margin-top: 12px;
   display: grid;
   gap: 12px;
   border-top: 1px solid #ece9e2;
   padding-top: 12px;
+}
+
+.place-detail-app-trip-editor--solo {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
 }
 .place-detail-app-trip-actions {
   display: flex;
