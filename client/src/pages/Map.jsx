@@ -140,6 +140,30 @@ function formatRouteDistance(meters) {
   return km >= 1 ? `${Number(km.toFixed(1))} km` : `${Math.round(meters)} m`;
 }
 
+function buildExternalDirectionsUrl(orderedStops, travelMode) {
+  if (!Array.isArray(orderedStops) || orderedStops.length === 0) return '';
+  const mode = travelMode === 'WALKING' ? 'walking' : 'driving';
+  const toCoord = (p) => `${Number(p.latitude)},${Number(p.longitude)}`;
+  const destination = orderedStops[orderedStops.length - 1];
+  if (!destination) return '';
+  const params = new URLSearchParams({
+    api: '1',
+    origin: 'Current Location',
+    destination: toCoord(destination),
+    travelmode: mode,
+  });
+  if (orderedStops.length > 1) {
+    params.set(
+      'waypoints',
+      orderedStops
+        .slice(0, -1)
+        .map((p) => toCoord(p))
+        .join('|')
+    );
+  }
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
 function getDateForDayLabel(startDate, dayIndex) {
   const ymd = getDateForDayIndex(startDate, dayIndex);
   if (!ymd) return '';
@@ -792,6 +816,13 @@ export default function MapPage() {
       navigator.clipboard.writeText(url).catch(() => {});
     }
   }, [tripFilterName, t]);
+
+  const handleOpenExternalDirections = useCallback(() => {
+    const url = buildExternalDirectionsUrl(placesInTripOrder, travelMode);
+    if (!url) return;
+    const opened = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!opened) window.location.assign(url);
+  }, [placesInTripOrder, travelMode]);
 
   const focusMapOnPlace = useCallback((place, maps, map, infoWindow) => {
     if (!place || !map) return;
@@ -1718,18 +1749,30 @@ export default function MapPage() {
 
               {/* Route summary: time to drive + distance + roads to pass */}
               {liveNavError && (
-                <p className="map-live-nav-error" role="alert">
-                  {liveNavError === 'denied'
-                    ? t('home', 'liveNavDenied')
-                    : liveNavError === 'unavailable'
-                      ? t('home', 'liveNavLocationFailed')
-                      : liveNavError === 'noGeolocation'
-                        ? t('home', 'liveNavNoGeo')
-                        : liveNavError === 'insecureContext'
-                          ? t('home', 'liveNavInsecureContext')
-                          : t('home', 'liveNavLocationFailed')}
-                  {liveNavErrorDebug ? ` (${liveNavErrorDebug})` : ''}
-                </p>
+                <>
+                  <p className="map-live-nav-error" role="alert">
+                    {liveNavError === 'denied'
+                      ? t('home', 'liveNavDenied')
+                      : liveNavError === 'unavailable'
+                        ? t('home', 'liveNavLocationFailed')
+                        : liveNavError === 'noGeolocation'
+                          ? t('home', 'liveNavNoGeo')
+                          : liveNavError === 'insecureContext'
+                            ? t('home', 'liveNavInsecureContext')
+                            : t('home', 'liveNavLocationFailed')}
+                    {liveNavErrorDebug ? ` (${liveNavErrorDebug})` : ''}
+                  </p>
+                  {placesInTripOrder.length >= 1 && (
+                    <button
+                      type="button"
+                      className="map-trip-route-opt-btn"
+                      onClick={handleOpenExternalDirections}
+                    >
+                      <Icon name="open_in_new" size={20} />
+                      <span>Open in Google Maps</span>
+                    </button>
+                  )}
+                </>
               )}
 
               {placesInTripOrder.length >= 1 && !liveNavigation && (
