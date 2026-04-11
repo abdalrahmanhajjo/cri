@@ -3193,6 +3193,7 @@
   color: #444;
 }
 .place-detail-app-booking-field input,
+.place-detail-app-booking-field select,
 .place-detail-app-booking-field textarea {
   width: 100%;
   border: 1px solid #e5e7eb;
@@ -3233,15 +3234,40 @@
   cursor: pointer;
   text-align: left;
 }
+.place-detail-app-trip-item.is-active {
+  border-color: #27ae60;
+  background: #f0fff4;
+}
 .place-detail-app-trip-name {
+  display: grid;
+  gap: 2px;
   font-size: 15px;
   font-weight: 700;
   color: #1a1a1a;
+}
+.place-detail-app-trip-name small {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
 }
 .place-detail-app-trip-arrow {
   color: #777;
   display: inline-flex;
   align-items: center;
+}
+.place-detail-app-trip-editor {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid #ece9e2;
+  padding-top: 12px;
+}
+.place-detail-app-trip-actions {
+  display: flex;
+  align-items: flex-end;
+}
+.place-detail-app-trip-actions .place-detail-app-modal-primary {
+  width: 100%;
 }
 
 @media (max-width: 767px) {

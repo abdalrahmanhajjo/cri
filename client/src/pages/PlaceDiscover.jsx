@@ -9,7 +9,14 @@ import GlobalSearchBar from '../components/GlobalSearchBar';
 import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
-import { getDayCount, ensureDaysArray, toDateOnly, sortPlacesForItinerary, tripDaysPlaceIdsOnlyToPayload } from '../utils/tripPlannerHelpers';
+import {
+  getDayCount,
+  ensureDaysWithSlots,
+  toDateOnly,
+  buildTripDaysApiPayload,
+  hasOverlappingTimeSlots,
+  getDateForDayIndex,
+} from '../utils/tripPlannerHelpers';
 import { DINING_PATH, HOTELS_PATH } from '../utils/discoverPaths';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import {
@@ -27,6 +34,17 @@ function formatTripRange(trip, locale) {
   return `${a.toLocaleDateString(locale, opts)} – ${b.toLocaleDateString(locale, opts)}`;
 }
 
+function normalizeHm(value) {
+  if (value == null) return '';
+  const raw = String(value).trim();
+  const m = raw.match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return '';
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return '';
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
 function DiscoverCard({
   place,
   viewMode,
@@ -38,6 +56,7 @@ function DiscoverCard({
   mapAriaLabel,
   addToTripLabel,
   favouriteLabel,
+  favouriteBusy,
 }) {
   const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
   const rating = place.rating != null ? Number(place.rating).toFixed(1) : null;
@@ -79,6 +98,8 @@ function DiscoverCard({
             aria-label={favouriteLabel}
             aria-pressed={Boolean(isFavourite)}
             title={favouriteLabel}
+            disabled={favouriteBusy}
+            aria-busy={favouriteBusy}
           >
             <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={20} aria-hidden />
           </button>
@@ -138,9 +159,15 @@ export default function PlaceDiscover() {
   const [tripModalTrips, setTripModalTrips] = useState([]);
   const [tripModalLoading, setTripModalLoading] = useState(false);
   const [tripAddSaving, setTripAddSaving] = useState(false);
+  const [tripActiveId, setTripActiveId] = useState('');
+  const [tripDayIndex, setTripDayIndex] = useState(0);
+  const [tripStartTime, setTripStartTime] = useState('');
+  const [tripEndTime, setTripEndTime] = useState('');
+  const [tripAddError, setTripAddError] = useState('');
   const [toast, setToast] = useState(null);
   const [sponsoredDiscover, setSponsoredDiscover] = useState([]);
   const [favouriteIds, setFavouriteIds] = useState(new Set());
+  const [favouriteBusyIds, setFavouriteBusyIds] = useState(new Set());
   const { settings } = useSiteSettings();
 
   const searchParamsRef = useRef(searchParams);
@@ -396,72 +423,125 @@ export default function PlaceDiscover() {
       }
       const placeId = place?.id != null ? String(place.id) : '';
       if (!placeId) return;
+      if (favouriteBusyIds.has(placeId)) return;
 
       const isFav = favouriteIds.has(placeId);
+      setFavouriteBusyIds((prev) => new Set(prev).add(placeId));
+      setFavouriteIds((prev) => {
+        const next = new Set(prev);
+        if (isFav) next.delete(placeId);
+        else next.add(placeId);
+        return next;
+      });
       if (isFav) {
         api.user
           .removeFavourite(placeId)
-          .then(() => {
-            setFavouriteIds((prev) => {
+          .then(() => showToast(t('feedback', 'favouriteRemoved'), 'success'))
+          .catch(() => {
+            setFavouriteIds((prev) => new Set(prev).add(placeId));
+            showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
+          })
+          .finally(() => {
+            setFavouriteBusyIds((prev) => {
               const next = new Set(prev);
               next.delete(placeId);
               return next;
             });
-            showToast(t('feedback', 'favouriteRemoved'), 'success');
-          })
-          .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
+          });
         return;
       }
 
       api.user
         .addFavourite(placeId)
-        .then(() => {
-          setFavouriteIds((prev) => new Set(prev).add(placeId));
-          showToast(t('feedback', 'favouriteAdded'), 'success');
+        .then(() => showToast(t('feedback', 'favouriteAdded'), 'success'))
+        .catch(() => {
+          setFavouriteIds((prev) => {
+            const next = new Set(prev);
+            next.delete(placeId);
+            return next;
+          });
+          showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
         })
-        .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
+        .finally(() => {
+          setFavouriteBusyIds((prev) => {
+            const next = new Set(prev);
+            next.delete(placeId);
+            return next;
+          });
+        });
     },
-    [favouriteIds, location.hash, location.pathname, location.search, navigate, showToast, t, user]
+    [favouriteIds, favouriteBusyIds, location.hash, location.pathname, location.search, navigate, showToast, t, user]
   );
 
   const closeTripModal = useCallback(() => {
     setTripPickPlace(null);
+    setTripActiveId('');
+    setTripDayIndex(0);
+    setTripStartTime('');
+    setTripEndTime('');
+    setTripAddError('');
   }, []);
 
-  const addPlaceToTripFirstDay = useCallback(
-    async (trip) => {
-      if (!tripPickPlace || tripAddSaving) return;
-      const start = toDateOnly(trip.startDate);
-      const end = toDateOnly(trip.endDate);
-      const dayCount = getDayCount(start || trip.startDate, end || trip.endDate);
-      const days = ensureDaysArray(trip.days, dayCount);
-      const idStr = String(tripPickPlace.id);
-      const firstIds = days[0]?.placeIds || [];
-      if (firstIds.includes(idStr)) {
-        showToast(t('placeDiscover', 'addToTripAlready'), 'info');
-        closeTripModal();
-        return;
-      }
-      const mergedIds = sortPlacesForItinerary([...firstIds, idStr], placeMap);
-      const newDaysPlaceIds = [{ placeIds: mergedIds }, ...days.slice(1).map((d) => ({ placeIds: [...(d?.placeIds || [])] }))];
-      const newDays = tripDaysPlaceIdsOnlyToPayload(newDaysPlaceIds, start || toDateOnly(trip.startDate));
-
-      setTripAddSaving(true);
-      try {
-        await api.user.updateTrip(trip.id, { days: newDays });
-        showToast(
-          (t('placeDiscover', 'addToTripSuccess') || '').replace('{name}', trip.name || ''),
-          'success'
-        );
-        closeTripModal();
-      } catch (err) {
-        showToast(err?.message || t('placeDiscover', 'addToTripFailed'), 'error');
-      } finally {
-        setTripAddSaving(false);
-      }
-    },
-    [tripPickPlace, tripAddSaving, placeMap, showToast, t, closeTripModal]
+  const selectedTrip = useMemo(
+    () => tripModalTrips.find((trip) => String(trip.id) === String(tripActiveId)) || null,
+    [tripModalTrips, tripActiveId]
   );
+
+  const selectedTripDayCount = useMemo(() => {
+    if (!selectedTrip) return 1;
+    const start = toDateOnly(selectedTrip.startDate);
+    const end = toDateOnly(selectedTrip.endDate);
+    return getDayCount(start || selectedTrip.startDate, end || selectedTrip.endDate);
+  }, [selectedTrip]);
+
+  const addPlaceToTrip = useCallback(async () => {
+    if (!tripPickPlace || !selectedTrip || tripAddSaving) return;
+    setTripAddError('');
+    const startHm = normalizeHm(tripStartTime);
+    const endHm = normalizeHm(tripEndTime);
+    if (!startHm || !endHm) {
+      setTripAddError('Select both start and end time.');
+      return;
+    }
+    if (endHm <= startHm) {
+      setTripAddError('End time must be after start time.');
+      return;
+    }
+
+    const start = toDateOnly(selectedTrip.startDate);
+    const end = toDateOnly(selectedTrip.endDate);
+    const dayCount = getDayCount(start || selectedTrip.startDate, end || selectedTrip.endDate);
+    const safeDayIndex = Math.min(Math.max(0, tripDayIndex), Math.max(0, dayCount - 1));
+    const days = ensureDaysWithSlots(selectedTrip.days, dayCount).map((day) => ({
+      slots: Array.isArray(day?.slots) ? day.slots.map((slot) => ({ ...slot })) : [],
+    }));
+
+    const idStr = String(tripPickPlace.id);
+    const daySlots = days[safeDayIndex]?.slots || [];
+    if (daySlots.some((slot) => String(slot.placeId) === idStr)) {
+      setTripAddError('This place is already in the selected day.');
+      return;
+    }
+    const nextSlot = { placeId: idStr, startTime: `${startHm}:00`, endTime: `${endHm}:00`, notes: null };
+    if (hasOverlappingTimeSlots([...daySlots, nextSlot])) {
+      setTripAddError('Selected time conflicts with another place in this day.');
+      return;
+    }
+
+    days[safeDayIndex] = { slots: [...daySlots, nextSlot] };
+    const payloadDays = buildTripDaysApiPayload(days, start || toDateOnly(selectedTrip.startDate));
+
+    setTripAddSaving(true);
+    try {
+      await api.user.updateTrip(selectedTrip.id, { days: payloadDays });
+      showToast((t('placeDiscover', 'addToTripSuccess') || '').replace('{name}', selectedTrip.name || ''), 'success');
+      closeTripModal();
+    } catch (err) {
+      setTripAddError(err?.message || t('placeDiscover', 'addToTripFailed'));
+    } finally {
+      setTripAddSaving(false);
+    }
+  }, [tripPickPlace, selectedTrip, tripAddSaving, tripStartTime, tripEndTime, tripDayIndex, showToast, t, closeTripModal]);
 
   useEffect(() => {
     if (!tripPickPlace) return;
@@ -471,6 +551,24 @@ export default function PlaceDiscover() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [tripPickPlace, closeTripModal]);
+
+  useEffect(() => {
+    if (!tripPickPlace) return;
+    if (tripModalTrips.length < 1) {
+      setTripActiveId('');
+      return;
+    }
+    setTripActiveId((prev) => {
+      if (prev && tripModalTrips.some((trip) => String(trip.id) === String(prev))) return prev;
+      return String(tripModalTrips[0].id);
+    });
+  }, [tripPickPlace, tripModalTrips]);
+
+  useEffect(() => {
+    if (!selectedTrip) return;
+    const maxDay = Math.max(0, selectedTripDayCount - 1);
+    setTripDayIndex((prev) => Math.min(Math.max(0, prev), maxDay));
+  }, [selectedTrip, selectedTripDayCount]);
 
   const countLabel = (t('placeDiscover', 'resultCount') || '{count} places').replace('{count}', String(filteredPlaces.length));
 
@@ -668,6 +766,7 @@ export default function PlaceDiscover() {
                 onAddToTrip={openAddToTrip}
                 onToggleFavourite={toggleFavourite}
                 isFavourite={favouriteIds.has(String(p.id))}
+                favouriteBusy={favouriteBusyIds.has(String(p.id))}
                 viewDetailsLabel={t('home', 'viewDetails')}
                 mapAriaLabel={t('placeDiscover', 'viewOnMap')}
                 addToTripLabel={t('placeDiscover', 'addToTrip')}
@@ -719,20 +818,65 @@ export default function PlaceDiscover() {
                   <li key={tr.id}>
                     <button
                       type="button"
-                      className="pd-modal-trip-row"
+                      className={`pd-modal-trip-row ${String(tr.id) === String(tripActiveId) ? 'is-active' : ''}`}
                       disabled={tripAddSaving}
-                      onClick={() => addPlaceToTripFirstDay(tr)}
+                      onClick={() => {
+                        setTripActiveId(String(tr.id));
+                        setTripAddError('');
+                      }}
                     >
                       <span className="pd-modal-trip-text">
                         <span className="pd-modal-trip-name">{tr.name}</span>
                         <span className="pd-modal-trip-dates">{formatTripRange(tr, locale)}</span>
                       </span>
-                      <Icon name="chevron_right" size={22} className="pd-modal-trip-chev" aria-hidden />
+                      {String(tr.id) === String(tripActiveId)
+                        ? <Icon name="check" size={20} className="pd-modal-trip-chev" aria-hidden />
+                        : <Icon name="chevron_right" size={22} className="pd-modal-trip-chev" aria-hidden />}
                     </button>
                   </li>
                 ))}
               </ul>
             )}
+
+            {selectedTrip ? (
+              <div className="pd-modal-trip-editor">
+                <div className="pd-modal-grid">
+                  <label className="pd-modal-field">
+                    <span>Day</span>
+                    <select
+                      value={tripDayIndex}
+                      onChange={(e) => setTripDayIndex(Number.parseInt(e.target.value, 10) || 0)}
+                      disabled={tripAddSaving}
+                    >
+                      {Array.from({ length: selectedTripDayCount }, (_, idx) => {
+                        const dateLabel = getDateForDayIndex(selectedTrip.startDate, idx);
+                        return (
+                          <option key={idx} value={idx}>
+                            {`Day ${idx + 1}${dateLabel ? ` - ${dateLabel}` : ''}`}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </label>
+                  <label className="pd-modal-field">
+                    <span>Start time</span>
+                    <input type="time" value={tripStartTime} onChange={(e) => setTripStartTime(e.target.value)} required />
+                  </label>
+                </div>
+                <div className="pd-modal-grid">
+                  <label className="pd-modal-field">
+                    <span>End time</span>
+                    <input type="time" value={tripEndTime} onChange={(e) => setTripEndTime(e.target.value)} required />
+                  </label>
+                  <div className="pd-modal-add-wrap">
+                    <button type="button" className="pd-modal-primary pd-modal-primary--full" onClick={addPlaceToTrip} disabled={tripAddSaving}>
+                      {tripAddSaving ? 'Saving...' : 'Add to selected trip'}
+                    </button>
+                  </div>
+                </div>
+                {tripAddError ? <p className="pd-modal-error" role="alert">{tripAddError}</p> : null}
+              </div>
+            ) : null}
 
             <div className="pd-modal-footer">
               <Link to="/plan" className="pd-modal-link">

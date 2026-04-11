@@ -237,6 +237,13 @@ export default function Layout() {
                 <Link to="/messages" className="nav-link nav-link--auth" onClick={closeMenu}>
                   {t('nav', 'venueMessages')}
                 </Link>
+                <Link
+                  to="/trips"
+                  className={`nav-link nav-link--auth ${isTripsPage ? 'nav-link--active' : ''}`}
+                  onClick={closeMenu}
+                >
+                  {t('nav', 'myTrips')}
+                </Link>
                 <Link to="/profile" className="nav-link nav-link--auth" onClick={closeMenu}>{user.name || t('nav', 'profile')}</Link>
                 <button type="button" className="btn-outline btn-sm btn-vd" onClick={handleLogout}>{t('nav', 'logOut')}</button>
               </>
