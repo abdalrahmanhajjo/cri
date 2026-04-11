@@ -40,6 +40,17 @@ const avatarUpload = multer({
   },
 });
 
+async function uploadAvatarWithMetadataFallback(imagekit, uploadPayload) {
+  try {
+    return await imagekit.upload(uploadPayload);
+  } catch (err) {
+    const msg = String(err?.message || '').toLowerCase();
+    if (!msg.includes('invalid custom metadata')) throw err;
+    const { customMetadata: _omit, ...withoutCustomMetadata } = uploadPayload;
+    return imagekit.upload(withoutCustomMetadata);
+  }
+}
+
 function sanitizeProfileInput(body) {
   const out = {};
   if (typeof body.name === 'string') {
@@ -165,7 +176,7 @@ router.post('/profile/avatar', avatarUpload.single('file'), async (req, res) => 
     const safeExt = pickImageExtension(prep.contentType, req.file.originalname, prep.useExtension);
     const finalFileName = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
 
-    const uploadResponse = await imagekit.upload({
+    const uploadResponse = await uploadAvatarWithMetadataFallback(imagekit, {
       file: prep.buffer,
       fileName: finalFileName,
       folder: storageFolder,
