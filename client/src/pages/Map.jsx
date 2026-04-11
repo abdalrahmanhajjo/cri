@@ -48,6 +48,34 @@ function haversineMeters(a, b) {
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(Math.max(0, 1 - x)));
 }
 
+function isLikelySafari() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /safari/i.test(ua) && !/(chrome|chromium|crios|android|edg|opr|opera|fxios|firefox)/i.test(ua);
+}
+
+function getCurrentPositionAsync(options) {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      reject(Object.assign(new Error('Geolocation unsupported'), { code: 0 }));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+}
+
+async function getCurrentPositionWithSafariFallback() {
+  const primary = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+  try {
+    return await getCurrentPositionAsync(primary);
+  } catch (err) {
+    // Safari can fail first attempt with strict options even when location access is available.
+    if (!isLikelySafari()) throw err;
+    const fallback = { enableHighAccuracy: false, timeout: 20000, maximumAge: 120000 };
+    return getCurrentPositionAsync(fallback);
+  }
+}
+
 function stripHtml(html) {
   if (!html || typeof html !== 'string') return '';
   const div = document.createElement('div');
@@ -1257,8 +1285,8 @@ export default function MapPage() {
       return;
     }
     setLiveNavRequestingPermission(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
+    getCurrentPositionWithSafariFallback()
+      .then((pos) => {
         setLiveNavRequestingPermission(false);
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         userLocationRef.current = loc;
@@ -1270,15 +1298,17 @@ export default function MapPage() {
         if (mapInstanceRef.current) {
           mapInstanceRef.current.panTo(loc);
         }
-      },
-      (err) => {
+      })
+      .catch((err) => {
         setLiveNavRequestingPermission(false);
         const code = err?.code;
-        if (code === 1) setLiveNavError('denied');
-        else setLiveNavError('unavailable');
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+        if (code === 1) {
+          // In Safari, treat most code=1 cases as unavailable to avoid false "blocked" messaging.
+          setLiveNavError(isLikelySafari() ? 'unavailable' : 'denied');
+        } else {
+          setLiveNavError('unavailable');
+        }
+      });
   }, []);
 
   const stopLiveNavigation = useCallback(() => {
@@ -1308,7 +1338,7 @@ export default function MapPage() {
     const watchId = navigator.geolocation.watchPosition(
       onPosition,
       (err) => {
-        if (err?.code === 1) setLiveNavError('denied');
+        if (err?.code === 1) setLiveNavError(isLikelySafari() ? 'unavailable' : 'denied');
         else if (err?.code != null) setLiveNavError('unavailable');
       },
       {
