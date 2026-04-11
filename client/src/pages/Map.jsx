@@ -76,6 +76,38 @@ async function getCurrentPositionWithSafariFallback() {
   }
 }
 
+function getFirstWatchPosition(options = {}, timeoutMs = 25000) {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      reject(Object.assign(new Error('Geolocation unsupported'), { code: 0 }));
+      return;
+    }
+    let settled = false;
+    let watchId = null;
+    const finish = (cb, value) => {
+      if (settled) return;
+      settled = true;
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
+      cb(value);
+    };
+    const timer = window.setTimeout(() => {
+      const timeoutError = Object.assign(new Error('Geolocation watch timed out'), { code: 3 });
+      finish(reject, timeoutError);
+    }, timeoutMs);
+    watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        window.clearTimeout(timer);
+        finish(resolve, pos);
+      },
+      (err) => {
+        window.clearTimeout(timer);
+        finish(reject, err);
+      },
+      options
+    );
+  });
+}
+
 function stripHtml(html) {
   if (!html || typeof html !== 'string') return '';
   const div = document.createElement('div');
@@ -1284,20 +1316,33 @@ export default function MapPage() {
       setLiveNavError('insecureContext');
       return;
     }
+    const applyLiveNavLocation = (pos) => {
+      setLiveNavRequestingPermission(false);
+      const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      userLocationRef.current = loc;
+      setUserLocation(loc);
+      lastLiveRouteTriggerRef.current = Date.now();
+      prevWatchPositionRef.current = loc;
+      setLiveNavigation(true);
+      setRouteRefreshTick((t) => t + 1);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.panTo(loc);
+      }
+    };
     setLiveNavRequestingPermission(true);
     getCurrentPositionWithSafariFallback()
+      .then(applyLiveNavLocation)
+      .catch((firstErr) => {
+        // Safari often succeeds with watchPosition even when initial getCurrentPosition fails.
+        return getFirstWatchPosition(
+          { enableHighAccuracy: false, maximumAge: 180000, timeout: 25000 },
+          25000
+        ).catch(() => {
+          throw firstErr;
+        });
+      })
       .then((pos) => {
-        setLiveNavRequestingPermission(false);
-        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        userLocationRef.current = loc;
-        setUserLocation(loc);
-        lastLiveRouteTriggerRef.current = Date.now();
-        prevWatchPositionRef.current = loc;
-        setLiveNavigation(true);
-        setRouteRefreshTick((t) => t + 1);
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.panTo(loc);
-        }
+        applyLiveNavLocation(pos);
       })
       .catch((err) => {
         setLiveNavRequestingPermission(false);
