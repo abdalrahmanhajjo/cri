@@ -140,28 +140,11 @@ function formatRouteDistance(meters) {
   return km >= 1 ? `${Number(km.toFixed(1))} km` : `${Math.round(meters)} m`;
 }
 
-function buildExternalDirectionsUrl(orderedStops, travelMode) {
-  if (!Array.isArray(orderedStops) || orderedStops.length === 0) return '';
-  const mode = travelMode === 'WALKING' ? 'walking' : 'driving';
-  const toCoord = (p) => `${Number(p.latitude)},${Number(p.longitude)}`;
-  const destination = orderedStops[orderedStops.length - 1];
-  if (!destination) return '';
-  const params = new URLSearchParams({
-    api: '1',
-    origin: 'Current Location',
-    destination: toCoord(destination),
-    travelmode: mode,
-  });
-  if (orderedStops.length > 1) {
-    params.set(
-      'waypoints',
-      orderedStops
-        .slice(0, -1)
-        .map((p) => toCoord(p))
-        .join('|')
-    );
-  }
-  return `https://www.google.com/maps/dir/?${params.toString()}`;
+function buildChromeAppUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  if (url.startsWith('https://')) return `googlechromes://${url.slice('https://'.length)}`;
+  if (url.startsWith('http://')) return `googlechrome://${url.slice('http://'.length)}`;
+  return '';
 }
 
 function getDateForDayLabel(startDate, dayIndex) {
@@ -817,12 +800,12 @@ export default function MapPage() {
     }
   }, [tripFilterName, t]);
 
-  const handleOpenExternalDirections = useCallback(() => {
-    const url = buildExternalDirectionsUrl(placesInTripOrder, travelMode);
-    if (!url) return;
-    const opened = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!opened) window.location.assign(url);
-  }, [placesInTripOrder, travelMode]);
+  const handleOpenInChrome = useCallback(() => {
+    const currentUrl = window.location.href;
+    const chromeUrl = buildChromeAppUrl(currentUrl);
+    if (!chromeUrl) return;
+    window.location.assign(chromeUrl);
+  }, []);
 
   const focusMapOnPlace = useCallback((place, maps, map, infoWindow) => {
     if (!place || !map) return;
@@ -1766,10 +1749,10 @@ export default function MapPage() {
                     <button
                       type="button"
                       className="map-trip-route-opt-btn"
-                      onClick={handleOpenExternalDirections}
+                      onClick={handleOpenInChrome}
                     >
                       <Icon name="open_in_new" size={20} />
-                      <span>Open in Google Maps</span>
+                      <span>Open in Chrome</span>
                     </button>
                   )}
                 </>
