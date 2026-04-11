@@ -888,13 +888,14 @@ export default function MapPage() {
 
   const handleOpenInChrome = useCallback(async () => {
     if (typeof window === 'undefined') return;
-    let handoffCode = '';
     try {
       const handoff = await api.auth.createChromeHandoff();
-      if (handoff?.code) handoffCode = String(handoff.code);
-    } catch {
-      handoffCode = '';
-    }
+      const handoffCode = handoff?.code ? String(handoff.code) : '';
+      if (!handoffCode) {
+        setLiveNavError('unavailable');
+        setLiveNavErrorDebug(t('home', 'liveNavChromeHandoffFailed'));
+        return;
+      }
     const targetUrl = buildChromeMapHandoffUrl({
       baseUrl: window.location.href,
       handoffCode,
@@ -904,8 +905,17 @@ export default function MapPage() {
       autoStart: true,
     });
     const chromeUrl = buildChromeAppUrl(targetUrl);
-    if (chromeUrl) window.location.assign(chromeUrl);
-  }, [currentDayPlaceIds, tripFilterName, travelMode]);
+      if (!chromeUrl) {
+        setLiveNavError('unavailable');
+        setLiveNavErrorDebug(t('home', 'liveNavChromeHandoffFailed'));
+        return;
+      }
+      window.location.assign(chromeUrl);
+    } catch {
+      setLiveNavError('unavailable');
+      setLiveNavErrorDebug(t('home', 'liveNavChromeHandoffFailed'));
+    }
+  }, [currentDayPlaceIds, tripFilterName, travelMode, t]);
 
   const canRedirectToChrome = useMemo(() => isLikelySafari() && isIosDevice(), []);
   const startButtonOpensChrome = canRedirectToChrome && liveNavError === 'denied';

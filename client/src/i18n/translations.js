@@ -1022,6 +1022,8 @@ export const translations = {
       liveNavOpenInChrome: 'Open in Chrome',
       liveNavDeniedOpenChromeHint:
         'Location is blocked in Safari. Allow location in Safari site settings, or open this same page in Chrome.',
+      liveNavChromeHandoffFailed:
+        'Could not open your signed-in session in Chrome. Please make sure you are logged in and try again.',
       liveNavNoGeo: 'This device or browser does not support location for live directions.',
       liveNavPeekExpand: 'Show full directions',
       liveNavPeekUpdating: 'Updating routeâ€¦',
@@ -2574,6 +2576,8 @@ export const translations = {
       liveNavOpenInChrome: 'Open in Chrome',
       liveNavDeniedOpenChromeHint:
         'Location is blocked in Safari. Allow location in Safari site settings, or open this same page in Chrome.',
+      liveNavChromeHandoffFailed:
+        'Could not open your signed-in session in Chrome. Please make sure you are logged in and try again.',
       liveNavNoGeo: 'Ù‡Ø°Ø§ Ø§Ù„Ø¬Ù‡Ø§Ø² Ø£Ùˆ Ø§Ù„Ù…ØªØµÙØ­ Ù„Ø§ ÙŠØ¯Ø¹Ù… Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ù„Ù„Ø§ØªØ¬Ø§Ù‡Ø§Øª Ø§Ù„Ù…Ø¨Ø§Ø´Ø±Ø©.',
       liveNavPeekExpand: 'Ø¹Ø±Ø¶ Ø§Ù„Ø§ØªØ¬Ø§Ù‡Ø§Øª ÙƒØ§Ù…Ù„Ø©',
       liveNavPeekUpdating: 'Ø¬Ø§Ø±ÙŠ ØªØ­Ø¯ÙŠØ« Ø§Ù„Ù…Ø³Ø§Ø±â€¦',
@@ -4120,6 +4124,8 @@ export const translations = {
       liveNavOpenInChrome: 'Open in Chrome',
       liveNavDeniedOpenChromeHint:
         'Location is blocked in Safari. Allow location in Safari site settings, or open this same page in Chrome.',
+      liveNavChromeHandoffFailed:
+        'Could not open your signed-in session in Chrome. Please make sure you are logged in and try again.',
       liveNavNoGeo: 'Cet appareil ou ce navigateur ne prend pas en charge la gÃ©olocalisation pour la navigation.',
       liveNavPeekExpand: 'Afficher tout lâ€™itinÃ©raire',
       liveNavPeekUpdating: 'Mise Ã  jour de lâ€™itinÃ©raireâ€¦',
