@@ -289,6 +289,13 @@
   flex-wrap: wrap;
 }
 
+.trips-controls-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .trips-filter-chips {
   display: flex;
   gap: 8px;
@@ -323,16 +330,19 @@
 }
 
 .trip-item {
-  padding: 0;
+  padding: 10px;
   min-width: 0;
+  display: grid;
+  gap: 8px;
 }
 
 .trip-item-link {
   display: block;
-  padding: clamp(14px, 3vw, 18px);
+  padding: 12px;
   text-decoration: none;
   color: inherit;
-  border-radius: inherit;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
   transition: transform var(--duration-fast, 0.15s), box-shadow var(--duration-fast, 0.15s), background var(--duration-fast, 0.15s);
 }
 
@@ -341,6 +351,37 @@
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(28, 25, 23, 0.08);
   text-decoration: none;
+}
+
+.trip-item-select {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.trip-item-select input {
+  width: 16px;
+  height: 16px;
+}
+
+.trip-item-quick-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.trips-mini-btn {
+  min-height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.trips-mini-btn:hover {
+  background: var(--color-surface-variant);
 }
 
 .trip-item-row {
@@ -400,6 +441,85 @@
   text-align: center;
   color: var(--color-text-secondary);
   font-size: clamp(14px, 2.5vw, 16px);
+}
+
+.trips-bulk-panel {
+  padding: 12px;
+}
+
+.trips-bulk-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.trips-bulk-head p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.trips-bulk-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trips-danger-btn {
+  min-height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(185, 28, 28, 0.35);
+  background: rgba(185, 28, 28, 0.08);
+  color: #b91c1c;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.trips-danger-btn:disabled,
+.trips-ghost-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.trips-timeline {
+  display: grid;
+  gap: 12px;
+}
+
+.trips-timeline-group {
+  display: grid;
+  gap: 8px;
+}
+
+.trips-timeline-month {
+  margin: 0;
+  font-size: 15px;
+  color: var(--color-text-secondary);
+}
+
+.trips-timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.trips-timeline-item {
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.trips-load-more-sentinel {
+  height: 4px;
+}
+
+.trips-load-more-btn {
+  justify-self: center;
 }
 
 .trips-footnote {
