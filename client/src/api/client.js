@@ -247,6 +247,9 @@ async function requestWithDedupe(path, options = {}) {
     headers,
     signal: options.signal,
   };
+  if (method === 'GET' && skipGetDedupeForPath(path)) {
+    fetchInit.cache = 'no-store';
+  }
 
   const run = async (serverRetriesLeft = MAX_RETRIES_5XX) => {
     const res = await fetchWithNetworkRetry(url, fetchInit);

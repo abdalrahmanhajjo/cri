@@ -23,6 +23,7 @@ import {
   getFoodAndStayCategoryIdSets,
   isDedicatedGuideListing,
 } from '../utils/placeGuideExclusions';
+import { beginFavouritesRead, shouldApplyFavouritesRead } from '../utils/favouritesReadGate';
 import './PlaceDiscover.css';
 
 function formatTripRange(trip, locale) {
@@ -282,15 +283,16 @@ export default function PlaceDiscover() {
       return;
     }
     let cancelled = false;
+    const rid = beginFavouritesRead();
     api.user
       .favourites()
       .then((res) => {
-        if (cancelled) return;
+        if (cancelled || !shouldApplyFavouritesRead(rid)) return;
         const ids = Array.isArray(res.placeIds) ? res.placeIds.map(String) : [];
         setFavouriteIds(new Set(ids));
       })
       .catch(() => {
-        if (!cancelled) setFavouriteIds(new Set());
+        if (!cancelled && shouldApplyFavouritesRead(rid)) setFavouriteIds(new Set());
       });
     return () => {
       cancelled = true;
@@ -435,7 +437,9 @@ export default function PlaceDiscover() {
 
   const syncFavouriteIds = useCallback(async () => {
     if (!user) return;
+    const rid = beginFavouritesRead();
     const res = await api.user.favourites();
+    if (!shouldApplyFavouritesRead(rid)) return;
     const ids = Array.isArray(res?.placeIds) ? res.placeIds.map(String) : [];
     setFavouriteIds(new Set(ids));
   }, [user]);

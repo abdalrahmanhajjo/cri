@@ -17,6 +17,7 @@ import {
   hasOverlappingTimeSlots,
   getDateForDayIndex,
 } from '../utils/tripPlannerHelpers';
+import { beginFavouritesRead, shouldApplyFavouritesRead } from '../utils/favouritesReadGate';
 import './Detail.css';
 
 /** Resolved, unique image URLs for gallery (primary `image` + `images[]`). */
@@ -558,13 +559,17 @@ export default function PlaceDetail() {
       setIsFavourite(false);
       return;
     }
+    const rid = beginFavouritesRead();
     api.user
       .favourites()
       .then((res) => {
+        if (!shouldApplyFavouritesRead(rid)) return;
         const ids = new Set((Array.isArray(res.placeIds) ? res.placeIds : []).map(String));
         setIsFavourite(ids.has(String(place.id)));
       })
-      .catch(() => setIsFavourite(false));
+      .catch(() => {
+        if (shouldApplyFavouritesRead(rid)) setIsFavourite(false);
+      });
   }, [user, place]);
 
   useEffect(() => {
@@ -574,7 +579,9 @@ export default function PlaceDetail() {
 
   const syncFavouriteState = useCallback(async () => {
     if (!user || !place) return;
+    const rid = beginFavouritesRead();
     const res = await api.user.favourites();
+    if (!shouldApplyFavouritesRead(rid)) return;
     const ids = new Set((Array.isArray(res?.placeIds) ? res.placeIds : []).map(String));
     setIsFavourite(ids.has(String(place.id)));
   }, [user, place]);

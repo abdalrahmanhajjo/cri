@@ -41,6 +41,7 @@ import {
   isDedicatedGuideListing,
 } from '../utils/placeGuideExclusions';
 import { supabaseOptimizeForThumbnail } from '../utils/supabaseImage.js';
+import { beginFavouritesRead, shouldApplyFavouritesRead } from '../utils/favouritesReadGate';
 import './Explore.css';
 import './CommunityFeedRedesign.css';
 import './PlanYourVisitRedesign.css';
@@ -334,9 +335,16 @@ function TopPicksCarousel({ places, t, moreTo }) {
       setFavouriteIds(new Set());
       return;
     }
-    api.user.favourites()
-      .then((res) => setFavouriteIds(new Set((Array.isArray(res.placeIds) ? res.placeIds : []).map(String))))
-      .catch(() => setFavouriteIds(new Set()));
+    const rid = beginFavouritesRead();
+    api.user
+      .favourites()
+      .then((res) => {
+        if (!shouldApplyFavouritesRead(rid)) return;
+        setFavouriteIds(new Set((Array.isArray(res.placeIds) ? res.placeIds : []).map(String)));
+      })
+      .catch(() => {
+        if (shouldApplyFavouritesRead(rid)) setFavouriteIds(new Set());
+      });
   }, [user]);
 
   const toggleFavourite = useCallback(

@@ -11,6 +11,7 @@ import Icon from '../components/Icon';
 import { DateRangeCalendar } from '../components/Calendar';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { orderPlacesByIds } from '../utils/orderPlacesByIds';
+import { beginFavouritesRead, shouldApplyFavouritesRead } from '../utils/favouritesReadGate';
 import {
   getDayCount,
   isValidDateRange,
@@ -431,9 +432,11 @@ export default function Plan() {
   }, []);
 
   const loadFavourites = useCallback(() => {
+    const rid = beginFavouritesRead();
     api.user
       .favourites()
       .then((res) => {
+        if (!shouldApplyFavouritesRead(rid)) return;
         const ids = Array.isArray(res.placeIds) ? res.placeIds.map(String) : [];
         setFavouriteIds(new Set(ids));
         if (ids.length === 0) {
@@ -441,6 +444,7 @@ export default function Plan() {
           return;
         }
         Promise.all(ids.map((id) => api.places.get(id).catch(() => null))).then((results) => {
+          if (!shouldApplyFavouritesRead(rid)) return;
           const list = results.filter(Boolean);
           const ordered = orderPlacesByIds(ids, list);
           setFavouritePlaces(ordered);
@@ -460,7 +464,11 @@ export default function Plan() {
           });
         });
       })
-      .catch(() => { setFavouriteIds(new Set()); setFavouritePlaces([]); });
+      .catch(() => {
+        if (!shouldApplyFavouritesRead(rid)) return;
+        setFavouriteIds(new Set());
+        setFavouritePlaces([]);
+      });
   }, []);
 
   const loadPlacesAndCategories = useCallback(() => {

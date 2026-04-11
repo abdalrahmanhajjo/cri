@@ -9,6 +9,7 @@ import DeliveryImg from '../components/DeliveryImg';
 import './Explore.css';
 import './Favourites.css';
 import { orderPlacesByIds } from '../utils/orderPlacesByIds';
+import { beginFavouritesRead, shouldApplyFavouritesRead } from '../utils/favouritesReadGate';
 
 function PlaceCardWithRemove({ place, onRemove, removeLabel }) {
   const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
@@ -48,9 +49,11 @@ export default function Favourites() {
   const loadFavourites = useCallback(() => {
     setLoading(true);
     setError(null);
+    const rid = beginFavouritesRead();
     api.user
       .favourites()
       .then((res) => {
+        if (!shouldApplyFavouritesRead(rid)) return;
         const ids = Array.isArray(res.placeIds) ? res.placeIds.map(String) : [];
         if (ids.length === 0) {
           setPlaces([]);
@@ -58,12 +61,17 @@ export default function Favourites() {
           return;
         }
         return Promise.all(ids.map((placeId) => api.places.get(placeId).catch(() => null))).then((results) => {
+          if (!shouldApplyFavouritesRead(rid)) return;
           const resolved = results.filter(Boolean);
           setPlaces(orderPlacesByIds(ids, resolved));
         });
       })
-      .catch((err) => setError(err.message || 'Failed to load favourites'))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (shouldApplyFavouritesRead(rid)) setError(err.message || 'Failed to load favourites');
+      })
+      .finally(() => {
+        if (shouldApplyFavouritesRead(rid)) setLoading(false);
+      });
   }, []);
 
   useEffect(() => {

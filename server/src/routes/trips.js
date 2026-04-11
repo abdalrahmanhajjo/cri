@@ -610,6 +610,7 @@ router.get('/favourites', async (req, res) => {
       placeId: r.place_id,
       savedAt: r.created_at ? new Date(r.created_at).toISOString() : null,
     }));
+    res.setHeader('Cache-Control', 'private, no-store');
     res.json({ placeIds, items });
   } catch (err) {
     console.error(err);
