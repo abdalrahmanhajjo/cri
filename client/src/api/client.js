@@ -69,6 +69,15 @@ export const DEFAULT_NETWORK_ERROR_MESSAGE =
 /** In-flight GET requests: key = url, value = Promise. Cleared when settled. */
 const getRequestCache = new Map();
 
+/**
+ * User-specific lists must not share an in-flight GET with a stale snapshot
+ * (e.g. favourites loaded, then user saves — sync must not resolve the pre-save GET).
+ */
+function skipGetDedupeForPath(path) {
+  const p = typeof path === 'string' ? path.split('?')[0] : '';
+  return p === '/api/user/favourites';
+}
+
 function isAbortError(e) {
   return e && (e.name === 'AbortError' || e.code === 20);
 }
@@ -217,7 +226,8 @@ async function requestWithDedupe(path, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
   const token = getToken();
   const authKey = token ? `:${token.slice(-20)}` : ':anon';
-  const cacheKey = method === 'GET' ? `${method}:${url}${authKey}` : null;
+  const useGetDedupe = method === 'GET' && !skipGetDedupeForPath(path) && !options.signal;
+  const cacheKey = useGetDedupe ? `${method}:${url}${authKey}` : null;
 
   if (cacheKey && !options.signal) {
     const cached = getRequestCache.get(cacheKey);

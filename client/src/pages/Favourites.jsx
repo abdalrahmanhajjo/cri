@@ -86,7 +86,7 @@ export default function Favourites() {
 
   if (loading) {
     return (
-      <div className="vd">
+      <div className="vd favourites-page">
         <div className="vd-loading">
           <div className="vd-loading-spinner" aria-hidden="true" />
           <span>{t('home', 'loading')}</span>
@@ -96,14 +96,14 @@ export default function Favourites() {
   }
   if (error) {
     return (
-      <div className="vd">
+      <div className="vd favourites-page">
         <div className="vd-error">{error}</div>
       </div>
     );
   }
 
   return (
-    <div className="vd">
+    <div className="vd favourites-page">
       <header className="vd-page-hero">
         <div className="vd-container vd-page-hero-inner">
           <h1 className="vd-page-hero-title">{t('nav', 'myFavourites')}</h1>
@@ -115,7 +115,7 @@ export default function Favourites() {
           {places.length === 0 ? (
             <p className="vd-empty">{t('home', 'favouritesEmpty')}</p>
           ) : (
-            <div className="vd-grid vd-grid--4">
+            <div className="vd-grid vd-grid--4 favourites-page__grid">
               {places.map((p) => (
                 <PlaceCardWithRemove
                   key={p.id}
