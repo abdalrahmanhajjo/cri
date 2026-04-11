@@ -40,6 +40,7 @@ export default function Layout() {
   const isCommunityHub =
     location.pathname === COMMUNITY_PATH || location.pathname.startsWith(`${COMMUNITY_PATH}/`);
   const isMapPage = location.pathname === '/map';
+  const isTripsPage = location.pathname === '/trips' || location.pathname.startsWith('/trips/');
   const isPlaceDiscoverPage =
     location.pathname === PLACES_DISCOVER_PATH || location.pathname.startsWith(`${PLACES_DISCOVER_PATH}/`);
   const isDiningPage = location.pathname === DINING_PATH;
@@ -308,6 +309,11 @@ export default function Layout() {
             <Link to="/plan" className={`nav-link nav-link--plan ${isPlan ? 'nav-link--active' : ''}`} onClick={closeMenu}>
               {t('nav', 'planYourVisit')}
             </Link>
+            {user ? (
+              <Link to="/trips" className={`nav-link ${isTripsPage ? 'nav-link--active' : ''}`} onClick={closeMenu}>
+                {t('nav', 'myTrips')}
+              </Link>
+            ) : null}
           </nav>
           <div className="header-drawer__footer">
             <div className={`nav-lang-wrap nav-lang-wrap--drawer ${langOpen ? 'nav-lang-wrap--open' : ''}`} ref={langDrawerRef}>
