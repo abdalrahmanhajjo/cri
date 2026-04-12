@@ -605,11 +605,15 @@ router.get('/favourites', async (req, res) => {
     await ensureSavedPlacesIndexes(favsColl);
     const rows = await favsColl.find({ user_id: userId }).toArray();
     const sorted = sortSavedPlaceDocs(rows);
-    const placeIds = sorted.map((r) => r.place_id);
-    const items = sorted.map((r) => ({
-      placeId: r.place_id,
-      savedAt: r.created_at ? new Date(r.created_at).toISOString() : null,
-    }));
+    const placeIds = sorted
+      .map((r) => r.place_id)
+      .filter((pid) => pid && String(pid) !== 'undefined' && String(pid) !== 'null');
+    const items = sorted
+      .filter((r) => r.place_id && String(r.place_id) !== 'undefined' && String(r.place_id) !== 'null')
+      .map((r) => ({
+        placeId: r.place_id,
+        savedAt: r.created_at ? new Date(r.created_at).toISOString() : null,
+      }));
     res.setHeader('Cache-Control', 'private, no-store');
     res.json({ placeIds, items });
   } catch (err) {
@@ -624,13 +628,23 @@ router.post('/favourites', async (req, res) => {
   const parsed = parsePlaceId(raw);
   if (!parsed.valid) return res.status(400).json({ error: 'Invalid or missing place id' });
   const placeId = parsed.value;
+  // Reject bad client payloads that stringify as "undefined" / "null" (seen in DB as id: "undefined")
+  if (placeId === 'undefined' || placeId === 'null' || !userId) {
+    return res.status(400).json({ error: 'Invalid or missing place id' });
+  }
+  /** Stable document id in MongoDB, same pattern as other clients: `${user_id}_${place_id}` */
+  const compositeId = `${userId}_${placeId}`;
   try {
     const favsColl = await getCollection('saved_places');
     await ensureSavedPlacesIndexes(favsColl);
     await favsColl.updateOne(
       { user_id: userId, place_id: placeId },
       {
-        $set: { user_id: userId, place_id: placeId },
+        $set: {
+          user_id: userId,
+          place_id: placeId,
+          id: compositeId,
+        },
         $setOnInsert: { created_at: new Date() },
       },
       { upsert: true }

@@ -14,6 +14,17 @@ function isAbortError(e) {
   return e && (e.name === 'AbortError' || e.code === 20);
 }
 
+/** Avoids `String(undefined)` → `"undefined"` being saved to MongoDB as place_id. */
+function normalizePlaceIdForFavourite(raw) {
+  if (raw == null) return null;
+  const s =
+    typeof raw === 'number' && Number.isFinite(raw)
+      ? String(Math.trunc(raw))
+      : String(raw).trim();
+  if (!s || s === 'undefined' || s === 'null') return null;
+  return s;
+}
+
 const FavouritesContext = createContext(null);
 
 /**
@@ -49,7 +60,9 @@ export function FavouritesProvider({ children }) {
     try {
       const res = await api.user.favourites({ signal: ac.signal });
       if (ac.signal.aborted || mySeq !== refreshSeqRef.current) return;
-      const ids = Array.isArray(res?.placeIds) ? res.placeIds.map(String) : [];
+      const ids = Array.isArray(res?.placeIds)
+        ? res.placeIds.map(String).filter((x) => x && x !== 'undefined' && x !== 'null')
+        : [];
       setFavouriteIds(new Set(ids));
     } catch (e) {
       if (isAbortError(e)) return;
@@ -76,11 +89,20 @@ export function FavouritesProvider({ children }) {
   }, [userId, refreshFavourites]);
 
   const isFavourite = useCallback(
-    (placeId) => (placeId != null ? favouriteIds.has(String(placeId)) : false),
+    (placeId) => {
+      const id = normalizePlaceIdForFavourite(placeId);
+      return id != null && favouriteIds.has(id);
+    },
     [favouriteIds]
   );
 
-  const isBusy = useCallback((placeId) => (placeId != null ? busyIds.has(String(placeId)) : false), [busyIds]);
+  const isBusy = useCallback(
+    (placeId) => {
+      const id = normalizePlaceIdForFavourite(placeId);
+      return id != null && busyIds.has(id);
+    },
+    [busyIds]
+  );
 
   /**
    * Optimistic toggle + server reconcile. Treats 404 remove / 409 add as success.
@@ -88,8 +110,9 @@ export function FavouritesProvider({ children }) {
    */
   const toggleFavourite = useCallback(
     async (placeId) => {
-      const id = String(placeId);
       if (userId == null) return { ok: false, reason: 'auth' };
+      const id = normalizePlaceIdForFavourite(placeId);
+      if (id == null) return { ok: false, reason: 'invalid' };
       if (busyRef.current.has(id)) return { ok: false, reason: 'busy' };
 
       busyRef.current.add(id);
