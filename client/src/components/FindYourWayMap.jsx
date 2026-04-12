@@ -5,9 +5,11 @@ import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { loadGoogleMapsScript } from '../utils/mapGoogleLoader';
 import { MAP_PATH, PLAN_TRIP_AREA_NAV, PLAN_TRIP_AREA_I18N_KEYS } from '../config/planTripAreas';
 import { getTripoliAreaKeyForCoordinates } from '../utils/tripoliAreaBounds';
-import { extendBoundsWithLebanon, LEBANON_MAP_CENTER, LEBANON_MAP_ZOOM } from '../utils/lebanonMapView';
 import Icon from './Icon';
 import './FindYourWayMap.css';
+
+const TRIPOLI_CENTER = { lat: 34.43692, lng: 35.83846 };
+const DEFAULT_ZOOM = 13;
 const NEARBY_LIMIT = 6;
 
 /** Wait until the map node has real layout size (mobile/WebKit often initializes too early). */
@@ -170,7 +172,12 @@ export default function FindYourWayMap({ places = [], t }) {
 
   const fitBounds = useCallback((map, maps, markerList) => {
     if (!map || !maps || !markerList.length) return;
-    const bounds = extendBoundsWithLebanon(maps, new maps.LatLngBounds());
+    if (markerList.length === 1) {
+      map.panTo({ lat: markerList[0]._lat, lng: markerList[0]._lng });
+      map.setZoom(15);
+      return;
+    }
+    const bounds = new maps.LatLngBounds();
     markerList.forEach((p) => bounds.extend({ lat: p._lat, lng: p._lng }));
     map.fitBounds(bounds, { top: 56, right: 56, bottom: 72, left: 56 });
   }, []);
@@ -206,8 +213,8 @@ export default function FindYourWayMap({ places = [], t }) {
           if (cancelled || !mapRef.current) return;
           let map = mapInstanceRef.current;
           const baseOpts = {
-            center: LEBANON_MAP_CENTER,
-            zoom: LEBANON_MAP_ZOOM,
+            center: TRIPOLI_CENTER,
+            zoom: DEFAULT_ZOOM,
             mapTypeId: 'roadmap',
             mapTypeControl: false,
             streetViewControl: false,
@@ -310,8 +317,8 @@ export default function FindYourWayMap({ places = [], t }) {
     markersRef.current = [];
 
     if (visibleMarkers.length === 0) {
-      map.setCenter(LEBANON_MAP_CENTER);
-      map.setZoom(LEBANON_MAP_ZOOM);
+      map.setCenter(TRIPOLI_CENTER);
+      map.setZoom(DEFAULT_ZOOM);
       staggerMapResize(maps, map, [0, 80]);
       return;
     }
