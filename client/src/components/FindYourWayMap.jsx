@@ -223,9 +223,10 @@ export default function FindYourWayMap({ places = [], t }) {
             let renderingTypeOpt = {};
             try {
               const lib = await window.google.maps.importLibrary('maps');
-              if (lib?.Map && lib.RenderingType?.RASTER != null) {
+              /* VECTOR (WebGL) stays sharp when zoomed; RASTER bitmap tiles look pixelated up close. */
+              if (lib?.Map && lib.RenderingType?.VECTOR != null) {
                 MapCtor = lib.Map;
-                renderingTypeOpt = { renderingType: lib.RenderingType.RASTER };
+                renderingTypeOpt = { renderingType: lib.RenderingType.VECTOR };
               }
             } catch {
               /* Classic maps namespace only */

@@ -226,8 +226,8 @@
 }
 
 /*
- * Global img { max-width: 100% } (index.css) shrinks Maps raster tiles and causes
- * gray bands / partial loads. Reset inside the map root only.
+ * Global img { max-width: 100% } (index.css) shrinks Maps tiles and causes
+ * gray bands / a blurry upscale when zooming. Reset inside the map root only.
  */
 .fym-map-canvas img,
 .fym-map-canvas .gm-style img {
