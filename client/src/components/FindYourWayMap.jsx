@@ -8,8 +8,11 @@ import { getTripoliAreaKeyForCoordinates } from '../utils/tripoliAreaBounds';
 import Icon from './Icon';
 import './FindYourWayMap.css';
 
-const TRIPOLI_CENTER = { lat: 34.43692, lng: 35.83846 };
-const DEFAULT_ZOOM = 13;
+/** West of downtown so the default view includes Tripoli + Mediterranean (not land-locked). */
+const TRIPOLI_MAP_CENTER = { lat: 34.438, lng: 35.805 };
+const TRIPOLI_DEFAULT_ZOOM = 12;
+/** Offshore/west — included in fitBounds so the sea stays visible with markers. */
+const TRIPOLI_SEA_ANCHOR = { lat: 34.415, lng: 35.765 };
 const NEARBY_LIMIT = 6;
 
 /** Wait until the map node has real layout size (mobile/WebKit often initializes too early). */
@@ -172,12 +175,8 @@ export default function FindYourWayMap({ places = [], t }) {
 
   const fitBounds = useCallback((map, maps, markerList) => {
     if (!map || !maps || !markerList.length) return;
-    if (markerList.length === 1) {
-      map.panTo({ lat: markerList[0]._lat, lng: markerList[0]._lng });
-      map.setZoom(15);
-      return;
-    }
     const bounds = new maps.LatLngBounds();
+    bounds.extend(TRIPOLI_SEA_ANCHOR);
     markerList.forEach((p) => bounds.extend({ lat: p._lat, lng: p._lng }));
     map.fitBounds(bounds, { top: 56, right: 56, bottom: 72, left: 56 });
   }, []);
@@ -213,8 +212,8 @@ export default function FindYourWayMap({ places = [], t }) {
           if (cancelled || !mapRef.current) return;
           let map = mapInstanceRef.current;
           const baseOpts = {
-            center: TRIPOLI_CENTER,
-            zoom: DEFAULT_ZOOM,
+            center: TRIPOLI_MAP_CENTER,
+            zoom: TRIPOLI_DEFAULT_ZOOM,
             mapTypeId: 'roadmap',
             mapTypeControl: false,
             streetViewControl: false,
@@ -224,6 +223,7 @@ export default function FindYourWayMap({ places = [], t }) {
             fullscreenControlOptions: { position: maps.ControlPosition.RIGHT_TOP },
             scaleControl: false,
             gestureHandling: 'greedy',
+            tilt: 0,
           };
           if (!map) {
             let MapCtor = maps.Map;
@@ -317,8 +317,8 @@ export default function FindYourWayMap({ places = [], t }) {
     markersRef.current = [];
 
     if (visibleMarkers.length === 0) {
-      map.setCenter(TRIPOLI_CENTER);
-      map.setZoom(DEFAULT_ZOOM);
+      map.setCenter(TRIPOLI_MAP_CENTER);
+      map.setZoom(TRIPOLI_DEFAULT_ZOOM);
       staggerMapResize(maps, map, [0, 80]);
       return;
     }

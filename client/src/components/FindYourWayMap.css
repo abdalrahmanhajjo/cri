@@ -28,6 +28,7 @@
 }
 
 .fym-controls {
+  flex-shrink: 0;
   padding-inline-start: 14px;
   margin-bottom: 14px;
 }
@@ -180,6 +181,9 @@
 
 .fym-map-stage {
   position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* Explicit box + absolute map pane so Google Maps always measures full size (avoids grey band / tiny tile). */
@@ -195,6 +199,7 @@
   width: 100%;
   height: clamp(280px, 52vh, 440px);
   min-height: 280px;
+  flex-shrink: 0;
   /* Match Google default while tiles load (avoid site tint on the map card) */
   background: #e5e3df;
 }
@@ -216,14 +221,10 @@
   z-index: 0;
 }
 
-/* Google Maps injects nested divs; force the stack to fill the canvas node */
-.fym-map-canvas > .gm-style,
-.fym-map-canvas > div {
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-}
+/*
+ * Do not style .fym-map-canvas > div / .gm-style — forcing size/position on Google’s
+ * root nodes breaks VECTOR (WebGL) layout: tiles render in a strip and markers misalign.
+ */
 
 /*
  * Global img { max-width: 100% } (index.css) shrinks Maps tiles and causes
