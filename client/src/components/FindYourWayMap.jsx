@@ -273,6 +273,7 @@ export default function FindYourWayMap({ places = [], t }) {
     if (typeof ResizeObserver !== 'undefined') {
       ro = new ResizeObserver(() => staggerMapResize(maps, map, [0, 60]));
       ro.observe(wrap);
+      if (mapRef.current) ro.observe(mapRef.current);
     }
     window.addEventListener('orientationchange', onOrientation);
     window.addEventListener('pageshow', onPageShow);

@@ -175,28 +175,9 @@
   background: #0d9488 !important;
 }
 
-/* Simplifying Map Component (fym) */
+/* Map sizing lives in FindYourWayMap.css (wrapper height + absolute canvas). */
 .fym-map-stage {
   margin-top: -10px !important;
-}
-
-/* Size the wrapper only; canvas fills it so Maps gets a single consistent box (fixes mobile grey map). */
-.fym-map-wrap {
-  height: min(280px, 45vh) !important;
-  min-height: 240px !important;
-}
-
-.fym-map-canvas {
-  height: 100% !important;
-  min-height: 0 !important;
-  width: 100% !important;
-}
-
-@media (min-width: 900px) {
-  .fym-map-wrap {
-    height: min(400px, 52vh) !important;
-    min-height: 360px !important;
-  }
 }
 
 .fym-legend,
@@ -225,24 +206,13 @@
   font-size: 12px !important;
 }
 
-/* Find Your Way Section Header Modernization */
+/* Find Your Way Section Header */
 .vd-find-your-way-header {
   margin-bottom: 48px !important;
   border-bottom: none !important;
   text-align: left !important;
   position: relative !important;
-  padding-left: 28px !important; /* Space for the green line */
-}
-
-.vd-find-your-way-header::before {
-  content: '' !important;
-  position: absolute !important;
-  left: 0 !important;
-  top: 4px !important;
-  bottom: 4px !important;
-  width: 4.5px !important;
-  background: linear-gradient(to bottom, var(--color-primary) 0%, rgba(15, 118, 110, 0.1) 100%) !important;
-  border-radius: 99px !important;
+  padding-left: 0 !important;
 }
 
 .vd-find-your-way-title {

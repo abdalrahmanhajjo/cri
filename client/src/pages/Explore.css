@@ -3298,7 +3298,6 @@ a.vd-top-picks-card-bg--hit {
   background: var(--color-surface);
   color: var(--color-text-primary);
   border: 1px solid var(--color-border);
-  border-inline-end: 4px solid var(--color-primary);
   box-shadow: var(--shadow-card);
   transition: transform 0.2s var(--ease-out);
 }
@@ -3314,24 +3313,8 @@ a.vd-top-picks-card-bg--hit {
 }
 
 .vd-bento-web-hub-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  display: block;
   min-width: 0;
-}
-
-.vd-bento-web-hub-icon {
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-primary-light);
-  color: var(--color-primary-dark);
-  border: 1px solid var(--color-border);
-  transition: transform 0.18s var(--ease-out);
 }
 
 .vd-bento-web-hub-titles {
@@ -3493,10 +3476,6 @@ a.vd-bento-web-hub-cta {
     transform: scaleX(-1) translateX(-3px);
   }
 
-  .vd-bento-web-hub:hover .vd-bento-web-hub-icon,
-  .vd-bento-web-hub:focus-within .vd-bento-web-hub-icon {
-    transform: translateY(-1px);
-  }
 }
 
 .vd-bento-web-hub:hover {
@@ -3530,16 +3509,10 @@ a.vd-bento-web-hub-cta {
     transform: none;
   }
 
-  .vd-bento-web-hub:hover .vd-bento-web-hub-icon,
-  .vd-bento-web-hub:focus-within .vd-bento-web-hub-icon {
-    transform: none;
-  }
-
   .vd-bento-web-hub-inner,
   .vd-bento-web-hub-cta,
   .vd-bento-web-hub-cta .icon,
-  .vd-bento-web-hub-cta .icon--feather,
-  .vd-bento-web-hub-icon {
+  .vd-bento-web-hub-cta .icon--feather {
     transition: none;
   }
 }
@@ -4345,16 +4318,6 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   .vd-bento-web-hub-kicker {
     font-size: 10px;
     letter-spacing: 0.12em;
-  }
-
-  .vd-bento-web-hub-header {
-    gap: 12px;
-  }
-
-  .vd-bento-web-hub-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 13px;
   }
 
   .vd-bento-web-hub-name {

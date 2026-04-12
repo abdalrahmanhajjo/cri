@@ -1048,9 +1048,6 @@ export default function Explore() {
               <div className="vd-bento-web-hub-inner">
                 <p className="vd-bento-web-hub-kicker">{t('home', 'useWebCta')}</p>
                 <div className="vd-bento-web-hub-header">
-                  <div className="vd-bento-web-hub-icon" aria-hidden="true">
-                    <Icon name="map" size={26} />
-                  </div>
                   <div className="vd-bento-web-hub-titles">
                     <p className="vd-bento-web-hub-name">{t('home', 'bentoWebHubTitle')}</p>
                     <p className="vd-bento-web-hub-sub">{t('home', 'bentoWebHubSub')}</p>
