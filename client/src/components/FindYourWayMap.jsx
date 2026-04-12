@@ -70,8 +70,23 @@ function formatWalkDistance(meters) {
 }
 
 function placeCoords(p) {
-  const lat = p.latitude != null ? Number(p.latitude) : p.coordinates?.lat != null ? Number(p.coordinates.lat) : null;
-  const lng = p.longitude != null ? Number(p.longitude) : p.coordinates?.lng != null ? Number(p.coordinates.lng) : null;
+  const c = p?.coordinates && typeof p.coordinates === 'object' ? p.coordinates : null;
+  const lat =
+    p?.latitude != null
+      ? Number(p.latitude)
+      : c?.lat != null
+        ? Number(c.lat)
+        : c?.latitude != null
+          ? Number(c.latitude)
+          : null;
+  const lng =
+    p?.longitude != null
+      ? Number(p.longitude)
+      : c?.lng != null
+        ? Number(c.lng)
+        : c?.longitude != null
+          ? Number(c.longitude)
+          : null;
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   return { lat, lng };
 }

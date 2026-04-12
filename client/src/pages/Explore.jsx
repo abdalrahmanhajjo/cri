@@ -1201,7 +1201,7 @@ export default function Explore() {
 
       <FindYourWayPracticalSection
         t={t}
-        places={directoryPlaces}
+        places={placesList}
         showMap={showMap}
         showTips={user?.showTips !== false}
       />
