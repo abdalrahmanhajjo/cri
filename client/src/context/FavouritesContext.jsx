@@ -22,6 +22,8 @@ const FavouritesContext = createContext(null);
  */
 export function FavouritesProvider({ children }) {
   const { user } = useAuth();
+  /** Stable id only — `user` object identity changes on profile refresh and must not retrigger effects. */
+  const userId = user?.id != null ? user.id : null;
   const [favouriteIds, setFavouriteIds] = useState(() => new Set());
   const [loading, setLoading] = useState(false);
   const [busyIds, setBusyIds] = useState(() => new Set());
@@ -31,7 +33,7 @@ export function FavouritesProvider({ children }) {
 
   const refreshFavourites = useCallback(async (options = {}) => {
     const { silent = false } = options;
-    if (!user) {
+    if (userId == null) {
       fetchAbortRef.current?.abort();
       setFavouriteIds(new Set());
       setLoading(false);
@@ -58,10 +60,10 @@ export function FavouritesProvider({ children }) {
         setLoading(false);
       }
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
-    if (!user) {
+    if (userId == null) {
       fetchAbortRef.current?.abort();
       setFavouriteIds(new Set());
       setLoading(false);
@@ -71,7 +73,7 @@ export function FavouritesProvider({ children }) {
     return () => {
       fetchAbortRef.current?.abort();
     };
-  }, [user?.id, refreshFavourites]);
+  }, [userId, refreshFavourites]);
 
   const isFavourite = useCallback(
     (placeId) => (placeId != null ? favouriteIds.has(String(placeId)) : false),
@@ -87,7 +89,7 @@ export function FavouritesProvider({ children }) {
   const toggleFavourite = useCallback(
     async (placeId) => {
       const id = String(placeId);
-      if (!user) return { ok: false, reason: 'auth' };
+      if (userId == null) return { ok: false, reason: 'auth' };
       if (busyRef.current.has(id)) return { ok: false, reason: 'busy' };
 
       busyRef.current.add(id);
@@ -116,7 +118,14 @@ export function FavouritesProvider({ children }) {
             if (err?.status !== 409) throw err;
           }
         }
+        // Re-fetch list; may race with other refreshes or briefly lag POST — reconcile below.
         await refreshFavourites({ silent: true });
+        setFavouriteIds((prev) => {
+          const next = new Set(prev);
+          if (wasFav) next.delete(id);
+          else next.add(id);
+          return next;
+        });
         return { ok: true, added: !wasFav };
       } catch (err) {
         setFavouriteIds((prev) => {
@@ -135,7 +144,7 @@ export function FavouritesProvider({ children }) {
         });
       }
     },
-    [user, refreshFavourites]
+    [userId, refreshFavourites]
   );
 
   const value = useMemo(
