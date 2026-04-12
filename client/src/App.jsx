@@ -1,6 +1,7 @@
 import { useEffect, useState, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { FavouritesProvider } from './context/FavouritesContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ToastProvider } from './context/ToastContext';
 import api, { getToken, getStoredUser } from './api/client';
@@ -302,7 +303,9 @@ export default function App() {
       <LanguageProvider>
         <ToastProvider>
           <AuthProvider>
-            <AppRoutes />
+            <FavouritesProvider>
+              <AppRoutes />
+            </FavouritesProvider>
           </AuthProvider>
         </ToastProvider>
       </LanguageProvider>

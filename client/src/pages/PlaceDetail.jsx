@@ -7,6 +7,7 @@ import { getPlaceImageUrl } from '../api/client';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useFavourites } from '../context/FavouritesContext';
 import { useToast } from '../context/ToastContext';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
 import {
@@ -17,7 +18,6 @@ import {
   hasOverlappingTimeSlots,
   getDateForDayIndex,
 } from '../utils/tripPlannerHelpers';
-import { beginFavouritesRead, shouldApplyFavouritesRead } from '../utils/favouritesReadGate';
 import './Detail.css';
 
 /** Resolved, unique image URLs for gallery (primary `image` + `images[]`). */
@@ -322,11 +322,12 @@ export default function PlaceDetail() {
   const location = useLocation();
   const { t, lang } = useLanguage();
   const { user } = useAuth();
+  const { isFavourite: isSavedPlace, isBusy: isFavouriteActionBusy, toggleFavourite: commitFavouriteToggle } =
+    useFavourites();
   const { showToast } = useToast();
   const [place, setPlace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isFavourite, setIsFavourite] = useState(false);
   const [copyToast, setCopyToast] = useState(false);
   const [promotions, setPromotions] = useState([]);
   const [redeemedPromotionIds, setRedeemedPromotionIds] = useState([]);
@@ -363,7 +364,6 @@ export default function PlaceDetail() {
   const [tripAddError, setTripAddError] = useState('');
   const [tripSearchQuery, setTripSearchQuery] = useState('');
   const [tripModalStep, setTripModalStep] = useState(1);
-  const [favouriteBusy, setFavouriteBusy] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [bookingDate, setBookingDate] = useState('');
   const [bookingTime, setBookingTime] = useState('');
@@ -374,6 +374,9 @@ export default function PlaceDetail() {
   const heroTouchStartX = useRef(null);
 
   const myReview = useMemo(() => placeReviews.find((r) => r.isYours), [placeReviews]);
+
+  const isFavourite = Boolean(place && user && isSavedPlace(place.id));
+  const favouriteBusy = Boolean(place && isFavouriteActionBusy(place.id));
 
   useEffect(() => {
     if (myReview) {
@@ -555,93 +558,29 @@ export default function PlaceDetail() {
   }, [loading, place, location.hash]);
 
   useEffect(() => {
-    if (!user || !place) {
-      setIsFavourite(false);
-      return;
-    }
-    const rid = beginFavouritesRead();
-    api.user
-      .favourites()
-      .then((res) => {
-        if (!shouldApplyFavouritesRead(rid)) return;
-        const ids = new Set((Array.isArray(res.placeIds) ? res.placeIds : []).map(String));
-        setIsFavourite(ids.has(String(place.id)));
-      })
-      .catch(() => {
-        if (shouldApplyFavouritesRead(rid)) setIsFavourite(false);
-      });
-  }, [user, place]);
-
-  useEffect(() => {
     if (!place) return;
     setInquiryIntent(isDiningPlace(place) ? 'booking' : 'general');
   }, [place?.id, place?.category, place?.categoryId, place?.tags]);
 
-  const syncFavouriteState = useCallback(async () => {
-    if (!user || !place) return;
-    const rid = beginFavouritesRead();
-    const res = await api.user.favourites();
-    if (!shouldApplyFavouritesRead(rid)) return;
-    const ids = new Set((Array.isArray(res?.placeIds) ? res.placeIds : []).map(String));
-    setIsFavourite(ids.has(String(place.id)));
-  }, [user, place]);
-
-  const toggleFavourite = useCallback(() => {
+  const toggleFavourite = useCallback(async () => {
     if (!user) {
       navigate('/login', { state: { from: 'place' } });
       return;
     }
     if (!place || favouriteBusy) return;
     const placeId = String(place.id);
-    const wasFavourite = isFavourite;
-    setFavouriteBusy(true);
-    setIsFavourite(!wasFavourite);
-    if (isFavourite) {
-      api.user
-        .removeFavourite(placeId)
-        .then(() => {
-          showToast(t('feedback', 'favouriteRemoved'), 'success');
-        })
-        .catch((err) => {
-          if (err?.status === 404) {
-            showToast(t('feedback', 'favouriteRemoved'), 'success');
-            return;
-          }
-          setIsFavourite(wasFavourite);
-          showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
-        })
-        .finally(async () => {
-          try {
-            await syncFavouriteState();
-          } catch {
-            // ignore
-          }
-          setFavouriteBusy(false);
-        });
-    } else {
-      api.user
-        .addFavourite(placeId)
-        .then(() => {
-          showToast(t('feedback', 'favouriteAdded'), 'success');
-        })
-        .catch((err) => {
-          if (err?.status === 409) {
-            showToast(t('feedback', 'favouriteAdded'), 'success');
-            return;
-          }
-          setIsFavourite(wasFavourite);
-          showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
-        })
-        .finally(async () => {
-          try {
-            await syncFavouriteState();
-          } catch {
-            // ignore
-          }
-          setFavouriteBusy(false);
-        });
+    const r = await commitFavouriteToggle(placeId);
+    if (r.reason === 'auth') {
+      navigate('/login', { state: { from: 'place' } });
+      return;
     }
-  }, [user, place, favouriteBusy, isFavourite, navigate, showToast, t, syncFavouriteState]);
+    if (!r.ok) {
+      if (r.reason === 'busy') return;
+      showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
+      return;
+    }
+    showToast(t('feedback', r.added ? 'favouriteAdded' : 'favouriteRemoved'), 'success');
+  }, [user, place, favouriteBusy, commitFavouriteToggle, navigate, showToast, t]);
 
   const handleShare = useCallback(() => {
     if (typeof navigator !== 'undefined' && navigator.share && place) {

@@ -4,6 +4,7 @@ import api, { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useFavourites } from '../context/FavouritesContext';
 import Icon from '../components/Icon';
 import GlobalSearchBar from '../components/GlobalSearchBar';
 import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
@@ -23,7 +24,6 @@ import {
   getFoodAndStayCategoryIdSets,
   isDedicatedGuideListing,
 } from '../utils/placeGuideExclusions';
-import { beginFavouritesRead, shouldApplyFavouritesRead } from '../utils/favouritesReadGate';
 import './PlaceDiscover.css';
 
 function formatTripRange(trip, locale) {
@@ -150,6 +150,7 @@ function getDefaultDiscoverViewMode() {
 export default function PlaceDiscover() {
   const { t, lang } = useLanguage();
   const { user } = useAuth();
+  const { isFavourite, isBusy, toggleFavourite: commitFavouriteToggle } = useFavourites();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -181,8 +182,6 @@ export default function PlaceDiscover() {
   const [tripModalStep, setTripModalStep] = useState(1);
   const [toast, setToast] = useState(null);
   const [sponsoredDiscover, setSponsoredDiscover] = useState([]);
-  const [favouriteIds, setFavouriteIds] = useState(new Set());
-  const [favouriteBusyIds, setFavouriteBusyIds] = useState(new Set());
   const { settings } = useSiteSettings();
 
   const searchParamsRef = useRef(searchParams);
@@ -276,28 +275,6 @@ export default function PlaceDiscover() {
       cancelled = true;
     };
   }, [langParam, sponsoredDiscoverEnabled]);
-
-  useEffect(() => {
-    if (!user) {
-      setFavouriteIds(new Set());
-      return;
-    }
-    let cancelled = false;
-    const rid = beginFavouritesRead();
-    api.user
-      .favourites()
-      .then((res) => {
-        if (cancelled || !shouldApplyFavouritesRead(rid)) return;
-        const ids = Array.isArray(res.placeIds) ? res.placeIds.map(String) : [];
-        setFavouriteIds(new Set(ids));
-      })
-      .catch(() => {
-        if (!cancelled && shouldApplyFavouritesRead(rid)) setFavouriteIds(new Set());
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
 
   useEffect(() => {
     if (!tripPickPlace || !user) {
@@ -435,17 +412,8 @@ export default function PlaceDiscover() {
     [user, navigate, location.pathname, location.search, location.hash]
   );
 
-  const syncFavouriteIds = useCallback(async () => {
-    if (!user) return;
-    const rid = beginFavouritesRead();
-    const res = await api.user.favourites();
-    if (!shouldApplyFavouritesRead(rid)) return;
-    const ids = Array.isArray(res?.placeIds) ? res.placeIds.map(String) : [];
-    setFavouriteIds(new Set(ids));
-  }, [user]);
-
   const toggleFavourite = useCallback(
-    (place) => {
+    async (place) => {
       const returnTo = `${location.pathname}${location.search}${location.hash || ''}`;
       if (!user) {
         navigate('/login', { state: { from: returnTo } });
@@ -453,72 +421,19 @@ export default function PlaceDiscover() {
       }
       const placeId = resolveDiscoverPlaceId(place);
       if (!placeId) return;
-      if (favouriteBusyIds.has(placeId)) return;
-
-      const isFav = favouriteIds.has(placeId);
-      setFavouriteBusyIds((prev) => new Set(prev).add(placeId));
-      setFavouriteIds((prev) => {
-        const next = new Set(prev);
-        if (isFav) next.delete(placeId);
-        else next.add(placeId);
-        return next;
-      });
-      if (isFav) {
-        api.user
-          .removeFavourite(placeId)
-          .then(() => showToast(t('feedback', 'favouriteRemoved'), 'success'))
-          .catch((err) => {
-            if (err?.status === 404) {
-              showToast(t('feedback', 'favouriteRemoved'), 'success');
-              return;
-            }
-            setFavouriteIds((prev) => new Set(prev).add(placeId));
-            showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
-          })
-          .finally(async () => {
-            try {
-              await syncFavouriteIds();
-            } catch {
-              // ignore
-            }
-            setFavouriteBusyIds((prev) => {
-              const next = new Set(prev);
-              next.delete(placeId);
-              return next;
-            });
-          });
+      const r = await commitFavouriteToggle(placeId);
+      if (r.reason === 'auth') {
+        navigate('/login', { state: { from: returnTo } });
         return;
       }
-
-      api.user
-        .addFavourite(placeId)
-        .then(() => showToast(t('feedback', 'favouriteAdded'), 'success'))
-        .catch((err) => {
-          if (err?.status === 409) {
-            showToast(t('feedback', 'favouriteAdded'), 'success');
-            return;
-          }
-          setFavouriteIds((prev) => {
-            const next = new Set(prev);
-            next.delete(placeId);
-            return next;
-          });
-          showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
-        })
-        .finally(async () => {
-          try {
-            await syncFavouriteIds();
-          } catch {
-            // ignore
-          }
-          setFavouriteBusyIds((prev) => {
-            const next = new Set(prev);
-            next.delete(placeId);
-            return next;
-          });
-        });
+      if (!r.ok) {
+        if (r.reason === 'busy') return;
+        showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
+        return;
+      }
+      showToast(t('feedback', r.added ? 'favouriteAdded' : 'favouriteRemoved'), 'success');
     },
-    [favouriteIds, favouriteBusyIds, location.hash, location.pathname, location.search, navigate, showToast, t, user, syncFavouriteIds]
+    [commitFavouriteToggle, location.hash, location.pathname, location.search, navigate, showToast, t, user]
   );
 
   const closeTripModal = useCallback(() => {
@@ -847,13 +762,13 @@ export default function PlaceDiscover() {
                   onMapClick={handleViewOnMap}
                   onAddToTrip={openAddToTrip}
                   onToggleFavourite={toggleFavourite}
-                  isFavourite={favouriteIds.has(rowId)}
-                  favouriteBusy={favouriteBusyIds.has(rowId)}
+                  isFavourite={isFavourite(rowId)}
+                  favouriteBusy={isBusy(rowId)}
                   viewDetailsLabel={t('home', 'viewDetails')}
                   mapAriaLabel={t('placeDiscover', 'viewOnMap')}
                   addToTripLabel={t('placeDiscover', 'addToTrip')}
                   favouriteLabel={
-                    favouriteIds.has(rowId)
+                    isFavourite(rowId)
                       ? t('home', 'removeFromFavourites')
                       : user
                         ? t('home', 'addToFavourites')

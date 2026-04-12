@@ -1,15 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
+import { useFavourites } from '../context/FavouritesContext';
 import Icon from '../components/Icon';
 import { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
 import './Explore.css';
 import './Favourites.css';
 import { orderPlacesByIds } from '../utils/orderPlacesByIds';
-import { beginFavouritesRead, shouldApplyFavouritesRead } from '../utils/favouritesReadGate';
 
 function PlaceCardWithRemove({ place, onRemove, removeLabel }) {
   const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;
@@ -42,57 +42,56 @@ function PlaceCardWithRemove({ place, onRemove, removeLabel }) {
 export default function Favourites() {
   const { t } = useLanguage();
   const { showToast } = useToast();
+  const { favouriteIds, favouritesLoading, toggleFavourite } = useFavourites();
   const [places, setPlaces] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingPlaces, setLoadingPlaces] = useState(true);
   const [error, setError] = useState(null);
 
-  const loadFavourites = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    const rid = beginFavouritesRead();
-    api.user
-      .favourites()
-      .then((res) => {
-        if (!shouldApplyFavouritesRead(rid)) return;
-        const ids = Array.isArray(res.placeIds) ? res.placeIds.map(String) : [];
-        if (ids.length === 0) {
-          setPlaces([]);
-          setLoading(false);
-          return;
-        }
-        return Promise.all(ids.map((placeId) => api.places.get(placeId).catch(() => null))).then((results) => {
-          if (!shouldApplyFavouritesRead(rid)) return;
-          const resolved = results.filter(Boolean);
-          setPlaces(orderPlacesByIds(ids, resolved));
-        });
-      })
-      .catch((err) => {
-        if (shouldApplyFavouritesRead(rid)) setError(err.message || 'Failed to load favourites');
-      })
-      .finally(() => {
-        if (shouldApplyFavouritesRead(rid)) setLoading(false);
-      });
-  }, []);
+  const idsKey = useMemo(() => [...favouriteIds].map(String).sort().join(','), [favouriteIds]);
 
   useEffect(() => {
-    loadFavourites();
-  }, [loadFavourites]);
+    if (favouritesLoading) return undefined;
+    const ids = idsKey ? idsKey.split(',') : [];
+    if (ids.length === 0) {
+      setPlaces([]);
+      setLoadingPlaces(false);
+      setError(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setLoadingPlaces(true);
+    setError(null);
+    Promise.all(ids.map((placeId) => api.places.get(placeId).catch(() => null)))
+      .then((results) => {
+        if (cancelled) return;
+        const resolved = results.filter(Boolean);
+        setPlaces(orderPlacesByIds(ids, resolved));
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message || 'Failed to load favourites');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPlaces(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [idsKey, favouritesLoading]);
 
   const handleRemove = useCallback(
-    (placeId) => {
-      const idStr = String(placeId);
-      api.user
-        .removeFavourite(idStr)
-        .then(() => {
-          setPlaces((prev) => prev.filter((p) => String(p.id) !== idStr));
-          showToast(t('feedback', 'favouriteRemoved'), 'success');
-        })
-        .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
+    async (placeId) => {
+      const r = await toggleFavourite(placeId);
+      if (!r.ok) {
+        if (r.reason === 'busy') return;
+        showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
+        return;
+      }
+      showToast(t('feedback', 'favouriteRemoved'), 'success');
     },
-    [showToast, t]
+    [toggleFavourite, showToast, t]
   );
 
-  if (loading) {
+  if (favouritesLoading) {
     return (
       <div className="vd favourites-page">
         <div className="vd-loading">
@@ -102,10 +101,43 @@ export default function Favourites() {
       </div>
     );
   }
+
+  if (favouriteIds.size === 0) {
+    return (
+      <div className="vd favourites-page">
+        <header className="vd-page-hero">
+          <div className="vd-container vd-page-hero-inner">
+            <h1 className="vd-page-hero-title">{t('nav', 'myFavourites')}</h1>
+            <p className="vd-page-hero-sub">{t('home', 'topPicksSub')}</p>
+          </div>
+        </header>
+        <section className="vd-section vd-spots">
+          <div className="vd-container">
+            <p className="vd-empty">{t('home', 'favouritesEmpty')}</p>
+            <p style={{ marginTop: 24 }}>
+              <Link to="/" className="vd-btn vd-btn--secondary">{t('home', 'viewMap')} <Icon name="arrow_forward" size={20} /></Link>
+            </p>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="vd favourites-page">
         <div className="vd-error">{error}</div>
+      </div>
+    );
+  }
+
+  if (loadingPlaces) {
+    return (
+      <div className="vd favourites-page">
+        <div className="vd-loading">
+          <div className="vd-loading-spinner" aria-hidden="true" />
+          <span>{t('home', 'loading')}</span>
+        </div>
       </div>
     );
   }

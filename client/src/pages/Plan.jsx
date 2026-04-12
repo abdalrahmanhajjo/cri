@@ -11,7 +11,7 @@ import Icon from '../components/Icon';
 import { DateRangeCalendar } from '../components/Calendar';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { orderPlacesByIds } from '../utils/orderPlacesByIds';
-import { beginFavouritesRead, shouldApplyFavouritesRead } from '../utils/favouritesReadGate';
+import { useFavourites } from '../context/FavouritesContext';
 import {
   getDayCount,
   isValidDateRange,
@@ -259,7 +259,6 @@ export default function Plan() {
   const [editingTripId, setEditingTripId] = useState(null);
   const [places, setPlaces] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [favouriteIds, setFavouriteIds] = useState(new Set());
   const [favouritePlaces, setFavouritePlaces] = useState([]);
   const [placeMap, setPlaceMap] = useState({});
   const [placeSearch, setPlaceSearch] = useState('');
@@ -298,6 +297,7 @@ export default function Plan() {
   const [expandedShareRequestIds, setExpandedShareRequestIds] = useState(() => new Set());
   const { settings } = useSiteSettings();
   const { user } = useAuth();
+  const { favouriteIds, toggleFavourite: commitFavouriteToggle } = useFavourites();
   const storageUserId = user?.id != null ? String(user.id) : 'anon';
 
   const tourCreateBtnRef = useRef(null);
@@ -431,46 +431,6 @@ export default function Plan() {
       .finally(() => setShareRequestsLoading(false));
   }, []);
 
-  const loadFavourites = useCallback(() => {
-    const rid = beginFavouritesRead();
-    api.user
-      .favourites()
-      .then((res) => {
-        if (!shouldApplyFavouritesRead(rid)) return;
-        const ids = Array.isArray(res.placeIds) ? res.placeIds.map(String) : [];
-        setFavouriteIds(new Set(ids));
-        if (ids.length === 0) {
-          setFavouritePlaces([]);
-          return;
-        }
-        Promise.all(ids.map((id) => api.places.get(id).catch(() => null))).then((results) => {
-          if (!shouldApplyFavouritesRead(rid)) return;
-          const list = results.filter(Boolean);
-          const ordered = orderPlacesByIds(ids, list);
-          setFavouritePlaces(ordered);
-          setPlaceMap((prev) => {
-            const next = { ...prev };
-            ordered.forEach((p) => {
-              next[String(p.id)] = p;
-            });
-            return next;
-          });
-          setPlaceNames((prev) => {
-            const next = { ...prev };
-            ordered.forEach((p) => {
-              next[String(p.id)] = p.name || p.id;
-            });
-            return next;
-          });
-        });
-      })
-      .catch(() => {
-        if (!shouldApplyFavouritesRead(rid)) return;
-        setFavouriteIds(new Set());
-        setFavouritePlaces([]);
-      });
-  }, []);
-
   const loadPlacesAndCategories = useCallback(() => {
     Promise.all([
       api.places.list({ lang: langParam }).catch(() => ({ popular: [] })),
@@ -492,6 +452,47 @@ export default function Plan() {
     () => getFoodAndStayCategoryIdSets(categories),
     [categories]
   );
+
+  const favouriteIdsKey = useMemo(
+    () => [...favouriteIds].map(String).sort().join(','),
+    [favouriteIds]
+  );
+
+  useEffect(() => {
+    if (!user) {
+      setFavouritePlaces([]);
+      return undefined;
+    }
+    const ids = favouriteIdsKey ? favouriteIdsKey.split(',') : [];
+    if (ids.length === 0) {
+      setFavouritePlaces([]);
+      return undefined;
+    }
+    let cancelled = false;
+    Promise.all(ids.map((id) => api.places.get(id).catch(() => null))).then((results) => {
+      if (cancelled) return;
+      const list = results.filter(Boolean);
+      const ordered = orderPlacesByIds(ids, list);
+      setFavouritePlaces(ordered);
+      setPlaceMap((prev) => {
+        const next = { ...prev };
+        ordered.forEach((p) => {
+          next[String(p.id)] = p;
+        });
+        return next;
+      });
+      setPlaceNames((prev) => {
+        const next = { ...prev };
+        ordered.forEach((p) => {
+          next[String(p.id)] = p.name || p.id;
+        });
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, favouriteIdsKey]);
 
   const filteredPlaces = useMemo(() => {
     let list = places.filter((p) => !isDedicatedGuideListing(p, foodCategoryIds, stayCategoryIds));
@@ -559,7 +560,6 @@ export default function Plan() {
       cancelled = true;
     };
   }, [tripsLoading, trips, searchParams, setSearchParams, showToast]);
-  useEffect(() => { loadFavourites(); }, [loadFavourites]);
   useEffect(() => { loadPlacesAndCategories(); }, [loadPlacesAndCategories]);
 
   useEffect(() => {
@@ -581,30 +581,23 @@ export default function Plan() {
     };
   }, [categoryFilterOpen]);
 
-  const toggleFavourite = useCallback((placeId) => {
-    const id = String(placeId);
-    const isFav = favouriteIds.has(id);
-    if (isFav) {
-      api.user.removeFavourite(id).catch(() => {});
-      setFavouriteIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
-      setFavouritePlaces((prev) => prev.filter((p) => String(p.id) !== id));
-      showToast(t('home', 'planToastFavouriteOff'), 'info');
-    } else {
-      api.user.addFavourite(id).catch(() => {});
-      setFavouriteIds((prev) => new Set([...prev, id]));
-      showToast(t('home', 'planToastFavouriteOn'), 'success');
-      api.places.get(id).then((p) => {
-        if (p) {
-          setFavouritePlaces((prev) => {
-            if (prev.some((x) => String(x.id) === id)) return prev;
-            return [...prev, p];
-          });
-          setPlaceMap((prev) => ({ ...prev, [id]: p }));
-          setPlaceNames((prev) => ({ ...prev, [id]: p.name || id }));
-        }
-      }).catch(() => {});
-    }
-  }, [favouriteIds, showToast, t]);
+  const toggleFavourite = useCallback(
+    async (placeId) => {
+      const id = String(placeId);
+      const wasFav = favouriteIds.has(id);
+      const r = await commitFavouriteToggle(id);
+      if (!r.ok) {
+        if (r.reason === 'busy') return;
+        showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
+        return;
+      }
+      showToast(
+        wasFav ? t('home', 'planToastFavouriteOff') : t('home', 'planToastFavouriteOn'),
+        wasFav ? 'info' : 'success'
+      );
+    },
+    [favouriteIds, commitFavouriteToggle, showToast, t]
+  );
 
   const editingTrip = useMemo(
     () => (editingTripId ? sortedTrips.find((tr) => tr.id === editingTripId) ?? null : null),

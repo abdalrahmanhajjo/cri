@@ -330,7 +330,7 @@ async function requestNoDedupe(path, options = {}, serverRetriesLeft = MAX_RETRI
 }
 
 export const api = {
-  get: (path) => request(path, { method: 'GET' }),
+  get: (path, options = {}) => request(path, { ...options, method: 'GET' }),
   /** `?? {}` so POST body is always valid JSON (never `undefined` → invalid fetch body). */
   post: (path, body) => request(path, { method: 'POST', body: JSON.stringify(body ?? {}) }),
   put: (path, body) => request(path, { method: 'PUT', body: JSON.stringify(body ?? {}) }),
@@ -776,7 +776,7 @@ export const api = {
       api.post(`/api/user/trip-share-requests/${encodeURIComponent(requestId)}/respond`, { decision }),
     searchTripShareUsers: (q) =>
       api.get(`/api/user/trip-share-users?q=${encodeURIComponent(String(q || ''))}`),
-    favourites: () => api.get('/api/user/favourites'),
+    favourites: (opts = {}) => api.get('/api/user/favourites', opts),
     addFavourite: (placeId) => api.post('/api/user/favourites', { placeId }),
     removeFavourite: (placeId) =>
       api.delete(`/api/user/favourites/${encodeURIComponent(String(placeId))}`),

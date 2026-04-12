@@ -41,7 +41,7 @@ import {
   isDedicatedGuideListing,
 } from '../utils/placeGuideExclusions';
 import { supabaseOptimizeForThumbnail } from '../utils/supabaseImage.js';
-import { beginFavouritesRead, shouldApplyFavouritesRead } from '../utils/favouritesReadGate';
+import { useFavourites } from '../context/FavouritesContext';
 import './Explore.css';
 import './CommunityFeedRedesign.css';
 import './PlanYourVisitRedesign.css';
@@ -284,6 +284,7 @@ function TopPicksCarousel({ places, t, moreTo }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { isFavourite, toggleFavourite: commitFavouriteToggle } = useFavourites();
   const safePlaces = Array.isArray(places) ? places : [];
   const [index, setIndex] = useState(0);
 
@@ -329,26 +330,8 @@ function TopPicksCarousel({ places, t, moreTo }) {
     [safePlaces.length]
   );
 
-  const [favouriteIds, setFavouriteIds] = useState(new Set());
-  useEffect(() => {
-    if (!user) {
-      setFavouriteIds(new Set());
-      return;
-    }
-    const rid = beginFavouritesRead();
-    api.user
-      .favourites()
-      .then((res) => {
-        if (!shouldApplyFavouritesRead(rid)) return;
-        setFavouriteIds(new Set((Array.isArray(res.placeIds) ? res.placeIds : []).map(String)));
-      })
-      .catch(() => {
-        if (shouldApplyFavouritesRead(rid)) setFavouriteIds(new Set());
-      });
-  }, [user]);
-
   const toggleFavourite = useCallback(
-    (e, placeId) => {
+    async (e, placeId) => {
       e.preventDefault();
       e.stopPropagation();
       if (!user) {
@@ -357,30 +340,19 @@ function TopPicksCarousel({ places, t, moreTo }) {
       }
       const id = placeId != null ? String(placeId) : '';
       if (!id) return;
-      const isFav = favouriteIds.has(id);
-      if (isFav) {
-        api.user
-          .removeFavourite(id)
-          .then(() => {
-            setFavouriteIds((prev) => {
-              const next = new Set(prev);
-              next.delete(id);
-              return next;
-            });
-            showToast(t('feedback', 'favouriteRemoved'), 'success');
-          })
-          .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
-      } else {
-        api.user
-          .addFavourite(id)
-          .then(() => {
-            setFavouriteIds((prev) => new Set(prev).add(id));
-            showToast(t('feedback', 'favouriteAdded'), 'success');
-          })
-          .catch(() => showToast(t('feedback', 'favouriteUpdateFailed'), 'error'));
+      const r = await commitFavouriteToggle(id);
+      if (r.reason === 'auth') {
+        navigate('/login', { state: { from: 'favourite' } });
+        return;
       }
+      if (!r.ok) {
+        if (r.reason === 'busy') return;
+        showToast(t('feedback', 'favouriteUpdateFailed'), 'error');
+        return;
+      }
+      showToast(t('feedback', r.added ? 'favouriteAdded' : 'favouriteRemoved'), 'success');
     },
-    [user, favouriteIds, navigate, showToast, t]
+    [user, commitFavouriteToggle, navigate, showToast, t]
   );
 
   return (
@@ -425,9 +397,9 @@ function TopPicksCarousel({ places, t, moreTo }) {
               const desc = p.description != null ? String(p.description) : '';
               const ratingNum = Number(p.rating);
               const rating = Number.isFinite(ratingNum) ? ratingNum : null;
-              const isFavourite = favouriteIds.has(String(p.id));
+              const placeIsSaved = isFavourite(String(p.id));
               const heartAria = user
-                ? (isFavourite ? t('home', 'removeFromFavourites') : t('home', 'addToFavourites'))
+                ? (placeIsSaved ? t('home', 'removeFromFavourites') : t('home', 'addToFavourites'))
                 : t('home', 'signInToSave');
               const titleId = `vd-top-picks-title-${placeId}`;
               return (
@@ -485,11 +457,11 @@ function TopPicksCarousel({ places, t, moreTo }) {
                         <div className="vd-top-picks-card-floating-actions">
                           <button
                             type="button"
-                            className={`vd-top-picks-action-btn vd-top-picks-action-btn--heart ${isFavourite ? 'vd-top-picks-action-btn--active' : ''}`}
+                            className={`vd-top-picks-action-btn vd-top-picks-action-btn--heart ${placeIsSaved ? 'vd-top-picks-action-btn--active' : ''}`}
                             onClick={(e) => toggleFavourite(e, placeId)}
                             aria-label={heartAria}
                           >
-                            <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={24} />
+                            <Icon name={placeIsSaved ? 'favorite' : 'favorite_border'} size={24} />
                           </button>
                         </div>
                       </div>
