@@ -11,13 +11,13 @@ import { filterPlacesByQuery } from '../utils/searchFilter';
 import { filterGeneralDirectoryPlaces } from '../utils/placeGuideExclusions';
 import { asyncPool } from '../utils/asyncPool';
 import { loadGoogleMapsScript } from '../utils/mapGoogleLoader';
+import { extendBoundsWithLebanon, LEBANON_MAP_CENTER, LEBANON_MAP_ZOOM } from '../utils/lebanonMapView';
 import { placeIdsFromDay, getDateForDayIndex } from '../utils/tripPlannerHelpers';
 import './Map.css';
 import './Explore.css';
 
 // Same reference as Flutter `lib/map/tripoli_geo.dart` + `map_constants.dart` (VisitTripoliApp)
 const TRIPOLI_CENTER = { lat: 34.43692, lng: 35.83846 };
-const DEFAULT_ZOOM = 14;
 const DETAIL_MAP_ZOOM = 15;
 const MAP_FIT_PADDING = 64;
 const PLACES_REGION = 'Tripoli, Lebanon';
@@ -1022,7 +1022,7 @@ export default function MapPage() {
       const list = markersVisibleOnMap || [];
       const tripRank = new Map((mapDisplayPlaces || []).map((p, i) => [p.id, String(i + 1)]));
       const showTripNumbers = Boolean(tripFilterName && mapDisplayPlaces.length > 0);
-      const bounds = new maps.LatLngBounds();
+      const bounds = extendBoundsWithLebanon(maps, new maps.LatLngBounds());
       const fitPad = {
         top: tripFilterName ? MAP_FIT_PADDING + 8 : MAP_FIT_PADDING + 16,
         right: MAP_FIT_PADDING,
@@ -1064,12 +1064,7 @@ export default function MapPage() {
         markersRef.current.push(entry);
         markersByPlaceIdRef.current.set(placeId, entry);
       });
-      if (markersRef.current.length > 1) {
-        map.fitBounds(bounds, fitPad);
-      } else if (markersRef.current.length === 1) {
-        map.panTo(markersRef.current[0].marker.getPosition());
-        map.setZoom(DETAIL_MAP_ZOOM);
-      }
+      map.fitBounds(bounds, fitPad);
     };
 
     if (mapInstanceRef.current && infoWindowRef.current) {
@@ -1082,8 +1077,8 @@ export default function MapPage() {
         if (cancelled || !mapRef.current) return;
         if (typeof window !== 'undefined') window.gm_authFailure = null;
         const map = new maps.Map(mapRef.current, {
-          center: TRIPOLI_CENTER,
-          zoom: DEFAULT_ZOOM,
+          center: LEBANON_MAP_CENTER,
+          zoom: LEBANON_MAP_ZOOM,
           minZoom: 2,
           maxZoom: 21,
           mapTypeId: 'satellite',
@@ -1178,19 +1173,14 @@ export default function MapPage() {
       maps.event.trigger(map, 'resize');
       const leftPadding = tripFilterName ? 400 : MAP_FIT_PADDING;
       const bottomPadding = listOpen && !tripFilterName ? 320 : MAP_FIT_PADDING;
-      if (markersRef.current.length > 1) {
-        const bounds = new maps.LatLngBounds();
-        markersRef.current.forEach((m) => bounds.extend(m.marker.getPosition()));
-        map.fitBounds(bounds, {
-          top: tripFilterName ? MAP_FIT_PADDING + 8 : MAP_FIT_PADDING + 16,
-          right: MAP_FIT_PADDING,
-          bottom: bottomPadding,
-          left: leftPadding,
-        });
-      } else if (markersRef.current.length === 1) {
-        map.panTo(markersRef.current[0].marker.getPosition());
-        map.setZoom(DETAIL_MAP_ZOOM);
-      }
+      const bounds = extendBoundsWithLebanon(maps, new maps.LatLngBounds());
+      markersRef.current.forEach((m) => bounds.extend(m.marker.getPosition()));
+      map.fitBounds(bounds, {
+        top: tripFilterName ? MAP_FIT_PADDING + 8 : MAP_FIT_PADDING + 16,
+        right: MAP_FIT_PADDING,
+        bottom: bottomPadding,
+        left: leftPadding,
+      });
     }, 150);
   }, [tripFilterName, listOpen]);
 
@@ -1606,8 +1596,8 @@ export default function MapPage() {
 
   const handleZoomToFit = useCallback(() => {
     const map = mapInstanceRef.current;
-    if (!map || markersRef.current.length === 0) return;
-    const bounds = new window.google.maps.LatLngBounds();
+    if (!map) return;
+    const bounds = extendBoundsWithLebanon(window.google.maps, new window.google.maps.LatLngBounds());
     markersRef.current.forEach((m) => bounds.extend(m.marker.getPosition()));
     const leftPadding = tripFilterName ? 400 : MAP_FIT_PADDING;
     const bottomPadding = listOpen && !tripFilterName ? 320 : MAP_FIT_PADDING;
@@ -1781,10 +1771,10 @@ export default function MapPage() {
 
         {/* Zoom controls (Google style) */}
         <div className="map-zoom-controls">
-          <button type="button" className="map-zoom-btn" onClick={() => mapInstanceRef.current?.setZoom((mapInstanceRef.current.getZoom() || DEFAULT_ZOOM) + 1)} aria-label="Zoom in">
+          <button type="button" className="map-zoom-btn" onClick={() => mapInstanceRef.current?.setZoom((mapInstanceRef.current.getZoom() || LEBANON_MAP_ZOOM) + 1)} aria-label="Zoom in">
             <Icon name="add" size={24} />
           </button>
-          <button type="button" className="map-zoom-btn" onClick={() => mapInstanceRef.current?.setZoom((mapInstanceRef.current.getZoom() || DEFAULT_ZOOM) - 1)} aria-label="Zoom out">
+          <button type="button" className="map-zoom-btn" onClick={() => mapInstanceRef.current?.setZoom((mapInstanceRef.current.getZoom() || LEBANON_MAP_ZOOM) - 1)} aria-label="Zoom out">
             <Icon name="remove" size={24} />
           </button>
         </div>
