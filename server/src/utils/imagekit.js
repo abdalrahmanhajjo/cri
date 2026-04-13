@@ -27,4 +27,21 @@ function getImageKit() {
   return imagekit;
 }
 
-module.exports = { getImageKit };
+/**
+ * ImageKit rejects uploads when `customMetadata` keys are not registered on the account.
+ * Retry without metadata so uploads still succeed (same pattern as profile avatars).
+ * @param {import('imagekit').ImageKit} imagekit
+ * @param {Record<string, unknown>} uploadPayload
+ */
+async function uploadImageKitWithMetadataFallback(imagekit, uploadPayload) {
+  try {
+    return await imagekit.upload(uploadPayload);
+  } catch (err) {
+    const msg = String(err?.message || '').toLowerCase();
+    if (!msg.includes('invalid custom metadata')) throw err;
+    const { customMetadata: _omit, ...withoutCustomMetadata } = uploadPayload;
+    return imagekit.upload(withoutCustomMetadata);
+  }
+}
+
+module.exports = { getImageKit, uploadImageKitWithMetadataFallback };

@@ -17,7 +17,7 @@ const {
 } = require('../../utils/imageUpload');
 const { getMulterFileSizeLimit } = require('../../utils/uploadLimits');
 const { prepareFeedVideoDiskPath } = require('../../utils/feedVideoUploadPrepare');
-const { getImageKit } = require('../../utils/imagekit');
+const { getImageKit, uploadImageKitWithMetadataFallback } = require('../../utils/imagekit');
 
 const router = express.Router();
 const MULTER_TMP = path.join(os.tmpdir(), 'visit-multer-uploads');
@@ -90,7 +90,7 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
       finalFileName = `${crypto.randomBytes(16).toString('hex')}${prep.safeExt || safeExt}`;
       storageFolder = '/tripoli-explorer/videos';
 
-      const uploadResponse = await imagekit.upload({
+      const uploadResponse = await uploadImageKitWithMetadataFallback(imagekit, {
         file: fs.createReadStream(prep.diskPath),
         fileName: finalFileName,
         folder: storageFolder,
@@ -112,7 +112,7 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
       const safeExt = pickImageExtension(prep.contentType, req.file.originalname, prep.useExtension);
       finalFileName = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
 
-      const uploadResponse = await imagekit.upload({
+      const uploadResponse = await uploadImageKitWithMetadataFallback(imagekit, {
         file: prep.buffer,
         fileName: finalFileName,
         folder: storageFolder,

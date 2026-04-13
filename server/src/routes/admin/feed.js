@@ -151,6 +151,7 @@ router.post('/', async (req, res) => {
       video_url: videoUrl,
       type,
       author_role: 'admin',
+      author_verified: true,
       moderation_status,
       discoverable,
       created_at: new Date(),

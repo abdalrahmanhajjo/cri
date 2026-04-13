@@ -19,7 +19,7 @@ const {
 } = require('../utils/imageUpload');
 const { getMulterFileSizeLimit } = require('../utils/uploadLimits');
 const { prepareFeedVideoDiskPath } = require('../utils/feedVideoUploadPrepare');
-const { getImageKit } = require('../utils/imagekit');
+const { getImageKit, uploadImageKitWithMetadataFallback } = require('../utils/imagekit');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -118,7 +118,7 @@ router.post('/upload', uploadMw.single('file'), async (req, res) => {
     const usersColl = await getCollection('users');
     const user = await usersColl.findOne({ id: req.user.userId });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.feed_upload_blocked === true) {
+    if (user.feed_upload_blocked === true && user.is_admin !== true) {
       return res.status(403).json({ error: 'Your account is blocked from uploading posts/reels' });
     }
 
@@ -140,7 +140,7 @@ router.post('/upload', uploadMw.single('file'), async (req, res) => {
         finalFileName = `${crypto.randomBytes(16).toString('hex')}${prep.safeExt || safeExt}`;
         storageFolder = '/tripoli-explorer/videos';
 
-        const uploadResponse = await imagekit.upload({
+        const uploadResponse = await uploadImageKitWithMetadataFallback(imagekit, {
           file: fs.createReadStream(prep.diskPath),
           fileName: finalFileName,
           folder: storageFolder,
@@ -161,7 +161,7 @@ router.post('/upload', uploadMw.single('file'), async (req, res) => {
       const safeExt = pickImageExtension(prep.contentType, req.file.originalname, prep.useExtension);
       finalFileName = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
 
-      const uploadResponse = await imagekit.upload({
+      const uploadResponse = await uploadImageKitWithMetadataFallback(imagekit, {
         file: prep.buffer,
         fileName: finalFileName,
         folder: storageFolder,
@@ -211,7 +211,7 @@ router.post('/', async (req, res) => {
     const usersColl = await getCollection('users');
     const user = await usersColl.findOne({ id: userId });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.feed_upload_blocked === true) {
+    if (user.feed_upload_blocked === true && user.is_admin !== true) {
       return res.status(403).json({ error: 'Your account is blocked from uploading posts/reels' });
     }
 
@@ -288,7 +288,7 @@ function buildFeedUpdateSet(body) {
   return { setObj };
 }
 
-/** PATCH /api/user/feed/:id — author or place owner */
+/** PATCH /api/user/feed/:id — author, place owner, or admin */
 router.patch('/:id', async (req, res) => {
   const userId = req.user.userId;
   const existing = await loadFeedPostById(req.params.id);
@@ -297,10 +297,11 @@ router.patch('/:id', async (req, res) => {
     return res.status(404).json({ error: 'Post not found' });
   }
 
+  let actor;
   try {
     const usersColl = await getCollection('users');
-    const user = await usersColl.findOne({ id: userId });
-    if (user?.feed_upload_blocked === true) {
+    actor = await usersColl.findOne({ id: userId }, { projection: { feed_upload_blocked: 1, is_admin: 1 } });
+    if (actor?.feed_upload_blocked === true && actor?.is_admin !== true) {
       return res.status(403).json({ error: 'Your account is blocked from uploading posts/reels' });
     }
   } catch (e) {
@@ -315,8 +316,10 @@ router.patch('/:id', async (req, res) => {
     const pid = parsePlaceId(body.placeId ?? body.place_id);
     if (!pid.valid) return res.status(400).json({ error: 'Invalid placeId' });
     if (pid.value !== existing.place_id) {
-      const link = await assertCanLinkPostToPlace(userId, pid.value);
-      if (!link.ok) return res.status(link.status).json({ error: link.error });
+      if (actor?.is_admin !== true) {
+        const link = await assertCanLinkPostToPlace(userId, pid.value);
+        if (!link.ok) return res.status(link.status).json({ error: link.error });
+      }
       setObj.place_id = pid.value;
     }
   }

@@ -11,7 +11,7 @@ const { validatePassword } = require('../utils/passwordValidator');
 const { isImageMime, prepareUploadedImage, pickImageExtension } = require('../utils/imageUpload');
 const { getMulterFileSizeLimit } = require('../utils/uploadLimits');
 const { visitorFollowupsFromDb } = require('../utils/inquiryFollowups');
-const { getImageKit } = require('../utils/imagekit');
+const { getImageKit, uploadImageKitWithMetadataFallback } = require('../utils/imagekit');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -40,16 +40,6 @@ const avatarUpload = multer({
   },
 });
 
-async function uploadAvatarWithMetadataFallback(imagekit, uploadPayload) {
-  try {
-    return await imagekit.upload(uploadPayload);
-  } catch (err) {
-    const msg = String(err?.message || '').toLowerCase();
-    if (!msg.includes('invalid custom metadata')) throw err;
-    const { customMetadata: _omit, ...withoutCustomMetadata } = uploadPayload;
-    return imagekit.upload(withoutCustomMetadata);
-  }
-}
 
 function sanitizeProfileInput(body) {
   const out = {};
@@ -176,7 +166,7 @@ router.post('/profile/avatar', avatarUpload.single('file'), async (req, res) => 
     const safeExt = pickImageExtension(prep.contentType, req.file.originalname, prep.useExtension);
     const finalFileName = `${crypto.randomBytes(16).toString('hex')}${safeExt}`;
 
-    const uploadResponse = await uploadAvatarWithMetadataFallback(imagekit, {
+    const uploadResponse = await uploadImageKitWithMetadataFallback(imagekit, {
       file: prep.buffer,
       fileName: finalFileName,
       folder: storageFolder,

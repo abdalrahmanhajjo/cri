@@ -7,6 +7,9 @@ const { getCollection } = require('../mongo');
 async function canManageFeedPost(userId, post) {
   if (!userId || !post) return false;
   if (post.user_id === userId) return true;
+  const usersColl = await getCollection('users');
+  const me = await usersColl.findOne({ id: userId }, { projection: { is_admin: 1 } });
+  if (me?.is_admin === true) return true;
   if (!post.place_id) return false;
   const poColl = await getCollection('place_owners');
   const row = await poColl.findOne({ place_id: post.place_id, user_id: userId });
