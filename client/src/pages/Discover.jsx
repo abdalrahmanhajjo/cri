@@ -1135,6 +1135,12 @@ export default function Discover() {
             <span>{t('discover', 'feedBusinessStudioCta')}</span>
           </Link>
         ) : null}
+        {user && (tab === 'feed' || tab === 'reel') ? (
+          <Link to="/community/create" className="ig-discover-business-cta ig-discover-business-cta--tabs ig-discover-business-cta--create">
+            <Icon name="add_circle" size={18} aria-hidden="true" />
+            <span>{t('discover', 'communityCreateCta')}</span>
+          </Link>
+        ) : null}
       </div>
 
       <main

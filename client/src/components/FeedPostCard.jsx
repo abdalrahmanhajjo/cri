@@ -662,7 +662,7 @@ export default function FeedPostCard({
     if (!requireAuth()) return;
     setOwnerSaving(true);
     try {
-      await api.business.feed.update(post.id, body);
+      await api.user.feed.update(post.id, body);
       onPatch?.(post.id, body);
       setFeedHeaderMoreOpen(false);
       setReelMoreOpen(false);
@@ -696,7 +696,7 @@ export default function FeedPostCard({
     setOwnerEditUploading('image');
     try {
       for (const file of list) {
-        const url = await api.business.upload(file, placeId);
+        const url = await api.user.feed.upload(file, placeId);
         if (!url) continue;
         setOwnerEditImages((prev) => {
           if (contentKind(post.type) === 'reel') return [url];
@@ -723,7 +723,7 @@ export default function FeedPostCard({
     }
     setOwnerEditUploading('video');
     try {
-      const url = await api.business.upload(
+      const url = await api.user.feed.upload(
         file,
         placeId,
         contentKind(post.type) === 'reel' ? { purpose: 'reel' } : {}
@@ -745,7 +745,7 @@ export default function FeedPostCard({
         .map((s) => String(s).trim())
         .filter(Boolean)
         .slice(0, MAX_FEED_POST_IMAGES);
-      const r = await api.business.feed.update(post.id, {
+      const r = await api.user.feed.update(post.id, {
         caption: cap,
         image_urls: lines.length ? lines : null,
         image_url: lines[0] || null,
@@ -775,7 +775,7 @@ export default function FeedPostCard({
     if (!window.confirm(t('discover', 'feedOwnerDeleteConfirm'))) return;
     setOwnerSaving(true);
     try {
-      await api.business.feed.delete(post.id);
+      await api.user.feed.delete(post.id);
       onRemove?.(post.id);
       setFeedHeaderMoreOpen(false);
       setReelMoreOpen(false);
@@ -1390,6 +1390,11 @@ export default function FeedPostCard({
                 ) : (
                   <span className="ig-feed-author">{displayName}</span>
                 )}
+                {post.author_verified === true ? (
+                  <span className="ig-feed-verified" title={t('discover', 'feedVerifiedAuthor')} aria-label={t('discover', 'feedVerifiedAuthor')}>
+                    <Icon name="verified" size={16} />
+                  </span>
+                ) : null}
                 {timeLabel && <time className="ig-feed-time" dateTime={post.created_at || undefined}>{timeLabel}</time>}
               </div>
             </div>
@@ -1417,7 +1422,17 @@ export default function FeedPostCard({
           </header>
 
           <div className="ig-feed-media-wrap" role="presentation" {...mediaTapProps}>
-            <div className="ig-feed-media">
+            <div
+              className={`ig-feed-media${post.media_filter && /^[a-z0-9_-]+$/.test(String(post.media_filter)) ? ` ig-feed-media-filter ig-feed-media-filter--${String(post.media_filter)}` : ''}`}
+            >
+              {post.overlay_text ? (
+                <div
+                  className={`ig-feed-overlay-text ig-feed-overlay-text--${post.overlay_position === 'top' || post.overlay_position === 'center' ? post.overlay_position : 'bottom'}`}
+                  aria-hidden="true"
+                >
+                  {post.overlay_text}
+                </div>
+              ) : null}
               {showVideo ? (
                 <video className="ig-feed-video" src={vid} controls playsInline preload="auto" poster={img || undefined} />
               ) : gallerySrcs.length > 1 ? (
@@ -1564,6 +1579,22 @@ export default function FeedPostCard({
           <strong>{displayName}</strong> {String(post.caption)}
         </p>
       )}
+
+      {!showReelTheater && post.location_label ? (
+        <p className="ig-feed-extras-loc" role="note">
+          <Icon name="place" size={16} aria-hidden />
+          <span>{String(post.location_label)}</span>
+        </p>
+      ) : null}
+      {!showReelTheater && Array.isArray(post.stickers) && post.stickers.length ? (
+        <div className="ig-feed-extras-stickers" aria-hidden="true">
+          {post.stickers.map((st) => (
+            <span key={st} className="ig-feed-sticker-chip">
+              {st}
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {!showReelTheater && commentsDisabled && (
         <p className="ig-feed-comments-disabled-hint" role="note">

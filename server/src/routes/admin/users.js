@@ -67,6 +67,7 @@ router.get('/', async (req, res) => {
         isAdmin: r.is_admin === true,
         isBusinessOwner: r.is_business_owner === true,
         isBlocked: r.is_blocked === true,
+      feedUploadBlocked: r.feed_upload_blocked === true,
       })),
       total,
     });
@@ -80,10 +81,10 @@ router.get('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const id = req.params.id;
   if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid user id' });
-  const { isAdmin, isBusinessOwner, isBlocked } = req.body || {};
+  const { isAdmin, isBusinessOwner, isBlocked, feedUploadBlocked } = req.body || {};
   
-  if (typeof isAdmin !== 'boolean' && typeof isBusinessOwner !== 'boolean' && typeof isBlocked !== 'boolean') {
-    return res.status(400).json({ error: 'Provide isAdmin, isBusinessOwner, and/or isBlocked booleans' });
+  if (typeof isAdmin !== 'boolean' && typeof isBusinessOwner !== 'boolean' && typeof isBlocked !== 'boolean' && typeof feedUploadBlocked !== 'boolean') {
+    return res.status(400).json({ error: 'Provide isAdmin, isBusinessOwner, isBlocked, and/or feedUploadBlocked booleans' });
   }
   
   const actorId = req.user.userId;
@@ -99,6 +100,7 @@ router.patch('/:id', async (req, res) => {
     if (typeof isAdmin === 'boolean') setObj.is_admin = isAdmin;
     if (typeof isBusinessOwner === 'boolean') setObj.is_business_owner = isBusinessOwner;
     if (typeof isBlocked === 'boolean') setObj.is_blocked = isBlocked;
+    if (typeof feedUploadBlocked === 'boolean') setObj.feed_upload_blocked = feedUploadBlocked;
 
     const usersColl = await getCollection('users');
     const result = await usersColl.findOneAndUpdate(

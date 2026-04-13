@@ -270,6 +270,8 @@ export default function BusinessPlaceEdit() {
         images: Array.isArray(p.images) ? p.images.join('\n') : '',
         tags: Array.isArray(p.tags) ? p.tags.join(', ') : '',
         hoursStr,
+        feedLinkingRestrictedToOwner: p.feedLinkingRestrictedToOwner === true,
+        feedLinkingDisabled: p.feedLinkingDisabled === true,
         ...diningProfileToForm(p.diningProfile),
       });
       dirtyRef.current = false;
@@ -485,6 +487,8 @@ export default function BusinessPlaceEdit() {
         tags,
         hours: hoursPayload,
         diningProfile,
+        feedLinkingRestrictedToOwner: form.feedLinkingRestrictedToOwner === true,
+        feedLinkingDisabled: form.feedLinkingDisabled === true,
       });
       dirtyRef.current = false;
       setDirty(false);
@@ -660,6 +664,35 @@ export default function BusinessPlaceEdit() {
                 </div>
               </div>
             )}
+            <h2 className="business-panel-title" style={{ marginTop: '1.75rem' }}>Feed &amp; community</h2>
+            <p className="business-hint">Control who can link photos and reels to this place. Public feed items must always reference a place.</p>
+            <div className="business-field">
+              <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={form.feedLinkingRestrictedToOwner === true}
+                  onChange={(e) => {
+                    markDirty();
+                    setForm((f) => (f ? { ...f, feedLinkingRestrictedToOwner: e.target.checked } : f));
+                  }}
+                />
+                <span>Only verified business owners can link posts and reels to this place</span>
+              </label>
+            </div>
+            <div className="business-field">
+              <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={form.feedLinkingDisabled === true}
+                  onChange={(e) => {
+                    markDirty();
+                    setForm((f) => (f ? { ...f, feedLinkingDisabled: e.target.checked } : f));
+                  }}
+                />
+                <span>Block all feed linking to this place</span>
+              </label>
+              <p className="business-hint">When enabled, new posts and reels cannot be linked here (including from the business portal).</p>
+            </div>
           </div>
         )}
 

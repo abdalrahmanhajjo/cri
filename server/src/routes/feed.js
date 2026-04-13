@@ -125,8 +125,9 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
       if (userId) {
         likedByMe = !!(await likesColl.findOne({ post_id: p.id, user_id: userId }));
         savedByMe = !!(await savesColl.findOne({ post_id: p.id, user_id: userId }));
-        if (p.place_id) {
-          iManagePost = !!(await placeOwnersColl.findOne({ place_id: p.id, user_id: userId }));
+        if (p.user_id === userId) iManagePost = true;
+        else if (p.place_id) {
+          iManagePost = !!(await placeOwnersColl.findOne({ place_id: p.place_id, user_id: userId }));
         }
       }
       
@@ -187,8 +188,9 @@ router.get('/post/:postId', optionalAuthMiddleware, async (req, res) => {
     if (userId) {
       likedByMe = !!(await likesColl.findOne({ post_id: post.id, user_id: userId }));
       savedByMe = !!(await savesColl.findOne({ post_id: post.id, user_id: userId }));
-      if (post.place_id) {
-        iManagePost = !!(await placeOwnersColl.findOne({ place_id: post.id, user_id: userId }));
+      if (post.user_id === userId) iManagePost = true;
+      else if (post.place_id) {
+        iManagePost = !!(await placeOwnersColl.findOne({ place_id: post.place_id, user_id: userId }));
       }
     }
 

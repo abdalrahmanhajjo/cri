@@ -170,6 +170,16 @@ function validateBusinessPlacePut(body) {
     out.tags = tg.value;
   }
 
+  if (body.feedLinkingRestrictedToOwner !== undefined || body.feed_linking_restricted_to_owner !== undefined) {
+    const v = body.feedLinkingRestrictedToOwner ?? body.feed_linking_restricted_to_owner;
+    out.feedLinkingRestrictedToOwner = Boolean(v);
+  }
+
+  if (body.feedLinkingDisabled !== undefined || body.feed_linking_disabled !== undefined) {
+    const v = body.feedLinkingDisabled ?? body.feed_linking_disabled;
+    out.feedLinkingDisabled = Boolean(v);
+  }
+
   if (body.diningProfile !== undefined || body.dining_profile !== undefined) {
     const dp = sanitizeDiningProfileInput(body.diningProfile ?? body.dining_profile);
     if (!dp.ok) return { ok: false, error: dp.error };

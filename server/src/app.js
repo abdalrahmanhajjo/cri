@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
@@ -104,7 +104,7 @@ app.use(
           "'unsafe-inline'",
           'https://maps.googleapis.com',
           'https://www.googletagmanager.com',
-          /** Google Identity Services — https://accounts.google.com/gsi/client */
+          /** Google Identity Services â€” https://accounts.google.com/gsi/client */
           'https://accounts.google.com',
         ],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
@@ -269,6 +269,7 @@ app.use('/api/coupons', couponsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/site-settings', siteSettingsPublicRoutes);
 app.use('/api/sponsored-places', sponsoredPlacesPublicRoutes);
+app.use('/api/user/feed', require('./routes/userFeed'));
 app.use('/api/user', profileRoutes);
 app.use('/api/user', tripsRoutes);
 app.use('/api/admin/places', adminPlacesRoutes);

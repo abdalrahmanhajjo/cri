@@ -15,6 +15,7 @@ const AdminApp = lazy(() => import('./pages/admin/AdminApp'));
 const BusinessApp = lazy(() => import('./pages/business/BusinessApp'));
 
 const Discover = lazy(() => import('./pages/Discover'));
+const CommunityCreate = lazy(() => import('./pages/CommunityCreate'));
 const PlaceDiscover = lazy(() => import('./pages/PlaceDiscover'));
 const PlaceDining = lazy(() => import('./pages/PlaceDining'));
 const PlaceHotels = lazy(() => import('./pages/PlaceHotels'));
@@ -165,6 +166,14 @@ function AppRoutes() {
           element={<LazyBoundary message="Loading…"><Discover /></LazyBoundary>}
         />
         <Route path="community" element={<LazyBoundary message="Loading…"><Discover /></LazyBoundary>} />
+        <Route
+          path="community/create"
+          element={
+            <ProtectedRoute>
+              <LazyBoundary message="Loading…"><CommunityCreate /></LazyBoundary>
+            </ProtectedRoute>
+          }
+        />
         <Route path="discover/place/:placeId" element={<LegacyDiscoverPlaceRedirect />} />
         <Route
           path="discover"

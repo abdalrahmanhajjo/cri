@@ -49,6 +49,8 @@ function rowToEditorPlace(row) {
     hours: typeof row.hours === 'string' ? normalizeDbText(row.hours) : row.hours ?? null,
     diningProfile,
     tags: tagList,
+    feedLinkingRestrictedToOwner: row.feed_linking_restricted_to_owner === true,
+    feedLinkingDisabled: row.feed_linking_disabled === true,
   };
 }
 
@@ -255,6 +257,8 @@ router.put('/:placeId', requirePlaceOwnerParam('placeId'), async (req, res) => {
     if (s.hours !== undefined) setObj.hours = s.hours;
     if (s.tags !== undefined) setObj.tags = s.tags;
     if (s.diningProfile !== undefined) setObj.dining_profile = s.diningProfile || {};
+    if (s.feedLinkingRestrictedToOwner !== undefined) setObj.feed_linking_restricted_to_owner = Boolean(s.feedLinkingRestrictedToOwner);
+    if (s.feedLinkingDisabled !== undefined) setObj.feed_linking_disabled = Boolean(s.feedLinkingDisabled);
     
     setObj.updated_at = new Date();
 

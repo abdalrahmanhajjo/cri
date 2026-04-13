@@ -5,6 +5,7 @@ const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { parsePlaceId, safeUrl } = require('../../utils/validate');
 const { feedImagesForStorage } = require('../../utils/feedImageUrls');
+const { normalizeFeedEnhancements } = require('../../utils/feedPostPayload');
 
 const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
@@ -138,6 +139,7 @@ router.post('/', async (req, res) => {
 
     const id = crypto.randomUUID();
     const postsColl = await getCollection('feed_posts');
+    const enhancements = normalizeFeedEnhancements(body);
     const newPost = {
       id,
       user_id: userId,
@@ -152,7 +154,8 @@ router.post('/', async (req, res) => {
       moderation_status,
       discoverable,
       created_at: new Date(),
-      updated_at: new Date()
+      updated_at: new Date(),
+      ...enhancements
     };
 
     await postsColl.insertOne(newPost);
@@ -221,7 +224,17 @@ router.patch('/:id', async (req, res) => {
     if (!pid.valid) return res.status(400).json({ error: 'Valid placeId is required' });
     setObj.place_id = pid.value;
   }
-  if (body.type !== undefined) setObj.type = String(body.type).slice(0, 40);
+  if (body.type !== undefined) {
+    const raw = String(body.type).trim().toLowerCase();
+    setObj.type = raw === 'reel' || raw === 'video' ? 'video' : 'post';
+  }
+  if (body.author_verified !== undefined) setObj.author_verified = Boolean(body.author_verified);
+  if (body.author_role !== undefined) {
+    const ar = String(body.author_role || '').trim().slice(0, 40);
+    if (ar) setObj.author_role = ar;
+  }
+  if (body.hide_likes !== undefined) setObj.hide_likes = Boolean(body.hide_likes);
+  if (body.comments_disabled !== undefined) setObj.comments_disabled = Boolean(body.comments_disabled);
   
   const hasImageUrls = Object.prototype.hasOwnProperty.call(body, 'image_urls');
   const hasImageUrl = Object.prototype.hasOwnProperty.call(body, 'image_url');
@@ -235,19 +248,17 @@ router.patch('/:id', async (req, res) => {
   }
   if (body.video_url !== undefined) setObj.video_url = body.video_url ? String(body.video_url).slice(0, 500) : null;
   if (body.admin_notes !== undefined) setObj.admin_notes = body.admin_notes ? String(body.admin_notes).slice(0, 4000) : null;
+  Object.assign(setObj, normalizeFeedEnhancements(body));
 
   if (Object.keys(setObj).length === 0) return res.status(400).json({ error: 'No fields to update' });
   setObj.updated_at = new Date();
 
   try {
     const postsColl = await getCollection('feed_posts');
-    const result = await postsColl.findOneAndUpdate(
-      { id: id },
-      { $set: setObj },
-      { returnDocument: 'after' }
-    );
-    if (!result) return res.status(404).json({ error: 'Post not found' });
-    res.json({ post: result });
+    const u = await postsColl.updateOne({ id: id }, { $set: setObj });
+    if (u.matchedCount === 0) return res.status(404).json({ error: 'Post not found' });
+    const post = await postsColl.findOne({ id: id });
+    res.json({ post });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update post' });

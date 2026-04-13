@@ -166,7 +166,9 @@ router.put('/:id', async (req, res) => {
     if (body.reviewCount !== undefined) setObj.review_count = parseInt(body.reviewCount, 10);
     if (body.hours !== undefined) setObj.hours = body.hours;
     if (body.tags !== undefined) setObj.tags = safeJson(body.tags, []);
-    
+    if (body.feedLinkingDisabled !== undefined) setObj.feed_linking_disabled = Boolean(body.feedLinkingDisabled);
+    if (body.feedLinkingRestrictedToOwner !== undefined) setObj.feed_linking_restricted_to_owner = Boolean(body.feedLinkingRestrictedToOwner);
+
     setObj.updated_at = new Date();
 
     const placesColl = await getCollection('places');

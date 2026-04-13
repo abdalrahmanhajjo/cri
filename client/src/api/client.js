@@ -757,6 +757,31 @@ export const api = {
       });
     },
     changePassword: (currentPassword, newPassword) => api.post('/api/user/change-password', { currentPassword, newPassword }),
+    /** Community posts/reels (requires placeId; moderation for non-owners). */
+    feed: {
+      create: (body) => api.post('/api/user/feed', body),
+      update: (id, body) => api.patch(`/api/user/feed/${encodeURIComponent(id)}`, body),
+      delete: (id) => api.delete(`/api/user/feed/${encodeURIComponent(id)}`),
+      upload: (file, placeId, options = {}) => {
+        const formData = new FormData();
+        formData.append('placeId', String(placeId));
+        if (options.purpose === 'reel') formData.append('purpose', 'reel');
+        formData.append('file', file);
+        const url = `${getBaseUrl()}/api/user/feed/upload`;
+        const headers = {};
+        const token = getToken();
+        if (token) headers.Authorization = `Bearer ${token}`;
+        return fetchWithNetworkRetry(url, { method: 'POST', body: formData, headers, credentials: 'include' }).then((r) =>
+          parseStorageUploadResponse(r, token)
+        );
+      },
+      placeSearch: (q, opts = {}) => {
+        const qs = new URLSearchParams();
+        qs.set('q', String(q || '').trim());
+        if (opts.limit) qs.set('limit', String(opts.limit));
+        return api.get(`/api/user/feed/places?${qs}`);
+      },
+    },
     /** Venue inquiries sent while signed in (place messages / proposals). */
     inquiries: () => api.get('/api/user/inquiries'),
     trips: () => api.get('/api/user/trips'),
