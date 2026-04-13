@@ -137,10 +137,7 @@ export default function FeedPostCard({
   const venueFeedPath = placeId ? discoverPlaceFeedPath(placeId) : '';
   const uploaderName =
     post.author_name != null && String(post.author_name).trim() ? String(post.author_name).trim() : '';
-  const headlineShown = placeId && venueFeedPath && placeName ? placeName : displayName;
-  const showUploaderByline =
-    Boolean(uploaderName) &&
-    uploaderName.localeCompare(String(headlineShown), undefined, { sensitivity: 'accent' }) !== 0;
+  const showUploaderByline = Boolean(uploaderName);
   const placeAvatarUrl = (() => {
     const raw = post.place_image_url;
     if (raw == null || typeof raw !== 'string' || !String(raw).trim()) return null;

@@ -678,7 +678,7 @@ export const api = {
     const q = qs.toString();
     return api.get(`/api/sponsored-places${q ? `?${q}` : ''}`);
   },
-  /** Public community feed (approved posts only). GET sends Bearer token when logged in for liked_by_me / saved_by_me. */
+  /** Public community feed (non-rejected posts). GET sends Bearer token when logged in for liked_by_me / saved_by_me. */
   communityFeed: (params) => {
     const qs = new URLSearchParams();
     if (params && typeof params === 'object') {

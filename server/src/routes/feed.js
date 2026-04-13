@@ -40,7 +40,7 @@ async function getPublicPostRow(postId) {
     const posts = await getCollection('feed_posts');
     const post = await posts.findOne({
       id: postId,
-      moderation_status: 'approved',
+      moderation_status: { $nin: ['rejected'] },
     });
     if (!post) return null;
     return {
@@ -67,7 +67,7 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
     const db = await getMongoDb();
     
     const queryObj = {
-      moderation_status: 'approved',
+      moderation_status: { $nin: ['rejected'] },
     };
     
     if (format === 'reel' || format === 'video') {
@@ -155,7 +155,7 @@ router.get('/post/:postId', optionalAuthMiddleware, async (req, res) => {
   try {
     const postsColl = await getCollection('feed_posts');
     const post = await postsColl.aggregate([
-      { $match: { id: postId, moderation_status: 'approved' } },
+      { $match: { id: postId, moderation_status: { $nin: ['rejected'] } } },
       { $lookup: {
           from: 'places',
           localField: 'place_id',
