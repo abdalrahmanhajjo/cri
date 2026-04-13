@@ -67,6 +67,13 @@ export function CommunityFeedCard({ post, t }) {
   const caption = fullCap.slice(0, 160);
   const placeId = post.place_id != null ? String(post.place_id) : '';
   const placeName = post.place_name != null ? String(post.place_name).trim() : '';
+  const uploaderName =
+    post.author_name != null && String(post.author_name).trim() ? String(post.author_name).trim() : '';
+  const headlineShown = placeName;
+  const showUploaderByline =
+    Boolean(uploaderName) &&
+    (!headlineShown ||
+      uploaderName.localeCompare(String(headlineShown), undefined, { sensitivity: 'accent' }) !== 0);
   const firstRaw = rawFeedImageUrls(post)[0];
   const img = firstRaw ? feedMediaUrl(firstRaw) : '';
   const vid = post.video_url ? feedMediaUrl(post.video_url) : '';
@@ -143,10 +150,22 @@ export function CommunityFeedCard({ post, t }) {
                     </span>
                   );
                 })()}
-                {placeName ? <span className="vd-community-feed-author">{placeName}</span> : null}
+                <span className="vd-community-feed-meta-titles">
+                  {placeName ? <span className="vd-community-feed-author">{placeName}</span> : null}
+                  {showUploaderByline ? (
+                    <span className="vd-community-feed-uploader">{uploaderName}</span>
+                  ) : null}
+                </span>
               </Link>
             ) : placeName ? (
-              <span className="vd-community-feed-author">{placeName}</span>
+              <span className="vd-community-feed-meta-titles">
+                <span className="vd-community-feed-author">{placeName}</span>
+                {showUploaderByline ? (
+                  <span className="vd-community-feed-uploader">{uploaderName}</span>
+                ) : null}
+              </span>
+            ) : showUploaderByline ? (
+              <span className="vd-community-feed-uploader vd-community-feed-uploader--solo">{uploaderName}</span>
             ) : null}
           </div>
           {placeId && (

@@ -6689,6 +6689,29 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   color: var(--color-text-primary);
 }
 
+.vd-community-feed-meta-titles {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.vd-community-feed-uploader {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.vd-community-feed-uploader--solo {
+  font-size: 12px;
+}
+
 .vd-community-feed-stats {
   display: inline-flex;
   flex-wrap: wrap;

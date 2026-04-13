@@ -12,16 +12,11 @@ router.use(authMiddleware, adminMiddleware);
 
 const MODERATION = new Set(['pending', 'approved', 'rejected']);
 
-function buildListMatch(status, discoverable, q, format) {
+function buildListMatch(status, q, format) {
   const match = {};
 
   if (status && status !== 'all') {
     match.moderation_status = status;
-  }
-  if (discoverable === 'true') {
-    match.discoverable = true;
-  } else if (discoverable === 'false') {
-    match.discoverable = { $ne: true };
   }
 
   if (format === 'reel') {
@@ -48,7 +43,6 @@ router.get('/', async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
   const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
   const status = req.query.status || 'all';
-  const discoverable = req.query.discoverable;
   const q = req.query.q || '';
   const format = String(req.query.format || 'all').toLowerCase();
   const formatKey = format === 'reel' || format === 'post' ? format : 'all';
@@ -66,7 +60,7 @@ router.get('/', async (req, res) => {
       { $addFields: {
           user_email: { $arrayElemAt: ['$user.email', 0] }
       }},
-      { $match: buildListMatch(status, discoverable, q, formatKey === 'all' ? null : formatKey) },
+      { $match: buildListMatch(status, q, formatKey === 'all' ? null : formatKey) },
       { $lookup: {
           from: 'feed_likes',
           localField: 'id',
@@ -124,9 +118,6 @@ router.post('/', async (req, res) => {
     if (!MODERATION.has(s)) return res.status(400).json({ error: 'Invalid moderation_status' });
     moderation_status = s;
   }
-  let discoverable = true;
-  if (body.discoverable !== undefined) discoverable = Boolean(body.discoverable);
-
   try {
     const placesColl = await getCollection('places');
     const place = await placesColl.findOne({ id: pid.value });
@@ -153,7 +144,6 @@ router.post('/', async (req, res) => {
       author_role: 'admin',
       author_verified: true,
       moderation_status,
-      discoverable,
       created_at: new Date(),
       updated_at: new Date(),
       ...enhancements
@@ -217,7 +207,6 @@ router.patch('/:id', async (req, res) => {
     if (!MODERATION.has(body.moderation_status)) return res.status(400).json({ error: 'Invalid moderation_status' });
     setObj.moderation_status = body.moderation_status;
   }
-  if (body.discoverable !== undefined) setObj.discoverable = Boolean(body.discoverable);
   if (body.caption !== undefined) setObj.caption = String(body.caption).slice(0, 8000);
   
   if (body.placeId !== undefined || body.place_id !== undefined) {

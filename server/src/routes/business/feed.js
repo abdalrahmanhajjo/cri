@@ -119,7 +119,6 @@ router.post('/', async (req, res) => {
       author_role: 'business_owner',
       author_verified: true,
       moderation_status: 'approved',
-      discoverable: true,
       ...enhancements,
       created_at: new Date(),
       updated_at: new Date()

@@ -1857,6 +1857,14 @@ a.ig-feed-avatar--link:focus-visible {
   margin-top: 0;
 }
 
+.ig-feed-uploader-line {
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--ig-muted);
+  padding-right: 48px;
+}
+
 .ig-feed-media-wrap {
   position: relative;
   overflow: hidden;
@@ -3281,6 +3289,17 @@ a.ig-feed-avatar--link:focus-visible {
   gap: 6px;
   flex-wrap: wrap;
   pointer-events: auto;
+}
+
+.ig-reel-uploader-name {
+  width: 100%;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 2px;
+  pointer-events: auto;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .ig-reel-place-meta {

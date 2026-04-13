@@ -678,7 +678,7 @@ export const api = {
     const q = qs.toString();
     return api.get(`/api/sponsored-places${q ? `?${q}` : ''}`);
   },
-  /** Public community feed (approved + discoverable only). GET sends Bearer token when logged in for liked_by_me / saved_by_me. */
+  /** Public community feed (approved posts only). GET sends Bearer token when logged in for liked_by_me / saved_by_me. */
   communityFeed: (params) => {
     const qs = new URLSearchParams();
     if (params && typeof params === 'object') {
@@ -757,7 +757,7 @@ export const api = {
       });
     },
     changePassword: (currentPassword, newPassword) => api.post('/api/user/change-password', { currentPassword, newPassword }),
-    /** Community posts/reels (requires placeId; moderation for non-owners). */
+    /** Community posts/reels (requires placeId; published to the public feed). */
     feed: {
       create: (body) => api.post('/api/user/feed', body),
       update: (id, body) => api.patch(`/api/user/feed/${encodeURIComponent(id)}`, body),

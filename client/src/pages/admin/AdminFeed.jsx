@@ -54,7 +54,6 @@ export default function AdminFeed() {
   const [saving, setSaving] = useState(null);
 
   const [status, setStatus] = useState('all');
-  const [discoverable, setDiscoverable] = useState('all');
   const [contentFormat, setContentFormat] = useState('all');
   const [q, setQ] = useState('');
 
@@ -74,7 +73,6 @@ export default function AdminFeed() {
   const [composerImages, setComposerImages] = useState([]);
   const [composerVideo, setComposerVideo] = useState('');
   const [composerModeration, setComposerModeration] = useState('approved');
-  const [composerDiscoverable, setComposerDiscoverable] = useState(true);
   /** null | 'image' | 'video' — which composer slot is uploading */
   const [composerUploading, setComposerUploading] = useState(null);
   const [composerSaving, setComposerSaving] = useState(false);
@@ -97,7 +95,6 @@ export default function AdminFeed() {
     }
     const params = {
       status,
-      discoverable,
       q: q.trim() || undefined,
       limit: 200,
       format: contentFormat !== 'all' ? contentFormat : undefined,
@@ -118,7 +115,7 @@ export default function AdminFeed() {
       .finally(() => {
         if (!silent) setLoading(false);
       });
-  }, [status, discoverable, contentFormat, q]);
+  }, [status, contentFormat, q]);
 
   useEffect(() => {
     load();
@@ -192,7 +189,6 @@ export default function AdminFeed() {
         video_url: composerVideo.trim() || undefined,
         type: composerContentKind === 'reel' ? 'video' : 'post',
         moderation_status: composerModeration,
-        discoverable: composerDiscoverable,
       });
       setComposerCaption('');
       setComposerImages([]);
@@ -401,14 +397,14 @@ export default function AdminFeed() {
     <div className="admin-page-content">
       <div className="admin-page-header">
         <div className="admin-page-title-wrap">
-          <p className="admin-subtitle">Moderate community posts, discovery visibility, captions, and comments</p>
+          <p className="admin-subtitle">Moderate community posts, captions, and comments</p>
           <h1>Feed control center</h1>
         </div>
       </div>
 
       {migrationError && (
         <div className="admin-error admin-feed-banner" role="alert">
-          Database migration required: run <code>server/migrations/006_feed_moderation.sql</code> so moderation and discovery fields exist.
+          Database migration required: run <code>server/migrations/006_feed_moderation.sql</code> so moderation fields exist.
         </div>
       )}
       {error && <div className="admin-error">{error}</div>}
@@ -482,7 +478,7 @@ export default function AdminFeed() {
                   </select>
                 </div>
               </div>
-              <div className="admin-form-row admin-form-row--3">
+              <div className="admin-form-row">
                 <div className="admin-form-group">
                   <label htmlFor="admin-feed-kind">Content</label>
                   <select
@@ -501,20 +497,10 @@ export default function AdminFeed() {
                     value={composerModeration}
                     onChange={(e) => setComposerModeration(e.target.value)}
                   >
-                    <option value="approved">approved (live if discoverable)</option>
+                    <option value="approved">approved (live)</option>
                     <option value="pending">pending (review first)</option>
                     <option value="rejected">rejected (hidden)</option>
                   </select>
-                </div>
-                <div className="admin-form-group" style={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <label style={{ marginBottom: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <input
-                      type="checkbox"
-                      checked={composerDiscoverable}
-                      onChange={(e) => setComposerDiscoverable(e.target.checked)}
-                    />
-                    <span>Show in public discovery</span>
-                  </label>
                 </div>
               </div>
               <div className="admin-form-group">
@@ -811,14 +797,6 @@ export default function AdminFeed() {
             </select>
           </div>
           <div className="admin-form-group" style={{ marginBottom: 0, minWidth: 160 }}>
-            <label htmlFor="feed-disc">Discoverable</label>
-            <select id="feed-disc" value={discoverable} onChange={(e) => setDiscoverable(e.target.value)}>
-              <option value="all">Any</option>
-              <option value="true">Yes (public discovery)</option>
-              <option value="false">No</option>
-            </select>
-          </div>
-          <div className="admin-form-group" style={{ marginBottom: 0, minWidth: 160 }}>
             <label htmlFor="feed-format">Content</label>
             <select id="feed-format" value={contentFormat} onChange={(e) => setContentFormat(e.target.value)}>
               <option value="all">All</option>
@@ -856,7 +834,6 @@ export default function AdminFeed() {
                       <th>Post</th>
                       <th>Author</th>
                       <th>Moderation</th>
-                      <th>Discovery</th>
                       <th style={{ whiteSpace: 'nowrap' }}>♥ / 💬</th>
                       <th style={{ width: 200 }}>Actions</th>
                     </tr>
@@ -924,7 +901,6 @@ export default function AdminFeed() {
                               {p.moderation_status || 'approved'}
                             </span>
                           </td>
-                          <td>{p.discoverable !== false ? 'Yes' : 'No'}</td>
                           <td>
                             {p.likes_count ?? 0} / {p.comments_count ?? 0}
                           </td>
@@ -936,7 +912,7 @@ export default function AdminFeed() {
                                     type="button"
                                     className="admin-btn admin-btn--sm admin-btn--primary"
                                     disabled={saving === p.id}
-                                    onClick={() => patchPost(p.id, { moderation_status: 'approved', discoverable: true })}
+                                    onClick={() => patchPost(p.id, { moderation_status: 'approved' })}
                                   >
                                     Approve
                                   </button>
@@ -944,21 +920,11 @@ export default function AdminFeed() {
                                     type="button"
                                     className="admin-btn admin-btn--sm admin-btn--secondary"
                                     disabled={saving === p.id}
-                                    onClick={() => patchPost(p.id, { moderation_status: 'rejected', discoverable: false })}
+                                    onClick={() => patchPost(p.id, { moderation_status: 'rejected' })}
                                   >
                                     Reject
                                   </button>
                                 </>
-                              )}
-                              {(p.moderation_status || 'approved') === 'approved' && (
-                                <button
-                                  type="button"
-                                  className="admin-btn admin-btn--sm admin-btn--secondary"
-                                  disabled={saving === p.id}
-                                  onClick={() => patchPost(p.id, { discoverable: p.discoverable === false })}
-                                >
-                                  {p.discoverable === false ? 'Show in discovery' : 'Hide from discovery'}
-                                </button>
                               )}
                               <button
                                 type="button"
@@ -993,7 +959,7 @@ export default function AdminFeed() {
                         </tr>
                         {expandedId === p.id && (
                           <tr className="admin-feed-comments-row">
-                            <td colSpan={7}>
+                            <td colSpan={6}>
                               <div className="admin-feed-comments-panel">
                                 {loadingComments === p.id && <div className="admin-loading">Loading comments…</div>}
                                 {loadingComments !== p.id && (comments[p.id] || []).length === 0 && (
@@ -1314,9 +1280,6 @@ export default function AdminFeed() {
                     </select>
                   </div>
                 </div>
-                <p className="admin-form-hint" style={{ marginTop: 0 }}>
-                  Discovery visibility is changed from the table (Hide / Show in discovery), not here.
-                </p>
               </div>
               <div className="admin-modal-footer">
                 <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setEditPost(null)}>

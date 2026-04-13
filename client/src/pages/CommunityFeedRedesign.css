@@ -107,6 +107,30 @@
   text-overflow: ellipsis !important;
 }
 
+.vd-community-feed-meta-titles {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+}
+
+.vd-community-feed-uploader {
+  display: block !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+
+.vd-community-feed-uploader--solo {
+  font-size: 12px !important;
+}
+
 .vd-community-feed-cta {
   display: inline-flex !important;
   align-items: center !important;

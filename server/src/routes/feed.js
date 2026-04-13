@@ -41,7 +41,6 @@ async function getPublicPostRow(postId) {
     const post = await posts.findOne({
       id: postId,
       moderation_status: 'approved',
-      discoverable: true
     });
     if (!post) return null;
     return {
@@ -69,7 +68,6 @@ router.get('/', optionalAuthMiddleware, async (req, res) => {
     
     const queryObj = {
       moderation_status: 'approved',
-      discoverable: true
     };
     
     if (format === 'reel' || format === 'video') {
@@ -157,7 +155,7 @@ router.get('/post/:postId', optionalAuthMiddleware, async (req, res) => {
   try {
     const postsColl = await getCollection('feed_posts');
     const post = await postsColl.aggregate([
-      { $match: { id: postId, moderation_status: 'approved', discoverable: true } },
+      { $match: { id: postId, moderation_status: 'approved' } },
       { $lookup: {
           from: 'places',
           localField: 'place_id',

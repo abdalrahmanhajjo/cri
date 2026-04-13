@@ -183,7 +183,7 @@ router.post('/upload', uploadMw.single('file'), async (req, res) => {
 
 /**
  * POST /api/user/feed
- * Any signed-in user: post/reel must include placeId. Community posts may require moderation.
+ * Any signed-in user: post/reel must include placeId. Posts are published to the public feed immediately.
  */
 router.post('/', async (req, res) => {
   const userId = req.user.userId;
@@ -219,8 +219,7 @@ router.post('/', async (req, res) => {
     if (!link.ok) return res.status(link.status).json({ error: link.error });
 
     const isOwnerPosting = link.own === true;
-    const moderation_status = isOwnerPosting ? 'approved' : 'pending';
-    const discoverable = isOwnerPosting ? true : false;
+    const moderation_status = 'approved';
     const author_verified = isOwnerPosting === true;
     const author_role = isOwnerPosting ? 'business_owner' : 'community';
 
@@ -243,7 +242,6 @@ router.post('/', async (req, res) => {
       author_role,
       author_verified,
       moderation_status,
-      discoverable,
       ...enhancements,
       created_at: new Date(),
       updated_at: new Date(),
