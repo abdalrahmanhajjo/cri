@@ -760,10 +760,10 @@ export default function MapPage() {
   }, [nearbyMode, userLocation, nearbyAnchorPlaceId, drawerPlacesWithCoords, coordsById]);
 
   const listForDrawer = useMemo(() => {
-    if (nearbyMode === 'off') return drawerPlaces;
+    if (addingTripStop || nearbyMode === 'off') return drawerPlaces;
     if (nearbyMode === 'me' && nearbyLocating) return [];
     return nearbyAnchoredList != null ? nearbyAnchoredList : [];
-  }, [nearbyMode, nearbyLocating, nearbyAnchoredList, drawerPlaces]);
+  }, [addingTripStop, nearbyMode, nearbyLocating, nearbyAnchoredList, drawerPlaces]);
 
   /** Drawer swipe deck: same order as nearby list when sorted; otherwise by distance from you or Tripoli center. */
   const swipeDeckPlaces = useMemo(() => {
@@ -2021,6 +2021,7 @@ export default function MapPage() {
                     onClick={() => {
                       setAddingTripStop(true);
                       setListOpen(true);
+                      setNearbyMode('off');
                     }}
                   >
                     <Icon name="add" size={20} />

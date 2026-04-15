@@ -806,6 +806,92 @@
   transform: translateY(-1px);
 }
 
+/* Narrow viewports: keep filters, counts, and map chrome readable without crowding the tiles */
+@media (max-width: 599px) {
+  .fym-controls {
+    margin-bottom: 12px;
+    padding-inline-start: 2px;
+  }
+
+  .fym-toolbar-scroll {
+    margin-bottom: 8px;
+    mask-image: none;
+  }
+
+  .fym-toolbar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .fym-chip {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .fym-meta {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .fym-meta-count {
+    text-align: center;
+    letter-spacing: 0.06em;
+  }
+
+  .fym-recenter {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .fym-map-overlay {
+    padding: 10px;
+  }
+
+  .fym-map-overlay--bottom {
+    padding-bottom: 8px;
+  }
+
+  .fym-legend {
+    padding: 8px 10px;
+  }
+
+  .fym-legend-items {
+    gap: 8px 12px;
+  }
+
+  .fym-legend-item {
+    font-size: 11px;
+  }
+
+  .fym-live-badge {
+    font-size: 10px;
+    padding: 6px 10px 6px 8px;
+  }
+
+  .fym-expand-map {
+    font-size: 12px;
+    min-height: 36px;
+    padding: 6px 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  .fym-map-overlay--top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .fym-live-badge {
+    justify-content: center;
+  }
+
+  .fym-expand-map {
+    justify-content: center;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fym-panel {
     animation: none;

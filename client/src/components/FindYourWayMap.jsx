@@ -104,7 +104,7 @@ function firstPlaceImage(p) {
 /**
  * Home “Find your way” — default Google roadmap, area filters, detail sheet, nearby list.
  */
-export default function FindYourWayMap({ places = [], t }) {
+export default function FindYourWayMap({ places = [], t, loadEager = false }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const apiKey = typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -157,6 +157,10 @@ export default function FindYourWayMap({ places = [], t }) {
   }, [selected, withGeo]);
 
   useEffect(() => {
+    if (loadEager) {
+      setVisible(true);
+      return undefined;
+    }
     const el = rootRef.current;
     if (!el || typeof IntersectionObserver === 'undefined') {
       setVisible(true);
@@ -175,7 +179,7 @@ export default function FindYourWayMap({ places = [], t }) {
       obs.disconnect();
       window.clearTimeout(fallbackTimer);
     };
-  }, []);
+  }, [loadEager]);
 
   const fitBounds = useCallback((map, maps, markerList) => {
     if (!map || !maps || !markerList.length) return;
