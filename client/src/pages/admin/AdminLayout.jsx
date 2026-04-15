@@ -7,8 +7,6 @@ const navItems = [
   { to: '/admin', end: true, icon: 'dashboard', label: 'Dashboard' },
   { to: '/admin/places', end: false, icon: 'place', label: 'Places' },
   { to: '/admin/categories', end: false, icon: 'category', label: 'Categories' },
-  { to: '/admin/dining', end: false, icon: 'restaurant', label: 'Dining guide' },
-  { to: '/admin/hotels', end: false, icon: 'hotel', label: 'Hotels guide' },
   { to: '/admin/interests', end: false, icon: 'interest', label: 'Interests' },
   { to: '/admin/experiences', end: false, icon: 'tour', label: 'Experiences' },
   { to: '/admin/events', end: false, icon: 'event', label: 'Events' },
@@ -206,8 +204,6 @@ function AdminLayoutInner() {
                 [
                   '/admin/places',
                   '/admin/categories',
-                  '/admin/dining',
-                  '/admin/hotels',
                   '/admin/interests',
                   '/admin/experiences',
                 ].includes(location.pathname)

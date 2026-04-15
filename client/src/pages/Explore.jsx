@@ -23,8 +23,6 @@ import { resolveHeroTagline, resolveFooterTagline } from '../config/resolveSiteT
 import {
   COMMUNITY_PATH,
   PLACES_DISCOVER_PATH,
-  DINING_PATH,
-  HOTELS_PATH,
   discoverSearchUrl,
 } from '../utils/discoverPaths';
 import { applyHomeSeoFromSettings } from '../utils/siteSeo';
@@ -544,8 +542,6 @@ function BrowseMapByThemeSection({
   lang,
   places = [],
   categories = [],
-  diningGuideEnabled = true,
-  hotelsGuideEnabled = true,
 }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const placesByWay = groupPlacesByWay(places, categories);
@@ -590,18 +586,7 @@ function BrowseMapByThemeSection({
               (n) => safeT('home', 'findYourWayThemeMore').split('{count}').join(String(n))
             );
             const rowTitle = titleFromCategories || safeT('home', way.titleKey);
-            const discoverTo =
-              way.wayKey === 'food'
-                ? diningGuideEnabled
-                  ? DINING_PATH
-                  : discoverSearchUrl('restaurant')
-                : way.wayKey === 'stay'
-                  ? hotelsGuideEnabled
-                    ? HOTELS_PATH
-                    : discoverSearchUrl('hotel')
-                  : way.discoverQ
-                    ? discoverSearchUrl(way.discoverQ)
-                    : discoverSearchUrl('');
+                        const discoverTo = way.discoverQ ? discoverSearchUrl(way.discoverQ) : discoverSearchUrl('');
             return (
               <Link
                 key={way.wayKey}
@@ -677,32 +662,15 @@ function FindYourWayPracticalSection({ t, places = [], showMap = true, showTips:
           </div>
           <div className="vd-find-your-way-side-stack">
             <div className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card">
-              <h3 className="vd-plan-trip-block-title">{safeT('home', 'stayTitle')}</h3>
-              <p className="vd-plan-trip-block-desc">{safeT('home', 'staySub')}</p>
+              <h3 className="vd-plan-trip-block-title">{safeT('nav', 'discoverPlaces')}</h3>
+              <p className="vd-plan-trip-block-desc">{safeT('home', 'seeAllWaysDiscover')}</p>
               <div className="vd-plan-trip-inline-actions">
-                <Link to={HOTELS_PATH} className="vd-plan-trip-cta vd-btn vd-btn--primary">
-                  {safeT('home', 'stayBrowseHotels')}
+                <Link to={PLACES_DISCOVER_PATH} className="vd-plan-trip-cta vd-btn vd-btn--primary">
+                  {safeT('nav', 'discoverPlaces')}
                   <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
                 </Link>
                 {showMap && (
-                  <Link to="/map?q=hotel" className="vd-plan-trip-inline-link">
-                    {safeT('home', 'stayCta')}
-                    <Icon name="arrow_forward" size={18} aria-hidden />
-                  </Link>
-                )}
-              </div>
-            </div>
-
-            <div className="vd-plan-trip-block vd-plan-trip-block--compact vd-find-your-way-side-card">
-              <h3 className="vd-plan-trip-block-title">{safeT('home', 'diningTitle')}</h3>
-              <p className="vd-plan-trip-block-desc">{safeT('home', 'diningSub')}</p>
-              <div className="vd-plan-trip-inline-actions">
-                <Link to={DINING_PATH} className="vd-plan-trip-cta vd-btn vd-btn--primary">
-                  {safeT('home', 'diningCta')}
-                  <Icon name="arrow_forward" className="vd-btn-arrow" size={20} />
-                </Link>
-                {showMap && (
-                  <Link to="/map?q=dining" className="vd-plan-trip-inline-link">
+                  <Link to="/map" className="vd-plan-trip-inline-link">
                     {safeT('home', 'viewMapCta')}
                     <Icon name="arrow_forward" size={18} aria-hidden />
                   </Link>
@@ -729,8 +697,6 @@ export default function Explore() {
   const [sponsoredHome, setSponsoredHome] = useState([]);
   const [loadNonce, setLoadNonce] = useState(0);
 
-  const diningGuideEnabled = settings?.diningGuide?.enabled !== false;
-  const hotelsGuideEnabled = settings?.hotelsGuide?.enabled !== false;
   const sponsoredHomeEnabled = settings?.sponsoredPlacesEnabled?.home !== false;
 
   useEffect(() => {
@@ -1170,8 +1136,6 @@ export default function Explore() {
         lang={lang}
         places={directoryPlaces}
         categories={categories}
-        diningGuideEnabled={diningGuideEnabled}
-        hotelsGuideEnabled={hotelsGuideEnabled}
       />
 
       {/* Featured picks first; community feed directly below */}

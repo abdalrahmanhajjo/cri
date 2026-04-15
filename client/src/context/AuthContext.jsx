@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, startTransition } from 'react';
-import { api, getToken, setToken as saveToken, getStoredUser, setStoredUser, getSessionCode, setSessionCode, generateSessionCode } from '../api/client';
+import { api, getToken, getTokenExpiryMs, setToken as saveToken, getStoredUser, setStoredUser, getSessionCode, setSessionCode, generateSessionCode } from '../api/client';
 
 const AuthContext = createContext(null);
 
@@ -83,6 +83,26 @@ export function AuthProvider({ children }) {
     window.addEventListener('tripoli:auth-expired', syncLogout);
     return () => window.removeEventListener('tripoli:auth-expired', syncLogout);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const check = () => {
+      const tok = getToken();
+      if (!tok) return;
+      const exp = getTokenExpiryMs(tok);
+      if (exp != null && Date.now() >= exp) {
+        saveToken(null);
+        setStoredUser(null);
+        setUser(null);
+        setSessionCode(null);
+        setSessionCodeState(null);
+        window.dispatchEvent(new Event("tripoli:auth-expired"));
+      }
+    };
+    check();
+    const id = window.setInterval(check, 30 * 1000);
+    return () => window.clearInterval(id);
+  }, [user?.id]);
 
   useEffect(() => {
     const token = getToken();

@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
 import AdminDashboard from './AdminDashboard';
 import AdminPlaces from './AdminPlaces';
@@ -14,8 +14,6 @@ import AdminPlaceOwners from './AdminPlaceOwners';
 import AdminOffers from './AdminOffers';
 import AdminEmailBroadcast from './AdminEmailBroadcast';
 import AdminSponsoredPlaces from './AdminSponsoredPlaces';
-import AdminDiningGuide from './AdminDiningGuide';
-import AdminHotelsGuide from './AdminHotelsGuide';
 
 export default function AdminApp() {
   return (
@@ -24,8 +22,8 @@ export default function AdminApp() {
         <Route index element={<AdminDashboard />} />
         <Route path="places" element={<AdminPlaces />} />
         <Route path="categories" element={<AdminCategories />} />
-        <Route path="dining" element={<AdminDiningGuide />} />
-        <Route path="hotels" element={<AdminHotelsGuide />} />
+        <Route path="dining" element={<Navigate to="/admin" replace />} />
+        <Route path="hotels" element={<Navigate to="/admin" replace />} />
         <Route path="experiences" element={<AdminExperiences />} />
         <Route path="events" element={<AdminEvents />} />
         <Route path="settings" element={<AdminSettings />} />

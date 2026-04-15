@@ -1,5 +1,5 @@
 /**
- * API client for Tripoli Explorer – same backend (Node) and DB as the mobile app.
+ * API client for Tripoli Explorer â€“ same backend (Node) and DB as the mobile app.
  * Set VITE_API_URL in .env to your backend (e.g. http://localhost:3000).
  * Features: GET deduplication (in-flight), AbortSignal support,
  * exponential backoff retries for transient network failures, retry for 5xx responses.
@@ -55,7 +55,7 @@ const SESSION_CODE_KEY = 'session_code';
 const MAX_RETRIES_5XX = 1;
 const RETRY_DELAY_MS = 800;
 
-/** Extra attempts after the first failed connection (unreliable Wi‑Fi / sleeping tabs). */
+/** Extra attempts after the first failed connection (unreliable Wiâ€‘Fi / sleeping tabs). */
 const MAX_NETWORK_RETRIES = 2;
 /** Backoff between network retries (ms); total attempts = 1 + MAX_NETWORK_RETRIES. */
 const NETWORK_RETRY_DELAYS_MS = [400, 1000];
@@ -71,7 +71,7 @@ const getRequestCache = new Map();
 
 /**
  * User-specific lists must not share an in-flight GET with a stale snapshot
- * (e.g. favourites loaded, then user saves — sync must not resolve the pre-save GET).
+ * (e.g. favourites loaded, then user saves â€” sync must not resolve the pre-save GET).
  */
 function skipGetDedupeForPath(path) {
   const p = typeof path === 'string' ? path.split('?')[0] : '';
@@ -134,6 +134,23 @@ async function fetchWithNetworkRetry(url, init) {
     }
   }
   throw wrapNetworkError(lastErr);
+}
+
+/** Milliseconds since epoch when JWT expires, or null if unknown. */
+export function getTokenExpiryMs(token) {
+  if (!token || typeof token !== "string") return null;
+  const parts = token.split(".");
+  if (parts.length < 2) return null;
+  try {
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 ? "=".repeat(4 - (b64.length % 4)) : "";
+    const json = atob(b64 + pad);
+    const payload = JSON.parse(json);
+    if (payload.exp && typeof payload.exp === "number") return payload.exp * 1000;
+  } catch {
+    /* ignore */
+  }
+  return null;
 }
 
 export function getToken() {
@@ -283,6 +300,12 @@ async function requestWithDedupe(path, options = {}) {
   return promise;
 }
 
+/** Place inquiry POSTs must not be retried automatically — the server may persist before the client sees 5xx/timeout. */
+function isPlacesInquiryMutationPath(path) {
+  const p = typeof path === "string" ? path.split("?")[0] : "";
+  return /\/api\/places\/[^/]+\/inquiries(\/|$)/.test(p);
+}
+
 async function request(path, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
   if (method === 'GET') return requestWithDedupe(path, options);
@@ -306,7 +329,9 @@ async function requestNoDedupe(path, options = {}, serverRetriesLeft = MAX_RETRI
     signal: options.signal,
   };
 
-  const res = await fetchWithNetworkRetry(url, fetchInit);
+  const method = (options.method || 'GET').toUpperCase();
+  const skipMutationRetry = method === 'POST' && isPlacesInquiryMutationPath(path);
+  const res = skipMutationRetry ? await fetch(url, fetchInit) : await fetchWithNetworkRetry(url, fetchInit);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401 && token) clearAuthStorageAndNotify();
@@ -317,7 +342,7 @@ async function requestNoDedupe(path, options = {}, serverRetriesLeft = MAX_RETRI
     ) {
       clearAuthStorageAndNotify();
     }
-    if (res.status >= 500 && serverRetriesLeft > 0) {
+    if (!skipMutationRetry && res.status >= 500 && serverRetriesLeft > 0) {
       await sleepAbortable(RETRY_DELAY_MS, options.signal);
       return requestNoDedupe(path, options, serverRetriesLeft - 1);
     }
@@ -378,13 +403,13 @@ export const api = {
     },
     /** Public: reviews left on Visit Tripoli (not Google). */
     reviews: (id) => api.get(`/api/places/${encodeURIComponent(id)}/reviews`),
-    /** Auth: create or replace current user’s review for this place. */
+    /** Auth: create or replace current userâ€™s review for this place. */
     submitReview: (id, body) =>
       api.post(`/api/places/${encodeURIComponent(id)}/reviews`, body || {}),
-    /** Auth: author, admin, or place owner — removes the review row. */
+    /** Auth: author, admin, or place owner â€” removes the review row. */
     deleteReview: (placeId, reviewId) =>
       api.delete(`/api/places/${encodeURIComponent(placeId)}/reviews/${encodeURIComponent(String(reviewId))}`),
-    /** Auth: admin or place owner — soft-hide or restore on the public list. */
+    /** Auth: admin or place owner â€” soft-hide or restore on the public list. */
     patchReview: (placeId, reviewId, body) =>
       api.patch(`/api/places/${encodeURIComponent(placeId)}/reviews/${encodeURIComponent(String(reviewId))}`, body),
     checkin: (id, body) => api.post(`/api/places/${encodeURIComponent(id)}/checkin`, body || {}),
@@ -529,7 +554,7 @@ export const api = {
       remove: (userId, placeId) =>
         api.delete(`/api/admin/place-owners?userId=${encodeURIComponent(userId)}&placeId=${encodeURIComponent(placeId)}`),
     },
-    /** Venue offers (place_promotions) — full CRUD; public Discover merges with coupons. */
+    /** Venue offers (place_promotions) â€” full CRUD; public Discover merges with coupons. */
     placePromotions: {
       list: (params) => {
         const qs = new URLSearchParams();
@@ -545,7 +570,7 @@ export const api = {
       update: (id, body) => api.patch(`/api/admin/place-promotions/${encodeURIComponent(id)}`, body),
       delete: (id) => api.delete(`/api/admin/place-promotions/${encodeURIComponent(id)}`),
     },
-    /** App coupons (coupons table) — distinct from POST /api/coupons/redeem for signed-in users. */
+    /** App coupons (coupons table) â€” distinct from POST /api/coupons/redeem for signed-in users. */
     managedCoupons: {
       list: (params) => {
         const qs = new URLSearchParams();
@@ -597,7 +622,7 @@ export const api = {
       );
     },
   },
-  /** Business owners: manage only places linked in place_owners (not admin). */
+  /** Business portal: owners manage assigned places; admins get full venue APIs (see server). */
   business: {
     me: () => api.get('/api/business/me'),
     places: {
@@ -629,6 +654,7 @@ export const api = {
         const qs = new URLSearchParams();
         if (params?.placeId) qs.set('placeId', String(params.placeId));
         if (params?.format && params.format !== 'all') qs.set('format', String(params.format));
+        if (params?.q && String(params.q).trim().length >= 2) qs.set('q', String(params.q).trim());
         const q = qs.toString();
         return api.get(`/api/business/feed${q ? `?${q}` : ''}`);
       },
@@ -699,10 +725,10 @@ export const api = {
         typeof bodyOrPayload === 'string' ? { body: bodyOrPayload } : bodyOrPayload;
       return api.post(`/api/feed/post/${encodeURIComponent(postId)}/comments`, payload);
     },
-    /** Like or unlike — server writes to `feed_likes` (INSERT / DELETE), returns DB counts. */
+    /** Like or unlike â€” server writes to `feed_likes` (INSERT / DELETE), returns DB counts. */
     toggleLike: (postId) => api.post(`/api/feed/post/${encodeURIComponent(postId)}/like`),
     toggleSave: (postId) => api.post(`/api/feed/post/${encodeURIComponent(postId)}/save`),
-    /** Like or unlike a comment — server writes to `feed_comment_likes`. */
+    /** Like or unlike a comment â€” server writes to `feed_comment_likes`. */
     toggleCommentLike: (postId, commentId) =>
       api.post(
         `/api/feed/post/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/like`
@@ -723,7 +749,7 @@ export const api = {
     return api.get(`/api/promotions${q ? `?${q}` : ''}`);
   },
 
-  /** Coupon redemption (auth) — same DB rules as mobile (`coupon_redemptions`, code check). */
+  /** Coupon redemption (auth) â€” same DB rules as mobile (`coupon_redemptions`, code check). */
   coupons: {
     redeemed: () => api.get('/api/coupons/redeemed'),
     redeem: (promotionId, code) => api.post('/api/coupons/redeem', { promotionId, code }),

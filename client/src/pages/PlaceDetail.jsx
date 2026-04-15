@@ -1,23 +1,14 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import api from '../api/client';
+import api, { getPlaceImageUrl } from '../api/client';
 import Icon from '../components/Icon';
 import OfferCard from '../components/OfferCard';
-import { getPlaceImageUrl } from '../api/client';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useFavourites } from '../context/FavouritesContext';
 import { useToast } from '../context/ToastContext';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
-import {
-  getDayCount,
-  ensureDaysWithSlots,
-  toDateOnly,
-  buildTripDaysApiPayload,
-  hasOverlappingTimeSlots,
-  getDateForDayIndex,
-} from '../utils/tripPlannerHelpers';
 import './Detail.css';
 
 /** Resolved, unique image URLs for gallery (primary `image` + `images[]`). */
@@ -58,66 +49,7 @@ function getPlaceCoordinates(place) {
       : null);
 }
 
-function getOpenStreetMapEmbedUrl(place) {
-  const coords = getPlaceCoordinates(place);
-  if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) return '';
-  const lat = Number(coords.lat);
-  const lng = Number(coords.lng);
-  const delta = 0.008;
-  const bbox = [
-    (lng - delta).toFixed(6),
-    (lat - delta).toFixed(6),
-    (lng + delta).toFixed(6),
-    (lat + delta).toFixed(6),
-  ].join('%2C');
-  const marker = `${lat.toFixed(6)}%2C${lng.toFixed(6)}`;
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${marker}`;
-}
 
-function normalizeHm(value) {
-  if (value == null) return '';
-  const raw = String(value).trim();
-  const m = raw.match(/^(\d{1,2}):(\d{2})/);
-  if (!m) return '';
-  const hh = Number(m[1]);
-  const mm = Number(m[2]);
-  if (!Number.isFinite(hh) || !Number.isFinite(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return '';
-  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-}
-
-function formatTripRange(startDate, endDate) {
-  const a = startDate ? new Date(startDate).toLocaleDateString() : '';
-  const b = endDate ? new Date(endDate).toLocaleDateString() : '';
-  if (a && b) return `${a} - ${b}`;
-  return a || b || '';
-}
-
-function isDiningPlace(place) {
-  const hay = [
-    place?.category,
-    place?.categoryId,
-    ...(Array.isArray(place?.tags) ? place.tags : place?.tags ? [place.tags] : []),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-  return /(restaurant|food|dining|cafe|café|coffee|bakery|sweet|dessert|cuisine|breakfast|lunch|dinner)/.test(hay);
-}
-
-function pickDiningTags(tags, matcher, limit = 4) {
-  const list = Array.isArray(tags) ? tags : tags ? [tags] : [];
-  const seen = new Set();
-  return list
-    .map((tag) => String(tag || '').trim())
-    .filter(Boolean)
-    .filter((tag) => {
-      const key = tag.toLowerCase();
-      if (!matcher.test(key) || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, limit);
-}
 
 function titleizeTokens(value) {
   return String(value || '')
@@ -126,91 +58,6 @@ function titleizeTokens(value) {
     .join(' ');
 }
 
-function buildDiningSummary(place) {
-  const tags = Array.isArray(place?.tags) ? place.tags : place?.tags ? [place.tags] : [];
-  const diningProfile = place?.diningProfile && typeof place.diningProfile === 'object' ? place.diningProfile : {};
-  const cuisines = [
-    ...pickDiningTags(tags, /(lebanese|mediterranean|seafood|dessert|sweets|bakery|coffee|breakfast|grill|mezza|traditional|patisserie|cocktail)/, 5),
-    ...(Array.isArray(diningProfile.cuisines) ? diningProfile.cuisines.map(titleizeTokens) : []),
-  ]
-    .filter((v, i, arr) => arr.findIndex((x) => String(x).toLowerCase() === String(v).toLowerCase()) === i)
-    .slice(0, 5);
-
-  const bestFor = [
-    ...pickDiningTags(tags, /(breakfast|brunch|lunch|dinner|dessert|coffee|date night|family|quick bite|late night|mana2ish|knefe|baklava)/, 5),
-    ...(Array.isArray(diningProfile.bestFor) ? diningProfile.bestFor.map(titleizeTokens) : []),
-  ]
-    .filter((v, i, arr) => arr.findIndex((x) => String(x).toLowerCase() === String(v).toLowerCase()) === i)
-    .slice(0, 5);
-
-  const features = [
-    ...(diningProfile.reservations ? ['Reservations'] : []),
-    ...(diningProfile.delivery ? ['Delivery'] : []),
-    ...(diningProfile.takeaway ? ['Takeaway'] : []),
-    ...(diningProfile.outdoorSeating ? ['Outdoor seating'] : []),
-    ...(diningProfile.familyFriendly ? ['Family friendly'] : []),
-    ...(Array.isArray(diningProfile.paymentMethods) ? diningProfile.paymentMethods.map(titleizeTokens) : []),
-  ].slice(0, 6);
-
-  return { cuisines, bestFor, features };
-}
-
-function normalizeDiningProfile(place) {
-  const raw = place?.diningProfile && typeof place.diningProfile === 'object' ? place.diningProfile : {};
-  const safeArray = (value) => (Array.isArray(value) ? value.filter(Boolean) : []);
-  const signatureDishes = safeArray(raw.signatureDishes).map((item) =>
-    typeof item === 'string'
-      ? { name: item }
-      : {
-          name: String(item?.name || '').trim(),
-          description: String(item?.description || '').trim(),
-          price: String(item?.price || '').trim(),
-          badge: String(item?.badge || '').trim(),
-        }
-  ).filter((item) => item.name);
-  const menuSections = safeArray(raw.menuSections)
-    .map((section) => ({
-      title: String(section?.title || '').trim(),
-      note: String(section?.note || '').trim(),
-      items: safeArray(section?.items)
-        .map((item) =>
-          typeof item === 'string'
-            ? { name: item }
-            : {
-                name: String(item?.name || '').trim(),
-                description: String(item?.description || '').trim(),
-                price: String(item?.price || '').trim(),
-                badge: String(item?.badge || '').trim(),
-              }
-        )
-        .filter((item) => item.name),
-    }))
-    .filter((section) => section.title || section.items.length > 0);
-
-  return {
-    atmosphere: String(raw.atmosphere || '').trim(),
-    reservationNotes: String(raw.reservationNotes || '').trim(),
-    menuNote: String(raw.menuNote || '').trim(),
-    serviceModes: safeArray(raw.serviceModes).map(titleizeTokens),
-    dietaryOptions: safeArray(raw.dietaryOptions).map(titleizeTokens),
-    contactPhone: String(raw.contactPhone || raw.phone || '').trim(),
-    contactEmail: String(raw.contactEmail || raw.email || '').trim(),
-    contactAddress: String(raw.contactAddress || raw.address || '').trim(),
-    contactNote: String(raw.contactNote || '').trim(),
-    socialMedia: {
-      instagram: String(raw.instagram || raw.social_instagram || '').trim(),
-      facebook: String(raw.facebook || raw.social_facebook || '').trim(),
-      website: String(raw.website || raw.link || '').trim(),
-    },
-    signatureDishes,
-    menuSections,
-  };
-}
-
-function translationOr(t, section, key, fallback) {
-  const value = t(section, key);
-  return value === key ? fallback : value;
-}
 
 function normalizeHoursEntries(hours) {
   if (!hours || typeof hours !== 'object' || Array.isArray(hours)) return [];
@@ -259,7 +106,7 @@ function LiveStatus({ hours, t }) {
     );
   }
 
-  const rangeParts = todayHours.split(/\s*[–-]\s*/);
+  const rangeParts = todayHours.split(/\s*[â€“-]\s*/);
   if (rangeParts.length < 2) {
     return (
       <span className="place-status place-status--unknown">
@@ -352,26 +199,7 @@ export default function PlaceDetail() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewMsg, setReviewMsg] = useState(null);
   const [reviewsOpen, setReviewsOpen] = useState(false);
-  const [diningTab, setDiningTab] = useState('overview');
-  const [tripPickPlace, setTripPickPlace] = useState(null);
-  const [tripModalTrips, setTripModalTrips] = useState([]);
-  const [tripModalLoading, setTripModalLoading] = useState(false);
-  const [tripAddSaving, setTripAddSaving] = useState(false);
-  const [tripActiveId, setTripActiveId] = useState('');
-  const [tripDayIndex, setTripDayIndex] = useState(0);
-  const [tripStartTime, setTripStartTime] = useState('');
-  const [tripEndTime, setTripEndTime] = useState('');
-  const [tripAddError, setTripAddError] = useState('');
-  const [tripSearchQuery, setTripSearchQuery] = useState('');
-  const [tripModalStep, setTripModalStep] = useState(1);
-  const [bookingModalOpen, setBookingModalOpen] = useState(false);
-  const [bookingDate, setBookingDate] = useState('');
-  const [bookingTime, setBookingTime] = useState('');
-  const [bookingGuests, setBookingGuests] = useState('2');
-  const [bookingNotes, setBookingNotes] = useState('');
-  const [bookingSending, setBookingSending] = useState(false);
-  const [bookingStatus, setBookingStatus] = useState(null);
-  const heroTouchStartX = useRef(null);
+
 
   const myReview = useMemo(() => placeReviews.find((r) => r.isYours), [placeReviews]);
 
@@ -392,13 +220,6 @@ export default function PlaceDetail() {
 
   useEffect(() => {
     setReviewsOpen(false);
-    setDiningTab('overview');
-    setBookingModalOpen(false);
-    setBookingDate('');
-    setBookingTime('');
-    setBookingGuests('2');
-    setBookingNotes('');
-    setBookingStatus(null);
   }, [id]);
 
   useEffect(() => {
@@ -497,41 +318,6 @@ export default function PlaceDetail() {
   }, [user?.email]);
 
   useEffect(() => {
-    if (!tripPickPlace || !user) {
-      setTripModalTrips([]);
-      return;
-    }
-    let cancelled = false;
-    setTripModalLoading(true);
-    api.user
-      .trips()
-      .then((res) => {
-        if (!cancelled) setTripModalTrips(Array.isArray(res.trips) ? res.trips : []);
-      })
-      .catch(() => {
-        if (!cancelled) setTripModalTrips([]);
-      })
-      .finally(() => {
-        if (!cancelled) setTripModalLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [tripPickPlace, user]);
-
-  useEffect(() => {
-    if (!tripPickPlace) return;
-    if (tripModalTrips.length < 1) {
-      setTripActiveId('');
-      return;
-    }
-    setTripActiveId((prev) => {
-      if (prev && tripModalTrips.some((trip) => String(trip.id) === String(prev))) return prev;
-      return String(tripModalTrips[0].id);
-    });
-  }, [tripPickPlace, tripModalTrips]);
-
-  useEffect(() => {
     if (!id) {
       setPromotions([]);
       return;
@@ -559,7 +345,7 @@ export default function PlaceDetail() {
 
   useEffect(() => {
     if (!place) return;
-    setInquiryIntent(isDiningPlace(place) ? 'booking' : 'general');
+    setInquiryIntent('general');
   }, [place?.id, place?.category, place?.categoryId, place?.tags]);
 
   const toggleFavourite = useCallback(async () => {
@@ -677,6 +463,17 @@ export default function PlaceDetail() {
       if (msg.length < 3) return;
       const phone = guestPhone.trim();
       if ((phone.match(/\d/g) || []).length < 8) return;
+      const em = guestEmail.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em) && !(user && !em)) {
+        setInqStatus(t('discover', 'proposalNeedEmail'));
+        showToast(t('discover', 'proposalNeedEmail'), 'error');
+        return;
+      }
+      if (!user && guestName.trim().length < 2) {
+        setInqStatus(t('discover', 'proposalNeedName'));
+        showToast(t('discover', 'proposalNeedName'), 'error');
+        return;
+      }
       setInqSending(true);
       setInqStatus(null);
       const body = user
@@ -705,8 +502,13 @@ export default function PlaceDetail() {
           showToast(t('feedback', 'inquirySent'), 'success');
         })
         .catch((err) => {
-          setInqStatus(err.message || 'Could not send');
-          showToast(t('feedback', 'inquiryFailed'), 'error');
+          if (err?.data?.code === 'MESSAGING_BLOCKED') {
+            setInqStatus(t('discover', 'messagingBlockedByVenue'));
+            showToast(t('discover', 'messagingBlockedByVenue'), 'error');
+          } else {
+            setInqStatus(err.message || 'Could not send');
+            showToast(t('feedback', 'inquiryFailed'), 'error');
+          }
         })
         .finally(() => setInqSending(false));
     },
@@ -820,238 +622,6 @@ export default function PlaceDetail() {
     });
   }, [place, user, navigate, location.pathname, location.search, location.hash]);
 
-  const openAddToTrip = useCallback(() => {
-    if (!place) return;
-    const returnTo = `${location.pathname}${location.search}${location.hash || ''}`;
-    if (!user) {
-      navigate('/login', { state: { from: returnTo } });
-      return;
-    }
-    setTripPickPlace(place);
-    setTripSearchQuery('');
-    setTripModalStep(1);
-  }, [place, user, navigate, location.pathname, location.search, location.hash]);
-
-  const closeTripModal = useCallback(() => {
-    setTripPickPlace(null);
-    setTripActiveId('');
-    setTripDayIndex(0);
-    setTripStartTime('');
-    setTripEndTime('');
-    setTripAddError('');
-    setTripSearchQuery('');
-    setTripModalStep(1);
-  }, []);
-
-  const selectedTrip = useMemo(
-    () => tripModalTrips.find((trip) => String(trip.id) === String(tripActiveId)) || null,
-    [tripModalTrips, tripActiveId]
-  );
-
-  useEffect(() => {
-    if (tripModalStep !== 2 || !tripPickPlace) return;
-    if (tripModalLoading) return;
-    if (tripModalTrips.length === 0) return;
-    if (!tripActiveId || !selectedTrip) setTripModalStep(1);
-  }, [tripModalStep, tripPickPlace, tripModalLoading, tripModalTrips.length, tripActiveId, selectedTrip]);
-
-  const selectedTripDayCount = useMemo(() => {
-    if (!selectedTrip) return 1;
-    const start = toDateOnly(selectedTrip.startDate);
-    const end = toDateOnly(selectedTrip.endDate);
-    return getDayCount(start || selectedTrip.startDate, end || selectedTrip.endDate);
-  }, [selectedTrip]);
-
-  const filteredTripOptions = useMemo(() => {
-    const q = tripSearchQuery.trim().toLowerCase();
-    if (!q) return tripModalTrips;
-    return tripModalTrips.filter((trip) => {
-      const haystack = `${trip?.name || ''} ${formatTripRange(trip.startDate, trip.endDate)}`.toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [tripModalTrips, tripSearchQuery]);
-
-  const liveTripValidationError = useMemo(() => {
-    if (!tripPickPlace || !selectedTrip) return 'Select a trip first.';
-    const startHm = normalizeHm(tripStartTime);
-    const endHm = normalizeHm(tripEndTime);
-    if (!startHm || !endHm) return 'Select start and end time.';
-    if (endHm <= startHm) return 'End time must be after start time.';
-
-    const start = toDateOnly(selectedTrip.startDate);
-    const end = toDateOnly(selectedTrip.endDate);
-    const dayCount = getDayCount(start || selectedTrip.startDate, end || selectedTrip.endDate);
-    const safeDayIndex = Math.min(Math.max(0, tripDayIndex), Math.max(0, dayCount - 1));
-    const days = ensureDaysWithSlots(selectedTrip.days, dayCount);
-    const daySlots = days[safeDayIndex]?.slots || [];
-    const placeId = String(tripPickPlace.id);
-    if (daySlots.some((slot) => String(slot.placeId) === placeId)) return 'This place is already in the selected day.';
-
-    const nextSlot = { placeId, startTime: `${startHm}:00`, endTime: `${endHm}:00`, notes: null };
-    if (hasOverlappingTimeSlots([...daySlots, nextSlot])) return 'Selected time conflicts with another place in this day.';
-    return '';
-  }, [tripPickPlace, selectedTrip, tripStartTime, tripEndTime, tripDayIndex]);
-
-  const addPlaceToTrip = useCallback(async () => {
-    if (!tripPickPlace || !selectedTrip || tripAddSaving) return;
-    if (liveTripValidationError) {
-      setTripAddError(liveTripValidationError);
-      return;
-    }
-    setTripAddError('');
-    const startHm = normalizeHm(tripStartTime);
-    const endHm = normalizeHm(tripEndTime);
-
-    const start = toDateOnly(selectedTrip.startDate);
-    const end = toDateOnly(selectedTrip.endDate);
-    const dayCount = getDayCount(start || selectedTrip.startDate, end || selectedTrip.endDate);
-    const safeDayIndex = Math.min(Math.max(0, tripDayIndex), Math.max(0, dayCount - 1));
-    const days = ensureDaysWithSlots(selectedTrip.days, dayCount).map((day) => ({
-      slots: Array.isArray(day?.slots) ? day.slots.map((slot) => ({ ...slot })) : [],
-    }));
-
-    const idStr = String(tripPickPlace.id);
-    const daySlots = days[safeDayIndex]?.slots || [];
-    const candidate = {
-      placeId: idStr,
-      startTime: `${startHm}:00`,
-      endTime: `${endHm}:00`,
-      notes: null,
-    };
-    const withCandidate = [...daySlots, candidate];
-    days[safeDayIndex] = { slots: withCandidate };
-    const payloadDays = buildTripDaysApiPayload(days, start || toDateOnly(selectedTrip.startDate));
-
-    setTripAddSaving(true);
-    try {
-      await api.user.updateTrip(selectedTrip.id, { days: payloadDays });
-      showToast((t('placeDiscover', 'addToTripSuccess') || '').replace('{name}', selectedTrip.name || ''), 'success');
-      closeTripModal();
-    } catch (err) {
-      setTripAddError(err?.message || t('placeDiscover', 'addToTripFailed'));
-    } finally {
-      setTripAddSaving(false);
-    }
-  }, [tripPickPlace, selectedTrip, tripAddSaving, tripStartTime, tripEndTime, tripDayIndex, liveTripValidationError, showToast, t, closeTripModal]);
-
-  useEffect(() => {
-    if (!tripPickPlace) return;
-    const onKey = (e) => {
-      if (e.key === 'Escape') closeTripModal();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [tripPickPlace, closeTripModal]);
-
-  useEffect(() => {
-    if (!selectedTrip) return;
-    const maxDay = Math.max(0, selectedTripDayCount - 1);
-    setTripDayIndex((prev) => Math.min(Math.max(0, prev), maxDay));
-  }, [selectedTrip, selectedTripDayCount]);
-
-  const handleBookingAction = useCallback(() => {
-    setInquiryIntent('booking');
-    setBookingStatus(null);
-    setBookingModalOpen(true);
-  }, []);
-
-  const handleHeroTouchStart = useCallback((e) => {
-    heroTouchStartX.current = e.touches?.[0]?.clientX ?? null;
-  }, []);
-
-  const handleHeroTouchEnd = useCallback(
-    (e) => {
-      const startX = heroTouchStartX.current;
-      const endX = e.changedTouches?.[0]?.clientX ?? null;
-      heroTouchStartX.current = null;
-      if (startX == null || endX == null || galleryUrls.length < 2) return;
-      const deltaX = endX - startX;
-      if (Math.abs(deltaX) < 40) return;
-      setGalleryIndex((i) => (deltaX < 0 ? (i + 1) % galleryUrls.length : (i - 1 + galleryUrls.length) % galleryUrls.length));
-    },
-    [galleryUrls.length]
-  );
-
-  const openExternalDirections = useCallback(() => {
-    const coords = getPlaceCoordinates(place);
-    const address =
-      place?.diningProfile && typeof place.diningProfile === 'object'
-        ? String(place.diningProfile.contactAddress || place.diningProfile.address || '').trim()
-        : '';
-    const query = address || place?.location || place?.name || 'Tripoli Lebanon';
-    const url =
-      coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)
-        ? `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}`
-        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  }, [place]);
-
-  const closeBookingModal = useCallback(() => {
-    if (bookingSending) return;
-    setBookingModalOpen(false);
-  }, [bookingSending]);
-
-  const submitBookingRequest = useCallback(
-    async (e) => {
-      e.preventDefault();
-      if (!place || bookingSending) return;
-      const phone = guestPhone.trim();
-      if ((phone.match(/\d/g) || []).length < 8) {
-        setBookingStatus({ type: 'err', text: t('detail', 'bookingPhoneRequired') || 'Please enter a valid phone number.' });
-        return;
-      }
-      const lines = [
-        `Booking request for ${place.name}`,
-        bookingDate ? `Date: ${bookingDate}` : '',
-        bookingTime ? `Time: ${bookingTime}` : '',
-        bookingGuests ? `Guests: ${bookingGuests}` : '',
-        bookingNotes.trim() ? `Notes: ${bookingNotes.trim()}` : '',
-      ].filter(Boolean);
-      const body = user
-        ? {
-            message: lines.join('\n'),
-            intent: 'booking',
-            guestEmail: guestEmail.trim(),
-            guestPhone: phone,
-          }
-        : {
-            message: lines.join('\n'),
-            intent: 'booking',
-            guestName: guestName.trim(),
-            guestEmail: guestEmail.trim(),
-            guestPhone: phone,
-          };
-
-      setBookingSending(true);
-      setBookingStatus(null);
-      try {
-        await api.places.inquiry(place.id, body);
-        setBookingStatus({ type: 'ok', text: t('detail', 'bookingRequestSent') || 'Booking request sent.' });
-        showToast(t('feedback', 'inquirySent'), 'success');
-        setBookingNotes('');
-        setBookingDate('');
-        setBookingTime('');
-        setBookingGuests('2');
-      } catch (err) {
-        const msg = err?.message || t('detail', 'reviewSubmitFailed') || 'Failed to send booking request.';
-        setBookingStatus({ type: 'err', text: msg });
-        showToast(t('feedback', 'actionFailed'), 'error');
-      } finally {
-        setBookingSending(false);
-      }
-    },
-    [place, bookingSending, guestPhone, bookingDate, bookingTime, bookingGuests, bookingNotes, user, guestEmail, guestName, showToast, t]
-  );
-
-  useEffect(() => {
-    if (!bookingModalOpen) return;
-    const onKey = (e) => {
-      if (e.key === 'Escape') closeBookingModal();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [bookingModalOpen, closeBookingModal]);
-
   if (loading) {
     return (
       <div className="place-detail place-detail--loading">
@@ -1081,9 +651,6 @@ export default function PlaceDetail() {
 
   const heroUrl = galleryUrls[galleryIndex] || null;
   const hasMultiGallery = galleryUrls.length > 1;
-  const diningPlace = isDiningPlace(place);
-  const diningSummary = buildDiningSummary(place);
-  const diningProfile = normalizeDiningProfile(place);
   const hoursEntries = normalizeHoursEntries(place.hours);
 
   const hours = place.hours;
@@ -1093,42 +660,12 @@ export default function PlaceDetail() {
       : Array.isArray(hours)
         ? hours.join(' - ')
         : hoursEntries.slice(0, 3).map((entry) => `${entry.label} ${entry.value}`).join(' - ');
-  const diningGallery = galleryUrls.slice(0, 4);
-  const diningSignals = [
-    ...diningSummary.bestFor,
-    ...diningSummary.features,
-    ...diningProfile.serviceModes,
-    ...diningProfile.dietaryOptions,
-  ]
-    .filter((item, index, arr) => arr.findIndex((x) => String(x).toLowerCase() === String(item).toLowerCase()) === index)
-    .slice(0, 8);
-  const diningFacts = [
-    place.price ? { icon: 'payments', label: translationOr(t, 'detail', 'priceRange', 'Price range'), value: place.price } : null,
-    hoursStr ? { icon: 'schedule', label: translationOr(t, 'detail', 'openingHours', 'Opening hours'), value: hoursStr } : null,
-    place.location ? { icon: 'location_on', label: translationOr(t, 'detail', 'location', 'Location'), value: place.location } : null,
-    place.rating != null
-      ? {
-          icon: 'star',
-          label: translationOr(t, 'detail', 'reviewsCount', 'Reviews'),
-          value: `${Number(place.rating).toFixed(1)}${place.reviewCount ? ` - ${place.reviewCount}` : ''}`,
-        }
-      : null,
-  ].filter(Boolean);
-  const diningTabs = [
-    { id: 'overview', label: t('detail', 'diningTabOverview') },
-    { id: 'menu', label: t('detail', 'diningTabMenu') },
-    { id: 'reviews', label: t('detail', 'diningTabReviews') },
-    { id: 'contact', label: t('detail', 'diningTabContact') },
-  ];
-  const mapEmbedUrl = getOpenStreetMapEmbedUrl(place);
-
-  const isDining = isDiningPlace(place);
 
   const reviewsContent = (
     <div className="place-detail-reviews-panel place-detail-reviews-panel--embedded">
       <p className="place-detail-engage-hint">{t('detail', 'reviewSiteHint')}</p>
 
-      {isDining && place.rating != null && (
+      {place.rating != null && (
         <div className="place-detail-app-rating-summary" style={{ padding: '24px', backgroundColor: 'var(--te-bg)', borderRadius: '16px', marginBottom: '24px', display: 'flex', gap: '32px', alignItems: 'center' }}>
           <div className="total-rating" style={{ textAlign: 'center' }}>
             <span className="big-num" style={{ fontSize: '3rem', fontWeight: 700 }}>{Number(place.rating).toFixed(1)}</span>
@@ -1283,621 +820,11 @@ export default function PlaceDetail() {
   );
 
 
-  const contactContent = (
-    <div className="place-detail-app-contact-blocks">
-      <div className="place-detail-app-contact-group">
-        {diningProfile.contactPhone && (
-          <a href={`tel:${diningProfile.contactPhone}`} className="place-detail-app-action-row">
-            <div className="action-icon call"><Icon name="call" size={24} /></div>
-            <div className="action-text">
-              <h4>{t('detail', 'callUs') || 'Call Restaurant'}</h4>
-              <span>{diningProfile.contactPhone}</span>
-            </div>
-            <Icon name="chevron_right" size={24} className="action-chevron" />
-          </a>
-        )}
-        <button type="button" onClick={openPlaceOnMap} className="place-detail-app-action-row">
-          <div className="action-icon map"><Icon name="directions" size={24} /></div>
-          <div className="action-text">
-            <h4>{t('detail', 'getDirections') || 'Get Directions'}</h4>
-            <span>{diningProfile.contactAddress || place.location || 'View on Map'}</span>
-          </div>
-          <Icon name="chevron_right" size={24} className="action-chevron" />
-        </button>
-        {diningProfile.socialMedia?.website && (
-          <a href={diningProfile.socialMedia.website} target="_blank" rel="noreferrer" className="place-detail-app-action-row">
-            <div className="action-icon web"><Icon name="language" size={24} /></div>
-            <div className="action-text">
-              <h4>{t('detail', 'website') || 'Website'}</h4>
-              <span>{t('detail', 'visitWebsite') || 'Visit Link'}</span>
-            </div>
-            <Icon name="chevron_right" size={24} className="action-chevron" />
-          </a>
-        )}
-        {diningProfile.socialMedia?.instagram && (
-          <a href={diningProfile.socialMedia.instagram} target="_blank" rel="noreferrer" className="place-detail-app-action-row">
-            <div className="action-icon insta"><Icon name="photo_camera" size={24} /></div>
-            <div className="action-text">
-              <h4>Instagram</h4>
-              <span>{t('detail', 'viewProfile') || 'View Profile'}</span>
-            </div>
-            <Icon name="chevron_right" size={24} className="action-chevron" />
-          </a>
-        )}
-      </div>
-    </div>
-  );
 
-  if (isDining) {
-    const totersHeroUrl = heroUrl;
-    return (
-      <div className="place-detail-app">
-        <header className="place-detail-app-hero">
-          <div
-            className="place-detail-app-hero-media"
-            onTouchStart={handleHeroTouchStart}
-            onTouchEnd={handleHeroTouchEnd}
-          >
-            {totersHeroUrl ? (
-              <img src={totersHeroUrl} alt={place.name} className="place-detail-app-hero-img" {...getDeliveryImgProps(totersHeroUrl, 'detailHero')} />
-            ) : (
-              <div className="place-detail-app-hero-fallback"><Icon name="restaurant" size={40} /></div>
-            )}
-            <div className="place-detail-app-hero-overlay" />
-            {hasMultiGallery && (
-              <>
-                <button
-                  type="button"
-                  className="place-detail-app-hero-nav place-detail-app-hero-nav--prev"
-                  onClick={() => setGalleryIndex((i) => (i - 1 + galleryUrls.length) % galleryUrls.length)}
-                  aria-label={t('detail', 'previousPhoto')}
-                >
-                  <Icon name="chevron_left" size={24} />
-                </button>
-                <button
-                  type="button"
-                  className="place-detail-app-hero-nav place-detail-app-hero-nav--next"
-                  onClick={() => setGalleryIndex((i) => (i + 1) % galleryUrls.length)}
-                  aria-label={t('detail', 'nextPhoto')}
-                >
-                  <Icon name="chevron_right" size={24} />
-                </button>
-              </>
-            )}
-            <Link to="/" className="place-detail-app-back-btn"><Icon name="arrow_back" size={24} /></Link>
-            <div className="place-detail-app-hero-actions">
-              <button
-                type="button"
-                className={`place-detail-app-hero-action ${isFavourite ? 'on' : ''}`}
-                onClick={toggleFavourite}
-                disabled={favouriteBusy}
-                aria-busy={favouriteBusy}
-              >
-                <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={24} />
-              </button>
-              <button type="button" className="place-detail-app-hero-action" onClick={handleShare}><Icon name="share" size={24} /></button>
-            </div>
-            {hasMultiGallery && (
-              <div className="place-detail-app-hero-gallery-ui">
-                <button
-                  type="button"
-                  className="place-detail-app-hero-gallery-count"
-                  onClick={() => openLightbox(galleryIndex)}
-                >
-                  {galleryIndex + 1} / {galleryUrls.length}
-                </button>
-                <div className="place-detail-app-hero-dots" role="tablist" aria-label={t('detail', 'gallery')}>
-                  {galleryUrls.map((url, index) => (
-                    <button
-                      key={url}
-                      type="button"
-                      role="tab"
-                      aria-selected={index === galleryIndex}
-                      className={`place-detail-app-hero-dot ${index === galleryIndex ? 'place-detail-app-hero-dot--on' : ''}`}
-                      onClick={() => setGalleryIndex(index)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          
-          <div className="place-detail-app-info-card">
-            <div className="place-detail-app-info-header">
-              <h1 className="place-detail-app-name">{place.name}</h1>
-              <LiveStatus hours={place.hours} t={t} />
-            </div>
-            <div className="place-detail-app-meta">
-              {place.rating != null && place.rating > 0 && <div className="place-detail-app-rating"><Icon name="star" size={16} /><span>{Number(place.rating).toFixed(1)}</span></div>}
-              <div className="place-detail-app-dot" />
-              <span className="place-detail-app-cuisines">{diningSummary.cuisines.slice(0, 2).join(', ')}</span>
-              {place.price && <><div className="place-detail-app-dot" /><span className="place-detail-app-price">{place.price}</span></>}
-            </div>
-          </div>
-        </header>
-
-        <nav className="place-detail-app-tabs">
-          <div className="place-detail-app-tabs-scroll">
-            {diningTabs.map(tab => (
-              <button key={tab.id} type="button" className={`place-detail-app-tab ${diningTab === tab.id ? 'active' : ''}`} onClick={() => setDiningTab(tab.id)}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </nav>
-
-        <main className="place-detail-app-main-content">
-          {diningTab === 'overview' && (
-            <div className="place-detail-app-overview">
-              <section className="place-detail-app-section place-detail-app-section--actions">
-                <h3>{t('detail', 'diningBestForTitle') || 'Best for your plan'}</h3>
-                <div className="place-detail-app-primary-actions">
-                  <button type="button" className="place-detail-app-primary-btn place-detail-app-primary-btn--booking" onClick={handleBookingAction}>
-                    <Icon name="event_available" size={18} />
-                    <span>{t('detail', 'intentBooking') || 'Booking / reservation'}</span>
-                  </button>
-                  <button type="button" className="place-detail-app-primary-btn" onClick={openAddToTrip}>
-                    <Icon name="event_note" size={18} />
-                    <span>{t('placeDiscover', 'addToTrip') || 'Add to trip'}</span>
-                  </button>
-                  <button type="button" className="place-detail-app-primary-btn place-detail-app-primary-btn--ghost" onClick={openPlaceOnMap}>
-                    <Icon name="map" size={18} />
-                    <span>{t('detail', 'viewOnMap') || 'View on map'}</span>
-                  </button>
-                </div>
-                {diningSignals.length > 0 && (
-                  <div className="place-detail-app-tags">
-                    {diningSignals.slice(0, 6).map((item) => <span key={item} className="place-detail-app-tag alt">{item}</span>)}
-                  </div>
-                )}
-              </section>
-
-              <section className="place-detail-app-section">
-                <h3>{t('detail', 'description') || 'About'}</h3>
-                <p>{place.description}</p>
-                <div className="place-detail-app-tags">
-                  {diningSummary.cuisines.map(c => <span key={c} className="place-detail-app-tag">{c}</span>)}
-                  {diningSummary.features.map(f => <span key={f} className="place-detail-app-tag alt">{f}</span>)}
-                </div>
-              </section>
-              
-              <section className="place-detail-app-section hours-section">
-                <h3>{t('detail', 'openingHours') || 'Opening Hours'}</h3>
-                <div className="place-detail-app-hours">
-                  {hoursEntries.map((e) => (
-                    <div key={e.key} className="place-detail-app-hour-row">
-                      <span className="day">{e.label}</span>
-                      <span className="time">{e.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="place-detail-app-section">
-                <h3>{t('detail', 'location') || 'Location'}</h3>
-                <p className="place-detail-app-address">{place.location}</p>
-                <button className="place-detail-app-map-btn" onClick={openPlaceOnMap}>
-                  <Icon name="directions" size={18} /> {t('detail', 'viewOnMap') || 'View on Map'}
-                </button>
-              </section>
-
-              {promotions.length > 0 && (
-                <section className="place-detail-app-section">
-                  <h3>{t('detail', 'offersTitle') || 'Coupons & offers'}</h3>
-                  <div className="offer-card-scope">
-                    <div className="ig-offer-list">
-                      {promotions.map((pr, i) => (
-                        <OfferCard
-                          key={pr.id}
-                          item={pr}
-                          index={i}
-                          showPlaceLink={false}
-                          t={t}
-                          user={user}
-                          redeemedPromotionIds={redeemedPromotionIds}
-                          onRedeemed={(promoId) =>
-                            setRedeemedPromotionIds((prev) => (prev.includes(promoId) ? prev : [...prev, promoId]))
-                          }
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </section>
-              )}
-            </div>
-          )}
-
-          {diningTab === 'menu' && (
-            <div className="place-detail-app-menu">
-              {diningProfile.menuSections?.length > 0 ? (
-                diningProfile.menuSections.map(section => (
-                  <section key={section.title} className="place-detail-app-menu-section">
-                    <h4>{section.title}</h4>
-                    <div className="place-detail-app-menu-items">
-                      {section.items.map(item => (
-                        <div key={item.name} className="place-detail-app-menu-item">
-                          <div className="info">
-                            <span className="name">{item.name}</span>
-                            <span className="desc">{item.description}</span>
-                            <span className="price">{item.price}</span>
-                          </div>
-                          <button className="add-btn"><Icon name="add" size={20} /></button>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ))
-              ) : (
-                <div className="place-detail-app-empty">{t('detail', 'menuEmpty') || 'Menu not available yet'}</div>
-              )}
-            </div>
-          )}
-
-          {diningTab === 'reviews' && reviewsContent}
-          {diningTab === 'contact' && (
-            <div className="place-detail-app-contact-blocks">
-              {mapEmbedUrl && (
-                <section className="place-detail-app-map-card">
-                  <div className="place-detail-app-map-card__head">
-                    <div>
-                      <h3>{t('detail', 'viewOnMap') || 'View on map'}</h3>
-                      <p>{diningProfile.contactAddress || place.location || place.name}</p>
-                    </div>
-                    <button type="button" className="place-detail-app-map-card__cta" onClick={openExternalDirections}>
-                      <Icon name="directions" size={18} />
-                      <span>{t('detail', 'getDirections') || 'Get Directions'}</span>
-                    </button>
-                  </div>
-                  <div className="place-detail-app-map-card__frame">
-                    <iframe
-                      title={`${place.name} map`}
-                      src={mapEmbedUrl}
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                    />
-                  </div>
-                </section>
-              )}
-              <div className="place-detail-app-contact-group">
-                {(diningProfile.contactAddress || place.location) && (
-                  <button type="button" onClick={openPlaceOnMap} className="place-detail-app-action-row">
-                    <div className="action-icon pin"><Icon name="location_on" size={24} /></div>
-                    <div className="action-text">
-                      <h4>{t('detail', 'viewOnMap') || 'See on map'}</h4>
-                      <span>{diningProfile.contactAddress || place.location}</span>
-                    </div>
-                    <Icon name="chevron_right" size={24} className="action-chevron" />
-                  </button>
-                )}
-                {(diningProfile.contactAddress || place.location || place.latitude != null || place.longitude != null) && (
-                  <button type="button" onClick={openExternalDirections} className="place-detail-app-action-row">
-                    <div className="action-icon map"><Icon name="directions" size={24} /></div>
-                    <div className="action-text">
-                      <h4>{t('detail', 'getDirections') || 'Get Directions'}</h4>
-                      <span>{diningProfile.contactAddress || place.location || 'Open in Maps'}</span>
-                    </div>
-                    <Icon name="chevron_right" size={24} className="action-chevron" />
-                  </button>
-                )}
-                {diningProfile.contactPhone && (
-                  <a href={`tel:${diningProfile.contactPhone}`} className="place-detail-app-action-row">
-                    <div className="action-icon call"><Icon name="call" size={24} /></div>
-                    <div className="action-text">
-                      <h4>{t('detail', 'callUs') || 'Call Restaurant'}</h4>
-                      <span>{diningProfile.contactPhone}</span>
-                    </div>
-                    <Icon name="chevron_right" size={24} className="action-chevron" />
-                  </a>
-                )}
-                {diningProfile.contactEmail && (
-                  <a href={`mailto:${diningProfile.contactEmail}`} className="place-detail-app-action-row">
-                    <div className="action-icon email"><Icon name="mail" size={24} /></div>
-                    <div className="action-text">
-                      <h4>{t('detail', 'email') || 'Email'}</h4>
-                      <span>{diningProfile.contactEmail}</span>
-                    </div>
-                    <Icon name="chevron_right" size={24} className="action-chevron" />
-                  </a>
-                )}
-                {(diningProfile.contactAddress || place.location) && (
-                  <div className="place-detail-app-action-row place-detail-app-action-row--static">
-                    <div className="action-icon info"><Icon name="info" size={24} /></div>
-                    <div className="action-text">
-                      <h4>{t('detail', 'location') || 'Location'}</h4>
-                      <span>{diningProfile.contactAddress || place.location}</span>
-                    </div>
-                  </div>
-                )}
-                {diningProfile.socialMedia?.website && (
-                  <a href={diningProfile.socialMedia.website} target="_blank" rel="noreferrer" className="place-detail-app-action-row">
-                    <div className="action-icon web"><Icon name="language" size={24} /></div>
-                    <div className="action-text">
-                      <h4>{t('detail', 'website') || 'Website'}</h4>
-                      <span>{t('detail', 'visitWebsite') || 'Visit Link'}</span>
-                    </div>
-                    <Icon name="chevron_right" size={24} className="action-chevron" />
-                  </a>
-                )}
-                {diningProfile.socialMedia?.instagram && (
-                  <a href={diningProfile.socialMedia.instagram} target="_blank" rel="noreferrer" className="place-detail-app-action-row">
-                    <div className="action-icon insta"><Icon name="photo_camera" size={24} /></div>
-                    <div className="action-text">
-                      <h4>Instagram</h4>
-                      <span>{t('detail', 'viewProfile') || 'View Profile'}</span>
-                    </div>
-                    <Icon name="chevron_right" size={24} className="action-chevron" />
-                  </a>
-                )}
-                {diningProfile.socialMedia?.facebook && (
-                  <a href={diningProfile.socialMedia.facebook} target="_blank" rel="noreferrer" className="place-detail-app-action-row">
-                    <div className="action-icon facebook"><Icon name="thumb_up" size={24} /></div>
-                    <div className="action-text">
-                      <h4>Facebook</h4>
-                      <span>{t('detail', 'viewProfile') || 'View Profile'}</span>
-                    </div>
-                    <Icon name="chevron_right" size={24} className="action-chevron" />
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-        </main>
-
-        {tripPickPlace && (
-          <div className="place-detail-app-modal-backdrop" role="presentation" onClick={closeTripModal}>
-            <div
-              className="place-detail-app-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="place-detail-trip-modal-title"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="place-detail-app-modal-header">
-                <h2 id="place-detail-trip-modal-title" className="place-detail-app-modal-title">
-                  {t('placeDiscover', 'addToTripTitle')}
-                </h2>
-                <button
-                  type="button"
-                  className="place-detail-app-modal-close"
-                  onClick={closeTripModal}
-                  aria-label={t('placeDiscover', 'modalClose') || 'Close'}
-                >
-                  <Icon name="close" size={22} />
-                </button>
-              </div>
-              {tripModalStep === 1 ? (
-                <>
-                  <p className="place-detail-app-modal-place">{tripPickPlace.name}</p>
-                  <p className="place-detail-app-modal-hint">{t('placeDiscover', 'addToTripHint')}</p>
-                  <p className="place-detail-app-modal-step">{t('placeDiscover', 'addToTripStepChoose')}</p>
-                  {tripModalLoading ? (
-                    <p className="place-detail-app-modal-loading">{t('placeDiscover', 'tripsLoading')}</p>
-                  ) : tripModalTrips.length === 0 ? (
-                    <div className="place-detail-app-modal-empty">
-                      <p>{t('placeDiscover', 'addToTripEmpty')}</p>
-                      <Link to="/plan" className="place-detail-app-modal-primary" onClick={closeTripModal}>
-                        {t('home', 'createTrip')}
-                      </Link>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="place-detail-app-trip-search-wrap">
-                        <input
-                          type="search"
-                          className="place-detail-app-trip-search"
-                          value={tripSearchQuery}
-                          onChange={(e) => setTripSearchQuery(e.target.value)}
-                          placeholder="Search trip..."
-                          aria-label="Search trip"
-                        />
-                      </div>
-                      <div className="place-detail-app-trip-list">
-                        {filteredTripOptions.map((trip) => (
-                          <button
-                            key={trip.id}
-                            type="button"
-                            className={`place-detail-app-trip-item ${String(trip.id) === String(tripActiveId) ? 'is-active' : ''}`}
-                            onClick={() => {
-                              setTripActiveId(String(trip.id));
-                              setTripAddError('');
-                            }}
-                            disabled={tripAddSaving}
-                          >
-                            <span className="place-detail-app-trip-name">
-                              {trip.name}
-                              {trip.startDate && trip.endDate ? (
-                                <small>{formatTripRange(trip.startDate, trip.endDate)}</small>
-                              ) : null}
-                            </span>
-                            <span className="place-detail-app-trip-arrow">
-                              {String(trip.id) === String(tripActiveId) ? (
-                                <Icon name="check" size={18} />
-                              ) : (
-                                <Icon name="chevron_right" size={18} />
-                              )}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                      {!tripModalLoading && filteredTripOptions.length === 0 ? (
-                        <p className="place-detail-app-modal-loading">No trips match your search.</p>
-                      ) : null}
-                      <div className="place-detail-app-trip-step-footer">
-                        <button
-                          type="button"
-                          className="place-detail-app-modal-primary place-detail-app-modal-primary--full"
-                          disabled={!tripActiveId || tripAddSaving}
-                          onClick={() => {
-                            setTripAddError('');
-                            setTripModalStep(2);
-                          }}
-                        >
-                          {t('placeDiscover', 'addToTripContinue')}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </>
-              ) : null}
-              {tripModalStep === 2 && selectedTrip ? (
-                <div className="place-detail-app-trip-editor place-detail-app-trip-editor--solo">
-                  <button
-                    type="button"
-                    className="place-detail-app-modal-back"
-                    onClick={() => {
-                      setTripAddError('');
-                      setTripModalStep(1);
-                    }}
-                    disabled={tripAddSaving}
-                  >
-                    <Icon name="arrow_back" size={20} aria-hidden />
-                    <span>{t('placeDiscover', 'addToTripBack')}</span>
-                  </button>
-                  <p className="place-detail-app-modal-place">{tripPickPlace.name}</p>
-                  <p className="place-detail-app-trip-picked">
-                    <span className="place-detail-app-trip-picked-name">{selectedTrip.name}</span>
-                    <span className="place-detail-app-trip-picked-dates">
-                      {formatTripRange(selectedTrip.startDate, selectedTrip.endDate)}
-                    </span>
-                  </p>
-                  <p className="place-detail-app-modal-step">{t('placeDiscover', 'addToTripStepTiming')}</p>
-                  <div className="place-detail-app-booking-grid">
-                    <label className="place-detail-app-booking-field">
-                      <span>Day</span>
-                      <select
-                        value={tripDayIndex}
-                        onChange={(e) => setTripDayIndex(Number.parseInt(e.target.value, 10) || 0)}
-                        disabled={tripAddSaving}
-                      >
-                        {Array.from({ length: selectedTripDayCount }, (_, idx) => {
-                          const dateLabel = getDateForDayIndex(selectedTrip.startDate, idx);
-                          return (
-                            <option key={idx} value={idx}>
-                              {`Day ${idx + 1}${dateLabel ? ` - ${dateLabel}` : ''}`}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </label>
-                    <label className="place-detail-app-booking-field">
-                      <span>Start time</span>
-                      <input type="time" value={tripStartTime} onChange={(e) => setTripStartTime(e.target.value)} required />
-                    </label>
-                  </div>
-                  <div className="place-detail-app-booking-grid">
-                    <label className="place-detail-app-booking-field">
-                      <span>End time</span>
-                      <input type="time" value={tripEndTime} onChange={(e) => setTripEndTime(e.target.value)} required />
-                    </label>
-                    <div className="place-detail-app-trip-actions">
-                      <button
-                        type="button"
-                        className="place-detail-app-modal-primary place-detail-app-modal-primary--full"
-                        onClick={addPlaceToTrip}
-                        disabled={tripAddSaving || !!liveTripValidationError}
-                      >
-                        {tripAddSaving ? 'Saving...' : 'Add to selected trip'}
-                      </button>
-                    </div>
-                  </div>
-                  {tripAddError || liveTripValidationError ? (
-                    <p className="place-detail-error-inline" role="alert">
-                      {tripAddError || liveTripValidationError}
-                    </p>
-                  ) : (
-                    <p className="place-detail-toast-inline" role="status">
-                      Timing looks good.
-                    </p>
-                  )}
-                </div>
-              ) : null}
-            </div>
-          </div>
-        )}
-
-        {bookingModalOpen && (
-          <div className="place-detail-app-modal-backdrop" role="presentation" onClick={closeBookingModal}>
-            <div
-              className="place-detail-app-modal place-detail-app-modal--booking"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="place-detail-booking-modal-title"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="place-detail-app-modal-header">
-                <h2 id="place-detail-booking-modal-title" className="place-detail-app-modal-title">
-                  {t('detail', 'intentBooking') || 'Booking / reservation'}
-                </h2>
-                <button
-                  type="button"
-                  className="place-detail-app-modal-close"
-                  onClick={closeBookingModal}
-                  aria-label={t('placeDiscover', 'modalClose') || 'Close'}
-                >
-                  <Icon name="close" size={22} />
-                </button>
-              </div>
-              <p className="place-detail-app-modal-place">{place.name}</p>
-              <form className="place-detail-app-booking-form" onSubmit={submitBookingRequest}>
-                {!user && (
-                  <label className="place-detail-app-booking-field">
-                    <span>{t('detail', 'name') || 'Name'}</span>
-                    <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} required />
-                  </label>
-                )}
-                <div className="place-detail-app-booking-grid">
-                  <label className="place-detail-app-booking-field">
-                    <span>{t('detail', 'date') || 'Date'}</span>
-                    <input type="date" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} required />
-                  </label>
-                  <label className="place-detail-app-booking-field">
-                    <span>{t('detail', 'time') || 'Time'}</span>
-                    <input type="time" value={bookingTime} onChange={(e) => setBookingTime(e.target.value)} required />
-                  </label>
-                </div>
-                <div className="place-detail-app-booking-grid">
-                  <label className="place-detail-app-booking-field">
-                    <span>{t('detail', 'guests') || 'Guests'}</span>
-                    <input type="number" min="1" max="30" value={bookingGuests} onChange={(e) => setBookingGuests(e.target.value)} required />
-                  </label>
-                  <label className="place-detail-app-booking-field">
-                    <span>{t('detail', 'mobilePhone') !== 'mobilePhone' ? t('detail', 'mobilePhone') : 'Mobile phone'}</span>
-                    <input type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} required />
-                  </label>
-                </div>
-                <label className="place-detail-app-booking-field">
-                  <span>{t('detail', 'email') || 'Email'}</span>
-                  <input type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} />
-                </label>
-                <label className="place-detail-app-booking-field">
-                  <span>{t('detail', 'note') || 'Notes'}</span>
-                  <textarea rows={4} value={bookingNotes} onChange={(e) => setBookingNotes(e.target.value)} placeholder={t('detail', 'inquiryBookingLead') || 'Any seating, timing, or celebration details'} />
-                </label>
-                {bookingStatus?.type === 'ok' ? <p className="place-detail-toast-inline" role="status">{bookingStatus.text}</p> : null}
-                {bookingStatus?.type === 'err' ? <p className="place-detail-error-inline" role="alert">{bookingStatus.text}</p> : null}
-                <div className="place-detail-app-booking-actions">
-                  {diningProfile.contactPhone ? (
-                    <a href={`tel:${diningProfile.contactPhone}`} className="place-detail-app-primary-btn place-detail-app-primary-btn--ghost">
-                      <Icon name="call" size={18} />
-                      <span>{t('detail', 'callUs') || 'Call Restaurant'}</span>
-                    </a>
-                  ) : null}
-                  <button type="submit" className="place-detail-app-primary-btn place-detail-app-primary-btn--booking" disabled={bookingSending}>
-                    <Icon name="event_available" size={18} />
-                    <span>{bookingSending ? (t('detail', 'loading') || 'Sending') : (t('detail', 'intentBooking') || 'Booking / reservation')}</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
     <div className="place-detail">
-      <div className="place-detail-container">
+      <div className="place-detail-container place-detail-shell">
         <nav className="place-detail-breadcrumb" aria-label="Breadcrumb">
           <ol className="place-detail-breadcrumb-list">
             <li><Link to="/">{t('nav', 'home')}</Link></li>
@@ -1909,9 +836,10 @@ export default function PlaceDetail() {
         <Link to="/discover" className="place-detail-back">
           <Icon name="arrow_back" size={20} /> {t('detail', 'backToExplore')}
         </Link>
+      </div>
 
-        <article className="place-detail-article">
-          <header className={`place-detail-hero ${hasMultiGallery ? 'place-detail-hero--gallery' : ''}`}>
+      <article className="place-detail-article place-detail-article--bleed">
+          <header className={`place-detail-hero place-detail-hero--fullbleed ${hasMultiGallery ? 'place-detail-hero--gallery' : ''}`}>
             {heroUrl && (
               <img
                 key={heroUrl}
@@ -2009,6 +937,7 @@ export default function PlaceDetail() {
             </div>
           </header>
 
+          <div className="place-detail-container place-detail-body">
           <div className="place-detail-actions">
             <button type="button" className="place-detail-btn place-detail-btn--primary" onClick={openPlaceOnMap}>
               <Icon name="map" size={20} /> {t('detail', 'viewOnMap')}
@@ -2045,219 +974,6 @@ export default function PlaceDetail() {
             <InfoRow icon="schedule" label={t('detail', 'duration')} value={place.duration} />
             <InfoRow icon="payments" label={t('detail', 'priceRange')} value={place.price} />
           </div>
-
-          {diningPlace && (
-            <section className="place-detail-section place-detail-dining" aria-labelledby="place-dining-heading">
-              <div className="place-detail-dining-shell">
-                <div className="place-detail-dining-stage">
-                  <div className="place-detail-dining-stage-media">
-                    {heroUrl ? (
-                      <img
-                        alt={place.name || ''}
-                        loading="lazy"
-                        decoding="async"
-                        className="place-detail-dining-stage-image"
-                        {...getDeliveryImgProps(heroUrl, 'detailHero')}
-                      />
-                    ) : (
-                      <div className="place-detail-dining-stage-fallback">
-                        <Icon name="restaurant" size={34} />
-                      </div>
-                    )}
-                    <div className="place-detail-dining-stage-scrim" aria-hidden="true" />
-                    {diningGallery.length > 1 ? (
-                      <div className="place-detail-dining-stage-thumbs" aria-label={translationOr(t, 'detail', 'gallery', 'Gallery')}>
-                        {diningGallery.map((url, index) => (
-                          <button
-                            key={url}
-                            type="button"
-                            className={`place-detail-dining-stage-thumb ${galleryUrls[galleryIndex] === url ? 'place-detail-dining-stage-thumb--on' : ''}`}
-                            onClick={() => setGalleryIndex(index)}
-                            aria-label={`${translationOr(t, 'detail', 'preview', 'Preview')} ${index + 1}`}
-                          >
-                            <img alt="" loading="lazy" decoding="async" {...getDeliveryImgProps(url, 'thumb')} />
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="place-detail-dining-stage-panel">
-                    <div className="place-detail-dining-head">
-                      <div className="place-detail-dining-head-copy">
-                        <span className="place-detail-dining-kicker">{t('detail', 'diningSectionEyebrow')}</span>
-                        <h2 id="place-dining-heading" className="place-detail-section-title">
-                          {t('detail', 'diningSectionTitle')}
-                        </h2>
-                        <p className="place-detail-dining-sub">{t('detail', 'diningSectionSub')}</p>
-                      </div>
-                    </div>
-
-                    {diningFacts.length > 0 ? (
-                      <div className="place-detail-dining-stage-facts">
-                        {diningFacts.map((fact) => (
-                          <article key={`${fact.label}-${fact.value}`} className="place-detail-dining-stage-fact">
-                            <span className="place-detail-dining-stage-fact-icon" aria-hidden="true">
-                              <Icon name={fact.icon} size={18} />
-                            </span>
-                            <div>
-                              <span className="place-detail-dining-stage-fact-label">{fact.label}</span>
-                              <strong className="place-detail-dining-stage-fact-value">{fact.value}</strong>
-                            </div>
-                          </article>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    <div className="place-detail-dining-hero-rail">
-                      {diningSignals.map((item) => (
-                        <span key={item} className="place-detail-dining-hero-pill">{item}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-              <div className="place-detail-dining-toolbar">
-                <div className="place-detail-dining-tabs" role="tablist" aria-label={t('detail', 'diningSectionTitle')}>
-                  {diningTabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={diningTab === tab.id}
-                      className={`place-detail-dining-tab ${diningTab === tab.id ? 'place-detail-dining-tab--on' : ''}`}
-                      onClick={() => setDiningTab(tab.id)}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="place-detail-dining-toolbar-actions">
-                  <button
-                    type="button"
-                    className="place-detail-btn place-detail-btn--secondary place-detail-dining-cta"
-                    onClick={() => {
-                      const el = document.getElementById('place-proposal');
-                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }}
-                  >
-                    <Icon name="chat" size={20} />
-                    {t('detail', 'diningContactCta')}
-                  </button>
-                  <button
-                    type="button"
-                    className="place-detail-btn place-detail-btn--ghost place-detail-dining-cta"
-                    onClick={openPlaceOnMap}
-                  >
-                    <Icon name="map" size={20} />
-                    {t('detail', 'diningMapCta')}
-                  </button>
-                </div>
-              </div>
-
-              {diningTab === 'overview' && (
-                <div className="place-detail-dining-grid">
-                  <article className="place-detail-dining-card">
-                    <div className="place-detail-dining-card-icon" aria-hidden="true">
-                      <Icon name="menu_book" size={22} />
-                    </div>
-                    <h3>{t('detail', 'diningMenuTitle')}</h3>
-                    <p>{diningProfile.menuNote || t('detail', 'diningMenuHint')}</p>
-                    {diningSummary.cuisines.length > 0 && (
-                      <div className="place-detail-dining-chip-list">
-                        {diningSummary.cuisines.map((item) => (
-                          <span key={item} className="place-detail-dining-chip">{item}</span>
-                        ))}
-                      </div>
-                    )}
-                  </article>
-
-                  <article className="place-detail-dining-card">
-                    <div className="place-detail-dining-card-icon" aria-hidden="true">
-                      <Icon name="event_available" size={22} />
-                    </div>
-                    <h3>{t('detail', 'diningBookingTitle')}</h3>
-                    <p>{place.price ? `${t('detail', 'priceRange')}: ${place.price}` : t('detail', 'diningBookingHint')}</p>
-                    <div className="place-detail-dining-meta-list">
-                      {hoursStr ? <span>{hoursStr}</span> : null}
-                      {place.location ? <span>{place.location}</span> : null}
-                    </div>
-                  </article>
-
-                  <article className="place-detail-dining-card">
-                    <div className="place-detail-dining-card-icon" aria-hidden="true">
-                      <Icon name="local_dining" size={22} />
-                    </div>
-                    <h3>{t('detail', 'diningBestForTitle')}</h3>
-                    <p>{diningProfile.atmosphere || t('detail', 'diningBestForHint')}</p>
-                    {([...diningSummary.bestFor, ...diningSummary.features, ...diningProfile.dietaryOptions].length > 0) && (
-                      <div className="place-detail-dining-chip-list">
-                        {[...diningSummary.bestFor, ...diningSummary.features, ...diningProfile.dietaryOptions].slice(0, 8).map((item) => (
-                          <span key={item} className="place-detail-dining-chip">{item}</span>
-                        ))}
-                      </div>
-                    )}
-                  </article>
-                </div>
-              )}
-
-              {diningTab === 'menu' && (
-                <div className="place-detail-dining-menu">
-                  {diningProfile.signatureDishes.length > 0 && (
-                    <div className="place-detail-dining-featured">
-                      <h3 className="place-detail-dining-panel-title">{t('detail', 'diningSignatureTitle')}</h3>
-                      <div className="place-detail-dining-featured-grid">
-                        {diningProfile.signatureDishes.map((dish) => (
-                          <article key={`${dish.name}-${dish.price}`} className="place-detail-dining-dish">
-                            <div className="place-detail-dining-dish-head">
-                              <strong>{dish.name}</strong>
-                              {dish.price ? <span>{dish.price}</span> : null}
-                            </div>
-                            {dish.badge ? <span className="place-detail-dining-dish-badge">{dish.badge}</span> : null}
-                            {dish.description ? <p>{dish.description}</p> : null}
-                          </article>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {diningProfile.menuSections.length > 0 ? (
-                    <div className="place-detail-dining-menu-sections">
-                      {diningProfile.menuSections.map((section) => (
-                        <section key={section.title || section.note} className="place-detail-dining-menu-section">
-                          {section.title ? <h3 className="place-detail-dining-panel-title">{section.title}</h3> : null}
-                          {section.note ? <p className="place-detail-dining-menu-note">{section.note}</p> : null}
-                          <div className="place-detail-dining-menu-items">
-                            {section.items.map((item) => (
-                              <article key={`${section.title}-${item.name}-${item.price}`} className="place-detail-dining-menu-item">
-                                <div className="place-detail-dining-menu-item-head">
-                                  <strong>{item.name}</strong>
-                                  {item.price ? <span>{item.price}</span> : null}
-                                </div>
-                                {item.badge ? <span className="place-detail-dining-dish-badge">{item.badge}</span> : null}
-                                {item.description ? <p>{item.description}</p> : null}
-                              </article>
-                            ))}
-                          </div>
-                        </section>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="place-detail-dining-empty">
-                      <Icon name="menu_book" size={30} />
-                      <h3>{t('detail', 'diningMenuEmptyTitle')}</h3>
-                      <p>{t('detail', 'diningMenuEmptyBody')}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {diningTab === 'reviews' && reviewsContent}
-
-              {diningTab === 'contact' && contactContent}
-              </div>
-            </section>
-          )}
 
           {place.description && (
             <section className="place-detail-section" aria-labelledby="place-description-heading">
@@ -2305,7 +1021,7 @@ export default function PlaceDetail() {
                 </div>
               )}
 
-              {!diningPlace && <div className="place-detail-engage-block place-detail-reviews-box">
+              <div className="place-detail-engage-block place-detail-reviews-box">
                 <button
                   type="button"
                   id="place-reviews-heading"
@@ -2342,7 +1058,7 @@ export default function PlaceDetail() {
                     {reviewsContent}
                   </div>
                 )}
-              </div>}
+              </div>
 
               {user && (
                 <div className="place-detail-engage-block place-detail-checkin">
@@ -2360,8 +1076,17 @@ export default function PlaceDetail() {
                   {checkinMsg && <p className="place-detail-toast-inline" role="status">{checkinMsg}</p>}
                 </div>
               )}
-              <form className="place-detail-inquiry" onSubmit={submitInquiry}>
-                <h3 className="place-detail-engage-subtitle">{t('detail', 'engageContactTitle')}</h3>
+              <div className="place-detail-chat">
+                <div className="place-detail-chat__head">
+                  <div className="place-detail-chat__avatar" aria-hidden="true">
+                    <Icon name="chat" size={22} />
+                  </div>
+                  <div className="place-detail-chat__head-text">
+                    <p className="place-detail-chat__label">{t('detail', 'engageContactTitle')}</p>
+                    <p className="place-detail-chat__place">{place.name}</p>
+                  </div>
+                </div>
+                <form className="place-detail-chat__form place-detail-inquiry" onSubmit={submitInquiry}>
                 <div className="place-detail-intent-tabs" role="tablist" aria-label={t('detail', 'engageContactTitle')}>
                   <button
                     type="button"
@@ -2461,29 +1186,42 @@ export default function PlaceDetail() {
                     }
                   />
                 </label>
-                <button
-                  type="submit"
-                  className="place-detail-btn place-detail-btn--primary"
-                  disabled={
-                    inqSending ||
-                    inqMessage.trim().length < 3 ||
-                    (guestPhone.trim().match(/\d/g) || []).length < 8
-                  }
-                >
-                  {inqSending ? '…' : t('detail', 'sendMessage')}
-                </button>
+                <div className="place-detail-chat__composer-actions">
+                  <button
+                    type="submit"
+                    className="place-detail-btn place-detail-btn--primary place-detail-chat__send"
+                    disabled={
+                      inqSending ||
+                      inqMessage.trim().length < 3 ||
+                      (guestPhone.trim().match(/\d/g) || []).length < 8
+                    }
+                  >
+                    {inqSending ? (
+                      <span className="place-detail-chat__sending" aria-hidden="true">
+                        â€¦
+                      </span>
+                    ) : (
+                      <>
+                        <Icon name="send" size={18} aria-hidden="true" />
+                        <span>{t('detail', 'sendMessage')}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
                 {inqStatus === 'sent' && (
                   <p className="place-detail-toast-inline" role="status">
                     {t('detail', 'inquirySent')}
                   </p>
                 )}
                 {inqStatus && inqStatus !== 'sent' && <p className="place-detail-error-inline">{inqStatus}</p>}
-              </form>
+                </form>
+              </div>
           </section>
 
           <footer className="place-detail-footer">
             <p className="place-detail-footer-notice">{t('detail', 'footerNotice')}</p>
           </footer>
+          </div>
           {copyToast && (
             <div className="place-detail-toast" role="status">
               {t('detail', 'linkCopied') || 'Link copied!'}
@@ -2547,7 +1285,7 @@ export default function PlaceDetail() {
             </div>
           )}
         </article>
-      </div>
     </div>
   );
 }
+
