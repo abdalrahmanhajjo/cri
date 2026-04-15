@@ -423,10 +423,17 @@ export default function PlaceDetail() {
         })
         .catch((e) => {
           const code = e?.data?.code;
-          if (code === 'LOCATION_REQUIRED') setCheckinMsg(t('detail', 'checkInNeedLocation'));
-          else if (code === 'TOO_FAR') setCheckinMsg(t('detail', 'checkInTooFar'));
-          else setCheckinMsg(e.message || t('detail', 'checkInFailed'));
-          showToast(t('feedback', 'actionFailed'), 'error');
+          if (code === 'LOCATION_REQUIRED') {
+            setCheckinMsg(t('detail', 'checkInNeedLocation'));
+            return;
+          }
+          if (code === 'TOO_FAR') {
+            setCheckinMsg(t('detail', 'checkInTooFar'));
+            return;
+          }
+          const msg = e.message || t('detail', 'checkInFailed');
+          setCheckinMsg(msg);
+          showToast(msg, 'error');
         });
     };
 

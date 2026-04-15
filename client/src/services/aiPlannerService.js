@@ -1356,7 +1356,7 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
     return { text: outText, slots, tripSettings };
   } catch (e) {
     if (e instanceof AIPlannerApiError) throw e;
-    return { text: 'Something went wrong. Please try again.', slots: null, tripSettings: null };
+    return { text: '', slots: null, tripSettings: null };
   }
 }
 

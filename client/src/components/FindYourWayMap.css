@@ -208,6 +208,14 @@
   background: #e5e3df;
 }
 
+
+/* Home (Explore): wider map on laptop/desktop (base rule caps at 560px) */
+@media (min-width: 1024px) {
+  .fym-map-wrap {
+    max-width: 100%;
+    aspect-ratio: 16 / 10;
+  }
+}
 @supports (overflow: clip) {
   .fym-map-wrap {
     overflow: clip;

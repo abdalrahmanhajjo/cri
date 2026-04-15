@@ -7053,6 +7053,13 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   margin-inline: auto;
 }
 
+
+/* Wider content rail for the home areas map only (desktop / laptop) */
+@media (min-width: 1024px) {
+  .vd-home .vd-find-your-way--practical .vd-container {
+    max-width: min(1720px, calc(100% - 2 * var(--page-padding)));
+  }
+}
 .vd-home>.vd-section {
   padding-top: var(--home-band-y);
   padding-bottom: var(--home-band-y);

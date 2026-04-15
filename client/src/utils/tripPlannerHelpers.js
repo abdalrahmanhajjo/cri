@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shared trip planning helpers (Visit Trioli web + parity with VisitTripoliApp Flutter):
  * calendar-day span, TripDay/TripSlot JSON, overlap checks, ordering: best time → duration → rating.
  */
@@ -32,6 +32,19 @@ export function formatYMD(d) {
 export function todayDateOnly() {
   return formatYMD(new Date());
 }
+
+export function clampTripStartDateLocal(d) {
+  const minStr = todayDateOnly();
+  const base =
+    d instanceof Date && !Number.isNaN(d.getTime()) ? d : new Date(`${minStr}T12:00:00`);
+  const cur = formatYMD(base);
+  if (cur >= minStr) {
+    return new Date(base.getFullYear(), base.getMonth(), base.getDate(), 12, 0, 0);
+  }
+  const [y, m, day] = minStr.split('-').map(Number);
+  return new Date(y, m - 1, day, 12, 0, 0);
+}
+
 
 /** Inclusive calendar days between date-only strings (same as Flutter trips_format / trip_form_modal). */
 export function getDayCount(startDate, endDate) {

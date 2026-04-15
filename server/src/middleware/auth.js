@@ -4,8 +4,11 @@ const { getCollection } = require('../mongo');
 const isProd = process.env.NODE_ENV === 'production';
 const JWT_SECRET = process.env.JWT_SECRET || (isProd ? '' : 'fallback-dev-only');
 const MAX_TOKEN_LENGTH = 1024;
-/** Must match `expiresIn` on every auth JWT issued in `routes/auth.js`. */
-const JWT_EXPIRES_IN = '1h';
+/**
+ * Must match `expiresIn` on every auth JWT issued in `routes/auth.js`.
+ * Default 7d so a typical break (e.g. 1h away) does not force sign-in; override with JWT_EXPIRES_IN.
+ */
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const JWT_OPTIONS = {
   algorithms: ['HS256'],
   maxAge: JWT_EXPIRES_IN,

@@ -20,6 +20,8 @@ import {
   formatYMD,
   findOverlappingTrips,
   findNextNonOverlappingDateRange,
+  clampTripStartDateLocal,
+  todayDateOnly,
 } from '../utils/tripPlannerHelpers';
 import {
   loadPlannerMemory,
@@ -58,6 +60,20 @@ function setTourEffectiveScrollY(y) {
   } else {
     window.scrollTo(0, yClamped);
   }
+}
+
+function assistantReplyForPlanner(reply, slots, t) {
+  const trimmed = (reply || "").trim();
+  const genericEn = "Something went wrong. Please try again.";
+  const genericI18n = t("aiPlanner", "errorGeneric");
+  if (trimmed === genericEn || trimmed === genericI18n) {
+    return "";
+  }
+  if (slots?.length) {
+    return (trimmed || t("aiPlanner", "assistantFallback")).trim();
+  }
+  if (trimmed) return trimmed;
+  return "";
 }
 
 /** Full page height while the tour pins body — documentElement.scrollHeight alone often collapses to the viewport. */
@@ -292,7 +308,10 @@ function inferTripSettingsFromUserText(raw) {
     const y = Number(iso[1]);
     const m = Number(iso[2]);
     const d = Number(iso[3]);
-    if (y && m >= 1 && m <= 12 && d >= 1 && d <= 31) next.startDate = { y, m, d };
+    if (y && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      const cand = new Date(y, m - 1, d);
+      if (formatYMD(cand) >= todayDateOnly()) next.startDate = { y, m, d };
+    }
   } else {
     const months = {
       jan: 1,
@@ -327,7 +346,10 @@ function inferTripSettingsFromUserText(raw) {
       : mdy
         ? { y: Number(mdy[3]), m: months[mdy[1]], d: Number(mdy[2]) }
         : null;
-    if (hit?.y && hit?.m && hit?.d) next.startDate = hit;
+    if (hit?.y && hit?.m && hit?.d) {
+      const cand = new Date(hit.y, hit.m - 1, hit.d);
+      if (formatYMD(cand) >= todayDateOnly()) next.startDate = hit;
+    }
   }
 
   return Object.keys(next).length ? next : null;
@@ -467,7 +489,7 @@ export default function AiPlanner() {
       if (p.startDate) {
         const parts = p.startDate.slice(0, 10).split('-').map(Number);
         const [y, mo, da] = parts;
-        if (y && mo && da) setSelectedDate(new Date(y, mo - 1, da));
+        if (y && mo && da) setSelectedDate(clampTripStartDateLocal(new Date(y, mo - 1, da)));
       }
       if (Array.isArray(p.interestIds) && p.interestIds.length > 0) {
         setInterestIds(new Set(p.interestIds));
@@ -979,7 +1001,15 @@ export default function AiPlanner() {
       if (inferred?.durationDays != null) setDurationDays(inferred.durationDays);
       if (inferred?.placesPerDay != null) setPlacesPerDay(inferred.placesPerDay);
       if (inferred?.budget) setBudget(inferred.budget);
-      if (inferred?.startDate) setSelectedDate(new Date(inferred.startDate.y, inferred.startDate.m - 1, inferred.startDate.d));
+
+      const mergedStart =
+        inferred?.startDate != null
+          ? new Date(inferred.startDate.y, inferred.startDate.m - 1, inferred.startDate.d)
+          : selectedDate;
+      const tripStartForApi = clampTripStartDateLocal(mergedStart);
+      if (formatYMD(tripStartForApi) !== formatYMD(selectedDate)) {
+        setSelectedDate(tripStartForApi);
+      }
 
       setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
       setInput('');
@@ -1015,7 +1045,7 @@ export default function AiPlanner() {
           durationDays,
           placesPerDay,
           budget,
-          selectedDate,
+          selectedDate: tripStartForApi,
           userInterests: interestNames,
           activityContext,
           responseLanguage: langParam,
@@ -1033,7 +1063,7 @@ export default function AiPlanner() {
           resolvedPlaces = slots.map((s) => placeById[s.placeId]).filter(Boolean);
         }
 
-        const assistantContent = (reply || t('aiPlanner', 'assistantFallback')).trim();
+        const assistantContent = assistantReplyForPlanner(reply, slots, t);
 
         setMessages((prev) => [
           ...prev,
@@ -1127,6 +1157,15 @@ export default function AiPlanner() {
     if (inferred?.placesPerDay != null) setPlacesPerDay(inferred.placesPerDay);
     if (inferred?.budget) setBudget(inferred.budget);
 
+    const mergedReplaceStart =
+      inferred?.startDate != null
+        ? new Date(inferred.startDate.y, inferred.startDate.m - 1, inferred.startDate.d)
+        : selectedDate;
+    const tripStartForReplaceApi = clampTripStartDateLocal(mergedReplaceStart);
+    if (formatYMD(tripStartForReplaceApi) !== formatYMD(selectedDate)) {
+      setSelectedDate(tripStartForReplaceApi);
+    }
+
     setAiReplaceSheet(null);
     setAiReplaceNote('');
     setSending(true);
@@ -1149,7 +1188,7 @@ export default function AiPlanner() {
         durationDays,
         placesPerDay,
         budget,
-        selectedDate,
+        selectedDate: tripStartForReplaceApi,
         userInterests: interestNames,
         activityContext,
         responseLanguage: langParam,
@@ -1167,7 +1206,7 @@ export default function AiPlanner() {
         resolvedPlaces = slots.map((s) => placeById[s.placeId]).filter(Boolean);
       }
 
-      const assistantContent = (reply || t('aiPlanner', 'assistantFallback')).trim();
+      const assistantContent = assistantReplyForPlanner(reply, slots, t);
       setMessages((prev) => [
         ...prev,
         {
@@ -1326,7 +1365,7 @@ export default function AiPlanner() {
           ]);
           return;
         }
-        setSelectedDate(new Date(`${nextRange.startDate}T12:00:00`));
+        setSelectedDate(clampTripStartDateLocal(new Date(`${nextRange.startDate}T12:00:00`)));
         setMessages((prev) =>
           prev.map((m, j) =>
             j === messageIndex
@@ -1352,12 +1391,18 @@ export default function AiPlanner() {
 
   const handleApplyTrip = useCallback(async () => {
     if (!lastSlots?.length || applying || planConflicts.size > 0) return;
+    const tripStart = clampTripStartDateLocal(selectedDate);
+    if (formatYMD(selectedDate) < todayDateOnly()) {
+      setSelectedDate(tripStart);
+      showToast(t('aiPlanner', 'pastStartDateNotAllowed'), 'error');
+      return;
+    }
     setApplying(true);
     try {
-      const days = slotsToTripDays(lastSlots, durationDays, selectedDate);
-      const end = new Date(selectedDate);
+      const days = slotsToTripDays(lastSlots, durationDays, tripStart);
+      const end = new Date(tripStart);
       end.setDate(end.getDate() + durationDays - 1);
-      const startStr = formatYMD(selectedDate);
+      const startStr = formatYMD(tripStart);
       const endStr = formatYMD(end);
       const tripsRes = await api.user.trips();
       const existingTrips = tripsRes.trips || [];
@@ -1378,16 +1423,16 @@ export default function AiPlanner() {
       const overlap = e?.data?.code === 'TRIP_DATE_OVERLAP';
       if (overlap) {
         try {
-          const end = new Date(selectedDate);
+          const end = new Date(tripStart);
           end.setDate(end.getDate() + durationDays - 1);
-          const startStr = formatYMD(selectedDate);
+          const startStr = formatYMD(tripStart);
           const endStr = formatYMD(end);
           const tripsRes = await api.user.trips();
           pushDateOverlapAssistantMessage(startStr, endStr, tripsRes.trips || []);
         } catch {
-          const end = new Date(selectedDate);
+          const end = new Date(tripStart);
           end.setDate(end.getDate() + durationDays - 1);
-          const startStr = formatYMD(selectedDate);
+          const startStr = formatYMD(tripStart);
           const endStr = formatYMD(end);
           setMessages((prev) => [
             ...prev,
@@ -1694,10 +1739,11 @@ export default function AiPlanner() {
                   <input
                     id="ai-chip-field-date"
                     type="date"
+                    min={todayDateOnly()}
                     value={formatYMD(selectedDate)}
                     onChange={(e) => {
                       const v = e.target.value;
-                      if (v) setSelectedDate(new Date(`${v}T12:00:00`));
+                      if (v) setSelectedDate(clampTripStartDateLocal(new Date(`${v}T12:00:00`)));
                     }}
                   />
                 </div>
@@ -2372,10 +2418,11 @@ export default function AiPlanner() {
               <input
                 id="ai-trip-date"
                 type="date"
+                min={todayDateOnly()}
                 value={formatYMD(selectedDate)}
                 onChange={(e) => {
                   const v = e.target.value;
-                  if (v) setSelectedDate(new Date(`${v}T12:00:00`));
+                  if (v) setSelectedDate(clampTripStartDateLocal(new Date(`${v}T12:00:00`)));
                 }}
               />
             </div>
