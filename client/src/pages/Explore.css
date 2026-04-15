@@ -2488,6 +2488,14 @@ a.vd-top-picks-card-bg--hit {
   border-radius: 0 0 clamp(12px, 1.5vw, 18px) clamp(12px, 1.5vw, 18px);
 }
 
+@media (min-width: 900px) {
+  .vd-home .vd-find-your-way-areas-card--map .fym {
+    width: 60%;
+    max-width: 100%;
+    margin-inline: auto;
+  }
+}
+
 .vd-home .vd-find-your-way--practical .vd-find-your-way-header {
   margin-bottom: clamp(24px, 3.5vw, 36px);
   padding-bottom: clamp(18px, 2.5vw, 26px);
