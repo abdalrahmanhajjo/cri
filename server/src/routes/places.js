@@ -262,6 +262,40 @@ router.get('/:id/promotions', async (req, res) => {
   }
 });
 
+async function refreshPlaceAppReviewAggregates(placeId) {
+  const reviewsColl = await getCollection("place_reviews");
+  const places = await getCollection("places");
+  const rows = await reviewsColl
+    .aggregate([
+      { $match: { place_id: placeId, hidden_at: null } },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+          avgRating: { $avg: "$rating" },
+        },
+      },
+    ])
+    .toArray();
+  const row = rows[0];
+  const n =
+    row && row.count != null && Number.isFinite(Number(row.count))
+      ? Math.max(0, Math.round(Number(row.count)))
+      : 0;
+  let avg = null;
+  if (n > 0 && row.avgRating != null && Number.isFinite(Number(row.avgRating))) {
+    avg = Math.round(Number(row.avgRating) * 100) / 100;
+  }
+  await places.updateOne(
+    { id: placeId },
+    {
+      $set: {
+        app_review_count: n,
+        app_avg_rating: avg,
+      },
+    }
+  );
+}
 function displayReviewAuthorName(name, email) {
   const n = typeof name === 'string' ? name.trim() : '';
   if (n) return n;
@@ -363,6 +397,12 @@ router.post('/:id/reviews', authMiddleware, async (req, res) => {
        await reviewsColl.insertOne({ ...update, created_at: new Date() });
     }
     
+    try {
+      await refreshPlaceAppReviewAggregates(place.id);
+    } catch (e) {
+      console.error("refreshPlaceAppReviewAggregates", place.id, e);
+    }
+
     res.status(201).json({ ok: true });
   } catch (err) {
     console.error(err);
@@ -398,6 +438,12 @@ router.delete('/:id/reviews/:reviewId', authMiddleware, async (req, res) => {
     }
 
     await reviewsColl.deleteOne(queryObj);
+    try {
+      await refreshPlaceAppReviewAggregates(place.id);
+    } catch (e) {
+      console.error("refreshPlaceAppReviewAggregates", place.id, e);
+    }
+
     return res.json({ ok: true });
   } catch (err) {
     console.error(err);

@@ -77,6 +77,40 @@ function Page({ title, intro, sections, dbTitle = 'Featured places from database
           <p className="seo-landing__intro">{intro}</p>
         </header>
 
+        {!loadingPlaces && dbPlaces.length > 0 && (
+          <section
+            className="seo-landing__topPlacesWide"
+            aria-labelledby="seo-top-places-heading"
+          >
+            <h2 id="seo-top-places-heading" className="seo-landing__topPlacesWideTitle">
+              Top places
+            </h2>
+            <div className="seo-landing__topPlacesWideGrid">
+              {dbPlaces.slice(0, 6).map((p) => {
+                const slug = placeSlug(p);
+                const to = `/place/${encodeURIComponent(slug)}`;
+                const img =
+                  getPlaceImageUrl(p.image) ||
+                  getPlaceImageUrl(Array.isArray(p.images) ? p.images[0] : '');
+                return (
+                  <article key={slug} className="seo-landing__topPlacesWideCard">
+                    <Link to={to} className="seo-landing__topPlacesWideMedia" aria-label={p.name || slug}>
+                      {img ? (
+                        <DeliveryImg url={img} preset="seoDb" alt="" />
+                      ) : (
+                        <div className="seo-landing__topPlacesWidePh" aria-hidden />
+                      )}
+                    </Link>
+                    <Link to={to} className="seo-landing__topPlacesWideLink">
+                      {p.name || slug}
+                    </Link>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         <div className="seo-landing__grid">
           <main className="seo-landing__main">
             {sections.map((s) => (
@@ -105,7 +139,7 @@ function Page({ title, intro, sections, dbTitle = 'Featured places from database
               </div>
             </div>
 
-            <div className="seo-landing__card">
+            <div className="seo-landing__card seo-landing__card--topPlacesOnly">
               <h3 className="seo-landing__sideTitleSm">Top places</h3>
               {loadingPlaces && <p className="seo-landing__sideP">Loading…</p>}
               {!loadingPlaces && sidebarPlaces.length === 0 && (
