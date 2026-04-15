@@ -142,7 +142,7 @@
 }
 
 .header-inner {
-  max-width: 1400px;
+  max-width: var(--main-content-max, 1400px);
   margin: 0 auto;
   padding: 12px var(--page-padding) 10px;
   display: flex;
@@ -540,7 +540,7 @@ button.nav-icon {
 }
 
 .nav-mega-grid {
-  max-width: 1200px;
+  max-width: var(--main-content-max, 1200px);
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(2, 1fr);

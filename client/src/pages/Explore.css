@@ -6961,6 +6961,8 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 .vd-home .vd-footer-inner {
   max-width: var(--main-content-max);
   width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
 }
 
 .vd-home .vd-plan-inner {
