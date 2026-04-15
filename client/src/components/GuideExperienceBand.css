@@ -1,0 +1,181 @@
+﻿.gex {
+  margin-bottom: clamp(28px, 5vw, 44px);
+  padding: clamp(22px, 4vw, 32px);
+  border-radius: 22px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.88) 100%);
+  box-shadow: 0 16px 48px rgba(11, 18, 36, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.gex::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.45;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 50% at 100% 0%, rgba(201, 162, 39, 0.12), transparent 55%),
+    radial-gradient(ellipse 55% 45% at 0% 100%, rgba(36, 49, 82, 0.08), transparent 50%);
+}
+
+.gex__head {
+  position: relative;
+  z-index: 1;
+  margin-bottom: clamp(18px, 3vw, 26px);
+  max-width: 62ch;
+}
+
+.gex__title {
+  margin: 0 0 10px;
+  font-family: var(--hg-display, "Playfair Display", Georgia, serif);
+  font-size: clamp(1.25rem, 2.6vw, 1.55rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--hg-night, #0b1224);
+}
+
+.gex__lead {
+  margin: 0;
+  font-size: clamp(0.9rem, 1.6vw, 1rem);
+  line-height: 1.55;
+  color: rgba(30, 41, 59, 0.88);
+}
+
+.gex__grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: clamp(14px, 2.5vw, 20px);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .gex__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.gex__card {
+  padding: 16px 16px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(30, 41, 59, 0.09);
+  background: rgba(255, 255, 255, 0.72);
+  animation: gex-card-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.2s ease;
+}
+
+.gex__card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(11, 18, 36, 0.1);
+  border-color: rgba(201, 162, 39, 0.28);
+}
+
+@keyframes gex-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gex__iconWrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+  color: var(--gex-icon-fg, #1e293b);
+  background: var(--gex-icon-bg, linear-gradient(145deg, rgba(201, 162, 39, 0.18), rgba(36, 49, 82, 0.06)));
+  border: 1px solid var(--gex-icon-border, rgba(30, 41, 59, 0.1));
+}
+
+.gex__cardTitle {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--hg-night, #0b1224);
+}
+
+.gex__cardBody {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: rgba(30, 41, 59, 0.82);
+}
+
+.gex--dining {
+  border-color: rgba(196, 92, 62, 0.14);
+  background: linear-gradient(155deg, rgba(255, 251, 248, 0.98) 0%, rgba(253, 238, 228, 0.92) 100%);
+  box-shadow: 0 18px 44px rgba(58, 22, 16, 0.08);
+}
+
+.gex--dining::before {
+  background: radial-gradient(ellipse 70% 50% at 100% 0%, rgba(232, 168, 73, 0.2), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(196, 92, 62, 0.1), transparent 50%);
+}
+
+.gex--dining .gex__title {
+  color: #3d1510;
+}
+
+.gex--dining .gex__lead {
+  color: rgba(91, 42, 32, 0.9);
+}
+
+.gex--dining .gex__card {
+  border-color: rgba(196, 92, 62, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.gex--dining .gex__card:hover {
+  border-color: rgba(232, 168, 73, 0.42);
+  box-shadow: 0 14px 36px rgba(58, 22, 16, 0.12);
+}
+
+.gex--dining .gex__iconWrap {
+  --gex-icon-bg: linear-gradient(145deg, rgba(232, 168, 73, 0.35), rgba(196, 92, 62, 0.12));
+  --gex-icon-fg: #4a1510;
+  --gex-icon-border: rgba(196, 92, 62, 0.2);
+}
+
+.gex--dining .gex__cardTitle {
+  color: #3d1510;
+}
+
+.gex--dining .gex__cardBody {
+  color: rgba(91, 42, 32, 0.88);
+}
+
+.gex--hotels .gex__iconWrap {
+  --gex-icon-bg: linear-gradient(145deg, rgba(201, 162, 39, 0.28), rgba(36, 49, 82, 0.12));
+  --gex-icon-fg: #0b1224;
+}
+
+.gex--discover {
+  border-color: rgba(36, 49, 82, 0.12);
+  background: linear-gradient(165deg, #ffffff 0%, #f1f5f9 55%, #e8edf5 100%);
+}
+
+.gex--discover::before {
+  opacity: 0.55;
+  background: radial-gradient(ellipse 65% 50% at 12% 0%, rgba(59, 130, 246, 0.12), transparent 52%),
+    radial-gradient(ellipse 50% 45% at 88% 100%, rgba(201, 162, 39, 0.14), transparent 48%);
+}
+
+.gex--discover .gex__iconWrap {
+  --gex-icon-bg: linear-gradient(145deg, rgba(59, 130, 246, 0.15), rgba(36, 49, 82, 0.08));
+  --gex-icon-fg: #1e3a5f;
+  --gex-icon-border: rgba(36, 49, 82, 0.12);
+}
+
+.gex--discover .gex__card:hover {
+  border-color: rgba(59, 130, 246, 0.22);
+}

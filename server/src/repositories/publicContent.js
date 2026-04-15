@@ -1,4 +1,5 @@
 const { getMongoDb, getCollection } = require('../mongo');
+const { mergeDiningProfileLayers } = require('../utils/diningProfileMerge');
 
 function getTranslation(doc, lang) {
   if (!doc || !doc.translations || typeof doc.translations !== 'object') return null;
@@ -96,7 +97,11 @@ async function listPlaces(lang, { limit, offset, usePagination } = {}) {
       hours: doc.hours || null,
       tags: Array.isArray(tr?.tags) ? tr.tags : Array.isArray(doc.tags) ? doc.tags : [],
       search_name: doc.searchName || null,
-      dining_profile: doc.diningProfile || {},
+      dining_profile: (() => {
+        const camel = doc.diningProfile && typeof doc.diningProfile === 'object' && !Array.isArray(doc.diningProfile) ? doc.diningProfile : {};
+        const snake = doc.dining_profile && typeof doc.dining_profile === 'object' && !Array.isArray(doc.dining_profile) ? doc.dining_profile : {};
+        return mergeDiningProfileLayers(camel, snake);
+      })(),
       app_avg_rating: doc.app_avg_rating ?? null,
       app_review_count: doc.app_review_count ?? 0,
     };

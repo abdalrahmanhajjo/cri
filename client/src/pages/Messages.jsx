@@ -19,7 +19,33 @@ function normalizeFollowups(raw) {
   return raw.filter((x) => x && typeof x.body === 'string' && String(x.body).trim());
 }
 
-/** Latest activity timestamp for a thread (message, follow-ups, venue reply). */
+/** Chronological visitor + venue messages for previews and the thread view. */
+function buildVenueThreadTimeline(row) {
+  const fus = normalizeFollowups(row.visitorFollowups);
+  const ownerMsgs = normalizeFollowups(row.ownerFollowups);
+  const items = [];
+  if (row.message && String(row.message).trim()) {
+    items.push({ role: 'user', body: String(row.message).trim(), at: row.createdAt });
+  }
+  for (const fu of fus) {
+    items.push({ role: 'user', body: String(fu.body || '').trim(), at: fu.createdAt });
+  }
+  for (const om of ownerMsgs) {
+    items.push({ role: 'venue', body: String(om.body || '').trim(), at: om.createdAt });
+  }
+  if (!ownerMsgs.length && row.response && String(row.response).trim()) {
+    items.push({ role: 'venue', body: String(row.response).trim(), at: row.respondedAt });
+  }
+  items.sort((a, b) => {
+    const ta = new Date(a.at || 0).getTime();
+    const tb = new Date(b.at || 0).getTime();
+    if (Number.isFinite(ta) && Number.isFinite(tb) && ta !== tb) return ta - tb;
+    return 0;
+  });
+  return items;
+}
+
+/** Latest activity timestamp for a thread (message, follow-ups, venue replies). */
 function threadLastActivityMs(row) {
   let ms = new Date(row.createdAt || 0).getTime();
   const ra = new Date(row.respondedAt || 0).getTime();
@@ -27,6 +53,11 @@ function threadLastActivityMs(row) {
   const fus = normalizeFollowups(row.visitorFollowups);
   for (const fu of fus) {
     const t = new Date(fu.createdAt || 0).getTime();
+    if (Number.isFinite(t) && t > ms) ms = t;
+  }
+  const owners = normalizeFollowups(row.ownerFollowups);
+  for (const o of owners) {
+    const t = new Date(o.createdAt || 0).getTime();
     if (Number.isFinite(t) && t > ms) ms = t;
   }
   return ms;
@@ -45,14 +76,9 @@ function placeInitials(name) {
 
 /** Short preview of latest activity in a thread for inbox rows. */
 function threadPreviewSnippet(row) {
-  const fus = normalizeFollowups(row.visitorFollowups);
-  if (fus.length) {
-    const last = fus[fus.length - 1];
-    return String(last.body || '').trim();
-  }
-  const resp = String(row.response || '').trim();
-  if (resp) return resp;
-  return String(row.message || '').trim();
+  const items = buildVenueThreadTimeline(row);
+  if (items.length) return String(items[items.length - 1].body || '').trim();
+  return '';
 }
 
 function formatShortTime(ms, locale) {
@@ -115,6 +141,7 @@ export default function Messages() {
         list.map((r) => ({
           ...r,
           visitorFollowups: normalizeFollowups(r.visitorFollowups),
+          ownerFollowups: normalizeFollowups(r.ownerFollowups),
         }))
       );
     } catch (e) {
@@ -198,6 +225,7 @@ export default function Messages() {
                 response: data.response ?? row.response,
                 respondedAt: data.respondedAt ?? row.respondedAt,
                 visitorFollowups: normalizeFollowups(data.visitorFollowups ?? row.visitorFollowups),
+                ownerFollowups: normalizeFollowups(data.ownerFollowups ?? row.ownerFollowups),
               }
             : row
         )
@@ -243,6 +271,7 @@ export default function Messages() {
                 response: data.response ?? r.response,
                 respondedAt: data.respondedAt ?? r.respondedAt,
                 visitorFollowups: normalizeFollowups(data.visitorFollowups),
+                ownerFollowups: normalizeFollowups(data.ownerFollowups ?? r.ownerFollowups),
               }
             : r
         )
@@ -266,80 +295,95 @@ export default function Messages() {
     }
   }
 
+
+  function formatChatTime(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+    } catch {
+      return '';
+    }
+  }
+
   function renderThreadCard(row) {
     const sid = String(row.id);
-    const followups = normalizeFollowups(row.visitorFollowups);
     const archived = String(row.status || '').toLowerCase() === 'archived';
+    const timeline = buildVenueThreadTimeline(row);
+    const open = String(row.status || '').toLowerCase() === 'open';
+    const showNoReplyYet = open && !timeline.some((m) => m.role === 'venue');
     return (
-      <article key={row.id} className="ig-proposal-thread messages-thread-card">
-        <div className="ig-proposal-thread-head messages-thread-head">
-          <span className="messages-thread-summary">
-            {row.createdAt ? new Date(row.createdAt).toLocaleString() : ''}
-            {row.id != null ? ` · #${row.id}` : ''}
+      <article key={row.id} className="messages-conv-thread messages-thread-card">
+        <div className="messages-conv-thread__toolbar">
+          <span className="messages-conv-thread__meta">
+            {row.createdAt ? formatChatTime(row.createdAt) : ''}
+            {row.id != null ? ` · #${String(row.id).slice(0, 8)}` : ''}
           </span>
-          <span className={`ig-proposal-thread-status ig-proposal-thread-status--${String(row.status || 'open')}`}>
+          <span className={`messages-conv-thread__status messages-conv-thread__status--${String(row.status || 'open')}`}>
             {statusLabel(row.status)}
           </span>
         </div>
-        <p className="ig-proposal-thread-message">{row.message}</p>
-        {followups.map((fu, idx) => (
-          <div key={`${sid}-fu-${idx}`} className="messages-follow-up-bubble">
-            <span className="messages-follow-up-label">{t('discover', 'proposalYourFollowUp')}</span>
-            {fu.createdAt ? <p className="messages-follow-up-meta">{new Date(fu.createdAt).toLocaleString()}</p> : null}
-            <p className="ig-proposal-thread-message messages-follow-up-body">{fu.body}</p>
-          </div>
-        ))}
-        {row.response && String(row.response).trim() ? (
-          <div className="ig-proposal-thread-reply">
-            <span className="ig-proposal-thread-reply-label">{t('discover', 'proposalVenueReply')}</span>
-            <p className="ig-proposal-thread-reply-text">{row.response}</p>
-          </div>
-        ) : (
-          String(row.status || '').toLowerCase() === 'open' && (
-            <p className="ig-proposal-thread-no-reply">{t('discover', 'proposalNoReplyYet')}</p>
-          )
-        )}
+        <div className="messages-conv-feed" role="log">
+          {timeline.map((m, idx) => (
+            <div
+              key={`${sid}-m-${idx}-${m.role}`}
+              className={`messages-conv-row messages-conv-row--${m.role === 'venue' ? 'in' : 'out'}`}
+            >
+              <div className={`messages-conv-bubble messages-conv-bubble--${m.role === 'venue' ? 'in' : 'out'}`}>
+                <p className="messages-conv-bubble__text">{m.body}</p>
+                <time className="messages-conv-bubble__time" dateTime={m.at ? new Date(m.at).toISOString() : undefined}>
+                  {formatChatTime(m.at)}
+                </time>
+              </div>
+            </div>
+          ))}
+          {showNoReplyYet ? (
+            <p className="messages-conv-hint">{t('discover', 'proposalNoReplyYet')}</p>
+          ) : null}
+        </div>
         {!archived && (
-          <div className="messages-follow-up-form">
+          <div className="messages-follow-up-form messages-conv-composer">
             <label className="messages-follow-up-form-label" htmlFor={`follow-up-${sid}`}>
               {t('discover', 'proposalFollowUpLabel')}
             </label>
-            <textarea
-              id={`follow-up-${sid}`}
-              className="messages-follow-up-textarea"
-              rows={3}
-              maxLength={8000}
-              placeholder={t('discover', 'proposalFollowUpPlaceholder')}
-              value={followUpDraft[sid] || ''}
-              disabled={followUpSendingId === row.id}
-              onChange={(e) =>
-                setFollowUpDraft((d) => ({
-                  ...d,
-                  [sid]: e.target.value,
-                }))
-              }
-            />
+            <div className="messages-conv-composer__inner">
+              <textarea
+                id={`follow-up-${sid}`}
+                className="messages-follow-up-textarea messages-conv-composer__input"
+                rows={2}
+                maxLength={8000}
+                placeholder={t('discover', 'proposalFollowUpPlaceholder')}
+                value={followUpDraft[sid] || ''}
+                disabled={followUpSendingId === row.id}
+                onChange={(e) =>
+                  setFollowUpDraft((d) => ({
+                    ...d,
+                    [sid]: e.target.value,
+                  }))
+                }
+              />
+              <button
+                type="button"
+                className="messages-conv-send"
+                disabled={followUpSendingId === row.id || (followUpDraft[sid] || '').trim().length < 3}
+                onClick={() => sendFollowUp(row)}
+                aria-label={t('discover', 'proposalFollowUpSend')}
+              >
+                <Icon name="send" size={22} aria-hidden="true" />
+              </button>
+            </div>
             {followUpErr[sid] ? (
               <p className="ig-proposal-error messages-follow-up-error" role="alert">
                 {followUpErr[sid]}
               </p>
             ) : null}
-            <div className="messages-follow-up-actions">
-              <button
-                type="button"
-                className="messages-follow-up-send"
-                disabled={followUpSendingId === row.id || (followUpDraft[sid] || '').trim().length < 3}
-                onClick={() => sendFollowUp(row)}
-              >
-                {followUpSendingId === row.id ? t('discover', 'proposalFollowUpSending') : t('discover', 'proposalFollowUpSend')}
-              </button>
-            </div>
           </div>
         )}
         {archived && <p className="messages-thread-archived-note">{t('discover', 'inquiryArchivedHint')}</p>}
         <button
           type="button"
-          className="ig-proposal-thread-refresh"
+          className="messages-conv-refresh"
           disabled={rowRefreshingId === row.id}
           onClick={() => refreshRow(row.placeId, row.id)}
         >

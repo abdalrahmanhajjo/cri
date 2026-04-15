@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const { authMiddleware } = require('../../middleware/auth');
-const { businessPortalMiddleware } = require('../../middleware/placeOwner');
+const { businessPortalMiddleware, userManagesPlace } = require('../../middleware/placeOwner');
 const { getCollection } = require('../../mongo');
 const { parsePlaceId } = require('../../utils/validate');
 const {
@@ -67,9 +67,9 @@ router.post('/', uploadMw.single('file'), async (req, res) => {
   const placeId = parsed.value;
 
   try {
-    const poColl = await getCollection('place_owners');
-    const own = await poColl.findOne({ user_id: req.user.userId, place_id: placeId });
-    if (!own) return res.status(403).json({ error: 'You do not manage this place' });
+    if (!(await userManagesPlace(req.user.userId, placeId))) {
+      return res.status(403).json({ error: 'You do not manage this place' });
+    }
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to verify place ownership' });

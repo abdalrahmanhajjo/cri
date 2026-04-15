@@ -1470,3 +1470,135 @@
   margin-top: auto;
   padding-top: 0.5rem;
 }
+
+/* Restaurant / admin business console enhancements */
+.business-dashboard-hero--dining {
+  background: linear-gradient(135deg, rgba(12, 92, 89, 0.08) 0%, transparent 55%);
+  border-radius: var(--biz-radius);
+  padding: 1.25rem 1.35rem 1.5rem;
+  border: 1px solid rgba(12, 92, 89, 0.12);
+}
+
+.business-dashboard-hero--admin {
+  border-color: rgba(59, 130, 246, 0.25);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.07) 0%, transparent 50%);
+}
+
+.business-admin-inline {
+  display: inline;
+  color: var(--biz-muted);
+}
+
+.business-inline-link {
+  color: var(--biz-accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.business-place-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.business-place-search {
+  flex: 1;
+  min-width: min(100%, 280px);
+}
+
+.business-place-search .business-input {
+  width: 100%;
+}
+
+.business-segmented {
+  display: inline-flex;
+  border: 1px solid var(--biz-line);
+  border-radius: 999px;
+  padding: 3px;
+  background: #faf9f7;
+}
+
+.business-seg-btn {
+  border: none;
+  background: transparent;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--biz-muted);
+  cursor: pointer;
+}
+
+.business-seg-btn--on {
+  background: var(--biz-surface);
+  color: var(--biz-ink);
+  box-shadow: var(--biz-shadow);
+}
+
+.business-place-grid--modern .business-place-card {
+  border-radius: calc(var(--biz-radius) + 2px);
+}
+
+.business-place-card-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.business-place-card-title-row h3 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.business-venue-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.business-venue-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(20, 26, 24, 0.06);
+  color: var(--biz-muted);
+}
+
+.business-venue-badge--dining {
+  background: rgba(12, 92, 89, 0.12);
+  color: var(--biz-accent);
+}
+
+.business-venue-badge--admin {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+}
+
+.business-kpi--accent .business-kpi-value {
+  color: #1d4ed8;
+}
+
+.business-venue-scope-bar {
+  border: 1px dashed rgba(12, 92, 89, 0.25);
+}
+
+.business-feed-filter--grow {
+  flex: 1;
+  min-width: min(100%, 260px);
+}
+
+@media (max-width: 720px) {
+  .business-feed-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

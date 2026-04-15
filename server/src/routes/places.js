@@ -7,11 +7,12 @@ const { authMiddleware, optionalAuthMiddleware } = require('../middleware/auth')
 const { sendDbAwareError } = require('../utils/dbHttpError');
 
 const router = express.Router();
-const { visitorFollowupsFromDb } = require('../utils/inquiryFollowups');
+const { attachPlaceInquiryRoutes } = require('./placeInquiriesPublic');
 const { isMessagingBlocked } = require('../utils/messagingBlocks');
 const { normalizeDbText } = require('../utils/normalizeDbText');
 const { cachePublicList } = require('../middleware/publicCache');
 const { listPlaces } = require('../repositories/publicContent');
+const { mergeDiningProfileLayers } = require('../utils/diningProfileMerge');
 
 const MAX_VISITOR_FOLLOWUPS_PER_INQUIRY = 50;
 
@@ -79,15 +80,45 @@ function normalizeTags(tags) {
   return tags;
 }
 
+/** JSON object from DB - sometimes stored as a string; ignore arrays at root. */
+function parseDiningProfileObject(val) {
+  if (!val) return null;
+  if (typeof val === 'object' && !Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    const t = val.trim();
+    if (!t) return null;
+    try {
+      const p = JSON.parse(t);
+      return p && typeof p === 'object' && !Array.isArray(p) ? p : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Merge diningProfile (sync / camelCase) with dining_profile (business portal).
+ * An empty {} in diningProfile must not hide a full dining_profile.
+ */
+function mergeDiningProfileFromDoc(doc) {
+  const camel = parseDiningProfileObject(doc && doc.diningProfile) || {};
+  const snake = parseDiningProfileObject(doc && doc.dining_profile) || {};
+  return mergeDiningProfileLayers(camel, snake);
+}
+function normalizeDiningProfileShape(dp) {
+  if (!dp || typeof dp !== 'object' || Array.isArray(dp)) return {};
+  const out = { ...dp };
+  if ((!Array.isArray(out.menuSections) || out.menuSections.length === 0) && Array.isArray(out.menu_sections) && out.menu_sections.length) {
+    out.menuSections = out.menu_sections;
+  }
+  return out;
+}
+
 function docToPlace(doc, baseUrl) {
   let images = Array.isArray(doc.images) ? doc.images : [];
   images = resolveImageUrls(images, baseUrl);
-  const diningProfile =
-    doc.diningProfile && typeof doc.diningProfile === 'object'
-      ? doc.diningProfile
-      : doc.dining_profile && typeof doc.dining_profile === 'object'
-        ? doc.dining_profile
-        : {};
+  const diningProfile = normalizeDiningProfileShape(mergeDiningProfileFromDoc(doc));
   const appN =
     doc.app_review_count != null
       ? Number(doc.app_review_count)
@@ -428,6 +459,8 @@ router.post('/:id/checkin', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Check-in failed' });
   }
 });
+
+attachPlaceInquiryRoutes(router);
 
 /** Search/Details. */
 router.get('/:id', async (req, res) => {

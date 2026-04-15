@@ -1,17 +1,11 @@
 const express = require('express');
 const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
-const { businessPortalMiddleware } = require('../../middleware/placeOwner');
+const { businessPortalMiddleware, userManagesPlace } = require('../../middleware/placeOwner');
 const { parsePlaceId } = require('../../utils/validate');
 
 const router = express.Router();
 router.use(authMiddleware, businessPortalMiddleware);
-
-async function assertOwnsPlace(userId, placeId) {
-  const poColl = await getCollection('place_owners');
-  const owner = await poColl.findOne({ user_id: userId, place_id: placeId });
-  return !!owner;
-}
 
 /**
  * GET /api/business/insights?placeId=
@@ -24,7 +18,7 @@ router.get('/', async (req, res) => {
   const userId = req.user.userId;
 
   try {
-    if (!(await assertOwnsPlace(userId, placeId))) {
+    if (!(await userManagesPlace(userId, placeId))) {
       return res.status(403).json({ error: 'You do not manage this place' });
     }
 

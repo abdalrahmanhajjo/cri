@@ -21,6 +21,8 @@ export default function GlobalSearchBar({
   onQueryChange,
   /** If set, choosing a suggestion focuses this flow instead of navigating to `/place/:id`. */
   onSelectPlace,
+  /** Override default `placeDiscover.searchPlaceholder` (e.g. dining-specific copy). */
+  placeholder,
 }) {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
@@ -139,7 +141,7 @@ export default function GlobalSearchBar({
           ref={inputRef}
           type="search"
           className="global-search-bar__input"
-          placeholder={t('placeDiscover', 'searchPlaceholder')}
+          placeholder={placeholder || t('placeDiscover', 'searchPlaceholder')}
           aria-label={t('nav', 'search')}
           role="combobox"
           aria-haspopup="listbox"

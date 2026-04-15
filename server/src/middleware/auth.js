@@ -4,9 +4,11 @@ const { getCollection } = require('../mongo');
 const isProd = process.env.NODE_ENV === 'production';
 const JWT_SECRET = process.env.JWT_SECRET || (isProd ? '' : 'fallback-dev-only');
 const MAX_TOKEN_LENGTH = 1024;
+/** Must match `expiresIn` on every auth JWT issued in `routes/auth.js`. */
+const JWT_EXPIRES_IN = '1h';
 const JWT_OPTIONS = {
   algorithms: ['HS256'],
-  maxAge: isProd ? '3d' : '7d',
+  maxAge: JWT_EXPIRES_IN,
   clockTolerance: 0,
 };
 
@@ -106,4 +108,4 @@ async function optionalAuthMiddleware(req, res, next) {
   next();
 }
 
-module.exports = { authMiddleware, optionalAuthMiddleware };
+module.exports = { authMiddleware, optionalAuthMiddleware, JWT_EXPIRES_IN };

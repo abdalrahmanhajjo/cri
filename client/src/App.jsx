@@ -17,8 +17,6 @@ const BusinessApp = lazy(() => import('./pages/business/BusinessApp'));
 const Discover = lazy(() => import('./pages/Discover'));
 const CommunityCreate = lazy(() => import('./pages/CommunityCreate'));
 const PlaceDiscover = lazy(() => import('./pages/PlaceDiscover'));
-const PlaceDining = lazy(() => import('./pages/PlaceDining'));
-const PlaceHotels = lazy(() => import('./pages/PlaceHotels'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const TourDetail = lazy(() => import('./pages/TourDetail'));
 const EventDetail = lazy(() => import('./pages/EventDetail'));
@@ -179,14 +177,8 @@ function AppRoutes() {
           path="discover"
           element={<LazyBoundary message="Loading…"><PlaceDiscover /></LazyBoundary>}
         />
-        <Route
-          path="dining"
-          element={<LazyBoundary message="Loading…"><PlaceDining /></LazyBoundary>}
-        />
-        <Route
-          path="hotels"
-          element={<LazyBoundary message="Loading…"><PlaceHotels /></LazyBoundary>}
-        />
+        <Route path="dining" element={<Navigate to="/discover" replace />} />
+        <Route path="hotels" element={<Navigate to="/discover" replace />} />
         <Route
           path="map"
           element={

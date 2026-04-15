@@ -114,15 +114,26 @@ function DiscoverProposalPanel({ places, t, user }) {
     const qq = searchQ.trim().toLowerCase();
     const base = Array.isArray(places) ? places : [];
     if (!qq) return base.slice(0, 200);
-    return base
-      .filter((p) => {
+    const scored = base
+      .map((p) => {
         const name = String(p.name || '').toLowerCase();
         const loc = String(p.location || '').toLowerCase();
         const cat = String(p.category || '').toLowerCase();
         const desc = String(p.description || '').toLowerCase();
-        return name.includes(qq) || loc.includes(qq) || cat.includes(qq) || desc.includes(qq);
+        let score = 0;
+        if (name.startsWith(qq)) score += 120;
+        else if (name.includes(qq)) score += 70;
+        if (loc.includes(qq)) score += 40;
+        if (cat.includes(qq)) score += 28;
+        if (desc.includes(qq)) score += 12;
+        if (score === 0) return null;
+        return { p, score, name };
       })
-      .slice(0, 200);
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+      .slice(0, 200)
+      .map((x) => x.p);
+    return scored;
   }, [places, searchQ]);
 
   const searchTrim = searchQ.trim();

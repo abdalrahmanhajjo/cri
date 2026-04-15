@@ -2,6 +2,7 @@ const express = require('express');
 const Stripe = require('stripe');
 const { getCollection } = require('../../mongo');
 const { parsePlaceId } = require('../../utils/validate');
+const { userManagesPlace } = require('../../middleware/placeOwner');
 const { loadSiteSettings } = require('../../utils/siteSettingsLoad');
 const {
   sponsorshipConfigFromSettings,
@@ -56,9 +57,9 @@ router.post('/checkout-session', async (req, res) => {
     const placeId = placeParsed.value;
 
     const userId = req.user.userId;
-    const poColl = await getCollection('place_owners');
-    const own = await poColl.findOne({ user_id: userId, place_id: placeId });
-    if (!own) return res.status(403).json({ error: 'You do not manage this place.' });
+    if (!(await userManagesPlace(userId, placeId))) {
+      return res.status(403).json({ error: 'You do not manage this place.' });
+    }
 
     const gate = await assertCanStartPaidCheckout(placeId, 'all');
     if (!gate.ok) return res.status(409).json({ error: gate.error });

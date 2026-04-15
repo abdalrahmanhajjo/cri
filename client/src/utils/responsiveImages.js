@@ -1,6 +1,6 @@
 /**
  * Responsive image delivery across the app:
- * - Unsplash: srcset + auto=format + fit=crop + quality (smaller bytes)
+ * - Unsplash: srcset + auto=format + fit (crop or `max` on detailHero) + quality
  * - Google Places photo API: srcset via maxwidth variants
  * - Supabase Storage public objects: /render/image + width srcset (WebP when API supports it)
  * - Other URLs: pass-through src only
@@ -25,6 +25,11 @@ const PRESETS = {
     defaultUnsplashW: 960,
     sizes: '(max-width: 900px) 100vw, min(1040px, 92vw)',
     q: '76',
+    /** Full photo in frame (no server-side crop) — matches CSS `object-fit: contain` on place heroes. */
+    unsplashFit: 'max',
+    supabaseResize: 'contain',
+    googlePhotoWidths: [320, 480, 640, 800, 1200, 1600],
+    googlePhotoDefaultW: 960,
   },
   topPicks: {
     unsplashWidths: [480, 640, 960, 1280, 1600],
@@ -123,8 +128,9 @@ export function parseUnsplash(src) {
   }
 }
 
-export function buildUnsplashUrl(base, w, q) {
-  return `${base}?auto=format&fit=crop&w=${w}&q=${q}`;
+export function buildUnsplashUrl(base, w, q, fit = 'crop') {
+  const fitParam = fit === 'max' ? 'max' : 'crop';
+  return `${base}?auto=format&fit=${fitParam}&w=${w}&q=${q}`;
 }
 
 /**
@@ -137,15 +143,16 @@ export function buildUnsplashUrl(base, w, q) {
  */
 function supabaseDeliveryProps(url, preset) {
   const q = Math.max(20, Math.min(100, Number(preset.q) || 78));
+  const resize = preset.supabaseResize === 'contain' ? 'contain' : 'cover';
   const sw = preset.unsplashWidths;
   const srcSet = sw
-    .map((w) => `${supabaseRenderImageUrl(url, { width: w, quality: q })} ${w}w`)
+    .map((w) => `${supabaseRenderImageUrl(url, { width: w, quality: q, resize })} ${w}w`)
     .join(', ');
-  const src = supabaseRenderImageUrl(url, { width: preset.defaultUnsplashW, quality: q });
+  const src = supabaseRenderImageUrl(url, { width: preset.defaultUnsplashW, quality: q, resize });
   return { src, srcSet, sizes: preset.sizes };
 }
 
-function googlePlacePhotoProps(url) {
+function googlePlacePhotoProps(url, preset) {
   try {
     const u = new URL(url, 'https://example.com');
     if (!u.pathname.includes('/maps/api/place/photo')) return null;
@@ -153,14 +160,15 @@ function googlePlacePhotoProps(url) {
     const key = u.searchParams.get('key');
     if (!ref || !key) return null;
     const base = 'https://maps.googleapis.com/maps/api/place/photo';
-    const widths = [200, 320, 480, 640];
+    const widths = Array.isArray(preset?.googlePhotoWidths) ? preset.googlePhotoWidths : [200, 320, 480, 640];
+    const defaultW = Number(preset?.googlePhotoDefaultW) > 0 ? Number(preset.googlePhotoDefaultW) : 480;
     const build = (w) =>
       `${base}?maxwidth=${w}&photo_reference=${encodeURIComponent(ref)}&key=${encodeURIComponent(key)}`;
     const srcSet = widths.map((w) => `${build(w)} ${w}w`).join(', ');
     return {
-      src: build(480),
+      src: build(Math.min(defaultW, Math.max(...widths))),
       srcSet,
-      sizes: '(max-width: 600px) 100vw, 360px',
+      sizes: preset?.sizes || '(max-width: 600px) 100vw, 360px',
     };
   } catch {
     return null;
@@ -177,9 +185,9 @@ export function getDeliveryImgProps(absUrl, presetKey = 'gridCard') {
   const url = absUrl.trim();
   const preset = PRESETS[presetKey] || PRESETS.gridCard;
 
-  const g = googlePlacePhotoProps(url);
+  const g = googlePlacePhotoProps(url, preset);
   if (g) {
-    return { src: g.src, srcSet: g.srcSet, sizes: preset.sizes };
+    return { src: g.src, srcSet: g.srcSet, sizes: g.sizes || preset.sizes };
   }
 
   if (isSupabaseStorageObjectPublicUrl(url)) {
@@ -191,8 +199,9 @@ export function getDeliveryImgProps(absUrl, presetKey = 'gridCard') {
     const q = parsed.q || preset.q;
     const { base } = parsed;
     const sw = preset.unsplashWidths;
-    const srcSet = sw.map((w) => `${buildUnsplashUrl(base, w, q)} ${w}w`).join(', ');
-    const src = buildUnsplashUrl(base, preset.defaultUnsplashW, q);
+    const uFit = preset.unsplashFit === 'max' ? 'max' : 'crop';
+    const srcSet = sw.map((w) => `${buildUnsplashUrl(base, w, q, uFit)} ${w}w`).join(', ');
+    const src = buildUnsplashUrl(base, preset.defaultUnsplashW, q, uFit);
     return { src, srcSet, sizes: preset.sizes };
   }
 
@@ -207,7 +216,8 @@ export function getUnsplashPreloadSrc(src, presetKey = 'bentoHero') {
   const preset = PRESETS[presetKey] || PRESETS.bentoHero;
   const parsed = parseUnsplash(src.trim());
   if (!parsed) return src.trim();
-  return buildUnsplashUrl(parsed.base, preset.defaultUnsplashW, parsed.q || preset.q);
+  const uFit = preset.unsplashFit === 'max' ? 'max' : 'crop';
+  return buildUnsplashUrl(parsed.base, preset.defaultUnsplashW, parsed.q || preset.q, uFit);
 }
 
 /**
@@ -221,11 +231,13 @@ export function getDeliveryPreloadSrc(src, presetKey = 'bentoHero') {
     return supabaseRenderImageUrl(trimmed, {
       width: preset.defaultUnsplashW,
       quality: Number(preset.q) || 76,
+      resize: preset.supabaseResize === 'contain' ? 'contain' : 'cover',
     });
   }
   const parsed = parseUnsplash(trimmed);
   if (parsed) {
-    return buildUnsplashUrl(parsed.base, preset.defaultUnsplashW, parsed.q || preset.q);
+    const uFit = preset.unsplashFit === 'max' ? 'max' : 'crop';
+    return buildUnsplashUrl(parsed.base, preset.defaultUnsplashW, parsed.q || preset.q, uFit);
   }
   return trimmed;
 }

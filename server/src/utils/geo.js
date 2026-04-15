@@ -1,4 +1,4 @@
-/** Earth radius in meters (WGS84 mean) */
+/** Earth radius in meters (WGS84 mean). */
 const R = 6371008.8;
 
 function toRad(deg) {

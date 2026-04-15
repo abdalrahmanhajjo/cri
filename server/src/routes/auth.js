@@ -25,7 +25,7 @@ const {
   canSendVerificationEmailNow,
  markVerificationEmailSent,
 } = require('../utils/authAbuseTracking');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, JWT_EXPIRES_IN } = require('../middleware/auth');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-dev-only';
@@ -99,7 +99,7 @@ async function buildAuthSessionPayload(user) {
   const placeOwners = await getCollection('place_owners');
   const ownedPlaceCount = await placeOwners.countDocuments({ user_id: user.id });
   const profile = user.profile || {};
-  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   return {
     token,
     user: {
@@ -390,7 +390,7 @@ router.post('/login', sanitizeLoginInput, async (req, res) => {
     const ownedPlaceCount = await placeOwners.countDocuments({ user_id: user.id });
 
     const profile = user.profile || {};
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     res.json({
       token,
       user: {
@@ -562,7 +562,7 @@ router.post('/google', async (req, res) => {
     const profile = user.profile || {};
     const username = profile.username || '';
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     res.json({
       token,
       user: {
@@ -743,7 +743,7 @@ router.post('/verify-email', async (req, res) => {
     const ownedPlaceCount = await placeOwners.countDocuments({ user_id: user.id });
 
     const vProfile = user.profile || {};
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     res.json({
       token,
       welcomeEmailDelivered,

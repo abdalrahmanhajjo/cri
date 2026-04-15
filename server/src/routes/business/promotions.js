@@ -1,18 +1,12 @@
 const express = require('express');
 const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
-const { businessPortalMiddleware } = require('../../middleware/placeOwner');
+const { businessPortalMiddleware, userManagesPlace } = require('../../middleware/placeOwner');
 const { parsePlaceId } = require('../../utils/validate');
 const crypto = require('crypto');
 
 const router = express.Router();
 router.use(authMiddleware, businessPortalMiddleware);
-
-async function assertOwnsPlace(userId, placeId) {
-  const poColl = await getCollection('place_owners');
-  const owner = await poColl.findOne({ user_id: userId, place_id: placeId });
-  return !!owner;
-}
 
 function rowToPromotion(doc) {
   return {
@@ -36,7 +30,7 @@ router.get('/', async (req, res) => {
   const parsed = parsePlaceId(req.query.placeId);
   if (!parsed.valid) return res.status(400).json({ error: 'Valid placeId query required' });
   const placeId = parsed.value;
-  if (!(await assertOwnsPlace(req.user.userId, placeId))) {
+  if (!(await userManagesPlace(req.user.userId, placeId))) {
     return res.status(403).json({ error: 'You do not manage this place' });
   }
   try {
@@ -54,7 +48,7 @@ router.post('/', async (req, res) => {
   const parsed = parsePlaceId(req.body?.placeId);
   if (!parsed.valid) return res.status(400).json({ error: 'placeId required' });
   const placeId = parsed.value;
-  if (!(await assertOwnsPlace(req.user.userId, placeId))) {
+  if (!(await userManagesPlace(req.user.userId, placeId))) {
     return res.status(403).json({ error: 'You do not manage this place' });
   }
 
@@ -102,7 +96,7 @@ router.patch('/:id', async (req, res) => {
     const existing = await promoColl.findOne({ id });
     if (!existing) return res.status(404).json({ error: 'Promotion not found' });
 
-    if (!(await assertOwnsPlace(req.user.userId, existing.place_id))) {
+    if (!(await userManagesPlace(req.user.userId, existing.place_id))) {
       return res.status(403).json({ error: 'You do not manage the place for this promotion' });
     }
 
@@ -140,7 +134,7 @@ router.delete('/:id', async (req, res) => {
     const promo = await promoColl.findOne({ id });
     if (!promo) return res.status(404).json({ error: 'Promotion not found' });
 
-    if (!(await assertOwnsPlace(req.user.userId, promo.place_id))) {
+    if (!(await userManagesPlace(req.user.userId, promo.place_id))) {
       return res.status(403).json({ error: 'You do not manage the place for this promotion' });
     }
 

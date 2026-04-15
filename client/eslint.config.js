@@ -42,4 +42,13 @@ export default defineConfig([
       globals: globals.node,
     },
   },
+  {
+    files: ['tools/**/*.js', 'scripts/**/*.mjs'],
+    languageOptions: {
+      globals: globals.node,
+      parserOptions: {
+        ecmaVersion: 'latest',
+      },
+    },
+  },
 ])

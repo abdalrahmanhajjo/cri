@@ -81,4 +81,19 @@ function parsePlacesListPagination(query) {
   return { usePagination: true, limit: clampedLimit, offset };
 }
 
-module.exports = { parsePositiveInt, parsePlaceId, parseTripId, safeUrl, parsePlacesListPagination };
+/**
+ * Escape a user-typed substring for safe use in MongoDB $regex.
+ * @param {string} s
+ */
+function escapeRegexForMongo(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+module.exports = {
+  parsePositiveInt,
+  parsePlaceId,
+  parseTripId,
+  safeUrl,
+  parsePlacesListPagination,
+  escapeRegexForMongo,
+};

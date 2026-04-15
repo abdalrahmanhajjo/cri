@@ -6,7 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import Icon from './Icon';
 import GlobalSearchBar from './GlobalSearchBar';
-import { COMMUNITY_PATH, PLACES_DISCOVER_PATH, DINING_PATH } from '../utils/discoverPaths';
+import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import './Layout.css';
 
 const langLabels = { en: 'EN', ar: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', fr: 'FR' };
@@ -43,8 +43,6 @@ export default function Layout() {
   const isTripsPage = location.pathname === '/trips' || location.pathname.startsWith('/trips/');
   const isPlaceDiscoverPage =
     location.pathname === PLACES_DISCOVER_PATH || location.pathname.startsWith(`${PLACES_DISCOVER_PATH}/`);
-  const isDiningPage = location.pathname === DINING_PATH;
-  const isHotelsPage = location.pathname === '/hotels';
   const isAboutTripoliPage = location.pathname === '/about-tripoli';
   const handleLogout = () => {
     logout();
@@ -148,7 +146,7 @@ export default function Layout() {
               <Link to="/" className={`nav-link nav-link--home ${isHome ? 'nav-link--active' : ''}`} onClick={closeMenu}>{t('nav', 'home')}</Link>
               <Link
                 to={PLACES_DISCOVER_PATH}
-                className={`nav-link ${isPlaceDiscoverPage && !isDiningPage && !isHotelsPage ? 'nav-link--active' : ''}`}
+                className={`nav-link ${isPlaceDiscoverPage ? 'nav-link--active' : ''}`}
                 onClick={closeMenu}
               >
                 {t('nav', 'discoverPlaces')}
@@ -284,7 +282,7 @@ export default function Layout() {
             <Link to="/" className={`nav-link nav-link--home ${isHome ? 'nav-link--active' : ''}`} onClick={closeMenu}>{t('nav', 'home')}</Link>
             <Link
               to={PLACES_DISCOVER_PATH}
-              className={`nav-link ${isPlaceDiscoverPage && !isDiningPage && !isHotelsPage ? 'nav-link--active' : ''}`}
+              className={`nav-link ${isPlaceDiscoverPage ? 'nav-link--active' : ''}`}
               onClick={closeMenu}
             >
               {t('nav', 'discoverPlaces')}

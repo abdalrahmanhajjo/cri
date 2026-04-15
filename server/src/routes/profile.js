@@ -10,7 +10,7 @@ const { getCollection, getMongoDb } = require('../mongo');
 const { validatePassword } = require('../utils/passwordValidator');
 const { isImageMime, prepareUploadedImage, pickImageExtension } = require('../utils/imageUpload');
 const { getMulterFileSizeLimit } = require('../utils/uploadLimits');
-const { visitorFollowupsFromDb } = require('../utils/inquiryFollowups');
+const { visitorFollowupsFromDb, ownerMessagesFromInquiry } = require('../utils/inquiryFollowups');
 const { getImageKit, uploadImageKitWithMetadataFallback } = require('../utils/imagekit');
 
 const router = express.Router();
@@ -203,8 +203,13 @@ router.get('/inquiries', async (req, res) => {
   const userId = req.user.userId;
   try {
     const inquiriesColl = await getCollection('place_inquiries');
+    const usersColl = await getCollection('users');
+    const u = await usersColl.findOne({ id: userId });
+    const emailLower = u && u.email ? String(u.email).trim().toLowerCase() : '';
+    const matchOr = [{ user_id: userId }];
+    if (emailLower) matchOr.push({ guest_email: emailLower });
     const rows = await inquiriesColl.aggregate([
-      { $match: { user_id: userId } },
+      { $match: { $or: matchOr } },
       { $lookup: {
           from: 'places',
           localField: 'place_id',
@@ -228,6 +233,7 @@ router.get('/inquiries', async (req, res) => {
       respondedAt: r.responded_at || null,
       createdAt: r.created_at,
       visitorFollowups: visitorFollowupsFromDb(r.visitor_followups),
+      ownerFollowups: ownerMessagesFromInquiry(r),
     }));
     res.json({ inquiries });
   } catch (err) {

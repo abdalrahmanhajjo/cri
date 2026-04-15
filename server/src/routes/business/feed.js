@@ -2,8 +2,9 @@ const express = require('express');
 const crypto = require('crypto');
 const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
-const { businessPortalMiddleware } = require('../../middleware/placeOwner');
-const { parsePlaceId, safeUrl } = require('../../utils/validate');
+const { businessPortalMiddleware, userManagesPlace } = require('../../middleware/placeOwner');
+const { parsePlaceId, safeUrl, escapeRegexForMongo } = require('../../utils/validate');
+const { restaurantRowFilter } = require('../../utils/restaurantPlaceScope');
 const { feedImagesForStorage } = require('../../utils/feedImageUrls');
 const { normalizeFeedEnhancements } = require('../../utils/feedPostPayload');
 const { canManageFeedPost, loadFeedPostById } = require('../../utils/feedPostAccess');
@@ -33,27 +34,46 @@ router.get('/', async (req, res) => {
     return res.status(400).json({ error: 'Invalid place id' });
   }
   const format = String(req.query.format || 'all').toLowerCase();
+  const qCaption = typeof req.query.q === 'string' ? req.query.q.trim() : '';
 
   try {
+    const usersColl = await getCollection('users');
     const poColl = await getCollection('place_owners');
-    const ownedPlaceIds = (await poColl.find({ user_id: userId }).toArray()).map(o => o.place_id);
-    
-    if (!ownedPlaceIds.length) return res.json({ posts: [] });
+    const placesColl = await getCollection('places');
+
+    const ownedPlaceIds = (await poColl.find({ user_id: userId }).toArray()).map((o) => o.place_id);
+    const actor = await usersColl.findOne({ id: userId }, { projection: { is_admin: 1 } });
+    const isAdmin = actor?.is_admin === true;
+
+    let scopePlaceIds = ownedPlaceIds;
+    if (isAdmin) {
+      const restRows = await placesColl.find(restaurantRowFilter(), { projection: { id: 1 } }).toArray();
+      const restIds = restRows.map((r) => r.id);
+      scopePlaceIds = [...new Set([...ownedPlaceIds, ...restIds])];
+    }
+
+    if (!scopePlaceIds.length) return res.json({ posts: [] });
 
     const postsColl = await getCollection('feed_posts');
-    const queryObj = { place_id: { $in: ownedPlaceIds } };
-    
+    const queryObj = {};
+
     if (placeFilter?.valid) {
-      if (!ownedPlaceIds.includes(placeFilter.value)) {
+      if (!(await userManagesPlace(userId, placeFilter.value))) {
         return res.status(403).json({ error: 'You do not manage this place' });
       }
       queryObj.place_id = placeFilter.value;
+    } else {
+      queryObj.place_id = { $in: scopePlaceIds };
     }
 
     if (format === 'reel') {
       queryObj.type = { $in: ['reel', 'video'] };
     } else if (format === 'post') {
       queryObj.type = { $ne: 'video' };
+    }
+
+    if (qCaption.length >= 2) {
+      queryObj.caption = { $regex: escapeRegexForMongo(qCaption), $options: 'i' };
     }
 
     const rows = await postsColl.find(queryObj).sort({ created_at: -1 }).limit(200).toArray();
@@ -82,21 +102,21 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const poColl = await getCollection('place_owners');
-    const own = await poColl.findOne({ user_id: userId, place_id: pid.value });
-    if (!own) return res.status(403).json({ error: 'You do not manage this place' });
+    if (!(await userManagesPlace(userId, pid.value))) {
+      return res.status(403).json({ error: 'You do not manage this place' });
+    }
 
     const usersColl = await getCollection('users');
     const user = await usersColl.findOne({ id: userId });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.feed_upload_blocked === true) {
+    if (user.feed_upload_blocked === true && user.is_admin !== true) {
       return res.status(403).json({ error: 'Your account is blocked from uploading posts/reels' });
     }
 
     const placesColl = await getCollection('places');
     const place = await placesColl.findOne({ id: pid.value });
     if (!place) return res.status(404).json({ error: 'Place not found' });
-    if (place.feed_linking_disabled === true) {
+    if (place.feed_linking_disabled === true && user.is_admin !== true) {
       return res.status(403).json({ error: 'Post/reel linking is disabled for this place by admin' });
     }
 
@@ -145,13 +165,15 @@ router.patch('/:id', async (req, res) => {
     const pid = parsePlaceId(body.placeId ?? body.place_id);
     if (!pid.valid) return res.status(400).json({ error: 'Invalid placeId' });
     if (pid.value !== existing.place_id) {
-      const poColl = await getCollection('place_owners');
-      const own = await poColl.findOne({ user_id: userId, place_id: pid.value });
-      if (!own) return res.status(403).json({ error: 'You do not manage this place' });
+      if (!(await userManagesPlace(userId, pid.value))) {
+        return res.status(403).json({ error: 'You do not manage this place' });
+      }
+      const usersColl = await getCollection('users');
+      const actor = await usersColl.findOne({ id: userId }, { projection: { is_admin: 1 } });
       const placesColl = await getCollection('places');
       const place = await placesColl.findOne({ id: pid.value });
       if (!place) return res.status(404).json({ error: 'Place not found' });
-      if (place.feed_linking_disabled === true) {
+      if (place.feed_linking_disabled === true && actor?.is_admin !== true) {
         return res.status(403).json({ error: 'Post/reel linking is disabled for this place' });
       }
       setObj.place_id = pid.value;

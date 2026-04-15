@@ -3,6 +3,7 @@ import { useParams, Link, useOutletContext } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension, getImageUrlAlternate } from '../../api/client';
 import { ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
 import MapPicker from '../../components/MapPicker';
+import { placePublicPagePath } from '../../utils/discoverPaths';
 import './Business.css';
 
 const DURATION_OPTIONS = ['', '15 mins', '30 mins', '45 mins', '1 hour', '1-2 hours', '2-3 hours', 'Half day', 'Full day'];
@@ -20,7 +21,6 @@ const TABS = [
   { id: 'location', label: 'Location' },
   { id: 'media', label: 'Photos' },
   { id: 'details', label: 'Details & hours' },
-  { id: 'dining', label: 'Dining profile' },
   { id: 'reviews', label: 'Reviews' },
   { id: 'languages', label: 'Languages' },
 ];
@@ -90,67 +90,6 @@ function fallbackTransFromEditor(form, place) {
     };
   }
   return fallbackTransFromPlace(place);
-}
-
-function diningProfileToForm(dp) {
-  const profile = dp && typeof dp === 'object' && !Array.isArray(dp) ? dp : {};
-  const signatureLines = Array.isArray(profile.signatureDishes)
-    ? profile.signatureDishes
-        .map((item) => {
-          if (typeof item === 'string') return item;
-          if (!item || typeof item !== 'object') return '';
-          return [item.name || '', item.price || '', item.description || '', item.badge || '']
-            .map((part) => String(part || '').trim())
-            .join(' | ')
-            .replace(/(\s\|\s)+$/, '');
-        })
-        .filter(Boolean)
-        .join('\n')
-    : '';
-
-  const menuSectionsJson = Array.isArray(profile.menuSections) && profile.menuSections.length
-    ? JSON.stringify(profile.menuSections, null, 2)
-    : '';
-
-  return {
-    diningCuisines: Array.isArray(profile.cuisines) ? profile.cuisines.join(', ') : '',
-    diningBestFor: Array.isArray(profile.bestFor) ? profile.bestFor.join(', ') : '',
-    diningDietary: Array.isArray(profile.dietaryOptions) ? profile.dietaryOptions.join(', ') : '',
-    diningServices: Array.isArray(profile.serviceModes) ? profile.serviceModes.join(', ') : '',
-    diningAtmosphere: profile.atmosphere || '',
-    diningReservationNotes: profile.reservationNotes || '',
-    diningContactAddress: profile.contactAddress || profile.address || '',
-    diningContactPhone: profile.contactPhone || profile.phone || '',
-    diningContactEmail: profile.contactEmail || profile.email || '',
-    diningContactNote: profile.contactNote || '',
-    diningMenuNote: profile.menuNote || '',
-    diningSignatureDishes: signatureLines,
-    diningMenuJson: menuSectionsJson,
-  };
-}
-
-function splitCommaList(value) {
-  return String(value || '')
-    .split(/[,;\n]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function parseSignatureDishLines(value) {
-  return String(value || '')
-    .split(/\r?\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [name = '', price = '', description = '', badge = ''] = line.split('|').map((part) => part.trim());
-      return {
-        name,
-        ...(price ? { price } : {}),
-        ...(description ? { description } : {}),
-        ...(badge ? { badge } : {}),
-      };
-    })
-    .filter((item) => item.name);
 }
 
 /**
@@ -272,7 +211,6 @@ export default function BusinessPlaceEdit() {
         hoursStr,
         feedLinkingRestrictedToOwner: p.feedLinkingRestrictedToOwner === true,
         feedLinkingDisabled: p.feedLinkingDisabled === true,
-        ...diningProfileToForm(p.diningProfile),
       });
       dirtyRef.current = false;
       setDirty(false);
@@ -438,37 +376,6 @@ export default function BusinessPlaceEdit() {
     try {
       const images = form.images.trim() ? form.images.split(/\n/).map((s) => s.trim()).filter(Boolean) : [];
       const tags = form.tags.trim() ? form.tags.split(/[,;]/).map((s) => s.trim()).filter(Boolean) : [];
-      let menuSections = [];
-      if (form.diningMenuJson?.trim()) {
-        try {
-          const parsed = JSON.parse(form.diningMenuJson);
-          if (!Array.isArray(parsed)) {
-            setError('Menu sections must be a JSON array.');
-            setSaving(false);
-            return;
-          }
-          menuSections = parsed;
-        } catch {
-          setError('Menu sections JSON is invalid.');
-          setSaving(false);
-          return;
-        }
-      }
-      const diningProfile = {
-        cuisines: splitCommaList(form.diningCuisines),
-        bestFor: splitCommaList(form.diningBestFor),
-        dietaryOptions: splitCommaList(form.diningDietary),
-        serviceModes: splitCommaList(form.diningServices),
-        atmosphere: String(form.diningAtmosphere || '').trim(),
-        reservationNotes: String(form.diningReservationNotes || '').trim(),
-        contactAddress: String(form.diningContactAddress || '').trim(),
-        contactPhone: String(form.diningContactPhone || '').trim(),
-        contactEmail: String(form.diningContactEmail || '').trim(),
-        contactNote: String(form.diningContactNote || '').trim(),
-        menuNote: String(form.diningMenuNote || '').trim(),
-        signatureDishes: parseSignatureDishLines(form.diningSignatureDishes),
-        menuSections,
-      };
       await api.business.places.update(placeId, {
         name: form.name,
         description: form.description,
@@ -486,7 +393,6 @@ export default function BusinessPlaceEdit() {
         images,
         tags,
         hours: hoursPayload,
-        diningProfile,
         feedLinkingRestrictedToOwner: form.feedLinkingRestrictedToOwner === true,
         feedLinkingDisabled: form.feedLinkingDisabled === true,
       });
@@ -583,7 +489,11 @@ export default function BusinessPlaceEdit() {
         <p className="business-edit-breadcrumb">
           <Link to="/business">Dashboard</Link>
           {' · '}
-          <a href={`/place/${encodeURIComponent(placeId)}`} target="_blank" rel="noopener noreferrer">
+          <a
+            href={placePublicPagePath(placeId)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Public preview
           </a>
         </p>
@@ -723,7 +633,8 @@ export default function BusinessPlaceEdit() {
           <div className="business-panel">
             <h2 className="business-panel-title">Photos</h2>
             <p className="business-hint" style={{ marginBottom: '1rem' }}>
-              First image is the cover. JPEG, PNG, GIF, or WebP — max 5 MB per file. Images are scanned server-side.
+              First image is the cover. Upload files only — JPEG, PNG, GIF, or WebP — max 5 MB per file. Images are scanned
+              server-side.
             </p>
             <div
               className="business-upload-zone"
@@ -776,10 +687,6 @@ export default function BusinessPlaceEdit() {
                 ))}
               </div>
             )}
-            <div className="business-field" style={{ marginTop: '1rem' }}>
-              <label htmlFor="biz-urls">Image URLs (one per line)</label>
-              <textarea id="biz-urls" className="business-textarea" rows={3} value={form.images} onChange={setField('images')} />
-            </div>
           </div>
         )}
 
@@ -845,149 +752,6 @@ export default function BusinessPlaceEdit() {
                 spellCheck={false}
               />
               <p className="business-hint">Optional structured hours for apps that read this field. Leave empty if unsure.</p>
-            </div>
-          </div>
-        )}
-
-        {tab === 'dining' && (
-          <div className="business-panel">
-            <h2 className="business-panel-title">Dining profile</h2>
-            <p className="business-hint" style={{ marginBottom: '1rem' }}>
-              Build a restaurant-grade detail page: cuisines, what the venue is best for, service options, signature dishes,
-              and structured menu sections for the public menu tab.
-            </p>
-            <div className="business-field-row">
-              <div className="business-field">
-                <label>Cuisines</label>
-                <input
-                  className="business-input"
-                  value={form.diningCuisines || ''}
-                  onChange={setField('diningCuisines')}
-                  placeholder="Lebanese, Mediterranean, Desserts"
-                />
-              </div>
-              <div className="business-field">
-                <label>Best for</label>
-                <input
-                  className="business-input"
-                  value={form.diningBestFor || ''}
-                  onChange={setField('diningBestFor')}
-                  placeholder="Breakfast, Family dinners, Date night"
-                />
-              </div>
-            </div>
-            <div className="business-field-row">
-              <div className="business-field">
-                <label>Dietary options</label>
-                <input
-                  className="business-input"
-                  value={form.diningDietary || ''}
-                  onChange={setField('diningDietary')}
-                  placeholder="Vegetarian, Vegan, Halal"
-                />
-              </div>
-              <div className="business-field">
-                <label>Service modes</label>
-                <input
-                  className="business-input"
-                  value={form.diningServices || ''}
-                  onChange={setField('diningServices')}
-                  placeholder="Reservations, Takeaway, Delivery, Outdoor seating"
-                />
-              </div>
-            </div>
-            <div className="business-field">
-              <label>Atmosphere</label>
-              <textarea
-                className="business-textarea"
-                rows={3}
-                value={form.diningAtmosphere || ''}
-                onChange={setField('diningAtmosphere')}
-                placeholder="Describe the mood, style, or setting guests can expect."
-              />
-            </div>
-            <div className="business-field">
-              <label>Reservation notes</label>
-              <textarea
-                className="business-textarea"
-                rows={3}
-                value={form.diningReservationNotes || ''}
-                onChange={setField('diningReservationNotes')}
-                placeholder="Booking windows, group sizes, walk-ins, special events, or table timing."
-              />
-            </div>
-            <div className="business-field-row">
-              <div className="business-field">
-                <label>Contact address</label>
-                <input
-                  className="business-input"
-                  value={form.diningContactAddress || ''}
-                  onChange={setField('diningContactAddress')}
-                  placeholder="Tripoli Lebanon"
-                />
-              </div>
-              <div className="business-field">
-                <label>Contact phone</label>
-                <input
-                  className="business-input"
-                  value={form.diningContactPhone || ''}
-                  onChange={setField('diningContactPhone')}
-                  placeholder="+961 6 444 445 ext 1"
-                />
-              </div>
-            </div>
-            <div className="business-field-row">
-              <div className="business-field">
-                <label>Contact email</label>
-                <input
-                  className="business-input"
-                  value={form.diningContactEmail || ''}
-                  onChange={setField('diningContactEmail')}
-                  placeholder="callcenter@example.com"
-                />
-              </div>
-              <div className="business-field">
-                <label>Contact note</label>
-                <input
-                  className="business-input"
-                  value={form.diningContactNote || ''}
-                  onChange={setField('diningContactNote')}
-                  placeholder="Use this section for direct reservation details or guest support."
-                />
-              </div>
-            </div>
-            <div className="business-field">
-              <label>Menu note</label>
-              <textarea
-                className="business-textarea"
-                rows={3}
-                value={form.diningMenuNote || ''}
-                onChange={setField('diningMenuNote')}
-                placeholder="Short note about menu availability, seasonal dishes, prices, or tasting style."
-              />
-            </div>
-            <div className="business-field">
-              <label>Signature dishes</label>
-              <textarea
-                className="business-textarea"
-                rows={6}
-                value={form.diningSignatureDishes || ''}
-                onChange={setField('diningSignatureDishes')}
-                placeholder={'Dish name | 8$ | Short description | Bestseller'}
-              />
-              <p className="business-hint">One dish per line. Format: name | price | description | badge</p>
-            </div>
-            <div className="business-field">
-              <label>Menu sections (JSON)</label>
-              <textarea
-                className="business-textarea"
-                rows={12}
-                value={form.diningMenuJson || ''}
-                onChange={setField('diningMenuJson')}
-                spellCheck={false}
-                placeholder={'[\n  {\n    "title": "Breakfast",\n    "note": "Served until noon",\n    "items": [\n      { "name": "Zaatar Manousheh", "price": "4$", "description": "Stone-baked flatbread", "badge": "Popular" }\n    ]\n  }\n]'}
-              />
-              <p className="business-hint">Optional structured menu used by the public restaurant menu tab.</p>
             </div>
           </div>
         )}

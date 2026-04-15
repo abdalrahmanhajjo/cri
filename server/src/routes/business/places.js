@@ -5,6 +5,8 @@ const { businessPortalMiddleware, requirePlaceOwnerParam } = require('../../midd
 const { parsePlaceId } = require('../../utils/validate');
 const { validateBusinessPlacePut, validateTranslationPut } = require('../../utils/businessPlaceValidation');
 const { normalizeDbText } = require('../../utils/normalizeDbText');
+const { mergeDiningProfileLayers } = require('../../utils/diningProfileMerge');
+const { isDiningVenueRow } = require('../../utils/restaurantPlaceScope');
 
 const router = express.Router();
 router.use(authMiddleware, businessPortalMiddleware);
@@ -22,16 +24,32 @@ function safeJson(val, fallback = []) {
   return fallback;
 }
 
+function parseDiningProfileObject(val) {
+  if (!val) return null;
+  if (typeof val === 'object' && !Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    const t = val.trim();
+    if (!t) return null;
+    try {
+      const p = JSON.parse(t);
+      return p && typeof p === 'object' && !Array.isArray(p) ? p : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 function rowToEditorPlace(row) {
   const images = safeJson(row.images, []);
   const tags = safeJson(row.tags, []);
-  const diningProfile =
-    row.dining_profile && typeof row.dining_profile === 'object' && !Array.isArray(row.dining_profile)
-      ? row.dining_profile
-      : {};
+  const camel = parseDiningProfileObject(row.diningProfile) || {};
+  const snake = parseDiningProfileObject(row.dining_profile) || {};
+  const diningProfile = mergeDiningProfileLayers(camel, snake);
   const tagList = Array.isArray(tags) ? tags.map((x) => (typeof x === 'string' ? normalizeDbText(x) : x)) : [];
   return {
     id: row.id,
+    venueKind: isDiningVenueRow(row) ? 'dining' : 'other',
     name: normalizeDbText(row.name || ''),
     description: normalizeDbText(row.description || ''),
     location: normalizeDbText(row.location || ''),

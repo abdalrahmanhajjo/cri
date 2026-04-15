@@ -1,18 +1,14 @@
 const express = require('express');
 const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
-const { businessPortalMiddleware } = require('../../middleware/placeOwner');
+const { businessPortalMiddleware, userManagesPlace } = require('../../middleware/placeOwner');
 const { parsePlaceId } = require('../../utils/validate');
-const { visitorFollowupsFromDb } = require('../../utils/inquiryFollowups');
+const { visitorFollowupsFromDb, ownerFollowupsFromDb, ownerMessagesFromInquiry } = require('../../utils/inquiryFollowups');
+
+const MAX_OWNER_FOLLOWUPS_PER_INQUIRY = 50;
 
 const router = express.Router();
 router.use(authMiddleware, businessPortalMiddleware);
-
-async function assertOwnsPlace(userId, placeId) {
-  const poColl = await getCollection('place_owners');
-  const owner = await poColl.findOne({ user_id: userId, place_id: placeId });
-  return !!owner;
-}
 
 /** Load one inquiry row with user and block info. */
 async function fetchInquiryRowById(id) {
@@ -71,6 +67,7 @@ function toApiInquiry(r) {
     guestPhone: r.guest_phone || '',
     message: r.message || '',
     response: r.response || '',
+    ownerFollowups: ownerMessagesFromInquiry(r),
     status: r.status,
     createdAt: r.created_at,
     respondedAt: r.responded_at,
@@ -88,7 +85,7 @@ router.get('/', async (req, res) => {
   const userId = req.user.userId;
 
   try {
-    if (!(await assertOwnsPlace(userId, placeId))) {
+    if (!(await userManagesPlace(userId, placeId))) {
       return res.status(403).json({ error: 'You do not manage this place' });
     }
 
@@ -160,22 +157,42 @@ router.patch('/:id', async (req, res) => {
     const inquiry = await inquiriesColl.findOne({ id });
     if (!inquiry) return res.status(404).json({ error: 'Inquiry not found' });
 
-    if (!(await assertOwnsPlace(userId, inquiry.place_id))) {
+    if (!(await userManagesPlace(userId, inquiry.place_id))) {
       return res.status(403).json({ error: 'You do not manage the place for this inquiry' });
     }
 
     if (statusIn === 'archived') {
       await inquiriesColl.updateOne({ id }, { $set: { status: 'archived', updated_at: new Date() } });
     } else {
+      const slice = responseText.slice(0, 8000);
+      let existing = ownerFollowupsFromDb(inquiry.owner_followups);
+      if (existing.length === 0 && inquiry.response && String(inquiry.response).trim()) {
+        existing = [
+          {
+            body: String(inquiry.response).trim().slice(0, 8000),
+            createdAt: inquiry.responded_at || inquiry.created_at || new Date(),
+          },
+        ];
+      }
+      if (existing.length >= MAX_OWNER_FOLLOWUPS_PER_INQUIRY) {
+        return res.status(400).json({ error: 'Too many venue replies on this thread.' });
+      }
+      const entry = { body: slice, createdAt: new Date().toISOString() };
+      const nextList = [...existing, entry];
       await inquiriesColl.updateOne(
         { id },
         {
           $set: {
-            response: responseText.slice(0, 8000),
+            owner_followups: nextList.map((x) => ({
+              body: x.body,
+              createdAt:
+                x.createdAt instanceof Date ? x.createdAt.toISOString() : x.createdAt || new Date().toISOString(),
+            })),
+            response: slice,
             status: 'answered',
-            responded_at: inquiry.responded_at || new Date(),
-            updated_at: new Date()
-          }
+            responded_at: new Date(),
+            updated_at: new Date(),
+          },
         }
       );
     }

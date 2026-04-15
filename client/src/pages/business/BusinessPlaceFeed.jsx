@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import api, { getImageUrl, fixImageUrlExtension } from '../../api/client';
 import { rawFeedImageUrls, MAX_FEED_POST_IMAGES } from '../../utils/feedPostImages';
 import {
@@ -41,10 +41,35 @@ export default function BusinessPlaceFeed() {
   const ctx = useOutletContext();
   const me = ctx?.me;
   const refreshMe = ctx?.refreshMe;
+  const [searchParams] = useSearchParams();
   const places = useMemo(() => (Array.isArray(me?.places) ? me.places : []), [me?.places]);
+  const meIsAdmin = me?.isAdmin === true;
+
+  const [venuePickQuery, setVenuePickQuery] = useState('');
+  const [captionSearch, setCaptionSearch] = useState('');
+  const [captionDebounced, setCaptionDebounced] = useState('');
+
+  const filteredVenueOptions = useMemo(() => {
+    const q = venuePickQuery.trim().toLowerCase();
+    if (!q) return places;
+    const hit = places.filter((p) => {
+      const name = String(p.name || '').toLowerCase();
+      const loc = String(p.location || '').toLowerCase();
+      const cat = String(p.category || '').toLowerCase();
+      return name.includes(q) || loc.includes(q) || cat.includes(q);
+    });
+    return hit.length ? hit : places;
+  }, [places, venuePickQuery]);
 
   const [posts, setPosts] = useState([]);
   const [placeFilter, setPlaceFilter] = useState('');
+  useEffect(() => {
+    const pid = String(searchParams.get('placeId') || searchParams.get('place') || '').trim();
+    if (!pid) return;
+    const allowed = places.some((p) => String(p.id) === pid);
+    if (allowed) setPlaceFilter(pid);
+  }, [searchParams, places]);
+
   const [formatFilter, setFormatFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -92,6 +117,8 @@ export default function BusinessPlaceFeed() {
       const params = {};
       if (placeFilter) params.placeId = placeFilter;
       if (formatFilter && formatFilter !== 'all') params.format = formatFilter;
+      const cq = captionDebounced.trim();
+      if (cq.length >= 2) params.q = cq;
       const r = await api.business.feed.list(params);
       setPosts(r.posts || []);
     } catch (e) {
@@ -100,7 +127,7 @@ export default function BusinessPlaceFeed() {
     } finally {
       setLoading(false);
     }
-  }, [placeFilter, formatFilter]);
+  }, [placeFilter, formatFilter, captionDebounced]);
 
   useEffect(() => {
     document.title = `Feed · ${BASE_TITLE}`;
@@ -108,6 +135,11 @@ export default function BusinessPlaceFeed() {
       document.title = BASE_TITLE;
     };
   }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setCaptionDebounced(captionSearch.trim()), 350);
+    return () => window.clearTimeout(t);
+  }, [captionSearch]);
 
   useEffect(() => {
     load();
@@ -450,12 +482,18 @@ export default function BusinessPlaceFeed() {
 
   return (
     <div className="business-dashboard">
-      <header className="business-dashboard-hero">
+      <header className={`business-dashboard-hero${meIsAdmin ? ' business-dashboard-hero--admin' : ''}`}>
         <p className="business-dashboard-kicker">Community</p>
-        <h1 className="business-dashboard-title">Your place feed</h1>
+        <h1 className="business-dashboard-title">Feed, inquiries & offers</h1>
         <p className="business-dashboard-lead">
-          Publish feed posts or short-video reels for each venue you manage. Content is tied to your listing; visibility in
-          Explore is controlled by administrators. You can edit or remove your items anytime.
+          Pick a venue by name, publish posts or reels, and moderate threads. Search and filters use venue names — not raw IDs.
+          {meIsAdmin && (
+            <span className="business-admin-inline">
+              {' '}
+              As an admin you can manage any assigned or dining-scoped venue; use{' '}
+              <a href="/admin/users" className="business-inline-link">Users</a> to block accounts platform-wide.
+            </span>
+          )}
         </p>
       </header>
 
@@ -467,7 +505,11 @@ export default function BusinessPlaceFeed() {
 
       {places.length === 0 && me && (
         <div className="business-empty-card">
-          <p>No place is linked to your account yet. Ask an administrator to assign a venue before posting to the feed.</p>
+          <p>
+            {meIsAdmin
+              ? 'No venues loaded yet. As an admin you will see venues you own plus dining listings once they exist in the directory.'
+              : 'No place is linked to your account yet. Ask an administrator to assign a venue before posting to the feed.'}
+          </p>
         </div>
       )}
 
@@ -504,9 +546,9 @@ export default function BusinessPlaceFeed() {
                   value={engagementPlaceId}
                   onChange={(e) => setEngagementPlaceId(e.target.value)}
                 >
-                  {places.map((p) => (
+                  {filteredVenueOptions.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name || p.id}
+                      {[p.name, p.location || p.category].filter(Boolean).join(' — ') || 'Venue'}
                     </option>
                   ))}
                 </select>
@@ -516,6 +558,22 @@ export default function BusinessPlaceFeed() {
 
           {sectionTab === 'feed' && (
             <>
+          <div className="business-panel business-venue-scope-bar" style={{ marginBottom: '1rem' }}>
+            <div className="business-field" style={{ marginBottom: 0 }}>
+              <span className="business-hint" style={{ display: 'block', marginBottom: '0.35rem' }}>
+                Find a venue by name or area
+              </span>
+              <input
+                type="search"
+                className="business-input"
+                placeholder="Search venues…"
+                value={venuePickQuery}
+                onChange={(e) => setVenuePickQuery(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
           <div className="business-panel" style={{ marginBottom: '1.5rem' }}>
             <h2 className="business-panel-title">New post or reel</h2>
             <form onSubmit={submitCreate} className="business-feed-form">
@@ -546,9 +604,9 @@ export default function BusinessPlaceFeed() {
                   onChange={(e) => setFormPlace(e.target.value)}
                   required
                 >
-                  {places.map((p) => (
+                  {filteredVenueOptions.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name || p.id}
+                      {[p.name, p.location || p.category].filter(Boolean).join(' — ') || 'Venue'}
                     </option>
                   ))}
                 </select>
@@ -781,15 +839,28 @@ export default function BusinessPlaceFeed() {
           </div>
 
           <div className="business-feed-toolbar">
+            <label className="business-feed-filter business-feed-filter--grow">
+              <span className="business-hint" style={{ marginRight: '0.5rem' }}>
+                Caption search:
+              </span>
+              <input
+                type="search"
+                className="business-input"
+                placeholder="Min. 2 characters"
+                value={captionSearch}
+                onChange={(e) => setCaptionSearch(e.target.value)}
+                style={{ minWidth: 'min(100%, 220px)' }}
+              />
+            </label>
             <label className="business-feed-filter">
               <span className="business-hint" style={{ marginRight: '0.5rem' }}>
-                Place:
+                Venue:
               </span>
               <select className="business-select" value={placeFilter} onChange={(e) => setPlaceFilter(e.target.value)}>
-                <option value="">All my places</option>
-                {places.map((p) => (
+                <option value="">{meIsAdmin ? 'All accessible venues' : 'All my venues'}</option>
+                {filteredVenueOptions.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name || p.id}
+                    {[p.name, p.location || p.category].filter(Boolean).join(' — ') || 'Venue'}
                   </option>
                 ))}
               </select>
@@ -820,7 +891,7 @@ export default function BusinessPlaceFeed() {
           {!loading && posts.length > 0 && (
             <div className="business-feed-list">
               {posts.map((p) => {
-                const placeName = places.find((x) => x.id === p.place_id)?.name || p.place_id;
+                const placeName = places.find((x) => x.id === p.place_id)?.name || 'Venue';
                 const isReel = isReelCard(p);
                 const firstImg = rawFeedImageUrls(p)[0];
                 const hasImage = !!imgSrc(firstImg);
@@ -1000,12 +1071,20 @@ export default function BusinessPlaceFeed() {
                           <p className="business-inquiry-message">{fu.body}</p>
                         </div>
                       ))}
-                    {q.response && (
-                      <div className="business-inquiry-reply">
-                        <span className="business-hint">Your reply</span>
-                        <p>{q.response}</p>
+                    {(Array.isArray(q.ownerFollowups) && q.ownerFollowups.length > 0
+                      ? q.ownerFollowups
+                      : q.response
+                        ? [{ body: q.response, createdAt: q.respondedAt }]
+                        : []
+                    ).map((rep, idx) => (
+                      <div key={`${q.id}-own-${idx}`} className="business-inquiry-reply">
+                        <span className="business-hint">
+                          Your reply
+                          {rep.createdAt ? ` · ${new Date(rep.createdAt).toLocaleString()}` : ''}
+                        </span>
+                        <p>{rep.body}</p>
                       </div>
-                    )}
+                    ))}
                     {q.status !== 'archived' && (
                       <div className="business-inquiry-reply-box">
                         <textarea

@@ -16,17 +16,18 @@ async function businessPortalMiddleware(req, res, next) {
     if (!user) return res.status(403).json({ error: 'Forbidden' });
 
     const ownedPlaces = await poColl.countDocuments({ user_id: userId });
-    
-    const ok = user.is_business_owner === true || ownedPlaces > 0;
+
+    const ok = user.is_admin === true || user.is_business_owner === true || ownedPlaces > 0;
     if (!ok) {
       return res.status(403).json({
         error: 'Business owner access required. Ask an admin to assign your place or enable the business owner role.',
       });
     }
-    
+
     req.businessPortal = {
       isBusinessOwner: user.is_business_owner === true,
       ownedPlaceCount: ownedPlaces,
+      isAdmin: user.is_admin === true,
     };
     return next();
   } catch (err) {
@@ -45,6 +46,10 @@ function requirePlaceOwnerParam(paramName = 'placeId') {
     if (!parsed.valid) return res.status(400).json({ error: 'Invalid place id' });
     const placeId = parsed.value;
     try {
+      if (req.businessPortal?.isAdmin === true) {
+        req.ownsPlaceId = placeId;
+        return next();
+      }
       const poColl = await getCollection('place_owners');
       const owner = await poColl.findOne({ user_id: userId, place_id: placeId });
       if (!owner) {
@@ -59,4 +64,19 @@ function requirePlaceOwnerParam(paramName = 'placeId') {
   };
 }
 
-module.exports = { businessPortalMiddleware, requirePlaceOwnerParam };
+/**
+ * Place owner or platform admin (full management in business APIs).
+ * @param {string} userId
+ * @param {string} placeId
+ */
+async function userManagesPlace(userId, placeId) {
+  if (!userId || !placeId) return false;
+  const usersColl = await getCollection('users');
+  const u = await usersColl.findOne({ id: userId }, { projection: { is_admin: 1 } });
+  if (u?.is_admin === true) return true;
+  const poColl = await getCollection('place_owners');
+  const row = await poColl.findOne({ user_id: userId, place_id: placeId });
+  return !!row;
+}
+
+module.exports = { businessPortalMiddleware, requirePlaceOwnerParam, userManagesPlace };

@@ -228,3 +228,22 @@
     padding: 0;
   }
 }
+
+
+.sp-card--tile .sp-card-media {
+  position: relative;
+}
+
+.sp-card--tile .sp-card-media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 40%, rgba(15, 23, 42, 0.35) 100%);
+  opacity: 0.85;
+  transition: opacity 0.25s ease;
+}
+
+.sp-card--tile:hover .sp-card-media::after {
+  opacity: 0.65;
+}

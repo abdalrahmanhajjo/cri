@@ -18,12 +18,12 @@ import {
   hasOverlappingTimeSlots,
   getDateForDayIndex,
 } from '../utils/tripPlannerHelpers';
-import { DINING_PATH, HOTELS_PATH } from '../utils/discoverPaths';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import {
   getFoodAndStayCategoryIdSets,
   isDedicatedGuideListing,
 } from '../utils/placeGuideExclusions';
+import { PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import './PlaceDiscover.css';
 
 function formatTripRange(trip, locale) {
@@ -194,9 +194,6 @@ export default function PlaceDiscover() {
   }, []);
 
   const sponsoredDiscoverEnabled = settings?.sponsoredPlacesEnabled?.discover !== false;
-  const diningGuideEnabled = settings?.diningGuide?.enabled !== false;
-  const hotelsGuideEnabled = settings?.hotelsGuide?.enabled !== false;
-
   useEffect(() => {
     setQDraft(qParam);
   }, [qParam]);
@@ -612,7 +609,6 @@ export default function PlaceDiscover() {
             <h1 id="pd-hero-title" className="pd-hero-title">
               {t('placeDiscover', 'title')}
             </h1>
-            <p className="pd-hero-sub">{t('placeDiscover', 'subtitle')}</p>
           </div>
           <div className="pd-global-search-wrap">
             <GlobalSearchBar
@@ -622,46 +618,6 @@ export default function PlaceDiscover() {
               onQueryChange={setQDraft}
             />
           </div>
-          {(diningGuideEnabled || hotelsGuideEnabled) && (
-            <div className="pd-discover-guides">
-              {diningGuideEnabled && (
-                <Link to={DINING_PATH} className="pd-dining-highlight" aria-label={t('nav', 'diningNav')}>
-                  <span className="pd-dining-highlight__badge">{t('placeDiscover', 'eyebrow') || 'Discover'}</span>
-                  <span className="pd-dining-highlight__main">
-                    <span className="pd-dining-highlight__icon">
-                      <Icon name="restaurant" size={22} aria-hidden />
-                    </span>
-                    <span className="pd-dining-highlight__copy">
-                      <strong>{t('nav', 'diningNav')}</strong>
-                      <span>{t('placeDiscover', 'exploreDining')}</span>
-                    </span>
-                  </span>
-                  <span className="pd-dining-highlight__cta">
-                    <span>{t('home', 'viewDetails')}</span>
-                    <Icon name="arrow_forward" size={18} aria-hidden />
-                  </span>
-                </Link>
-              )}
-              {hotelsGuideEnabled && (
-                <Link to={HOTELS_PATH} className="pd-hotels-highlight" aria-label={t('nav', 'hotelsNav')}>
-                  <span className="pd-hotels-highlight__badge">{t('placeDiscover', 'eyebrow') || 'Discover'}</span>
-                  <span className="pd-hotels-highlight__main">
-                    <span className="pd-hotels-highlight__icon">
-                      <Icon name="hotel" size={22} aria-hidden />
-                    </span>
-                    <span className="pd-hotels-highlight__copy">
-                      <strong>{t('nav', 'hotelsNav')}</strong>
-                      <span>{t('placeDiscover', 'exploreHotels')}</span>
-                    </span>
-                  </span>
-                  <span className="pd-hotels-highlight__cta">
-                    <span>{t('home', 'viewDetails')}</span>
-                    <Icon name="arrow_forward" size={18} aria-hidden />
-                  </span>
-                </Link>
-              )}
-            </div>
-          )}
         </div>
       </header>
 
@@ -737,6 +693,21 @@ export default function PlaceDiscover() {
           </div>
         </section>
 
+        {sponsoredDiscoverVisible.length > 0 ? (
+          <section className="pd-sponsored-xp" aria-label={t('placeDiscover', 'sponsoredStripTitle')}>
+            <header className="pd-sponsored-xp__head">
+              <h2 className="pd-sponsored-xp__title">{t('placeDiscover', 'sponsoredStripTitle')}</h2>
+            </header>
+            <div className="pd-sponsored-xp__track">
+              {sponsoredDiscoverVisible.slice(0, 8).map((item) => (
+                <div key={item.id} className="pd-sponsored-xp__cell">
+                  <SponsoredPlaceCard item={item} t={t} variant="tile" />
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <h2 id="pd-results-heading" className="pd-sr-only">
           {t('placeDiscover', 'resultsHeading')}
         </h2>
@@ -744,14 +715,6 @@ export default function PlaceDiscover() {
           <p className="pd-empty">{t('home', 'noSpots')}</p>
         ) : (
           <section className={`pd-mosaic pd-mosaic--${viewMode}`} aria-labelledby="pd-results-heading">
-            {sponsoredDiscoverVisible.length > 0 && viewMode === 'list' ? (
-              <div className="pd-sponsored-block">
-                <p className="pd-sponsored-kicker">{t('discover', 'sponsoredDiscoverKicker')}</p>
-                <div className="pd-sponsored-inline">
-                  <SponsoredPlaceCard item={sponsoredDiscoverVisible[0]} t={t} variant="inline" />
-                </div>
-              </div>
-            ) : null}
             {filteredPlaces.map((p) => {
               const rowId = resolveDiscoverPlaceId(p) || String(p.id ?? '');
               return (
