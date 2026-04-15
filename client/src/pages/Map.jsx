@@ -1662,7 +1662,7 @@ export default function MapPage() {
     <div
       className={`vd map-page map-page--google${liveNavigation ? ' map-page--live-nav' : ''}${
         liveNavigation && !liveNavDirectionsExpanded ? ' map-page--live-nav-collapsed' : ''
-      }${listOpen ? ' map-page--list-open' : ''}`}
+      }${listOpen ? ' map-page--list-open' : ''}${tripFilterName ? ' map-page--trip-route' : ''}`}
       role="main"
       aria-label={t('home', 'mapPageTitle')}
     >
@@ -2075,65 +2075,66 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* Places list drawer */}
-        {!addingTripStop && listOpen && (
-          <div
-            className={`map-nearby-tabs-floating${listOpen ? ' map-nearby-tabs-floating--open' : ''}`}
-            role="group"
-            aria-label={t('home', 'mapNearbyGroupAria')}
-          >
-            <button
-              type="button"
-              className={`map-drawer-nearby-btn ${nearbyMode === 'off' ? 'map-drawer-nearby-btn--active' : ''}`}
-              onClick={handleNearbyModeAll}
-              aria-pressed={nearbyMode === 'off'}
-            >
-              <Icon name="list" size={18} />
-              <span>{t('home', 'mapNearbyAll')}</span>
-            </button>
-            <button
-              type="button"
-              className={`map-drawer-nearby-btn ${nearbyMode === 'me' ? 'map-drawer-nearby-btn--active' : ''}`}
-              onClick={handleNearbyModeMe}
-              aria-pressed={nearbyMode === 'me'}
-            >
-              <Icon name="my_location" size={18} />
-              <span>{t('home', 'mapNearbyNearMe')}</span>
-            </button>
-            <button
-              type="button"
-              className={`map-drawer-nearby-btn ${nearbyMode === 'place' ? 'map-drawer-nearby-btn--active' : ''}`}
-              onClick={handleNearbyModePlace}
-              disabled={!nearbyFromSelectionReady}
-              title={!nearbyFromSelectionReady ? t('home', 'mapNearbySelectForDisabledTitle') : undefined}
-              aria-pressed={nearbyMode === 'place'}
-            >
-              <Icon name="place" size={18} />
-              <span>{t('home', 'mapNearbyNearSelection')}</span>
-            </button>
-          </div>
-        )}
+        {/* Places list: unified sheet (filters + list) */}
         <div className={`map-drawer ${listOpen ? 'map-drawer--open' : ''}`}>
-          <div className="map-drawer-header">
-            <h2 className="map-drawer-title">{t('home', 'mapPageTitle')}</h2>
-            <p className="map-drawer-sub">
+          <div className="map-drawer-sheet">
+            {!addingTripStop && listOpen && (
+              <div
+                className="map-drawer-segmented"
+                role="group"
+                aria-label={t('home', 'mapNearbyGroupAria')}
+              >
+                <button
+                  type="button"
+                  className={`map-drawer-nearby-btn ${nearbyMode === 'off' ? 'map-drawer-nearby-btn--active' : ''}`}
+                  onClick={handleNearbyModeAll}
+                  aria-pressed={nearbyMode === 'off'}
+                >
+                  <Icon name="list" size={18} />
+                  <span>{t('home', 'mapNearbyAll')}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`map-drawer-nearby-btn ${nearbyMode === 'me' ? 'map-drawer-nearby-btn--active' : ''}`}
+                  onClick={handleNearbyModeMe}
+                  aria-pressed={nearbyMode === 'me'}
+                >
+                  <Icon name="my_location" size={18} />
+                  <span>{t('home', 'mapNearbyNearMe')}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`map-drawer-nearby-btn ${nearbyMode === 'place' ? 'map-drawer-nearby-btn--active' : ''}`}
+                  onClick={handleNearbyModePlace}
+                  disabled={!nearbyFromSelectionReady}
+                  title={!nearbyFromSelectionReady ? t('home', 'mapNearbySelectForDisabledTitle') : undefined}
+                  aria-pressed={nearbyMode === 'place'}
+                >
+                  <Icon name="place" size={18} />
+                  <span>{t('home', 'mapNearbyNearSelection')}</span>
+                </button>
+              </div>
+            )}
+            <div className="map-drawer-header">
+              <h2 className="map-drawer-title">{t('home', 'mapPageTitle')}</h2>
+              <p className="map-drawer-sub">
               {nearbyMode === 'off' && t('home', 'mapNearbyCount').replace('{n}', String(drawerPlaces.length))}
               {nearbyMode === 'me' && nearbyLocating && t('home', 'mapNearbyGettingLocation')}
               {nearbyMode === 'me' && !nearbyLocating &&
                 t('home', 'mapNearbyCount').replace('{n}', String(listForDrawer.length))}
               {nearbyMode === 'place' &&
                 t('home', 'mapNearbyCount').replace('{n}', String(listForDrawer.length))}
-            </p>
-            {nearbyMode === 'me' && !nearbyLocating && (
+              </p>
+              {nearbyMode === 'me' && !nearbyLocating && (
               <p className="map-drawer-nearby-hint">{t('home', 'mapNearbySortedFromYou')}</p>
-            )}
-            {nearbyMode === 'place' && (
+              )}
+              {nearbyMode === 'place' && (
               <p className="map-drawer-nearby-hint">{t('home', 'mapNearbySortedFromPlace')}</p>
-            )}
-            <button type="button" className="map-drawer-close" onClick={() => setListOpen(false)} aria-label="Close">
+              )}
+              <button type="button" className="map-drawer-close" onClick={() => setListOpen(false)} aria-label="Close">
               <Icon name="close" size={24} />
-            </button>
-          </div>
+              </button>
+            </div>
           <div className="map-drawer-list">
             {listForDrawer.length === 0 ? (
               <p className="map-drawer-empty">
@@ -2192,6 +2193,7 @@ export default function MapPage() {
                 nearbyMode={nearbyMode}
               />
             )}
+          </div>
           </div>
         </div>
         <div className={`map-drawer-backdrop ${listOpen ? 'map-drawer-backdrop--visible' : ''}`} onClick={() => setListOpen(false)} aria-hidden="true" />
