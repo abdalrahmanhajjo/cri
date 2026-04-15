@@ -111,9 +111,11 @@ export default function FindYourWayMap({ places = [], t }) {
   const mapWrapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
+  const mapPaintedOnceRef = useRef(false);
   const [visible, setVisible] = useState(false);
   const [mapError, setMapError] = useState(null);
   const [mapReady, setMapReady] = useState(false);
+  const [mapPainted, setMapPainted] = useState(false);
   const [areaFilter, setAreaFilter] = useState(null);
   const [selected, setSelected] = useState(null);
 
@@ -200,6 +202,8 @@ export default function FindYourWayMap({ places = [], t }) {
 
     let cancelled = false;
     setMapError(null);
+    mapPaintedOnceRef.current = false;
+    setMapPainted(false);
 
     loadGoogleMapsScript(apiKey, (err) => {
       if (!cancelled) setMapError(err.message);
@@ -245,16 +249,20 @@ export default function FindYourWayMap({ places = [], t }) {
           }
           setMapReady(true);
           staggerMapResize(maps, map);
-          maps.event.addListenerOnce(map, 'idle', () => {
-            staggerMapResize(maps, map, [0, 100, 320]);
+          const markPainted = () => {
+            if (cancelled || mapPaintedOnceRef.current) return;
+            mapPaintedOnceRef.current = true;
+            setMapPainted(true);
+            staggerMapResize(maps, map, [0, 100, 320, 700]);
             try {
               map.panBy(1, 0);
               map.panBy(-1, 0);
             } catch {
               /* ignore */
             }
-          });
-          maps.event.addListenerOnce(map, 'tilesloaded', () => staggerMapResize(maps, map, [0, 50]));
+          };
+          maps.event.addListenerOnce(map, 'idle', markPainted);
+          maps.event.addListenerOnce(map, 'tilesloaded', markPainted);
         };
 
         runWhenMapContainerReady(mapRef.current, () => {
@@ -267,8 +275,15 @@ export default function FindYourWayMap({ places = [], t }) {
         if (!cancelled) setMapError(err.message || 'Failed to load map');
       });
 
+    const paintFallbackTimer = window.setTimeout(() => {
+      if (cancelled || mapPaintedOnceRef.current) return;
+      mapPaintedOnceRef.current = true;
+      setMapPainted(true);
+    }, 12000);
+
     return () => {
       cancelled = true;
+      window.clearTimeout(paintFallbackTimer);
       if (typeof window !== 'undefined') window.gm_authFailure = null;
     };
   }, [visible, apiKey]);
@@ -480,7 +495,7 @@ export default function FindYourWayMap({ places = [], t }) {
               {mapError}
             </div>
           )}
-          {!mapReady && !mapError && visible && (
+          {!mapPainted && !mapError && visible && (
             <div className="fym-loading">
               <div className="fym-loading-shimmer" />
               <p className="fym-loading-text">{safeT('home', 'findYourWayMapLoading')}</p>

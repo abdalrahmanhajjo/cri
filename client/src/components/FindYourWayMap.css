@@ -196,9 +196,13 @@
     0 1px 0 rgba(255, 255, 255, 0.9) inset,
     0 28px 64px rgba(12, 44, 40, 0.1),
     0 8px 24px rgba(28, 25, 23, 0.06);
+  box-sizing: border-box;
   width: 100%;
-  height: clamp(280px, 52vh, 440px);
-  min-height: 280px;
+  max-width: min(100%, 560px);
+  margin-inline: auto;
+  aspect-ratio: 1 / 1;
+  height: auto;
+  min-height: 0;
   flex-shrink: 0;
   /* Match Google default while tiles load (avoid site tint on the map card) */
   background: #e5e3df;
@@ -792,13 +796,6 @@
 .fym-cta-pill:hover {
   box-shadow: 0 12px 36px rgba(15, 118, 110, 0.42);
   transform: translateY(-1px);
-}
-
-@media (min-width: 900px) {
-  .fym-map-wrap {
-    height: clamp(360px, 50vh, 520px);
-    min-height: 360px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

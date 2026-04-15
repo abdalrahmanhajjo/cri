@@ -1,7 +1,8 @@
-﻿import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
 import Icon from '../components/Icon';
+import PlaceDetailMap from '../components/PlaceDetailMap';
 import OfferCard from '../components/OfferCard';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
@@ -106,7 +107,7 @@ function LiveStatus({ hours, t }) {
     );
   }
 
-  const rangeParts = todayHours.split(/\s*[â€“-]\s*/);
+  const rangeParts = todayHours.split(/\s*[–-]\s*/);
   if (rangeParts.length < 2) {
     return (
       <span className="place-status place-status--unknown">
@@ -622,6 +623,8 @@ export default function PlaceDetail() {
     });
   }, [place, user, navigate, location.pathname, location.search, location.hash]);
 
+  const mapCoords = useMemo(() => getPlaceCoordinates(place), [place]);
+
   if (loading) {
     return (
       <div className="place-detail place-detail--loading">
@@ -660,6 +663,9 @@ export default function PlaceDetail() {
       : Array.isArray(hours)
         ? hours.join(' - ')
         : hoursEntries.slice(0, 3).map((entry) => `${entry.label} ${entry.value}`).join(' - ');
+
+  const hasMapsKey =
+    typeof import.meta !== 'undefined' && Boolean(import.meta.env?.VITE_GOOGLE_MAPS_API_KEY);
 
   const reviewsContent = (
     <div className="place-detail-reviews-panel place-detail-reviews-panel--embedded">
@@ -975,6 +981,17 @@ export default function PlaceDetail() {
             <InfoRow icon="payments" label={t('detail', 'priceRange')} value={place.price} />
           </div>
 
+          {mapCoords && hasMapsKey && Number.isFinite(mapCoords.lat) && Number.isFinite(mapCoords.lng) && (
+            <section className="place-detail-section place-detail-map-section" aria-labelledby="place-map-heading">
+              <h2 id="place-map-heading" className="place-detail-section-title">
+                {t('detail', 'tourMapTab')}
+              </h2>
+              <div className="place-detail-map-wrap">
+                <PlaceDetailMap lat={mapCoords.lat} lng={mapCoords.lng} title={place.name} t={t} />
+              </div>
+            </section>
+          )}
+
           {place.description && (
             <section className="place-detail-section" aria-labelledby="place-description-heading">
               <h2 id="place-description-heading" className="place-detail-section-title">{t('detail', 'description')}</h2>
@@ -1198,7 +1215,7 @@ export default function PlaceDetail() {
                   >
                     {inqSending ? (
                       <span className="place-detail-chat__sending" aria-hidden="true">
-                        â€¦
+                        …
                       </span>
                     ) : (
                       <>

@@ -1,4 +1,4 @@
-/* Place detail – government-quality, professional layout */
+/* Place detail â€“ government-quality, professional layout */
 
 .place-detail {
   min-height: 100%;
@@ -42,7 +42,7 @@
 }
 
 .place-detail-breadcrumb-list li:not(:last-child)::after {
-  content: '›';
+  content: 'â€º';
   margin-left: 8px;
   color: var(--color-text-tertiary);
 }
@@ -62,7 +62,7 @@
 }
 
 [dir='rtl'] .place-detail-breadcrumb-list li:not(:last-child)::after {
-  content: '‹';
+  content: 'â€¹';
   margin-left: 0;
   margin-right: 8px;
 }
@@ -1110,6 +1110,45 @@
   color: var(--color-text-primary);
 }
 
+
+/* Google Maps JS preview — same loader as /map; contained width */
+.place-detail-map-section .place-detail-map-wrap {
+  width: 100%;
+  max-width: min(720px, 100%);
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: #e8eaed;
+}
+
+.place-detail-map-canvas {
+  display: block;
+  width: 100%;
+  height: min(52vh, 420px);
+  min-height: 220px;
+}
+
+.place-detail-map-error-card {
+  padding: 16px;
+  border-radius: 12px;
+  max-width: min(720px, 100%);
+  margin: 0 auto;
+  background: var(--color-surface-alt, #f8f9fa);
+  border: 1px solid var(--color-border);
+}
+
+.place-detail-map-error-title {
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  font-size: 16px;
+}
+
+.place-detail-map-error-msg {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
 .place-detail-description {
   font-size: 16px;
   line-height: 1.65;
@@ -2492,7 +2531,7 @@
 }
 .place-detail-app-hero {
   position: relative;
-  /* Neutral letterboxing behind `object-fit: contain` — no blurred filler */
+  /* Neutral letterboxing behind `object-fit: contain` â€” no blurred filler */
   background: #e8eaed;
 }
 .place-detail-app-hero-media {
@@ -2533,7 +2572,7 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  /* Stronger only at top (chrome) and bottom (gallery controls) — middle stays clear */
+  /* Stronger only at top (chrome) and bottom (gallery controls) â€” middle stays clear */
   background: linear-gradient(
     to bottom,
     rgba(0, 0, 0, 0.22) 0%,
@@ -3559,7 +3598,7 @@ button.place-detail-app-modal-primary {
 }
 
 
-/* Venue messaging — chat-style composer */
+/* Venue messaging â€” chat-style composer */
 .place-detail-chat {
   margin-top: 4px;
   border-radius: 20px;
@@ -3686,7 +3725,7 @@ button.place-detail-app-modal-primary {
   margin-top: 8px;
 }
 
-/* Venue chat — closer to WhatsApp */
+/* Venue chat â€” closer to WhatsApp */
 .place-detail-chat {
   border: none;
   background: #ece5dd;
@@ -3739,18 +3778,21 @@ button.place-detail-app-modal-primary {
 }
 
 
-/* Full-bleed hero; narrower reading column (place detail) */
-.place-detail-article--bleed {
-  overflow: visible;
+/* Place detail: hero + card aligned to a comfortable column (not edge-to-edge) */
+.place-detail-article.place-detail-article--bleed {
+  max-width: min(640px, calc(100vw - 32px));
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 1280px) {
+  .place-detail-article.place-detail-article--bleed {
+    max-width: min(680px, calc(100vw - 32px));
+  }
 }
 
 .place-detail-hero--fullbleed {
-  width: 100vw;
-  max-width: 100vw;
-  margin-left: calc(50% - 50vw);
-  margin-right: calc(50% - 50vw);
-  border-radius: 0;
-  min-height: min(52vh, 520px);
+  min-height: min(44vh, 440px);
 }
 
 .place-detail-shell.place-detail-container,
