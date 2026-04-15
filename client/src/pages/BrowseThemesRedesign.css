@@ -15,6 +15,9 @@
     overflow-x: auto !important;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
+    /* Avoid a permanent left-heavy strip on ultra-wide viewports when all cards fit */
+    justify-content: center !important;
+    scroll-snap-type: x proximity !important;
   }
 
   .vd-find-your-way--map-themes .vd-find-your-way-deck::-webkit-scrollbar {
@@ -23,6 +26,7 @@
 
   .vd-find-your-way-row {
     flex: 0 0 260px !important; /* Slightly smaller width */
+    scroll-snap-align: start !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;

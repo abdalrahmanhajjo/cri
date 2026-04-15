@@ -37,15 +37,68 @@ export const WAYS_CONFIG = [
     discoverQ: 'park',
     keywords: ['family', 'park', 'kids', 'children', 'relax', 'garden', 'playground'],
   },
+  {
+    wayKey: 'food',
+    titleKey: 'wayFood',
+    descKey: 'wayFoodDesc',
+    detailKey: 'wayFoodDetail',
+    icon: 'restaurant',
+    discoverQ: 'restaurant',
+    keywords: [
+      'restaurant',
+      'café',
+      'cafe',
+      'dining',
+      'food',
+      'coffee',
+      'bakery',
+      'sweet',
+      'kitchen',
+      'meal',
+      'brunch',
+      'bistro',
+      'grill',
+      'juice',
+      'cafeteria',
+    ],
+  },
+  {
+    wayKey: 'stay',
+    titleKey: 'wayStay',
+    descKey: 'wayStayDesc',
+    detailKey: 'wayStayDetail',
+    icon: 'hotel',
+    discoverQ: 'hotel',
+    keywords: [
+      'hotel',
+      'hostel',
+      'guesthouse',
+      'guest house',
+      'lodging',
+      'accommodation',
+      'inn',
+      'resort',
+      'suite',
+      'bnb',
+      'b&b',
+      'motel',
+    ],
+  },
 ];
 
 export const FIND_YOUR_WAY_WAY_KEYS = WAYS_CONFIG.map((w) => w.wayKey);
+
+/** Resolve overlaps by checking more specific buckets before the broad explorer default. */
+const WAY_MATCH_ORDER = ['stay', 'food', 'history', 'sea', 'family', 'explorer'];
 
 function matchCategoryToWay(categoryName, categoryTags) {
   const name = (categoryName || '').toLowerCase();
   const tagStr = Array.isArray(categoryTags) ? categoryTags.join(' ').toLowerCase() : '';
   const combined = `${name} ${tagStr}`;
-  for (const way of WAYS_CONFIG) {
+  const byKey = new Map(WAYS_CONFIG.map((w) => [w.wayKey, w]));
+  for (const key of WAY_MATCH_ORDER) {
+    const way = byKey.get(key);
+    if (!way) continue;
     for (const kw of way.keywords) {
       if (combined.includes(kw.toLowerCase())) return way.wayKey;
     }

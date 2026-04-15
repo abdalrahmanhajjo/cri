@@ -2504,6 +2504,13 @@ a.vd-top-picks-card-bg--hit {
   .vd-find-your-way-row--d {
     margin-inline-start: clamp(20px, 5vw, 80px);
   }
+
+  .vd-find-your-way--map-themes .vd-find-your-way-row--a,
+  .vd-find-your-way--map-themes .vd-find-your-way-row--b,
+  .vd-find-your-way--map-themes .vd-find-your-way-row--c,
+  .vd-find-your-way--map-themes .vd-find-your-way-row--d {
+    margin-inline-start: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
