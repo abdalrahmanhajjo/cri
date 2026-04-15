@@ -1109,6 +1109,10 @@ export const translations = {
       findYourWayNavAsideBullet2: 'Add stops along your day or open a trip you saved in Plan.',
       findYourWayNavAsideBullet3:
         'Filter by neighbourhood on the home preview; search the whole city on the full map.',
+      findYourWayPracticalQuickTitle: 'While you plan',
+      findYourWayPracticalQuickDiscover: 'Browse by theme',
+      findYourWayPracticalQuickPlan: 'Plan your visit',
+      findYourWayPracticalQuickCommunity: 'Community tips',
       via: 'Via',
       details: 'Details',
       preview: 'Preview',
@@ -2750,6 +2754,10 @@ export const translations = {
       findYourWayNavAsideBullet2: 'أضف محطات خلال يومك أو افتح رحلة حفظتها في التخطيط.',
       findYourWayNavAsideBullet3:
         'صفّ حسب الحي في المعاينة، ابحث في المدينة كاملة على الخريطة الكبيرة.',
+      findYourWayPracticalQuickTitle: 'أثناء التخطيط',
+      findYourWayPracticalQuickDiscover: 'تصفّح حسب السمة',
+      findYourWayPracticalQuickPlan: 'اخطط زيارتك',
+      findYourWayPracticalQuickCommunity: 'نصائح المجتمع',
       via: 'عبر',
       details: 'Ø§Ù„ØªÙØ§ØµÙŠÙ„',
       preview: 'Ù…Ø¹Ø§ÙŠÙ†Ø©',
@@ -4384,6 +4392,10 @@ export const translations = {
         'Ajoutez des étapes dans la journée ou ouvrez un voyage enregistré dans Planifier.',
       findYourWayNavAsideBullet3:
         'Filtrez par quartier ici ; recherchez toute la ville sur la carte complète.',
+      findYourWayPracticalQuickTitle: 'En parallèle',
+      findYourWayPracticalQuickDiscover: 'Parcourir par thème',
+      findYourWayPracticalQuickPlan: 'Préparer la visite',
+      findYourWayPracticalQuickCommunity: 'Conseils du forum',
       via: 'Via',
       details: 'Détails',
       preview: 'Aperçu',

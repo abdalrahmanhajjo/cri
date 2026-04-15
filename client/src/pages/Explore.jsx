@@ -662,6 +662,28 @@ function FindYourWayPracticalSection({ t, places = [], showMap = true, showTips:
                 </Link>
               </div>
             </div>
+            <div
+              className="vd-find-your-way-practical-quick"
+              aria-label={safeT('home', 'findYourWayPracticalQuickTitle')}
+            >
+              <p className="vd-find-your-way-practical-quick-title">
+                {safeT('home', 'findYourWayPracticalQuickTitle')}
+              </p>
+              <div className="vd-find-your-way-practical-quick-grid">
+                <Link to={PLACES_DISCOVER_PATH} className="vd-find-your-way-practical-quick-link">
+                  <Icon name="explore" size={20} aria-hidden />
+                  <span>{safeT('home', 'findYourWayPracticalQuickDiscover')}</span>
+                </Link>
+                <Link to="/plan" className="vd-find-your-way-practical-quick-link">
+                  <Icon name="calendar_month" size={20} aria-hidden />
+                  <span>{safeT('home', 'findYourWayPracticalQuickPlan')}</span>
+                </Link>
+                <Link to={COMMUNITY_PATH} className="vd-find-your-way-practical-quick-link">
+                  <Icon name="chat_bubble_outline" size={20} aria-hidden />
+                  <span>{safeT('home', 'findYourWayPracticalQuickCommunity')}</span>
+                </Link>
+              </div>
+            </div>
           </aside>
         </div>
       </div>

@@ -218,7 +218,7 @@ export default function FindYourWayMap({ places = [], t, loadEager = false }) {
         if (cancelled || !mapRef.current) return;
         if (typeof window !== 'undefined') window.gm_authFailure = null;
 
-        const mountMap = async () => {
+        const mountMap = () => {
           if (cancelled || !mapRef.current) return;
           let map = mapInstanceRef.current;
           const baseOpts = {
@@ -234,22 +234,19 @@ export default function FindYourWayMap({ places = [], t, loadEager = false }) {
             scaleControl: false,
             gestureHandling: 'greedy',
             tilt: 0,
+            backgroundColor: '#e8eaed',
+            styles: [],
           };
           if (!map) {
-            let MapCtor = maps.Map;
-            let renderingTypeOpt = {};
-            try {
-              const lib = await window.google.maps.importLibrary('maps');
-              /* VECTOR (WebGL) stays sharp when zoomed; RASTER bitmap tiles look pixelated up close. */
-              if (lib?.Map && lib.RenderingType?.VECTOR != null) {
-                MapCtor = lib.Map;
-                renderingTypeOpt = { renderingType: lib.RenderingType.VECTOR };
-              }
-            } catch {
-              /* Classic maps namespace only */
-            }
-            map = new MapCtor(mapRef.current, { ...baseOpts, ...renderingTypeOpt });
+            map = new maps.Map(mapRef.current, baseOpts);
             mapInstanceRef.current = map;
+            setTimeout(() => {
+              try {
+                maps.event.trigger(map, 'resize');
+              } catch {
+                /* ignore */
+              }
+            }, 0);
           } else {
             map.setOptions({ styles: [] });
           }
@@ -272,9 +269,11 @@ export default function FindYourWayMap({ places = [], t, loadEager = false }) {
         };
 
         runWhenMapContainerReady(mapRef.current, () => {
-          void mountMap().catch((e) => {
+          try {
+            mountMap();
+          } catch (e) {
             if (!cancelled) setMapError(e?.message || 'Map failed to start');
-          });
+          }
         });
       })
       .catch((err) => {
