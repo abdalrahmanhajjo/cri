@@ -1265,10 +1265,120 @@ button.nav-icon {
     display: none !important;
   }
 
+  /* Sticky header: readable glass bar on wide viewports (matches tablet blur, tuned for desktop). */
+  .header {
+    background: color-mix(in oklab, var(--color-surface) 88%, transparent);
+    backdrop-filter: saturate(160%) blur(12px);
+    -webkit-backdrop-filter: saturate(160%) blur(12px);
+    border-bottom-color: color-mix(in oklab, var(--color-border) 85%, transparent);
+    box-shadow:
+      0 1px 0 color-mix(in oklab, var(--color-border) 65%, transparent),
+      0 12px 40px rgba(28, 25, 23, 0.04);
+  }
+
+  .header-inner {
+    gap: 12px;
+    padding-top: 14px;
+    padding-bottom: 12px;
+  }
+
+  .header-row--secondary {
+    padding-top: 6px;
+  }
+
+  /* Let global search breathe on desktop - was capped at 420px everywhere. */
+  .header-search-slot--desktop {
+    max-width: min(520px, 46vw);
+  }
+
+  .logo-stack .header-emblem-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .header--vd .logo {
+    font-size: clamp(22px, 1.9vw, 26px);
+  }
+
   /* Keep primary nav on one line so flex gap reads evenly (no tall wrapped pill). */
   .nav--vd.nav--main > .nav-link,
   .nav--vd.nav--main .nav-dropdown-trigger {
     white-space: nowrap;
+  }
+
+  .nav--vd .nav-link {
+    padding: 9px 16px;
+    font-size: 14.5px;
+  }
+
+  .nav--vd.nav--main {
+    gap: 2px 10px;
+  }
+
+  .main--contained {
+    padding-bottom: clamp(40px, 5vw, 72px);
+  }
+
+  .ai-plan-banner {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .ai-plan-banner-text {
+    max-width: min(72ch, 100%);
+    text-align: center;
+  }
+}
+
+@media (min-width: 1440px) {
+  .header-inner {
+    padding-top: 16px;
+    padding-bottom: 14px;
+    gap: 14px;
+  }
+
+  .header-search-slot--desktop {
+    max-width: min(600px, 44vw);
+  }
+
+  .nav--vd .nav-link {
+    padding: 10px 18px;
+    font-size: 15px;
+  }
+
+  .nav--vd.nav--main {
+    gap: 2px 12px;
+  }
+
+  .header-meta {
+    margin-left: 12px;
+    padding-left: 16px;
+  }
+
+  [dir='rtl'] .header-meta {
+    margin-right: 12px;
+    padding-right: 16px;
+  }
+}
+
+@media (min-width: 1680px) {
+  .header-search-slot--desktop {
+    max-width: min(680px, 42vw);
+  }
+
+  .logo-stack .header-emblem-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .header--vd .logo {
+    font-size: clamp(24px, 1.65vw, 28px);
+  }
+
+  .main--contained {
+    padding-bottom: clamp(48px, 4.5vw, 88px);
   }
 }
 

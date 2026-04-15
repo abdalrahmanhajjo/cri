@@ -176,3 +176,10 @@
 .header-search-mobile-panel .global-search-bar {
   max-width: none;
 }
+
+/* Desktop header: let .header-search-slot--desktop in Layout.css set max width (520px+). */
+@media (min-width: 1200px) {
+  .header-search-slot--desktop .global-search-bar {
+    max-width: none;
+  }
+}
