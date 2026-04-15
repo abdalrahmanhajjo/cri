@@ -1099,6 +1099,16 @@ export const translations = {
       addDestination: 'Add destination',
       mapAddStopHint: 'Search or tap a place on the map to add it to this route.',
       mapAddStopDone: 'Done',
+      mapDefaultTripName: 'Trip',
+      findYourWayPracticalSub:
+        'Use the preview map to see listings by quarter, then open the full map for directions and multi-stop trips.',
+      findYourWayNavAsideTitle: 'Full map and trip planner',
+      findYourWayNavAsideLead:
+        'Go beyond the preview: build routes, add stops, and switch between driving and walking.',
+      findYourWayNavAsideBullet1: 'Turn-by-turn directions and optional live updates on the full map.',
+      findYourWayNavAsideBullet2: 'Add stops along your day or open a trip you saved in Plan.',
+      findYourWayNavAsideBullet3:
+        'Filter by neighbourhood on the home preview; search the whole city on the full map.',
       via: 'Via',
       details: 'Details',
       preview: 'Preview',
@@ -2730,6 +2740,16 @@ export const translations = {
       addDestination: 'Ø¥Ø¶Ø§ÙØ© ÙˆØ¬Ù‡Ø©',
       mapAddStopHint: 'Ø§Ø¨Ø­Ø« Ø£Ùˆ Ø§Ø¶ØºØ· Ø¹Ù„Ù‰ Ù…ÙƒØ§Ù† ÙÙŠ Ø§Ù„Ø®Ø±ÙŠØ·Ø© Ù„Ø¥Ø¶Ø§ÙØªÙ‡ Ø¥Ù„Ù‰ Ù‡Ø°Ø§ Ø§Ù„Ù…Ø³Ø§Ø±.',
       mapAddStopDone: 'ØªÙ…',
+      mapDefaultTripName: 'رحلة',
+      findYourWayPracticalSub:
+        'استخدم المعاينة أدناه لرؤية الأماكن حسب الحي، ثم افتح الخريطة الكاملة للاتجاهات والمحطات المتعددة.',
+      findYourWayNavAsideTitle: 'الخريطة الكاملة ومخطط الرحلة',
+      findYourWayNavAsideLead:
+        'تجاوز المعاينة: ابنِ المسارات، أضف محطات، وبدّل بين القيادة والمشي.',
+      findYourWayNavAsideBullet1: 'اتجاهات خطوة بخطوة وتحديثات مباشرة اختيارية على الخريطة الكاملة.',
+      findYourWayNavAsideBullet2: 'أضف محطات خلال يومك أو افتح رحلة حفظتها في التخطيط.',
+      findYourWayNavAsideBullet3:
+        'صفّ حسب الحي في المعاينة، ابحث في المدينة كاملة على الخريطة الكبيرة.',
       via: 'عبر',
       details: 'Ø§Ù„ØªÙØ§ØµÙŠÙ„',
       preview: 'Ù…Ø¹Ø§ÙŠÙ†Ø©',
@@ -4352,6 +4372,18 @@ export const translations = {
       addDestination: 'Ajouter une destination',
       mapAddStopHint: 'Recherchez ou touchez un lieu sur la carte pour lâ€™ajouter Ã  cet itinÃ©raire.',
       mapAddStopDone: 'Terminé',
+      mapDefaultTripName: 'Voyage',
+      findYourWayPracticalSub:
+        "Utilisez la carte d'aperçu pour voir les lieux par quartier, puis ouvrez la carte complète pour l'itinéraire et les étapes.",
+      findYourWayNavAsideTitle: 'Carte complète et planificateur',
+      findYourWayNavAsideLead:
+        "Allez au-delà de l'aperçu : tracez un parcours, ajoutez des arrêts, passez de la voiture à la marche.",
+      findYourWayNavAsideBullet1:
+        'Itinéraire détaillé et navigation en direct optionnelle sur la grande carte.',
+      findYourWayNavAsideBullet2:
+        'Ajoutez des étapes dans la journée ou ouvrez un voyage enregistré dans Planifier.',
+      findYourWayNavAsideBullet3:
+        'Filtrez par quartier ici ; recherchez toute la ville sur la carte complète.',
       via: 'Via',
       details: 'Détails',
       preview: 'Aperçu',

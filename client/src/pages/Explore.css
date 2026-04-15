@@ -2426,8 +2426,9 @@ a.vd-top-picks-card-bg--hit {
     align-items: stretch;
   }
 
-  .vd-find-your-way-main-grid--map-only {
-    grid-template-columns: 1fr;
+  .vd-find-your-way-main-grid--practical-split {
+    grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+    align-items: start;
   }
 }
 
@@ -2480,20 +2481,62 @@ a.vd-top-picks-card-bg--hit {
   margin-bottom: 0;
 }
 
+.vd-find-your-way-header--practical {
+  max-width: min(960px, 100%);
+}
+
+.vd-find-your-way-header--practical .vd-find-your-way-sub {
+  margin-top: 0;
+}
+
+.vd-find-your-way-practical-aside {
+  min-width: 0;
+}
+
+.vd-find-your-way-practical-aside-card {
+  height: 100%;
+  padding: clamp(22px, 2.6vw, 28px) clamp(20px, 2.4vw, 26px);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: linear-gradient(165deg, var(--color-surface) 0%, var(--color-surface-variant) 100%);
+  box-shadow: var(--shadow-card);
+}
+
+.vd-find-your-way-practical-aside-list {
+  margin: 0 0 18px 0;
+  padding-inline-start: 1.15em;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.vd-find-your-way-practical-aside-list li::marker {
+  color: var(--color-primary);
+}
+
+.vd-find-your-way-practical-aside-actions {
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.vd-plan-trip-inline-link--secondary {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.vd-plan-trip-inline-link--secondary:hover {
+  color: var(--color-primary-dark);
+}
+
 .vd-home .vd-find-your-way-areas-card--map .fym {
   margin-top: clamp(14px, 2.2vw, 22px);
   padding-top: clamp(16px, 2.2vw, 22px);
   border-top: 1px solid var(--color-border);
   background: linear-gradient(180deg, rgba(15, 118, 110, 0.05) 0%, transparent 52%);
   border-radius: 0 0 clamp(12px, 1.5vw, 18px) clamp(12px, 1.5vw, 18px);
-}
-
-@media (min-width: 900px) {
-  .vd-home .vd-find-your-way-areas-card--map .fym {
-    width: 60%;
-    max-width: 100%;
-    margin-inline: auto;
-  }
 }
 
 .vd-home .vd-find-your-way--practical .vd-find-your-way-header {
@@ -7100,11 +7143,12 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 }
 
 
-/* Home: compact map card; loadEager matches /map (script on mount, not scroll-gated) */
+/* Home: map fills the left column (~60%); loadEager matches /map (script on mount, not scroll-gated) */
 @media (min-width: 1024px) {
   .vd-home .vd-find-your-way--practical .fym-map-wrap {
-    max-width: min(640px, 100%);
-    margin-inline: auto;
+    max-width: none;
+    width: 100%;
+    margin-inline: 0;
     aspect-ratio: 4 / 3;
     min-height: 0;
   }

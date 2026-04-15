@@ -840,6 +840,15 @@ export default function MapPage() {
       const id = String(rawId);
       const st = location.state;
       if (!Array.isArray(st?.tripPlaceIds) || st.tripPlaceIds.length === 0) {
+        navigate('/map', {
+          replace: true,
+          state: {
+            ...(st && typeof st === 'object' ? st : {}),
+            tripPlaceIds: [id],
+            tripDays: [{ placeIds: [id] }],
+            tripName: st?.tripName || t('home', 'mapDefaultTripName'),
+          },
+        });
         setAddingTripStop(false);
         setSearchQuery('');
         return;
@@ -868,7 +877,7 @@ export default function MapPage() {
       setAddingTripStop(false);
       setSearchQuery('');
     },
-    [location.state, navigate, selectedDayIndex]
+    [location.state, navigate, selectedDayIndex, t]
   );
 
   const handleCopyRouteLink = useCallback(() => {
