@@ -431,9 +431,7 @@ export default function PlaceDetail() {
             setCheckinMsg(t('detail', 'checkInTooFar'));
             return;
           }
-          const msg = e.message || t('detail', 'checkInFailed');
-          setCheckinMsg(msg);
-          showToast(msg, 'error');
+          setCheckinMsg(e.message || t('detail', 'checkInFailed'));
         });
     };
 

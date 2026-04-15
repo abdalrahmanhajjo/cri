@@ -41,11 +41,13 @@ function formatMapDistanceM(meters) {
 function haversineMeters(a, b) {
   if (!a || !b || a.lat == null || b.lat == null) return 0;
   const R = 6371000;
-  const Ï†1 = (Number(a.lat) * Math.PI) / 180;
-  const Ï†2 = (Number(b.lat) * Math.PI) / 180;
-  const Î”Ï† = ((Number(b.lat) - Number(a.lat)) * Math.PI) / 180;
-  const Î”Î» = ((Number(b.lng) - Number(a.lng)) * Math.PI) / 180;
-  const x = Math.sin(Î”Ï† / 2) ** 2 + Math.cos(Ï†1) * Math.cos(Ï†2) * Math.sin(Î”Î» / 2) ** 2;
+  const phi1 = (Number(a.lat) * Math.PI) / 180;
+  const phi2 = (Number(b.lat) * Math.PI) / 180;
+  const deltaPhi = ((Number(b.lat) - Number(a.lat)) * Math.PI) / 180;
+  const deltaLambda = ((Number(b.lng) - Number(a.lng)) * Math.PI) / 180;
+  const x =
+    Math.sin(deltaPhi / 2) ** 2 +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(Math.max(0, 1 - x)));
 }
 

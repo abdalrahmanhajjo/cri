@@ -58,11 +58,13 @@ const FYM_AREA_UI_DOT = '#64748b';
 function haversineMeters(a, b) {
   if (!a || !b || a.lat == null || b.lat == null) return Infinity;
   const R = 6371000;
-  const φ1 = (Number(a.lat) * Math.PI) / 180;
-  const φ2 = (Number(b.lat) * Math.PI) / 180;
-  const Δφ = ((Number(b.lat) - Number(a.lat)) * Math.PI) / 180;
-  const Δλ = ((Number(b.lng) - Number(a.lng)) * Math.PI) / 180;
-  const x = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  const phi1 = (Number(a.lat) * Math.PI) / 180;
+  const phi2 = (Number(b.lat) * Math.PI) / 180;
+  const deltaPhi = ((Number(b.lat) - Number(a.lat)) * Math.PI) / 180;
+  const deltaLambda = ((Number(b.lng) - Number(a.lng)) * Math.PI) / 180;
+  const x =
+    Math.sin(deltaPhi / 2) ** 2 +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(Math.max(0, 1 - x)));
 }
 
