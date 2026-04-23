@@ -29,8 +29,8 @@ const TRAVEL_MODES = Object.freeze([
   { id: 'WALKING', icon: 'directions_walk', labelKey: 'travelModeWalk' },
 ]);
 
-const LIVE_ROUTE_MIN_INTERVAL_MS = 22000;
-const LIVE_ROUTE_MIN_MOVE_M = 48;
+const LIVE_ROUTE_MIN_INTERVAL_MS = 12000;
+const LIVE_ROUTE_MIN_MOVE_M = 20;
 
 function formatMapDistanceM(meters) {
   if (!Number.isFinite(meters)) return '';
@@ -359,6 +359,7 @@ export default function MapPage() {
   const [liveNavErrorDebug, setLiveNavErrorDebug] = useState('');
   /** True while waiting for the browser geolocation prompt / first fix. */
   const [liveNavRequestingPermission, setLiveNavRequestingPermission] = useState(false);
+  const [liveNavFollowing, setLiveNavFollowing] = useState(false);
   const [addingTripStop, setAddingTripStop] = useState(false);
   const [catalogPlaces, setCatalogPlaces] = useState([]);
   const [catalogFetched, setCatalogFetched] = useState(false);
@@ -1107,6 +1108,9 @@ export default function MapPage() {
           styles: [],
         });
         mapInstanceRef.current = map;
+        map.addListener('dragstart', () => {
+          setLiveNavFollowing(false);
+        });
         const infoWindow = new maps.InfoWindow();
         infoWindowRef.current = infoWindow;
         addMarkers(map, maps, infoWindow);
@@ -1475,6 +1479,7 @@ export default function MapPage() {
       lastLiveRouteTriggerRef.current = Date.now();
       prevWatchPositionRef.current = loc;
       setLiveNavigation(true);
+      setLiveNavFollowing(true);
       setRouteRefreshTick((t) => t + 1);
       if (mapInstanceRef.current) {
         mapInstanceRef.current.panTo(loc);
@@ -1539,6 +1544,7 @@ export default function MapPage() {
 
   const stopLiveNavigation = useCallback(() => {
     setLiveNavigation(false);
+    setLiveNavFollowing(false);
     setLiveNavDirectionsExpanded(false);
     setLiveNavError(null);
     setLiveNavErrorDebug('');
@@ -1553,6 +1559,9 @@ export default function MapPage() {
       const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       userLocationRef.current = loc;
       setUserLocation(loc);
+      if (liveNavFollowing && mapInstanceRef.current) {
+        mapInstanceRef.current.panTo(loc);
+      }
       const now = Date.now();
       const prev = prevWatchPositionRef.current;
       const moved = prev ? haversineMeters(prev, loc) : LIVE_ROUTE_MIN_MOVE_M;
@@ -1582,7 +1591,7 @@ export default function MapPage() {
       navigator.geolocation.clearWatch(watchId);
       clearInterval(intervalId);
     };
-  }, [liveNavigation]);
+  }, [liveNavigation, liveNavFollowing]);
 
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -1671,6 +1680,21 @@ export default function MapPage() {
         {liveNavigation && (
           <button type="button" className="map-live-nav-exit" onClick={stopLiveNavigation}>
             <Icon name="close" size={22} /> {t('home', 'liveNavStop')}
+          </button>
+        )}
+        {liveNavigation && !liveNavFollowing && (
+          <button
+            type="button"
+            className="map-live-nav-recenter"
+            onClick={() => {
+              setLiveNavFollowing(true);
+              const ul = userLocationRef.current;
+              if (ul && mapInstanceRef.current) {
+                mapInstanceRef.current.panTo(ul);
+              }
+            }}
+          >
+            <Icon name="my_location" size={20} /> {t('home', 'recenterMap') || 'Recenter'}
           </button>
         )}
         {tripFilterName && (
