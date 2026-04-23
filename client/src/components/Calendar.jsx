@@ -22,6 +22,7 @@ export function DateRangeCalendar({
   onChange,
   minDate,
   maxDate,
+  className,
   locale = 'en-GB',
   hintStart = 'Select start date',
   hintEnd = 'Select end date',
@@ -103,7 +104,7 @@ export function DateRangeCalendar({
   }, [startDate]);
 
   return (
-    <div className="calendar calendar--range" role="application" aria-label="Choose date range">
+    <div className={`calendar calendar--range ${className || ''}`} role="application" aria-label="Choose date range">
       <div className="calendar-header">
         <button type="button" className="calendar-nav" onClick={goPrevMonth} disabled={!canPrev} aria-label="Previous month">
           <Icon name="chevron_left" size={24} />

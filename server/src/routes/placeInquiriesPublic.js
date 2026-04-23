@@ -15,10 +15,11 @@ const inquiryPostLimiter = rateLimit({
   max: 24,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { ip: false, default: false },
   message: { error: 'Too many messages. Please try again later.', code: 'INQUIRY_RATE_LIMIT' },
   keyGenerator: (req) => {
     if (req.user?.userId) return `piq:u:${req.user.userId}`;
-    const ip = req.ip || '0';
+    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '0';
     const em = (typeof req.body?.guestEmail === 'string' ? req.body.guestEmail : '').trim().toLowerCase().slice(0, 200);
     return `piq:${ip}:${em || 'no-email'}`;
   },
@@ -29,9 +30,10 @@ const inquiryFollowUpLimiter = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { ip: false, default: false },
   message: { error: 'Too many follow-up messages. Please try again later.', code: 'INQUIRY_FOLLOWUP_RATE_LIMIT' },
   keyGenerator: (req) => {
-    const ip = req.ip || '0';
+    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '0';
     const iid = String(req.params?.inquiryId || '').trim().slice(0, 80);
     if (req.user?.userId) return `pfu:u:${req.user.userId}:${iid}`;
     const em = (typeof req.body?.guestEmail === 'string' ? req.body.guestEmail : '').trim().toLowerCase().slice(0, 200);

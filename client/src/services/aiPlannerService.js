@@ -16,6 +16,9 @@ import {
   rankPlacesForPlanner,
   compactPlaceRowForModel,
 } from '../utils/aiPlannerPlaceRanker';
+import { buildDayPlan } from '../utils/placeRanking/buildDayPlan.ts';
+import { rankPlaces as rankPlacesPipeline } from '../utils/placeRanking/rankPlaces.ts';
+import { scorePlace } from '../utils/placeRanking/scorePlace.ts';
 
 function apiBase() {
   const raw = import.meta.env.VITE_API_URL;
@@ -537,6 +540,74 @@ function buildFallbackReason(place, { userInterests = [], budget = 'moderate', s
   return `${timeLead} for ${interestLead}${areaLead}${budgetLead}.`;
 }
 
+function isGenericReason(reason) {
+  const r = String(reason || '').trim();
+  if (!r) return true;
+  if (r.length < 12) return true;
+  if (/^(neutral|nice|good|great|recommended)\b/i.test(r)) return true;
+  if (/^because it (is|was) (a|an)\b/i.test(r)) return true;
+  return false;
+}
+
+function autoReasonForSlot(place, ctx) {
+  try {
+    const out = scorePlace(place, ctx);
+    const reasons = Array.isArray(out?.breakdown?.reasons) ? out.breakdown.reasons : [];
+    if (!reasons.length) return null;
+    return reasons.join('; ');
+  } catch {
+    return null;
+  }
+}
+
+function ensureSlotReasons(slots, { places = [], intentText = '', userInterests = [], budget = 'moderate' } = {}) {
+  if (!Array.isArray(slots) || slots.length === 0) return slots;
+  const placeById = Object.fromEntries((places || []).map((p) => [String(p.id), p]));
+  const byDay = new Map();
+  for (const s of slots) {
+    const di = s?.dayIndex != null && Number.isFinite(Number(s.dayIndex)) ? Number(s.dayIndex) : 0;
+    if (!byDay.has(di)) byDay.set(di, []);
+    byDay.get(di).push(s);
+  }
+
+  const patched = [];
+  for (const [, list] of byDay) {
+    const day = list.slice().sort((a, b) => suggestedTimeToMinutes(a.suggestedTime) - suggestedTimeToMinutes(b.suggestedTime));
+    const selectedPlaces = [];
+    let previousPlace = null;
+    for (let i = 0; i < day.length; i += 1) {
+      const slot = { ...day[i] };
+      const place = placeById[String(slot.placeId)];
+      if (place && isGenericReason(slot.reason)) {
+        const autoReason = autoReasonForSlot(place, {
+          intentText,
+          interestNames: userInterests,
+          budget,
+          selectedPlaces,
+          previousPlace,
+          slotIndex: i,
+          weather: null,
+          pace: 'normal',
+        });
+        if (autoReason) slot.reason = autoReason;
+      }
+      if (place) {
+        selectedPlaces.push(place);
+        previousPlace = place;
+      }
+      patched.push(slot);
+    }
+  }
+
+  patched.sort((a, b) => {
+    const da = a?.dayIndex != null && Number.isFinite(Number(a.dayIndex)) ? Number(a.dayIndex) : 0;
+    const db = b?.dayIndex != null && Number.isFinite(Number(b.dayIndex)) ? Number(b.dayIndex) : 0;
+    if (da !== db) return da - db;
+    return suggestedTimeToMinutes(a.suggestedTime) - suggestedTimeToMinutes(b.suggestedTime);
+  });
+  return patched;
+}
+
 function buildHeuristicFallbackSlots({
   places = [],
   fallbackPlaceIds = [],
@@ -544,57 +615,47 @@ function buildHeuristicFallbackSlots({
   placesPerDay = 4,
   userInterests = [],
   budget = 'moderate',
+  intentText = '',
 }) {
   const dd = Number.isFinite(Number(durationDays)) && Number(durationDays) > 0 ? Number(durationDays) : 1;
   const ppd = Number.isFinite(Number(placesPerDay)) && Number(placesPerDay) > 0 ? Number(placesPerDay) : 4;
   const placeById = Object.fromEntries((places || []).map((p) => [String(p.id), p]));
-  const ranked = (fallbackPlaceIds || [])
+  const pool = (fallbackPlaceIds || [])
     .map((id) => placeById[String(id)])
     .filter(Boolean);
-  if (!ranked.length) return [];
+  if (!pool.length) return [];
 
   const slots = [];
   const used = new Set();
-  let cursor = 0;
+  const baseIntent = String(intentText || '').trim() || (userInterests || []).join(' ');
 
   for (let dayIndex = 0; dayIndex < dd; dayIndex += 1) {
-    const preferredArea = dayIndex % 2 === 0 ? 'old_city' : 'mina';
-    const dayChosen = [];
-    const dayCategories = new Set();
+    const remaining = pool.filter((p) => !used.has(String(p.id)));
+    if (!remaining.length) break;
+    const { selected } = buildDayPlan(remaining, baseIntent, {
+      placesPerDay: ppd,
+      dayIndex,
+      budget,
+      pace: 'normal',
+      interestNames: userInterests,
+      weather: null,
+      debug: false,
+    });
 
-    const tryTake = (predicate) => {
-      for (let i = 0; i < ranked.length; i += 1) {
-        const place = ranked[(cursor + i) % ranked.length];
-        const id = String(place.id);
-        if (used.has(id)) continue;
-        if (!predicate(place)) continue;
-        used.add(id);
-        dayChosen.push(place);
-        if (place.category) dayCategories.add(String(place.category).toLowerCase());
-        cursor = (cursor + i + 1) % ranked.length;
-        return true;
-      }
-      return false;
-    };
-
-    tryTake((place) => compactPlaceRowForModel(place).area === preferredArea);
-
-    while (dayChosen.length < ppd) {
-      const added =
-        tryTake((place) => {
-          const cat = String(place.category || '').toLowerCase();
-          return !dayCategories.has(cat);
-        }) ||
-        tryTake(() => true);
-      if (!added) break;
-    }
-
-    dayChosen.forEach((place, slotIndex) => {
+    selected.forEach((row, slotIndex) => {
+      const place = row.place;
+      const pid = String(place.id);
+      if (!pid || used.has(pid)) return;
+      used.add(pid);
+      const reasonFromScore =
+        Array.isArray(row.breakdown?.reasons) && row.breakdown.reasons.length
+          ? row.breakdown.reasons.join('; ')
+          : null;
       slots.push({
-        placeId: String(place.id),
+        placeId: pid,
         suggestedTime: fallbackTimeForIndex(slotIndex, place.bestTime),
         dayIndex,
-        reason: buildFallbackReason(place, { userInterests, budget, slotIndex }),
+        reason: reasonFromScore || buildFallbackReason(place, { userInterests, budget, slotIndex }),
       });
     });
   }
@@ -904,7 +965,7 @@ function buildSingleReplaceFallbackText(lang) {
  * Build ordered place list + JSON rows for the model. Refinements use the full catalog for IDs
  * but still surface ranked, enriched rows first (plus any places already on the draft).
  */
-function buildPlacesPromptPayload(places, ctx) {
+async function buildPlacesPromptPayload(places, ctx) {
   const {
     userMessage,
     userInterests,
@@ -934,7 +995,7 @@ function buildPlacesPromptPayload(places, ctx) {
     }
   }
 
-  const { ordered: ranked, hintLines } = rankPlacesForPlanner(places || [], rankOpts);
+  const { ordered: ranked, hintLines } = await rankPlacesForPlanner(places || [], rankOpts);
 
   if (!isRefinement) {
     const placeIdSet = new Set(ranked.map((p) => String(p.id)));
@@ -988,7 +1049,7 @@ export async function chatForTripPlan(params) {
     learnedCategoryHints = [],
   } = params;
 
-  const { placeIdSet, placesContext, rankingHints, fallbackPlaceIds } = buildPlacesPromptPayload(places, {
+  const { placeIdSet, placesContext, rankingHints, fallbackPlaceIds } = await buildPlacesPromptPayload(places, {
     userMessage,
     userInterests,
     budget,
@@ -1213,6 +1274,7 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
 
     let { text, slots } = parsePlanJson(rawForPlan, placeIdSet, placeResolver);
     const outText = slots?.length ? '' : text || "Here's a plan for you!";
+    const fullIntentText = [userMessage, ...(userInterests || [])].filter(Boolean).join(' ');
 
     const ensureExactSlotCount = (rawSlots) => {
       if (!Array.isArray(rawSlots) || rawSlots.length === 0) return rawSlots;
@@ -1245,24 +1307,45 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
         if (counts[dayIndex] >= effPlacesPerDay) {
           break;
         }
-        let candidateIndex = candidatePlaces.findIndex((place) => {
-          const cat = String(place?.category || '').trim().toLowerCase();
-          return !cat || !dayCategories[dayIndex].has(cat);
+        const daySlots = next.filter((s) => {
+          const d = s?.dayIndex != null && Number.isFinite(Number(s.dayIndex)) ? Number(s.dayIndex) : 0;
+          return d === dayIndex;
         });
-        if (candidateIndex < 0) candidateIndex = 0;
-        const [place] = candidatePlaces.splice(candidateIndex, 1);
-        const pid = String(place.id);
+        daySlots.sort((a, b) => suggestedTimeToMinutes(a.suggestedTime) - suggestedTimeToMinutes(b.suggestedTime));
+        const dayPlaces = daySlots
+          .map((s) => (places || []).find((p) => String(p.id) === String(s.placeId)))
+          .filter(Boolean);
+        const previousPlace = dayPlaces.length ? dayPlaces[dayPlaces.length - 1] : null;
+        const rankedAdds = rankPlacesPipeline(candidatePlaces, fullIntentText, {
+          budget,
+          pace: 'normal',
+          interestNames: userInterests,
+          selectedPlaces: dayPlaces,
+          previousPlace,
+          slotIndex: counts[dayIndex],
+          weather: null,
+        });
+        const pick = rankedAdds[0]?.place;
+        if (!pick) break;
+        const pickId = String(pick.id);
+        const candidateIndex = candidatePlaces.findIndex((p) => String(p.id) === pickId);
+        if (candidateIndex >= 0) candidatePlaces.splice(candidateIndex, 1);
+        const pid = pickId;
         next.push({
           placeId: pid,
-          suggestedTime: fallbackTimeForIndex(counts[dayIndex], place.bestTime),
+          suggestedTime: fallbackTimeForIndex(counts[dayIndex], pick.bestTime),
           dayIndex,
-          reason: buildFallbackReason(place, {
-            userInterests,
-            budget,
-            slotIndex: counts[dayIndex],
-          }),
+          reason:
+            (Array.isArray(rankedAdds[0]?.breakdown?.reasons) && rankedAdds[0].breakdown.reasons.length
+              ? rankedAdds[0].breakdown.reasons.join('; ')
+              : null) ||
+            buildFallbackReason(pick, {
+              userInterests,
+              budget,
+              slotIndex: counts[dayIndex],
+            }),
         });
-        const cat = String(place?.category || '').trim().toLowerCase();
+        const cat = String(pick?.category || '').trim().toLowerCase();
         if (cat) dayCategories[dayIndex].add(cat);
         used.add(pid);
         counts[dayIndex] += 1;
@@ -1279,7 +1362,13 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
         next = enforcePlacesPerDay(next, effDays, effPlacesPerDay);
       }
       next = ensureExactSlotCount(next);
-      return applySmartScheduleToAiSlots(next, effDays, effSelectedDate, places);
+      const scheduled = await applySmartScheduleToAiSlots(next, effDays, effSelectedDate, places);
+      return ensureSlotReasons(scheduled, {
+        places,
+        intentText: fullIntentText,
+        userInterests,
+        budget,
+      });
     };
 
     const targetSlotCount =
@@ -1297,6 +1386,7 @@ ${activityContext ? `\n${activityContext}\n` : ''}${
         placesPerDay: effPlacesPerDay || placesPerDay || 4,
         userInterests,
         budget,
+        intentText: fullIntentText,
       });
       if (fallbackSlots.length) {
         return {

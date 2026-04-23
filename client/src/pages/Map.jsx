@@ -257,7 +257,7 @@ function getRouteSummary(directionsResult) {
   };
 }
 
-/** Find place by name â€“ returns place_id and basic info from Google Places */
+/** Find place by name – returns place_id and basic info from Google Places */
 function findPlaceFromText(query, apiKey) {
   const input = encodeURIComponent(query.trim() || PLACES_REGION);
   const fields = 'place_id,name,formatted_address,geometry';
@@ -331,9 +331,9 @@ export default function MapPage() {
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
-  /** Google Maps script / API load failures only â€” never geolocation (see myLocationNotice). */
+  /** Google Maps script / API load failures only — never geolocation (see myLocationNotice). */
   const [mapError, setMapError] = useState(null);
-  /** My location FAB: permission or timeout â€” shown as a small toast, not the map load modal. */
+  /** My location FAB: permission or timeout — shown as a small toast, not the map load modal. */
   const [myLocationNotice, setMyLocationNotice] = useState(null);
   const [googlePlaceData, setGooglePlaceData] = useState({});
   const [fetchingPlaces, setFetchingPlaces] = useState(false);
@@ -387,8 +387,8 @@ export default function MapPage() {
 
   const infoWindowStrings = useMemo(
     () => ({
-      viewDetails: `${t('home', 'viewDetails')} â†’`,
-      directions: `${t('home', 'mapDirections')} â†’`,
+      viewDetails: `${t('home', 'viewDetails')} →`,
+      directions: `${t('home', 'mapDirections')} →`,
     }),
     [t, lang]
   );
@@ -644,7 +644,7 @@ export default function MapPage() {
     return list;
   }, [withNativeCoords, needGoogleData, googlePlaceData]);
 
-  /** Current day's place IDs (supports API `{ slots }` or `{ placeIds }` â€” VisitTripoliApp TripDay). */
+  /** Current day's place IDs (supports API `{ slots }` or `{ placeIds }` — VisitTripoliApp TripDay). */
   const currentDayPlaceIds = useMemo(() => {
     const days =
       Array.isArray(tripDays) && tripDays.length > 0
@@ -666,7 +666,7 @@ export default function MapPage() {
     return withCoords;
   }, [tripFilterName, currentDayPlaceIds, withCoords]);
 
-  /** Trip places in the order they appear for the selected day (for routing â€“ only with coords). */
+  /** Trip places in the order they appear for the selected day (for routing – only with coords). */
   const placesInTripOrder = useMemo(() => {
     if (currentDayPlaceIds.length === 0 || !withCoords.length) return [];
     const byId = new Map(withCoords.map((p) => [String(p.id), p]));
@@ -688,7 +688,7 @@ export default function MapPage() {
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
-  /** Browse mode: markers match the search bar (same algorithm as Discover); empty match â†’ show all. */
+  /** Browse mode: markers match the search bar (same algorithm as Discover); empty match → show all. */
   const mapBrowseMarkers = useMemo(() => {
     if (tripFilterName && currentDayPlaceIds.length > 0) return mapDisplayPlaces;
     const qq = deferredSearchQuery.trim();
@@ -1228,7 +1228,7 @@ export default function MapPage() {
     return () => ro.disconnect();
   }, []);
 
-  /* Trip route: static (firstâ†’last) or live (GPSâ†’â€¦â†’last with ordered waypoints). Car & walk only. */
+  /* Trip route: static (first→last) or live (GPS→…→last with ordered waypoints). Car & walk only. */
   useEffect(() => {
     const map = mapInstanceRef.current;
     const maps = window.google?.maps;
@@ -1729,7 +1729,7 @@ export default function MapPage() {
         {(loading || fetchingPlaces) && (
           <div className="map-loading-overlay">
             <div className="map-loading-spinner" />
-            <span>{loading ? t('home', 'loading') : 'Loading places from Google Mapsâ€¦'}</span>
+            <span>{loading ? t('home', 'loading') : 'Loading places from Google Maps…'}</span>
           </div>
         )}
 
@@ -1746,7 +1746,7 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* Floating search â€” hidden in trip/tour mode (VisitTripoliApp map_screen). */}
+        {/* Floating search — hidden in trip/tour mode (VisitTripoliApp map_screen). */}
         {(!tripFilterName || addingTripStop) && (
           <div
             className={`map-search-wrap${addingTripStop ? ' map-search-wrap--add-stop' : ''}`}
@@ -1761,7 +1761,7 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* List toggle â€” hidden during live navigation */}
+        {/* List toggle — hidden during live navigation */}
         <button
           type="button"
           className={`map-fab map-fab--list${liveNavigation ? ' map-fab--hidden' : ''}`}
@@ -1847,7 +1847,7 @@ export default function MapPage() {
             </button>
           )}
 
-        {/* Trip route panel (right sidebar) â€“ when viewing a trip; hidden during live nav until user expands */}
+        {/* Trip route panel (right sidebar) – when viewing a trip; hidden during live nav until user expands */}
         {tripFilterName && (placesInTripOrder.length >= 1 || (tripDays?.length > 0)) && (!liveNavigation || liveNavDirectionsExpanded) && (
           <div className="map-trip-route-panel gm-directions-panel" role="complementary" aria-label={t('home', 'viewingTrip')}>
             <div className="map-trip-route-panel-inner">
@@ -1863,7 +1863,7 @@ export default function MapPage() {
                   <span>{t('home', 'liveNavCollapseToMap')}</span>
                 </button>
               )}
-              {/* Day selector â€“ one route per day */}
+              {/* Day selector – one route per day */}
               {Array.isArray(tripDays) && tripDays.length > 1 && (
                 <div className="map-trip-route-days">
                   {tripDays.map((day, i) => (
@@ -1985,7 +1985,7 @@ export default function MapPage() {
                 ))}
               </div>
 
-              {/* Waypoints â€” simplified while live nav is on */}
+              {/* Waypoints — simplified while live nav is on */}
               <div className={`map-trip-route-waypoints${liveNavigation ? ' map-trip-route-waypoints--compact' : ''}`}>
                 {currentDayPlacesForList.map((p, index) => {
                   const g = p._google;
@@ -2039,7 +2039,7 @@ export default function MapPage() {
                 )}
               </div>
 
-              {/* Step-by-step (Details) â€” optional when not in live nav to keep UI calm */}
+              {/* Step-by-step (Details) — optional when not in live nav to keep UI calm */}
               {routeSummary && !liveNavigation && (
                 <div className="map-trip-route-details-wrap">
                   <button type="button" className="map-trip-route-link gm-details-toggle" onClick={() => setRouteDetailsOpen((o) => !o)}>
@@ -2378,7 +2378,7 @@ function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode }) 
                       )}
                     </div>
                     <Link to={`/place/${pid}`} className="map-drawer-swipe-details">
-                      {t('home', 'viewDetails')} â†’
+                      {t('home', 'viewDetails')} →
                     </Link>
                   </div>
                 </article>
@@ -2407,8 +2407,8 @@ function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode }) 
 
 function buildInfoContent(p, apiKey = '', strings = {}, isDark = false) {
   const s = {
-    viewDetails: strings.viewDetails ?? 'View details â†’',
-    directions: strings.directions ?? 'Directions â†’',
+    viewDetails: strings.viewDetails ?? 'View details →',
+    directions: strings.directions ?? 'Directions →',
   };
   const placeId = p.id;
   const g = p._google || null;
@@ -2444,7 +2444,7 @@ function buildInfoContent(p, apiKey = '', strings = {}, isDark = false) {
       ${imgHtml}
       <strong class="gm-info-title">${escapeHtml(name)}</strong>
       ${address ? `<p class="gm-info-address">${escapeHtml(address)}</p>` : ''}
-      ${rating != null ? `<p class="gm-info-rating">â˜… ${Number(rating).toFixed(1)}${reviews != null ? ` (${reviews} reviews)` : ''}</p>` : ''}
+      ${rating != null ? `<p class="gm-info-rating">★ ${Number(rating).toFixed(1)}${reviews != null ? ` (${reviews} reviews)` : ''}</p>` : ''}
       ${openNow !== null ? `<p class="gm-info-open ${openNow ? 'gm-info-open--yes' : 'gm-info-open--no'}">${openNow ? 'Open now' : 'Closed'}</p>` : ''}
       <div class="gm-info-actions">
         <a href="/place/${encodeURIComponent(placeId)}" class="map-info-link" data-place-id="${escapeHtml(String(placeId))}">${escapeHtml(s.viewDetails)}</a>

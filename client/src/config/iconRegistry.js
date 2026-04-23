@@ -79,6 +79,17 @@ export const ICON_DOCS = {
     description: 'Unsaved bookmark state: same control as bookmark, outline style before save.',
     flaticonAnimated: 'Outline bookmark toggling to filled in animation from Flaticon (save).',
   },
+  group: { description: 'Group or users' },
+  category: {
+    variant: 'ui',
+    description: 'Category or grouping',
+    flaticonAnimated: '',
+  },
+  wb_sunny: {
+    variant: 'nature',
+    description: 'Sun or best time to visit',
+    flaticonAnimated: '',
+  },
   calendar_month: {
     variant: 'time',
     description: 'Trip dates, schedule overview, or month-span context on trip detail.',

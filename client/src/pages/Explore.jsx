@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
@@ -8,6 +8,7 @@ import { useToast } from '../context/ToastContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import Icon from '../components/Icon';
 import { CommunityFeedStrip } from '../components/CommunityFeed';
+import EventsAndToursSection from '../components/EventsAndToursSection';
 import FindYourWayMap from '../components/FindYourWayMap';
 import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { trackEvent } from '../utils/analytics';
@@ -250,14 +251,31 @@ function TopPicksCarousel({ places, t, moreTo }) {
   const { isFavourite, toggleFavourite: commitFavouriteToggle } = useFavourites();
   const safePlaces = Array.isArray(places) ? places : [];
   const [index, setIndex] = useState(0);
+  const carouselRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Watch whether carousel has entered the viewport
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setIsVisible(true);
+      return undefined;
+    }
+    const obs = new IntersectionObserver(
+      ([entry]) => setIsVisible(!!entry?.isIntersecting),
+      { threshold: 0.3 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
-    if (safePlaces.length <= 1) return;
+    if (safePlaces.length <= 1 || !isVisible) return;
     const id = setInterval(() => {
       setIndex((i) => (i + 1) % safePlaces.length);
     }, 10000);
     return () => clearInterval(id);
-  }, [safePlaces.length]);
+  }, [safePlaces.length, isVisible]);
 
   useEffect(() => {
     setIndex((i) => (safePlaces.length ? Math.min(i, safePlaces.length - 1) : 0));
@@ -337,6 +355,7 @@ function TopPicksCarousel({ places, t, moreTo }) {
         </header>
 
         <div
+          ref={carouselRef}
           className="vd-top-picks-carousel"
           tabIndex={0}
           role="region"
@@ -702,6 +721,8 @@ export default function Explore() {
   const [error, setError] = useState(null);
   const [communityPosts, setCommunityPosts] = useState([]);
   const [sponsoredHome, setSponsoredHome] = useState([]);
+  const [homeEvents, setHomeEvents] = useState([]);
+  const [homeTours, setHomeTours] = useState([]);
   const [loadNonce, setLoadNonce] = useState(0);
 
   const sponsoredHomeEnabled = settings?.sponsoredPlacesEnabled?.home !== false;
@@ -757,6 +778,24 @@ export default function Explore() {
   useEffect(() => {
     trackEvent(user, 'page_view', { page: 'home' });
   }, [user]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.allSettled([api.events.list({ lang }), api.tours.list({ lang })])
+      .then(([evRes, toRes]) => {
+        if (cancelled) return;
+        if (evRes.status === 'fulfilled') {
+          const ev = evRes.value?.events || [];
+          setHomeEvents(Array.isArray(ev) ? ev.slice(0, 8) : []);
+        }
+        if (toRes.status === 'fulfilled') {
+          const to = toRes.value?.featured || [];
+          setHomeTours(Array.isArray(to) ? to.slice(0, 8) : []);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [lang]);
 
   useEffect(() => {
     applyHomeSeoFromSettings(settings);
@@ -1170,6 +1209,8 @@ export default function Explore() {
           </div>
         </section>
       )}
+
+      <EventsAndToursSection events={homeEvents} tours={homeTours} t={t} />
 
       {communityPosts.length > 0 && (
         <CommunityFeedStrip posts={communityPosts} t={t} moreTo={COMMUNITY_PATH} layout="bento" />

@@ -918,25 +918,23 @@ a.vd-top-picks-card-bg--hit {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(12px) saturate(1.8);
-  -webkit-backdrop-filter: blur(12px) saturate(1.8);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  background: var(--color-primary-dark, #0d5c54);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   pointer-events: auto;
-  transition: all 0.3s var(--ease-out);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  transition: all 0.25s var(--ease-out);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .vd-top-picks-arrow:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: scale(1.08);
+  background: #0a4a43;
+  transform: scale(1.1);
   color: #fff;
-  box-shadow: 0 12px 48px rgba(15, 118, 110, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .vd-top-picks-arrow:active {
@@ -7778,5 +7776,207 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
     min-height: 46px;
     padding-inline: 20px;
     border-radius: 999px;
+  }
+}
+
+/* ═══════════════════════════════════════
+   MOBILE COMMUNITY FEED — STORY REEL
+   Phone-only. Desktop completely untouched.
+   ═══════════════════════════════════════ */
+@media (max-width: 767px) {
+
+  /* Strip the framed card shell entirely on mobile */
+  .vd-community-feed-bento-shell.vd-community-feed-grid--bento,
+  .vd-community-feed-bento-shell.vd-community-feed-grid--trio,
+  .vd-community-feed-grid--bento,
+  .vd-community-feed-grid--trio.vd-community-feed-grid--bento {
+    all: unset !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    gap: 14px !important;
+    padding: 8px 20px 24px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .vd-community-feed-bento-shell.vd-community-feed-grid--bento::-webkit-scrollbar,
+  .vd-community-feed-bento-shell.vd-community-feed-grid--trio::-webkit-scrollbar,
+  .vd-community-feed-grid--bento::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Each card: portrait story format */
+  .vd-community-feed--showcase .vd-community-feed-card,
+  .vd-community-feed-bento-shell .vd-community-feed-card,
+  .vd-community-feed-grid--bento > .vd-community-feed-card {
+    flex: 0 0 70vw !important;
+    width: 70vw !important;
+    max-width: 280px !important;
+    min-height: 420px !important;
+    height: 420px !important;
+    border-radius: 22px !important;
+    scroll-snap-align: start !important;
+    overflow: hidden !important;
+    position: relative !important;
+    transform: none !important;
+    transition: box-shadow 0.3s ease !important;
+    box-shadow: 0 10px 36px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    grid-column: unset !important;
+    grid-row: unset !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    border: none !important;
+  }
+
+  /* First card slightly taller and wider */
+  .vd-community-feed--showcase .vd-community-feed-card:nth-child(1),
+  .vd-community-feed-bento-shell .vd-community-feed-card:nth-child(1),
+  .vd-community-feed-grid--bento > .vd-community-feed-card:nth-child(1) {
+    flex: 0 0 75vw !important;
+    width: 75vw !important;
+    max-width: 300px !important;
+    min-height: 460px !important;
+    height: 460px !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.26) !important;
+  }
+
+  /* Full-bleed image */
+  .vd-community-feed--showcase .vd-community-feed-card-media,
+  .vd-community-feed-bento-shell .vd-community-feed-card-media,
+  .vd-community-feed-grid--bento > .vd-community-feed-card .vd-community-feed-card-media {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: unset !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .vd-community-feed--showcase .vd-community-feed-img,
+  .vd-community-feed--showcase .vd-community-feed-video,
+  .vd-community-feed-bento-shell .vd-community-feed-img,
+  .vd-community-feed-bento-shell .vd-community-feed-video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  /* Cinematic gradient body */
+  .vd-community-feed--showcase .vd-community-feed-card-body,
+  .vd-community-feed-bento-shell .vd-community-feed-card-body,
+  .vd-community-feed-grid--bento > .vd-community-feed-card .vd-community-feed-card-body {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 2 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+    padding: 18px !important;
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.9) 0%,
+      rgba(0, 0, 0, 0.55) 38%,
+      rgba(0, 0, 0, 0.08) 68%,
+      transparent 100%
+    ) !important;
+    border-radius: 22px !important;
+    gap: 0 !important;
+    border-top: none !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .vd-community-feed--showcase .vd-community-feed-card-content,
+  .vd-community-feed-bento-shell .vd-community-feed-card-content {
+    padding: 0 !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Caption */
+  .vd-community-feed--showcase .vd-community-feed-caption,
+  .vd-community-feed-bento-shell .vd-community-feed-caption,
+  .vd-community-feed-grid--bento > .vd-community-feed-card .vd-community-feed-caption {
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    margin-bottom: 0 !important;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.55) !important;
+  }
+
+  /* Glass pill row at the bottom */
+  .vd-community-feed--showcase .vd-community-feed-glass-footer,
+  .vd-community-feed-bento-shell .vd-community-feed-glass-footer {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    background: rgba(255, 255, 255, 0.13) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 16px !important;
+    padding: 9px 12px !important;
+    margin-top: 12px !important;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.18) !important;
+  }
+
+  /* Show place/name meta */
+  .vd-community-feed--showcase .vd-community-feed-meta,
+  .vd-community-feed-bento-shell .vd-community-feed-meta {
+    display: flex !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    border-top: none !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  .vd-community-feed--showcase .vd-community-feed-author,
+  .vd-community-feed-bento-shell .vd-community-feed-author {
+    color: #fff !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+  }
+
+  .vd-community-feed--showcase .vd-community-feed-uploader,
+  .vd-community-feed-bento-shell .vd-community-feed-uploader {
+    color: rgba(255,255,255,0.68) !important;
+    font-size: 10px !important;
+  }
+
+  /* Solid white CTA pill */
+  .vd-community-feed--showcase .vd-community-feed-cta,
+  .vd-community-feed-bento-shell .vd-community-feed-cta {
+    flex-shrink: 0 !important;
+    background: #fff !important;
+    color: var(--color-primary-dark, #0d5c54) !important;
+    border: none !important;
+    padding: 8px 14px !important;
+    border-radius: 99px !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.16) !important;
+  }
+
+  .vd-community-feed--showcase .vd-community-feed-cta:hover,
+  .vd-community-feed-bento-shell .vd-community-feed-cta:hover {
+    background: #f0fdf9 !important;
+    transform: none !important;
   }
 }

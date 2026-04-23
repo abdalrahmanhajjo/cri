@@ -164,9 +164,8 @@ router.post('/complete', aiAuthIfRequired, async (req, res) => {
     } catch (err) {
       console.error('[AI] Groq error:', err.message);
       const isAuth = err.message && /api.key|401|403|invalid|unauthorized/i.test(err.message);
-      return res.status(isAuth ? 401 : 500).json({
-        error: isAuth ? 'Invalid Groq API key. Get a free key at console.groq.com' : 'AI request failed',
-        detail: process.env.NODE_ENV !== 'production' ? err.message : undefined,
+      return res.status(isAuth ? 401 : 503).json({
+        error: isAuth ? 'Invalid API Key' : 'The planner is currently busy or overloaded. Please try again shortly, or manually edit your trip.',
       });
     }
   }
@@ -235,10 +234,35 @@ router.post('/complete', aiAuthIfRequired, async (req, res) => {
     }
     const msg = String(err.message || '');
     const isNetwork = /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|fetch failed|network/i.test(msg);
-    return res.status(500).json({
-      error: isNetwork ? 'Could not reach n8n. Set GROQ_API_KEY to use free AI without n8n.' : 'AI request failed',
-      detail: process.env.NODE_ENV !== 'production' ? err.message : undefined,
+    return res.status(isNetwork ? 503 : 500).json({
+      error: 'The smart planner is a bit busy right now. We are working on reconnecting to our AI paths.',
     });
+  }
+});
+
+router.post('/rerank-places', aiAuthIfRequired, async (req, res) => {
+  if (!useGroqDirect()) {
+    return res.status(503).json({ error: 'Reranking requires active Groq API Key' });
+  }
+
+  const { intent, candidates } = req.body;
+  if (!intent || !candidates || !candidates.length) {
+    return res.status(400).json({ error: 'Missing intent or candidates' });
+  }
+
+  const prompt = `You are an AI planner. Rerank these places based on this user intent: "${intent}".
+Return a JSON array of objects with exactly 'id', 'aiRelevance' (0-10) and 'reason' fields.
+Candidates:\n${candidates.map(c => `- ${c.id}: ${c.name}`).join('\n')}`;
+
+  try {
+    const { text } = await callGroq([{ role: 'user', content: prompt }], 0.2, 2048);
+    const match = text.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error('Failed to parse array');
+    const scoredIds = JSON.parse(match[0]);
+    res.json({ ranked: scoredIds });
+  } catch (err) {
+    console.error('[AI] Rerank error', err.message);
+    res.status(500).json({ error: 'Reranking failed' });
   }
 });
 

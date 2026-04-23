@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
@@ -7,6 +7,7 @@ import Icon from '../components/Icon';
 import './Explore.css';
 import './Events.css';
 import './ActivitiesHub.css';
+import { DateRangeCalendar } from '../components/Calendar';
 
 function normalizeHaystack(s) {
   return String(s ?? '')
@@ -32,77 +33,337 @@ function clipDescription(raw, maxLen = 110) {
   return `${s.slice(0, maxLen).trim()}…`;
 }
 
-function TourCard({ tour }) {
-  const img = getPlaceImageUrl(tour.image) || null;
-  const tourDesc = clipDescription(tour.description, 100);
-  return (
-    <Link to={`/tour/${tour.id}`} className="vd-card vd-card--tour activities-hub-card">
-      <div className="vd-card-media">
-        {img ? <DeliveryImg url={img} preset="gridCard" alt="" /> : <span className="vd-card-fallback">Tour</span>}
-        {tour.duration && <span className="vd-card-badge">{tour.duration}</span>}
-      </div>
-      <div className="vd-card-content">
-        <h3 className="vd-card-title vd-card-title--dark">{tour.name}</h3>
-        {tour.priceDisplay && <p className="vd-card-meta vd-card-price">{tour.priceDisplay}</p>}
-        {tourDesc ? <p className="activities-hub-card-snippet">{tourDesc}</p> : null}
-      </div>
-    </Link>
-  );
-}
-
-function EventCard({ event }) {
-  const img = getPlaceImageUrl(event.image) || null;
-  const date = event.startDate
-    ? new Date(event.startDate).toLocaleDateString(undefined, {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    : '';
-  const category = event.category || '';
-  const status = event.status || '';
-  const organizer = event.organizer || '';
-  const price = event.priceDisplay || event.price || '';
-  const desc = clipDescription(event.description, 118);
+/* ─── Premium Full-Image Card (Adapted for Activities Grid) ──────────────── */
+function FullImageCard({ item, type, t }) {
+  const imgSrc = item.image ? getPlaceImageUrl(item.image) : null;
+  const isFree = !item.price || (item.price != null && Number(item.price) === 0);
+  const priceLabel = item.priceDisplay || (isFree ? 'Free' : `$${item.price}`);
+  
+  // Date formatting for events
+  const dateObj = item.startDate ? new Date(item.startDate) : null;
+  const dayNum = dateObj ? dateObj.toLocaleDateString('en-US', { day: '2-digit' }) : '';
+  const monthStr = dateObj ? dateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() : '';
+  const weekday = dateObj ? dateObj.toLocaleDateString('en-US', { weekday: 'short' }) : '';
 
   return (
-    <Link to={`/event/${event.id}`} className="vd-card vd-card--event events-card activities-hub-card">
-      <div className="vd-card-media">
-        {img ? <DeliveryImg url={img} preset="gridCard" alt="" /> : <span className="vd-card-fallback">Event</span>}
-        {status && <span className="events-status-pill events-status-pill--corner">{status}</span>}
-        {date && <span className="vd-card-badge vd-card-date">{date}</span>}
-      </div>
-      <div className="vd-card-content events-card-content">
-        <h3 className="vd-card-title vd-card-title--dark events-card-title">{event.name}</h3>
-        {category && (
-          <p className="events-card-category">
-            <Icon name="event" size={16} /> {category}
-          </p>
+    <Link 
+      to={`/${type === 'event' ? 'event' : 'tour'}/${item.id}`}
+      className="activities-hub-card-link"
+      style={{
+        display: 'block', textDecoration: 'none', width: '100%',
+        height: '420px', position: 'relative',
+        borderRadius: '24px', overflow: 'hidden',
+        background: '#f1f5f9',
+        boxShadow: 'var(--shadow-card)',
+        transition: 'transform 0.4s cubic-bezier(0.2, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.2, 1, 0.3, 1)',
+      }}
+    >
+      {/* Media Background */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+        {imgSrc ? (
+          <img src={imgSrc} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ 
+            width: '100%', height: '100%', 
+            background: type === 'event' ? 'linear-gradient(135deg, #0d9488, #115e59)' : 'linear-gradient(135deg, #0ea5e9, #0369a1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <Icon name={type === 'event' ? 'calendar' : 'compass'} size={64} style={{ color: 'rgba(255,255,255,0.15)' }} />
+          </div>
         )}
-        {event.location && <p className="events-card-location">{event.location}</p>}
-        {desc ? <p className="events-card-desc">{desc}</p> : null}
-        <div className="events-card-meta-row">
-          {organizer && (
-            <span className="events-card-meta">
-              <Icon name="account_circle" size={16} /> {organizer}
-            </span>
-          )}
-          {price && (
-            <span className="events-card-meta events-card-meta--accent">
-              <Icon name="payments" size={16} /> {price}
-            </span>
-          )}
+        {/* Bottom-heavy gradient for readability */}
+        <div style={{ 
+          position: 'absolute', inset: 0, 
+          background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 45%, transparent 80%)' 
+        }} />
+      </div>
+
+      {/* Floating Badges */}
+      <div style={{ position: 'relative', zIndex: 2, padding: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <span style={{
+          background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          color: '#fff', fontSize: '9px', fontWeight: 800,
+          padding: '5px 12px', borderRadius: '20px', letterSpacing: '0.12em', textTransform: 'uppercase'
+        }}>
+          {item.category || (type === 'event' ? 'Event' : 'Tour')}
+        </span>
+        <span style={{
+          background: '#fff', color: '#000',
+          fontSize: '11px', fontWeight: 900,
+          padding: '5px 14px', borderRadius: '20px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+        }}>
+          {priceLabel}
+        </span>
+      </div>
+
+      {/* Floating Date (for Events) */}
+      {type === 'event' && dayNum && (
+        <div style={{
+          position: 'absolute', top: '65px', left: '18px', zIndex: 2,
+          background: '#fff', borderRadius: '14px', padding: '10px 14px',
+          textAlign: 'center', boxShadow: 'var(--shadow-card)',
+          minWidth: '58px'
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-primary)', letterSpacing: '0.05em', marginBottom: '2px' }}>{monthStr}</div>
+          <div style={{ fontSize: '26px', fontWeight: 900, color: '#000', lineHeight: 1 }}>{dayNum}</div>
+        </div>
+      )}
+
+      {/* Bottom Content Area */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2,
+        padding: '24px 20px',
+        display: 'flex', flexDirection: 'column', gap: '14px'
+      }}>
+        <div>
+          <h3 style={{
+            margin: '0 0 8px', fontSize: '19px', fontWeight: 800, color: '#fff',
+            lineHeight: 1.2, letterSpacing: '-0.01em',
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+          }}>
+            {item.name}
+          </h3>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+            {type === 'event' ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>
+                  <Icon name="map-pin" size={14} style={{ color: '#fff' }} />
+                  <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.location || 'Tripoli'}</span>
+                </div>
+                {weekday && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.85)' }}>
+                    <Icon name="clock" size={14} />
+                    <span>{weekday}</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {item.rating && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', color: '#fbbf24' }}>
+                      {[...Array(5)].map((_, i) => (
+                        <Icon key={i} name="star" size={12} style={{ opacity: i < Math.floor(Number(item.rating)) ? 1 : 0.4 }} />
+                      ))}
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>{item.rating}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.85)' }}>
+                  <Icon name="clock" size={14} />
+                  <span>{item.duration || 'Full day'}</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+           <span style={{ 
+             background: 'rgba(255,255,255,0.18)', color: '#fff',
+             fontSize: '12px', fontWeight: 800, padding: '10px 18px', borderRadius: '12px',
+             display: 'flex', alignItems: 'center', gap: '8px',
+             backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+             border: '1px solid rgba(255,255,255,0.2)',
+           }}>
+             {type === 'event' ? 'Event Details' : 'Tour Details'}
+             <Icon name="arrow_forward" size={15} />
+           </span>
         </div>
       </div>
     </Link>
   );
 }
 
+/* ─── Mobile Date Strip ─── */
+function MobileDateStrip({ selectedDate, onChange, events = [] }) {
+  const days = useMemo(() => {
+    const arr = [];
+    const today = new Date();
+    // Start from today, show 30 days
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      arr.push(d);
+    }
+    return arr;
+  }, []);
+
+  // Calculate which YMD strings have events
+  const eventDays = useMemo(() => {
+    const set = new Set();
+    events.forEach(e => {
+      if (!e.startDate) return;
+      const start = new Date(e.startDate);
+      const end = e.endDate ? new Date(e.endDate) : start;
+      const current = new Date(start);
+      // Cap safety for infinite loops
+      let safety = 0;
+      while (current <= end && safety < 100) {
+        set.add(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+        safety++;
+      }
+    });
+    return set;
+  }, [events]);
+
+  return (
+    <div className="activities-hub-mobile-datestrip" style={{
+      display: 'flex', gap: '10px', overflowX: 'auto', padding: '12px 4px 20px',
+      margin: '0 -20px', paddingLeft: '20px', paddingRight: '20px',
+      scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch'
+    }}>
+      <button
+        onClick={() => onChange(null)}
+        style={{
+          flexShrink: 0, padding: '8px 20px', borderRadius: '16px', 
+          border: '1.5px solid',
+          borderColor: !selectedDate ? 'var(--color-primary)' : 'var(--color-border)',
+          background: !selectedDate ? 'var(--color-primary)' : 'var(--color-surface)',
+          color: !selectedDate ? '#fff' : 'var(--color-text-primary)',
+          fontSize: '13px', fontWeight: 800, transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: !selectedDate ? '0 8px 20px rgba(13, 148, 136, 0.25)' : 'none'
+        }}
+      >
+        All
+      </button>
+      {days.map(d => {
+        const ymd = d.toISOString().split('T')[0];
+        const active = selectedDate === ymd;
+        const hasEvents = eventDays.has(ymd);
+        const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+        const dateNum = d.getDate();
+        const monthShort = d.toLocaleDateString('en-US', { month: 'short' });
+        
+        return (
+          <button
+            key={ymd}
+            onClick={() => onChange(active ? null : ymd)}
+            style={{
+              flexShrink: 0, padding: '8px 0', borderRadius: '16px', 
+              border: '1.5px solid',
+              borderColor: active ? 'var(--color-primary)' : 'var(--color-border)',
+              background: active ? 'var(--color-primary)' : 'var(--color-surface)',
+              color: active ? '#fff' : 'var(--color-text-primary)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              minWidth: '58px', height: '64px', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: active ? '0 10px 24px rgba(13, 148, 136, 0.3)' : 'none',
+              transform: active ? 'scale(1.05)' : 'none',
+              position: 'relative'
+            }}
+          >
+            <span style={{ fontSize: '9px', fontWeight: 800, opacity: active ? 0.9 : 0.5, textTransform: 'uppercase', lineHeight: 1 }}>{dayName}</span>
+            <span style={{ fontSize: '20px', fontWeight: 900, lineHeight: 1.1, marginTop: '2px' }}>{dateNum}</span>
+            <span style={{ fontSize: '8px', fontWeight: 700, opacity: 0.5, marginTop: '1px' }}>{monthShort}</span>
+            
+            {hasEvents && !active && (
+              <div style={{
+                position: 'absolute', bottom: '6px', width: '4px', height: '4px',
+                borderRadius: '50%', background: 'var(--color-primary)',
+                boxShadow: '0 0 4px var(--color-primary)'
+              }} />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── Date Picker Dropdown ─── */
+function DatePickerFilter({ selectedDate, onChange, label, isMobile }) {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const clickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    if (open) document.addEventListener('mousedown', clickOutside);
+    return () => document.removeEventListener('mousedown', clickOutside);
+  }, [open]);
+
+  if (isMobile) return null; // Mobile uses DateStrip
+
+  const display = selectedDate 
+    ? new Date(selectedDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    : label;
+
+  return (
+    <div className="date-picker-wrapper" ref={dropdownRef} style={{ position: 'relative' }}>
+      <button 
+        type="button"
+        className={`activities-hub-select ${selectedDate ? 'activities-hub-select--active' : ''}`}
+        onClick={() => setOpen(!open)}
+        style={{ 
+          display: 'flex', alignItems: 'center', gap: '8px', minWidth: '160px',
+          background: selectedDate ? 'var(--color-primary-light, #f0fdfa)' : '#fff',
+          borderColor: selectedDate ? 'var(--color-primary)' : 'var(--color-border)',
+          color: selectedDate ? 'var(--color-primary-dark)' : 'inherit',
+          padding: '0 18px', fontWeight: 700, borderRadius: '12px',
+          height: '48px', fontSize: '15px'
+        }}
+      >
+        <Icon name="calendar" size={18} />
+        <span style={{ flex: 1, textAlign: 'left' }}>{display}</span>
+        {selectedDate ? (
+          <Icon 
+            name="close" 
+            size={14} 
+            onClick={(e) => { e.stopPropagation(); onChange(null); }} 
+            style={{ cursor: 'pointer', opacity: 0.6 }} 
+          />
+        ) : (
+          <Icon name="expand_more" size={14} style={{ opacity: 0.5 }} />
+        )}
+      </button>
+
+      {open && (
+        <div style={{ 
+          position: 'absolute', top: '100%', right: 0, zIndex: 100, marginTop: '12px',
+          background: '#fff', borderRadius: '24px', boxShadow: '0 15px 45px rgba(0,0,0,0.22)',
+          padding: '8px', border: '1px solid rgba(0,0,0,0.06)'
+        }}>
+          <DateRangeCalendar 
+            startDate={selectedDate}
+            endDate={selectedDate}
+            onChange={(s) => { onChange(s); setOpen(false); }}
+            showHint={false}
+            className="calendar--large"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Mobile Hook ─── */
+function useMobile() {
+  const [mobile, setMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth <= 767 : false
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 767px)');
+    const handler = (e) => setMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return mobile;
+}
+
 export default function ActivitiesHub() {
   const { t, lang } = useLanguage();
   const [searchParams] = useSearchParams();
-  const tab = searchParams.get('tab') === 'events' ? 'events' : 'experiences';
+  const tab = searchParams.get('tab') || 'events';
+  const isMobile = useMobile();
 
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const [tours, setTours] = useState([]);
@@ -114,11 +375,13 @@ export default function ActivitiesHub() {
   const [expDifficulty, setExpDifficulty] = useState('');
   const [expDuration, setExpDuration] = useState('');
   const [expSort, setExpSort] = useState('default');
+  const [expDate, setExpDate] = useState(null);
 
   const [evtQuery, setEvtQuery] = useState('');
   const [evtCategory, setEvtCategory] = useState('');
   const [evtStatus, setEvtStatus] = useState('');
   const [evtSort, setEvtSort] = useState('dateDesc');
+  const [evtDate, setEvtDate] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,6 +485,12 @@ export default function ActivitiesHub() {
       });
     }
 
+    if (expDate) {
+      // For tours, we assume all are available daily for now,
+      // but we could filter by actual schedule if it existed.
+      // This acts as a "What can I do on this date?" filter.
+    }
+
     const out = [...list];
     if (expSort === 'name') out.sort((a, b) => collator.compare(a.name || '', b.name || ''));
     else if (expSort === 'durationAsc')
@@ -232,7 +501,7 @@ export default function ActivitiesHub() {
     else if (expSort === 'ratingDesc') out.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
 
     return out;
-  }, [tours, expQuery, expDifficulty, expDuration, expSort, collator]);
+  }, [tours, expQuery, expDifficulty, expDuration, expSort, expDate, collator]);
 
   const filteredEvents = useMemo(() => {
     let list = events.filter((e) =>
@@ -248,6 +517,15 @@ export default function ActivitiesHub() {
       list = list.filter((e) => normalizeHaystack(e.status || '') === ns);
     }
 
+    if (evtDate) {
+      list = list.filter((e) => {
+        if (!e.startDate) return false;
+        const startYMD = e.startDate.split('T')[0];
+        const endYMD = (e.endDate || e.startDate).split('T')[0];
+        return evtDate >= startYMD && evtDate <= endYMD;
+      });
+    }
+
     const out = [...list];
     if (evtSort === 'dateAsc')
       out.sort((a, b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime());
@@ -256,16 +534,17 @@ export default function ActivitiesHub() {
     else if (evtSort === 'name') out.sort((a, b) => collator.compare(a.name || '', b.name || ''));
 
     return out;
-  }, [events, evtQuery, evtCategory, evtStatus, evtSort, collator]);
+  }, [events, evtQuery, evtCategory, evtStatus, evtSort, evtDate, collator]);
 
-  const expFiltersActive = Boolean(expQuery.trim() || expDifficulty || (expDuration && expDuration !== 'any') || expSort !== 'default');
-  const evtFiltersActive = Boolean(evtQuery.trim() || evtCategory || evtStatus || evtSort !== 'dateDesc');
+  const expFiltersActive = Boolean(expQuery.trim() || expDifficulty || (expDuration && expDuration !== 'any') || expSort !== 'default' || expDate);
+  const evtFiltersActive = Boolean(evtQuery.trim() || evtCategory || evtStatus || evtSort !== 'dateDesc' || evtDate);
 
   const clearExperiences = useCallback(() => {
     setExpQuery('');
     setExpDifficulty('');
     setExpDuration('');
     setExpSort('default');
+    setExpDate(null);
   }, []);
 
   const clearEvents = useCallback(() => {
@@ -273,6 +552,7 @@ export default function ActivitiesHub() {
     setEvtCategory('');
     setEvtStatus('');
     setEvtSort('dateDesc');
+    setEvtDate(null);
   }, []);
 
   if (loading) {
@@ -349,12 +629,18 @@ export default function ActivitiesHub() {
       <div className="vd-container activities-hub-body">
         {tab === 'experiences' ? (
           <section className="activities-hub-panel" aria-labelledby="hub-experiences-heading">
-            <div className="activities-hub-panel-head">
-              <h2 id="hub-experiences-heading" className="activities-hub-panel-kicker">
+            <header style={{ 
+              marginTop: '40px', 
+              marginBottom: '32px',
+              paddingLeft: '24px',
+              borderLeft: '4px solid var(--color-primary)',
+              position: 'relative'
+            }}>
+              <h2 id="hub-experiences-heading" className="activities-hub-panel-kicker" style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>
                 {t('nav', 'megaExperiences')}
               </h2>
-              <p className="activities-hub-panel-desc">{t('nav', 'megaExperiencesDesc')}</p>
-            </div>
+              <p className="activities-hub-panel-desc" style={{ margin: '8px 0 0', opacity: 0.8 }}>{t('nav', 'megaExperiencesDesc')}</p>
+            </header>
 
             <div className="activities-hub-toolbar" role="search">
               <label className="activities-hub-search">
@@ -415,6 +701,12 @@ export default function ActivitiesHub() {
                   <option value="priceAsc">{t('home', 'activitiesHubSortPriceAsc')}</option>
                   <option value="ratingDesc">{t('home', 'activitiesHubSortRating')}</option>
                 </select>
+                <DatePickerFilter 
+                  selectedDate={expDate} 
+                  onChange={setExpDate} 
+                  label={t('home', 'filterByDate') || 'Pick Date'} 
+                  isMobile={isMobile}
+                />
                 {expFiltersActive ? (
                   <button type="button" className="activities-hub-clear" onClick={clearExperiences}>
                     {t('home', 'activitiesHubClear')}
@@ -422,6 +714,10 @@ export default function ActivitiesHub() {
                 ) : null}
               </div>
             </div>
+
+            {isMobile && (
+              <MobileDateStrip selectedDate={expDate} onChange={setExpDate} events={tours} />
+            )}
 
             <p className="activities-hub-results-meta" aria-live="polite">
               {t('home', 'activitiesHubResultsOfTotal')
@@ -436,19 +732,27 @@ export default function ActivitiesHub() {
             ) : (
               <div className="vd-grid vd-grid--4 activities-hub-grid">
                 {filteredTours.map((tour) => (
-                  <TourCard key={tour.id} tour={tour} />
+                  <FullImageCard key={tour.id} item={tour} type="experience" t={t} />
                 ))}
               </div>
             )}
           </section>
+        ) : tab === 'calendar' ? (
+          <CalendarPanel events={events} tours={tours} t={t} />
         ) : (
           <section className="activities-hub-panel" aria-labelledby="hub-events-heading">
-            <div className="activities-hub-panel-head">
-              <h2 id="hub-events-heading" className="activities-hub-panel-kicker">
+            <header style={{ 
+              marginTop: '40px', 
+              marginBottom: '32px',
+              paddingLeft: '24px',
+              borderLeft: '4px solid var(--color-primary)',
+              position: 'relative'
+            }}>
+              <h2 id="hub-events-heading" className="activities-hub-panel-kicker" style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>
                 {t('nav', 'megaEvents')}
               </h2>
-              <p className="activities-hub-panel-desc">{t('nav', 'megaEventsDesc')}</p>
-            </div>
+              <p className="activities-hub-panel-desc" style={{ margin: '8px 0 0', opacity: 0.8 }}>{t('nav', 'megaEventsDesc')}</p>
+            </header>
 
             <div className="activities-hub-toolbar" role="search">
               <label className="activities-hub-search">
@@ -504,6 +808,12 @@ export default function ActivitiesHub() {
                   <option value="dateAsc">{t('home', 'activitiesHubSortDateOld')}</option>
                   <option value="name">{t('home', 'activitiesHubSortName')}</option>
                 </select>
+                <DatePickerFilter 
+                  selectedDate={evtDate} 
+                  onChange={setEvtDate} 
+                  label={t('home', 'filterByDate') || 'Pick Date'} 
+                  isMobile={isMobile}
+                />
                 {evtFiltersActive ? (
                   <button type="button" className="activities-hub-clear" onClick={clearEvents}>
                     {t('home', 'activitiesHubClear')}
@@ -511,6 +821,10 @@ export default function ActivitiesHub() {
                 ) : null}
               </div>
             </div>
+
+            {isMobile && (
+              <MobileDateStrip selectedDate={evtDate} onChange={setEvtDate} events={events} />
+            )}
 
             <p className="activities-hub-results-meta" aria-live="polite">
               {t('home', 'activitiesHubResultsOfTotal')
@@ -525,7 +839,7 @@ export default function ActivitiesHub() {
             ) : (
               <div className="vd-grid vd-grid--4 activities-hub-grid activities-hub-events-grid">
                 {filteredEvents.map((e) => (
-                  <EventCard key={e.id} event={e} />
+                  <FullImageCard key={e.id} item={e} type="event" t={t} />
                 ))}
               </div>
             )}

@@ -357,7 +357,12 @@ export default function FindYourWayMap({ places = [], t, loadEager = false }) {
       markersRef.current.push({ marker, placeId: p.id });
     });
 
-    fitBounds(map, maps, visibleMarkers);
+    if (areaFilter == null) {
+      map.setCenter({ lat: 33.85, lng: 35.86 });
+      map.setZoom(8.2);
+    } else {
+      fitBounds(map, maps, visibleMarkers);
+    }
     staggerMapResize(maps, map, [0, 60, 200]);
   }, [visibleMarkers, mapReady, fitBounds]);
 

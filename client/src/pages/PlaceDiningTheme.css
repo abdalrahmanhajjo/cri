@@ -1,5 +1,5 @@
 /**
- * Dining guide â€” warm burgundy / terracotta / honey (replaces hotelsâ€™ blue-slate look).
+ * Dining guide — warm burgundy / terracotta / honey (replaces hotels’ blue-slate look).
  * Loaded after PlaceHotels.css; scoped to .hg-page--dining only.
  */
 
@@ -405,7 +405,7 @@
   opacity: 0.92;
 }
 
-/* Dining listing card â€” quick book / order / menu + cart/map on one row */
+/* Dining listing card — quick book / order / menu + cart/map on one row */
 .hg-page--dining .hg-stay-card--dining .hg-dining-card__footer--split {
   margin-top: auto;
   display: flex;
@@ -596,6 +596,7 @@
   line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

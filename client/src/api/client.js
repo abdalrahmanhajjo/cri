@@ -55,7 +55,7 @@ const SESSION_CODE_KEY = 'session_code';
 const MAX_RETRIES_5XX = 1;
 const RETRY_DELAY_MS = 800;
 
-/** Extra attempts after the first failed connection (unreliable Wiâ€‘Fi / sleeping tabs). */
+/** Extra attempts after the first failed connection (unreliable Wi‑Fi / sleeping tabs). */
 const MAX_NETWORK_RETRIES = 2;
 /** Backoff between network retries (ms); total attempts = 1 + MAX_NETWORK_RETRIES. */
 const NETWORK_RETRY_DELAYS_MS = [400, 1000];
@@ -71,7 +71,7 @@ const getRequestCache = new Map();
 
 /**
  * User-specific lists must not share an in-flight GET with a stale snapshot
- * (e.g. favourites loaded, then user saves â€” sync must not resolve the pre-save GET).
+ * (e.g. favourites loaded, then user saves — sync must not resolve the pre-save GET).
  */
 function skipGetDedupeForPath(path) {
   const p = typeof path === 'string' ? path.split('?')[0] : '';
@@ -403,13 +403,13 @@ export const api = {
     },
     /** Public: reviews left on Visit Tripoli (not Google). */
     reviews: (id) => api.get(`/api/places/${encodeURIComponent(id)}/reviews`),
-    /** Auth: create or replace current userâ€™s review for this place. */
+    /** Auth: create or replace current user’s review for this place. */
     submitReview: (id, body) =>
       api.post(`/api/places/${encodeURIComponent(id)}/reviews`, body || {}),
-    /** Auth: author, admin, or place owner â€” removes the review row. */
+    /** Auth: author, admin, or place owner — removes the review row. */
     deleteReview: (placeId, reviewId) =>
       api.delete(`/api/places/${encodeURIComponent(placeId)}/reviews/${encodeURIComponent(String(reviewId))}`),
-    /** Auth: admin or place owner â€” soft-hide or restore on the public list. */
+    /** Auth: admin or place owner — soft-hide or restore on the public list. */
     patchReview: (placeId, reviewId, body) =>
       api.patch(`/api/places/${encodeURIComponent(placeId)}/reviews/${encodeURIComponent(String(reviewId))}`, body),
     checkin: (id, body) => api.post(`/api/places/${encodeURIComponent(id)}/checkin`, body || {}),
@@ -554,7 +554,7 @@ export const api = {
       remove: (userId, placeId) =>
         api.delete(`/api/admin/place-owners?userId=${encodeURIComponent(userId)}&placeId=${encodeURIComponent(placeId)}`),
     },
-    /** Venue offers (place_promotions) â€” full CRUD; public Discover merges with coupons. */
+    /** Venue offers (place_promotions) — full CRUD; public Discover merges with coupons. */
     placePromotions: {
       list: (params) => {
         const qs = new URLSearchParams();
@@ -570,7 +570,7 @@ export const api = {
       update: (id, body) => api.patch(`/api/admin/place-promotions/${encodeURIComponent(id)}`, body),
       delete: (id) => api.delete(`/api/admin/place-promotions/${encodeURIComponent(id)}`),
     },
-    /** App coupons (coupons table) â€” distinct from POST /api/coupons/redeem for signed-in users. */
+    /** App coupons (coupons table) — distinct from POST /api/coupons/redeem for signed-in users. */
     managedCoupons: {
       list: (params) => {
         const qs = new URLSearchParams();
@@ -725,10 +725,10 @@ export const api = {
         typeof bodyOrPayload === 'string' ? { body: bodyOrPayload } : bodyOrPayload;
       return api.post(`/api/feed/post/${encodeURIComponent(postId)}/comments`, payload);
     },
-    /** Like or unlike â€” server writes to `feed_likes` (INSERT / DELETE), returns DB counts. */
+    /** Like or unlike — server writes to `feed_likes` (INSERT / DELETE), returns DB counts. */
     toggleLike: (postId) => api.post(`/api/feed/post/${encodeURIComponent(postId)}/like`),
     toggleSave: (postId) => api.post(`/api/feed/post/${encodeURIComponent(postId)}/save`),
-    /** Like or unlike a comment â€” server writes to `feed_comment_likes`. */
+    /** Like or unlike a comment — server writes to `feed_comment_likes`. */
     toggleCommentLike: (postId, commentId) =>
       api.post(
         `/api/feed/post/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/like`
@@ -749,7 +749,7 @@ export const api = {
     return api.get(`/api/promotions${q ? `?${q}` : ''}`);
   },
 
-  /** Coupon redemption (auth) â€” same DB rules as mobile (`coupon_redemptions`, code check). */
+  /** Coupon redemption (auth) — same DB rules as mobile (`coupon_redemptions`, code check). */
   coupons: {
     redeemed: () => api.get('/api/coupons/redeemed'),
     redeem: (promotionId, code) => api.post('/api/coupons/redeem', { promotionId, code }),

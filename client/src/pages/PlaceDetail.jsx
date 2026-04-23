@@ -980,8 +980,8 @@ export default function PlaceDetail() {
           <div className="place-detail-info">
             <InfoRow icon="schedule" label={t('detail', 'openingHours')} value={hoursStr} />
             <InfoRow icon="location_on" label={t('detail', 'location')} value={place.location} />
-            <InfoRow icon="category" label={t('detail', 'category')} value={place.category} />
-            <InfoRow icon="wb_sunny" label={t('detail', 'bestTimeToVisit')} value={place.bestTime} />
+            <InfoRow icon="grid" label={t('detail', 'category')} value={place.category} />
+            <InfoRow icon="sun" label={t('detail', 'bestTimeToVisit')} value={place.bestTime} />
             <InfoRow icon="schedule" label={t('detail', 'duration')} value={place.duration} />
             <InfoRow icon="payments" label={t('detail', 'priceRange')} value={place.price} />
           </div>

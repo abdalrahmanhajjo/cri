@@ -251,21 +251,41 @@
 @media (max-width: 767px) {
   .vd-community-feed {
     padding-bottom: 40px !important;
+    /* Bleed section edge-to-edge for immersive feel */
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
 
+  /* Section header — keep padded */
   .vd-community-feed-header {
     border-bottom: none !important;
-    margin-bottom: 24px !important;
-    padding-bottom: 0 !important;
+    margin-bottom: 28px !important;
+    padding: 0 20px !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: flex-end !important;
     position: relative !important;
   }
 
+  .vd-community-feed-showcase-title {
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin-bottom: 4px !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.15 !important;
+  }
+
+  .vd-community-feed-showcase-tagline {
+    font-size: 14px !important;
+    color: #64748b !important;
+    margin-bottom: 0 !important;
+    font-weight: 450 !important;
+    max-width: 260px !important;
+  }
+
   .vd-community-feed-more--pill-compact {
     flex-shrink: 0 !important;
-    margin-bottom: 8px !important;
     padding: 8px 16px !important;
     background: rgba(15, 118, 110, 0.08) !important;
     border: 1.5px solid rgba(15, 118, 110, 0.2) !important;
@@ -275,54 +295,188 @@
     border-radius: 99px !important;
   }
 
-  .vd-community-feed-intro {
-    padding-left: 24px !important;
-    border-left: none !important; /* Remove solid border */
+  /* ━━━━━ STORY REEL GRID ━━━━━ */
+  /* Turn the bento/grid wrapper into a horizontal snap-scroll reel */
+  .vd-community-feed-grid--bento,
+  .vd-community-feed-bento-shell,
+  .vd-community-feed-bento-shell.vd-community-feed-grid--bento,
+  .vd-community-feed-bento-shell.vd-community-feed-grid--trio,
+  .vd-community-feed-grid--trio.vd-community-feed-grid--bento {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    gap: 14px !important;
+    padding: 0 20px 20px !important;
+    /* Reset any grid columns from desktop */
+    grid-template-columns: unset !important;
+    grid-template-rows: unset !important;
+    grid-template-areas: unset !important;
+  }
+
+  /* Hide scrollbar in webkit */
+  .vd-community-feed-grid--bento::-webkit-scrollbar,
+  .vd-community-feed-bento-shell::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Each card — tall story card */
+  .vd-community-feed-card {
+    flex: 0 0 72vw !important;
+    max-width: 300px !important;
+    width: 72vw !important;
+    min-height: 440px !important;
+    height: 440px !important;
+    border-radius: 24px !important;
+    scroll-snap-align: start !important;
+    overflow: hidden !important;
+    position: relative !important;
+    transform: scale(0.97) !important;
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    grid-column: unset !important;
+    grid-row: unset !important;
+    margin: 0 !important;
+  }
+
+  /* Taller first card for visual hierarchy */
+  .vd-community-feed-card:nth-child(1) {
+    flex: 0 0 78vw !important;
+    max-width: 320px !important;
+    width: 78vw !important;
+    min-height: 480px !important;
+    height: 480px !important;
+    transform: scale(1) !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  /* Full image fill */
+  .vd-community-feed-card-media {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: unset !important;
+  }
+
+  .vd-community-feed-img,
+  .vd-community-feed-video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  /* Deep cinematic gradient overlay */
+  .vd-community-feed-card-body {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 1 !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
-    position: relative !important;
-    background: none !important; /* Remove background color effect */
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
+    justify-content: flex-end !important;
+    padding: 20px !important;
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.88) 0%,
+      rgba(0, 0, 0, 0.5) 40%,
+      rgba(0, 0, 0, 0.1) 70%,
+      transparent 100%
+    ) !important;
+    border-radius: 24px !important;
   }
 
-  .vd-community-feed-intro::before {
-    content: none !important;
+  .vd-community-feed-card-content {
+    padding: 0 !important;
+    margin-bottom: 14px !important;
   }
 
-  .vd-community-feed-intro-avatars {
-    justify-content: flex-start !important;
-    margin-bottom: 12px !important;
-    gap: -12px !important; /* more overlap */
+  /* Caption — bold and legible */
+  .vd-community-feed-caption {
+    font-size: 15px !important;
+    line-height: 1.45 !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    margin-bottom: 16px !important;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5) !important;
   }
 
-  .vd-community-feed-intro-avatars img {
-    width: 48px !important;
-    height: 48px !important;
-    border-width: 2.5px !important;
-    border-color: #fff !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+  /* Glass pill footer */
+  .vd-community-feed-glass-footer {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    border-radius: 18px !important;
+    padding: 10px 14px !important;
+    margin: 0 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+    gap: 10px !important;
   }
 
-  .vd-community-feed-showcase-title {
-    font-size: 30px !important;
+  /* Show meta on mobile (place name) */
+  .vd-community-feed-meta {
+    display: flex !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .vd-community-feed-author {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .vd-community-feed-uploader {
+    font-size: 11px !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+
+  /* CTA pill button */
+  .vd-community-feed-cta {
+    flex-shrink: 0 !important;
+    background: #fff !important;
+    color: var(--color-primary-dark, #0d5c54) !important;
+    border: none !important;
+    padding: 9px 16px !important;
+    border-radius: 99px !important;
+    font-size: 13px !important;
     font-weight: 800 !important;
-    color: #0f172a !important;
-    margin-bottom: 8px !important;
-    letter-spacing: -0.02em !important;
-    line-height: 1.2 !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18) !important;
+    letter-spacing: 0.01em !important;
   }
 
-  .vd-community-feed-showcase-tagline {
-    font-size: 14px !important;
-    color: #475569 !important;
-    opacity: 1 !important;
-    margin-bottom: 12px !important;
-    line-height: 1.5 !important;
-    font-weight: 500 !important;
+  .vd-community-feed-cta:hover {
+    background: #f0fdf9 !important;
+    transform: none !important;
   }
 
+  /* Hint scroll fade on the right */
+  .vd-community-feed > .vd-container {
+    position: relative !important;
+  }
+
+  /* Section wrapper clips the cards cleanly */
+  .vd-community-feed .vd-container {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Keep intro eyebrow styled */
   .vd-community-feed-intro-eyebrow {
     font-size: 12px !important;
     font-weight: 800 !important;
@@ -333,74 +487,12 @@
     align-items: center !important;
     gap: 10px !important;
     text-transform: uppercase !important;
+    padding: 0 20px !important;
   }
-  
+
   .vd-community-feed-pulse {
     width: 8px !important;
     height: 8px !important;
     background-color: var(--color-primary) !important;
-  }
-
-  /* Card Redesign - Removing the heavy box */
-  .vd-community-feed-card {
-    min-height: 480px !important; /* Taller for mobile */
-    border-radius: 28px !important;
-    margin-bottom: 20px !important;
-  }
-
-  .vd-community-feed-card-body {
-    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 40%, transparent 100%) !important;
-    padding: 20px !important;
-    justify-content: flex-end !important;
-  }
-
-  .vd-community-feed-card-content {
-    padding: 0 !important;
-    margin-bottom: 16px !important;
-  }
-
-  .vd-community-feed-caption {
-    font-size: 15px !important;
-    line-height: 1.4 !important;
-    -webkit-line-clamp: 3 !important;
-    line-clamp: 3 !important;
-    font-weight: 500 !important;
-  }
-
-  /* Remove the glass box container entirely on mobile */
-  .vd-community-feed-glass-footer {
-    background: transparent !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    border: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    box-shadow: none !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-  }
-
-  .vd-community-feed-meta {
-    display: none !important; /* User: only keep view post button and description */
-  }
-
-  /* Floating Author Info */
-  .vd-community-feed-author {
-    font-size: 13px !important;
-    opacity: 0.9 !important;
-  }
-
-  /* Redesigned Floating Button */
-  .vd-community-feed-cta {
-    background: rgba(255, 255, 255, 0.15) !important;
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    padding: 10px 20px !important;
-    border-radius: 99px !important;
-    font-size: 14px !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
   }
 }

@@ -5,6 +5,7 @@ const { adminMiddleware } = require('../../middleware/admin');
 const { normalizeDbText } = require('../../utils/normalizeDbText');
 const { validateAdminPlaceUpsert } = require('../../utils/validateAdminPlace');
 const { invalidateSitemapCache } = require('../../seo/seoRoutes');
+const { enrichPlaceBackground } = require('../../ai/placeEnrichment/enrichPlace');
 
 const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
@@ -88,6 +89,10 @@ router.post('/', async (req, res) => {
 
     await placesColl.replaceOne({ id: v.id }, doc, { upsert: true });
     invalidateSitemapCache();
+    
+    // Auto-trigger enrichment
+    enrichPlaceBackground(v.id, doc);
+
     res.status(201).json({ id: v.id, message: 'Place saved' });
   } catch (err) {
     console.error(err);
@@ -176,6 +181,11 @@ router.put('/:id', async (req, res) => {
     
     if (result.matchedCount === 0) return res.status(404).json({ error: 'Place not found' });
     invalidateSitemapCache();
+
+    // Auto-trigger enrichment
+    const currentDoc = await placesColl.findOne({ id });
+    if (currentDoc) enrichPlaceBackground(id, currentDoc);
+
     res.json({ id, message: 'Place updated' });
   } catch (err) {
     console.error(err);

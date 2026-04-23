@@ -362,12 +362,12 @@ export default function EventDetail() {
               </div>
 
               <div className="place-detail-info">
-                <InfoRow icon="calendar_today" label={t('detail', 'date')} value={dateLabel} />
-                <InfoRow icon="schedule" label={t('detail', 'time')} value={timeStr} />
-                {!isLiveUrl && <InfoRow icon="location_on" label={t('detail', 'location')} value={event.location} />}
-                <InfoRow icon="category" label={t('detail', 'category')} value={hasEventCategory ? String(event.category).trim() : null} />
-                <InfoRow icon="group" label={t('detail', 'organizer')} value={organizerDisplay} />
-                <InfoRow icon="payments" label={t('detail', 'priceRange')} value={eventPriceDisplayValue} />
+                <InfoRow icon="calendar" label={t('detail', 'date')} value={dateLabel} />
+                <InfoRow icon="clock" label={t('detail', 'time')} value={timeStr} />
+                {!isLiveUrl && <InfoRow icon="map-pin" label={t('detail', 'location')} value={event.location} />}
+                <InfoRow icon="grid" label={t('detail', 'category')} value={hasEventCategory ? String(event.category).trim() : null} />
+                <InfoRow icon="users" label={t('detail', 'organizer')} value={organizerDisplay} />
+                <InfoRow icon="credit-card" label={t('detail', 'priceRange')} value={eventPriceDisplayValue} />
                 <InfoRow icon="info" label={t('detail', 'status')} value={statusDisplay} />
               </div>
 

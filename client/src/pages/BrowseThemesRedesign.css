@@ -11,12 +11,11 @@
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     gap: 20px !important;
-    padding: 20px 0 !important;
+    padding: 20px 32px !important;
     overflow-x: auto !important;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
-    /* Avoid a permanent left-heavy strip on ultra-wide viewports when all cards fit */
-    justify-content: center !important;
+    justify-content: flex-start !important;
     scroll-snap-type: x proximity !important;
   }
 
