@@ -121,22 +121,46 @@ export default function FindYourWayMap({ places = [], t, loadEager = false }) {
   const [areaFilter, setAreaFilter] = useState(null);
   const [selected, setSelected] = useState(null);
 
+  /** Map PLAN_TRIP_AREA_NAV keys → search tokens for text matching.
+   *  Based on actual location/tag values in the database.
+   */
+  const AREA_SEARCH_MAP = useMemo(() => ({
+    // Al-Mina / El-Mina: port, waterfront, train station, palm islands
+    mina: ['el-mina', 'al-mina', 'port area', 'waterfront / port', 'off el-mina', 'fairgrounds', 'rashid karami'],
+    // Old City / medina: historic quarters, hammams, khans, madrasas, churches inside the walls
+    old_city: ['old city', 'old-city', 'al-nouri', 'haddadine', 'souk', 'medina', 'khan al-', 'near khan', 'old city souks'],
+    // Al-Tell / Al-Tal: city center square area east of medina
+    tell: ['al-tal', 'al-tell', 'azmi street', 'city centre', 'city center'],
+  }), []);
+
+
+  function matchesArea(p, areaKey) {
+    const keywords = AREA_SEARCH_MAP[areaKey];
+    if (!keywords) return false;
+    const haystack = [
+      p.location || '',
+      p.name || '',
+      ...(Array.isArray(p.tags) ? p.tags : []),
+    ].join(' ').toLowerCase();
+    return keywords.some((kw) => haystack.includes(kw.toLowerCase()));
+  }
+
   const withGeo = useMemo(() => {
     const list = Array.isArray(places) ? places : [];
     return list
       .map((p) => {
         const c = placeCoords(p);
         if (!c) return null;
-        const areaKey = getTripoliAreaKeyForCoordinates(c.lat, c.lng);
-        return { ...p, _lat: c.lat, _lng: c.lng, _areaKey: areaKey };
+        return { ...p, _lat: c.lat, _lng: c.lng };
       })
       .filter(Boolean);
   }, [places]);
 
   const visibleMarkers = useMemo(() => {
     if (!areaFilter) return withGeo;
-    return withGeo.filter((p) => p._areaKey === areaFilter);
-  }, [withGeo, areaFilter]);
+    return withGeo.filter((p) => matchesArea(p, areaFilter));
+  }, [withGeo, areaFilter, matchesArea]);
+
 
   useEffect(() => {
     setSelected((prev) => {

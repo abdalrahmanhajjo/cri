@@ -4,25 +4,28 @@
  */
 export const TRIPOLI_AREA_REGIONS = [
   {
+    // Al-Mina: port peninsula, northwest of the city
     key: 'mina',
-    south: 34.426,
-    west: 35.805,
-    north: 34.452,
-    east: 35.836,
+    south: 34.425,
+    west: 35.800,
+    north: 34.458,
+    east: 35.833,
   },
   {
+    // Old City: historic medina, west-central
     key: 'old_city',
     south: 34.426,
-    west: 35.828,
-    north: 34.444,
-    east: 35.854,
+    west: 35.826,
+    north: 34.445,
+    east: 35.851,
   },
   {
+    // Al-Tell: city center / Al-Tall square, east of Old City
     key: 'tell',
-    south: 34.434,
-    west: 35.836,
-    north: 34.454,
-    east: 35.862,
+    south: 34.432,
+    west: 35.843,
+    north: 34.456,
+    east: 35.870,
   },
 ];
 
