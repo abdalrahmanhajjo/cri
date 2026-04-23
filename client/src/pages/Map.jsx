@@ -750,12 +750,22 @@ export default function MapPage() {
       const sp = coordsById.get(String(nearbyAnchorPlaceId));
       if (!sp || sp.latitude == null || sp.longitude == null) return null;
       anchor = { lat: Number(sp.latitude), lng: Number(sp.longitude) };
+    } else if (nearbyMode === 'trip') {
+      if (placesInTripOrder.length === 0) return null;
+      // In trip mode, distance is calculated to the *nearest* stop in the trip
+      anchor = placesInTripOrder.map(s => ({ lat: Number(s.latitude), lng: Number(s.longitude) }));
     }
     if (!anchor) return null;
-    const rows = drawerPlacesWithCoords.map((p) => ({
-      ...p,
-      _distanceM: haversineMeters(anchor, { lat: Number(p.latitude), lng: Number(p.longitude) }),
-    }));
+    const rows = drawerPlacesWithCoords.map((p) => {
+      const pCoords = { lat: Number(p.latitude), lng: Number(p.longitude) };
+      let distM;
+      if (Array.isArray(anchor)) {
+        distM = Math.min(...anchor.map(s => haversineMeters(s, pCoords)));
+      } else {
+        distM = haversineMeters(anchor, pCoords);
+      }
+      return { ...p, _distanceM: distM };
+    });
     rows.sort((a, b) => a._distanceM - b._distanceM);
     return rows;
   }, [nearbyMode, userLocation, nearbyAnchorPlaceId, drawerPlacesWithCoords, coordsById]);
@@ -1430,6 +1440,12 @@ export default function MapPage() {
     setNearbyAnchorPlaceId(selectedPlaceId);
     setNearbyMode('place');
   }, [selectedPlaceId, coordsById]);
+
+  const handleNearbyModeTrip = useCallback(() => {
+    setNearbyMode('trip');
+    setListOpen(true);
+    setSwipeDeckIndex(0);
+  }, []);
 
   const handleMyLocation = useCallback(() => {
     setMyLocationNotice(null);
@@ -2137,27 +2153,73 @@ export default function MapPage() {
                   <Icon name="place" size={18} />
                   <span>{t('home', 'mapNearbyNearSelection')}</span>
                 </button>
+                {tripFilterName && placesInTripOrder.length > 0 && (
+                  <button
+                    type="button"
+                    className={`map-drawer-nearby-btn ${nearbyMode === 'trip' ? 'map-drawer-nearby-btn--active' : ''}`}
+                    onClick={handleNearbyModeTrip}
+                    aria-pressed={nearbyMode === 'trip'}
+                  >
+                    <Icon name="route" size={18} />
+                    <span>{t('home', 'mapNearbyNearTrip')}</span>
+                  </button>
+                )}
               </div>
             )}
             <div className="map-drawer-header">
-              <h2 className="map-drawer-title">{t('home', 'mapPageTitle')}</h2>
-              <p className="map-drawer-sub">
-              {nearbyMode === 'off' && t('home', 'mapNearbyCount').replace('{n}', String(drawerPlaces.length))}
-              {nearbyMode === 'me' && nearbyLocating && t('home', 'mapNearbyGettingLocation')}
-              {nearbyMode === 'me' && !nearbyLocating &&
-                t('home', 'mapNearbyCount').replace('{n}', String(listForDrawer.length))}
-              {nearbyMode === 'place' &&
-                t('home', 'mapNearbyCount').replace('{n}', String(listForDrawer.length))}
-              </p>
+              <div className="map-drawer-title-row">
+                <div className="map-drawer-title-wrap">
+                  <h2 className="map-drawer-title">{t('home', 'mapPageTitle')}</h2>
+                  <p className="map-drawer-sub">
+                    {nearbyMode === 'off' && t('home', 'mapNearbyCount').replace('{n}', String(drawerPlaces.length))}
+                    {nearbyMode === 'me' && nearbyLocating && t('home', 'mapNearbyGettingLocation')}
+                    {nearbyMode === 'me' && !nearbyLocating &&
+                      t('home', 'mapNearbyCount').replace('{n}', String(listForDrawer.length))}
+                    {nearbyMode === 'place' &&
+                      t('home', 'mapNearbyCount').replace('{n}', String(listForDrawer.length))}
+                    {nearbyMode === 'trip' &&
+                      t('home', 'mapNearbyCount').replace('{n}', String(listForDrawer.length))}
+                  </p>
+                </div>
+                <button type="button" className="map-drawer-close" onClick={() => setListOpen(false)} aria-label="Close">
+                  <Icon name="close" size={24} />
+                </button>
+              </div>
+
+              {addingTripStop && (
+                <div className="map-drawer-search-row">
+                  <div className="map-drawer-search-input-wrap">
+                    <Icon name="search" size={20} />
+                    <input
+                      type="text"
+                      className="map-drawer-search-input"
+                      placeholder={t('home', 'mapDrawerSearchPlaceholder')}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      autoFocus
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        className="map-drawer-search-clear"
+                        onClick={() => setSearchQuery('')}
+                      >
+                        <Icon name="close" size={18} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {nearbyMode === 'me' && !nearbyLocating && (
-              <p className="map-drawer-nearby-hint">{t('home', 'mapNearbySortedFromYou')}</p>
+                <p className="map-drawer-nearby-hint">{t('home', 'mapNearbySortedFromYou')}</p>
               )}
               {nearbyMode === 'place' && (
-              <p className="map-drawer-nearby-hint">{t('home', 'mapNearbySortedFromPlace')}</p>
+                <p className="map-drawer-nearby-hint">{t('home', 'mapNearbySortedFromPlace')}</p>
               )}
-              <button type="button" className="map-drawer-close" onClick={() => setListOpen(false)} aria-label="Close">
-              <Icon name="close" size={24} />
-              </button>
+              {nearbyMode === 'trip' && (
+                <p className="map-drawer-nearby-hint">{t('home', 'mapNearbySortedFromTrip')}</p>
+              )}
             </div>
           <div className="map-drawer-list">
             {listForDrawer.length === 0 ? (
