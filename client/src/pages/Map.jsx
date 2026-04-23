@@ -2243,6 +2243,8 @@ function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode }) 
 
   const onPointerDown = (e) => {
     if (places.length <= 1 || e.button !== 0) return;
+    // Don't capture if the user clicked a link or button — let those handle their own events
+    if (e.target.closest('a, button')) return;
     dragStartXRef.current = e.clientX;
     capturingRef.current = true;
     try {

@@ -3543,53 +3543,66 @@
   box-shadow: 0 2px 8px rgba(15, 118, 110, 0.15) !important;
 }
 
-/* ── Desktop: full sidebar ── */
+/* ── Desktop: keep as bottom sheet, same as mobile ── */
 @media (min-width: 960px) {
+  /* Override any sidebar positioning — stay as bottom sheet on all screen sizes */
   .map-page:not(.map-page--trip-route) .map-drawer {
-    width: min(400px, 36vw) !important;
-    max-width: 420px !important;
+    left: 50% !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+    transform: translateX(-50%) !important;
+    width: min(620px, calc(100% - 24px)) !important;
+    max-width: calc(100% - 24px) !important;
+    height: auto !important;
+    max-height: none !important;
   }
 
+  .map-page:not(.map-page--trip-route) .map-drawer--open {
+    transform: translateX(-50%) !important;
+  }
+
+  /* Restore bottom-sheet rounded corners */
   .map-page:not(.map-page--trip-route) .map-drawer .map-drawer-sheet {
-    border-radius: 0 !important;
-    box-shadow: 4px 0 24px rgba(15, 23, 42, 0.12) !important;
-    border: none !important;
-    border-right: 1px solid #e8f0fe !important;
+    border-radius: 22px 22px 0 0 !important;
+    box-shadow: 0 -8px 48px rgba(15, 23, 42, 0.18), 0 -2px 8px rgba(15, 23, 42, 0.06) !important;
+    border: 1px solid rgba(15, 23, 42, 0.09) !important;
+    border-bottom: none !important;
   }
 
+  /* Show drag handle on desktop too */
   .map-page:not(.map-page--trip-route) .map-drawer .map-drawer-sheet::before {
-    display: none !important;
+    display: block !important;
   }
 
-  /* On desktop, make the swipe card vertical (image on top) */
+  /* Keep horizontal card layout (image left, content right) — same as mobile */
   .map-drawer-swipe-slide {
-    flex-direction: column !important;
-    min-height: 260px !important;
-    border-radius: 16px !important;
-    overflow: hidden !important;
+    flex-direction: row !important;
+    min-height: 160px !important;
   }
 
   .map-drawer-swipe-media {
-    width: 100% !important;
-    min-width: 0 !important;
-    height: 180px !important;
-    min-height: 180px !important;
+    width: 170px !important;
+    min-width: 170px !important;
+    height: auto !important;
+    min-height: 160px !important;
     border-radius: 0 !important;
-    border-top-left-radius: 14px !important;
-    border-top-right-radius: 14px !important;
-    border-bottom-left-radius: 0 !important;
+    border-top-left-radius: 16px !important;
+    border-bottom-left-radius: 16px !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
   }
 
   .map-drawer-swipe-body {
-    border-top-right-radius: 0 !important;
+    border-top-right-radius: 16px !important;
+    border-bottom-right-radius: 16px !important;
     border-top-left-radius: 0 !important;
-    border-bottom-left-radius: 14px !important;
-    border-bottom-right-radius: 14px !important;
+    border-bottom-left-radius: 0 !important;
     padding: 16px !important;
   }
 
   .map-drawer-swipe-main {
-    min-height: 280px !important;
+    min-height: 160px !important;
   }
 
   .map-drawer-swipe-name {
@@ -3597,7 +3610,7 @@
   }
 
   .map-drawer .map-drawer-title {
-    font-size: 18px !important;
+    font-size: 16px !important;
   }
 
   .map-drawer .map-drawer-sub {
