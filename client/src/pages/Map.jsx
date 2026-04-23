@@ -2170,51 +2170,15 @@ export default function MapPage() {
                       ? t('home', 'mapDrawerEmptySearch')
                       : t('home', 'mapDrawerEmptyNoLocations')}
               </p>
-            ) : addingTripStop ? (
-              listForDrawer.map((p) => {
-                const g = p._google;
-                const name = g?.name || p.name || p.id;
-                const loc = g?.formatted_address || p.location;
-                const dbRating = p.rating != null && Number.isFinite(Number(p.rating)) ? Number(p.rating) : null;
-                const rating = dbRating ?? (g?.rating != null ? Number(g.rating) : null);
-                const dbReviews = p.reviewCount != null && Number.isFinite(Number(p.reviewCount)) ? Number(p.reviewCount) : null;
-                const reviews = dbReviews ?? g?.user_ratings_total ?? null;
-                const openNow = g?.opening_hours && typeof g.opening_hours.open_now === 'boolean'
-                  ? g.opening_hours.open_now
-                  : null;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={`map-drawer-item ${selectedPlaceId === p.id ? 'map-drawer-item--selected' : ''}`}
-                    onClick={() => handlePlaceSelect(p)}
-                  >
-                    <span className="map-drawer-item-name">{name}</span>
-                    {loc && <span className="map-drawer-item-loc">{loc}</span>}
-                    <div className="map-drawer-item-meta-row">
-                      {rating != null && (
-                        <span className="map-drawer-item-rating">
-                          <Icon name="star" size={14} /> {Number(rating).toFixed(1)}
-                          {reviews != null && ` (${reviews})`}
-                        </span>
-                      )}
-                      {openNow !== null && (
-                        <span className={`map-drawer-item-open ${openNow ? 'map-drawer-item-open--yes' : 'map-drawer-item-open--no'}`}>
-                          {openNow ? t('detail', 'openNow') : t('detail', 'closedNow')}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })
             ) : (
               <MapDrawerSwipeDeck
-                places={swipeDeckPlaces}
+                places={listForDrawer}
                 index={swipeDeckIndex}
                 setIndex={setSwipeDeckIndex}
                 apiKey={apiKey}
                 t={t}
                 nearbyMode={nearbyMode}
+                onPlaceSelect={addingTripStop ? handlePlaceSelect : undefined}
               />
             )}
           </div>
@@ -2228,7 +2192,7 @@ export default function MapPage() {
 
 const MAP_DRAWER_SWIPE_THRESHOLD_PX = 56;
 
-function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode }) {
+function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode, onPlaceSelect }) {
   const [dragPx, setDragPx] = useState(0);
   const dragStartXRef = useRef(null);
   const capturingRef = useRef(false);
@@ -2406,6 +2370,16 @@ function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode }) 
                     <Link to={`/place/${pid}`} className="map-drawer-swipe-details">
                       {t('home', 'viewDetails')} →
                     </Link>
+                    {onPlaceSelect && (
+                      <button
+                        type="button"
+                        className="map-drawer-swipe-select-btn"
+                        onClick={() => onPlaceSelect(current)}
+                      >
+                        <Icon name="add" size={18} />
+                        <span>{t('home', 'addToTrip')}</span>
+                      </button>
+                    )}
                   </div>
                 </article>
               );

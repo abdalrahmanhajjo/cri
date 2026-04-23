@@ -1134,6 +1134,7 @@ export const translations = {
         'Could not read your location. Turn on location services if they are off, then try again.',
       liveNavStop: 'Exit navigation',
       recenterMap: 'Recenter',
+      addToTrip: 'Add to trip',
       liveNavTracking: 'Live — route updates as you move',
       liveNavUpdatingHint: 'Time and route refresh automatically along the way.',
       liveNavDenied: 'Location permission is needed for live directions. Allow access in the browser, then try again.',
@@ -2784,6 +2785,7 @@ export const translations = {
         'ØªØ¹Ø°Ø± Ù‚Ø±Ø§Ø¡Ø© Ù…ÙˆÙ‚Ø¹Ùƒ. ØªØ£ÙƒØ¯ Ù…Ù† ØªÙØ¹ÙŠÙ„ Ø®Ø¯Ù…Ø§Øª Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ø«Ù… Ø£Ø¹Ø¯ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©.',
       liveNavStop: 'إنهـاء التنقل',
       recenterMap: 'إعادة التوسيط',
+      addToTrip: 'إضافة إلى الرحلة',
       liveNavTracking: 'Ù…Ø¨Ø§Ø´Ø± — Ø§Ù„Ù…Ø³Ø§Ø± ÙŠØªØ­Ø¯Ø« Ù…Ø¹ ØªØ­Ø±ÙƒÙƒ',
       liveNavUpdatingHint: 'ÙŠÙØ­Ø¯Ù‘ÙŽØ« Ø§Ù„ÙˆÙ‚Øª ÙˆØ§Ù„Ù…Ø³Ø§Ø± ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø·Ø±ÙŠÙ‚.',
       liveNavDenied: 'ÙŠÙ„Ø²Ù… Ø§Ù„Ø¥Ø°Ù† Ø¨Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ù„Ù„Ø§ØªØ¬Ø§Ù‡Ø§Øª Ø§Ù„Ù…Ø¨Ø§Ø´Ø±Ø©. Ø§Ø³Ù…Ø­ Ù„Ù„Ù…ØªØµÙØ­ Ø¨Ø§Ù„ÙˆØµÙˆÙ„ Ø«Ù… Ø£Ø¹Ø¯ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©.',
@@ -4424,6 +4426,7 @@ export const translations = {
         'Impossible de lire votre position. Vérifiez que la géolocalisation est activée, puis réessayez.',
       liveNavStop: 'Quitter la navigation',
       recenterMap: 'Recentrer',
+      addToTrip: 'Ajouter au voyage',
       liveNavTracking: 'En direct — l’itinÃ©raire se met Ã  jour quand vous vous dÃ©placez',
       liveNavUpdatingHint: 'Durée et itinéraire se mettent à jour automatiquement en chemin.',
       liveNavDenied:
