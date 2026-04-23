@@ -63,6 +63,23 @@ function isIosDevice() {
   return /iPad|iPhone|iPod/i.test(ua);
 }
 
+/** Redesign turn-by-turn icons: simpler, more visual. */
+function getTurnIcon(instrHtml) {
+  const t = stripHtml(instrHtml || '').toLowerCase();
+  if (t.includes('roundabout')) return 'roundabout_right';
+  if (t.includes('u-turn')) return 'u_turn_left';
+  if (t.includes('left')) return 'turn_left';
+  if (t.includes('right')) return 'turn_right';
+  if (t.includes('slight left')) return 'turn_slight_left';
+  if (t.includes('slight right')) return 'turn_slight_right';
+  if (t.includes('keep left')) return 'navigation';
+  if (t.includes('keep right')) return 'navigation';
+  if (t.includes('exit')) return 'exit_to_app';
+  if (t.includes('at the next')) return 'straight';
+  if (t.includes('destination')) return 'place';
+  return 'navigation';
+}
+
 function getCurrentPositionAsync(options) {
   return new Promise((resolve, reject) => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -1941,44 +1958,43 @@ export default function MapPage() {
 
               {placesInTripOrder.length >= 1 && !liveNavigation && (
                 <div className="map-live-nav-start-wrap">
-                  <button
-                    type="button"
-                    className="map-live-nav-start-btn"
-                    onClick={startButtonOpensChrome ? handleOpenInChrome : startLiveNavigation}
-                    disabled={liveNavRequestingPermission}
-                    aria-busy={liveNavRequestingPermission}
-                  >
-                    <Icon name={startButtonOpensChrome ? 'open_in_new' : 'navigation'} size={22} />
-                    <span>
-                      {startButtonOpensChrome ? t('home', 'liveNavOpenInChrome') : t('home', 'liveNavStart')}
-                    </span>
-                  </button>
-                  <p className="map-live-nav-start-hint">
-                    {liveNavRequestingPermission
-                      ? t('home', 'liveNavPermissionWaiting')
-                      : t('home', 'liveNavStartHint')}
-                  </p>
-                  {!liveNavRequestingPermission ? (
-                    <p className="map-live-nav-permission-note">
-                      {startButtonOpensChrome
-                        ? t('home', 'liveNavDeniedOpenChromeHint')
-                        : t('home', 'liveNavAllowInBrowser')}
-                    </p>
-                  ) : null}
+                  <div className="map-live-nav-onboarding">
+                    <Icon name="navigation" size={32} className="map-live-nav-onboarding-icon" />
+                    <button
+                      type="button"
+                      className="map-live-nav-start-btn"
+                      onClick={startButtonOpensChrome ? handleOpenInChrome : startLiveNavigation}
+                      disabled={liveNavRequestingPermission}
+                    >
+                      <Icon name={startButtonOpensChrome ? 'open_in_new' : 'navigation'} size={22} />
+                      <span>{startButtonOpensChrome ? t('home', 'liveNavOpenInChrome') : t('home', 'liveNavStart')}</span>
+                    </button>
+                    {!liveNavRequestingPermission && (
+                      <p className="map-live-nav-permission-note">
+                        {t('home', 'liveNavStartHint')}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
 
               {routeSummary && (
                 <div className="map-trip-route-summary gm-summary-card">
-                  <p className="gm-summary-time-label">
-                    <Icon name="schedule" size={20} />
-                    <span>{routeTimeLabel}</span>
-                  </p>
-                  <p className="map-trip-route-time-dist gm-summary-primary">
-                    {routeSummary.durationText} <span className="gm-summary-sep">Â·</span> {routeSummary.distanceText}
-                  </p>
+                  <div className="gm-summary-header">
+                    <div className="gm-summary-primary-row">
+                      <span className="gm-summary-time">{routeSummary.durationText}</span>
+                      <span className="gm-summary-dot">Â·</span>
+                      <span className="gm-summary-dist">{routeSummary.distanceText}</span>
+                    </div>
+                    <p className="gm-summary-mode-hint">
+                      <Icon name="schedule" size={14} /> {routeTimeLabel}
+                    </p>
+                  </div>
                   {liveNavigation && nextTurnText && (
-                    <p className="map-live-next-turn">{nextTurnText}</p>
+                    <div className="map-live-next-turn-wrap">
+                      <Icon name={getTurnIcon(nextTurnText)} size={24} />
+                      <p className="map-live-next-turn">{nextTurnText}</p>
+                    </div>
                   )}
                   <p className="map-trip-route-leave-now">
                     {liveNavigation ? t('home', 'liveNavUpdatingHint') : t('home', 'leaveNow')}
@@ -2036,7 +2052,19 @@ export default function MapPage() {
                   return (
                     <div key={p.id} className={`map-trip-route-waypoint ${isFirst ? 'gm-waypoint-start' : ''} ${isLast ? 'gm-waypoint-end' : ''}`}>
                       <span className="map-trip-route-waypoint-dot" aria-hidden="true">
-                        {isFirst ? <Icon name="trip_origin" size={20} /> : isLast ? <Icon name="place" size={20} /> : <span className="gm-dot-mid" />}
+                        {isFirst ? (
+                          <div className="gm-waypoint-icon-wrap gm-waypoint-icon-wrap--start">
+                            <Icon name="trip_origin" size={18} />
+                          </div>
+                        ) : isLast ? (
+                          <div className="gm-waypoint-icon-wrap gm-waypoint-icon-wrap--end">
+                            <Icon name="place" size={18} />
+                          </div>
+                        ) : (
+                          <div className="gm-waypoint-icon-wrap gm-waypoint-icon-wrap--mid">
+                            <span className="gm-dot-mid-inner" />
+                          </div>
+                        )}
                       </span>
                       <div className="map-trip-route-waypoint-content">
                         <span className="map-trip-route-waypoint-name">{name}</span>
@@ -2090,9 +2118,15 @@ export default function MapPage() {
                     <div className="map-trip-route-details">
                       {directionsResult.routes[0].legs.flatMap((leg, legIndex) =>
                         (leg.steps || []).map((step, stepIndex) => (
-                          <p key={`${legIndex}-${stepIndex}`} className="map-trip-route-step">
-                            {stripHtml(step.instructions)}
-                          </p>
+                          <div key={`${legIndex}-${stepIndex}`} className="map-trip-route-step-item">
+                            <Icon name={getTurnIcon(step.instructions)} size={20} className="map-trip-route-step-icon" />
+                            <div className="map-trip-route-step-text-wrap">
+                              <p className="map-trip-route-step-instr">{stripHtml(step.instructions)}</p>
+                              {step.distance?.text && (
+                                <span className="map-trip-route-step-dist">{step.distance.text}</span>
+                              )}
+                            </div>
+                          </div>
                         ))
                       )}
                     </div>
