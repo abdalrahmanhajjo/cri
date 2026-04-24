@@ -28,6 +28,8 @@ export function DateRangeCalendar({
   hintEnd = 'Select end date',
   showHint = true,
   specialDays = [],
+  dayMetadata = {},
+  isRange = true,
   renderHeader,
 }) {
   const today = new Date();
@@ -80,6 +82,18 @@ export function DateRangeCalendar({
   const handleDayClick = (date) => {
     if (!date || isDisabled(date)) return;
     const str = toDateStr(date);
+
+    if (!isRange) {
+      // Toggle off if same date clicked? 
+      // ActivitiesHub seems to expect either a date or null.
+      if (startDate === str) {
+        onChange(null, null);
+      } else {
+        onChange(str, str);
+      }
+      return;
+    }
+
     if (selecting === 'start') {
       if (end && parseLocalDate(end).getTime() < date.getTime()) {
         onChange(str, str);
@@ -146,16 +160,20 @@ export function DateRangeCalendar({
           const inRange = date && isInRange(date);
           const selected = date && isSelected(date);
           const special = date && isSpecial(date);
+          const metadata = date && dayMetadata[toDateStr(date)];
+          const title = Array.isArray(metadata) ? metadata.join('\n') : metadata || '';
+
           return (
-            <button
-              key={i}
-              type="button"
-              className={`calendar-day ${!date ? 'calendar-day--pad' : ''} ${disabled ? 'calendar-day--disabled' : ''} ${inRange ? 'calendar-day--range' : ''} ${selected ? 'calendar-day--selected' : ''} ${special ? 'calendar-day--special' : ''}`}
-              disabled={disabled}
-              onClick={() => handleDayClick(date)}
-              aria-label={date ? date.toLocaleDateString(locale) : ''}
-              aria-selected={selected}
-            >
+              <button
+                key={i}
+                type="button"
+                className={`calendar-day ${!date ? 'calendar-day--pad' : ''} ${disabled ? 'calendar-day--disabled' : ''} ${inRange ? 'calendar-day--range' : ''} ${selected ? 'calendar-day--selected' : ''} ${special ? 'calendar-day--special' : ''}`}
+                disabled={disabled}
+                onClick={() => handleDayClick(date)}
+                aria-label={date ? date.toLocaleDateString(locale) : ''}
+                aria-selected={selected}
+                title={title || undefined}
+              >
               <span className="calendar-day-number">{date ? date.getDate() : ''}</span>
               {special && <span className="calendar-day-special-dot" aria-hidden="true" />}
             </button>

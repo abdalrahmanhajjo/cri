@@ -307,6 +307,7 @@ function DatePickerFilter({ selectedDate, onChange, label, isMobile }) {
             endDate={selectedDate}
             onChange={(s) => { onChange(s); setOpen(false); }}
             showHint={false}
+            isRange={false}
             className="calendar--large"
           />
         </div>
@@ -543,10 +544,24 @@ export default function ActivitiesHub() {
     return out;
   }, [events, evtQuery, evtCategory, evtStatus, evtSort, evtDate, collator]);
 
+  const calendarFilteredEvents = useMemo(() => {
+    let list = events.filter((e) =>
+      matchesQuery(e, ['name', 'category', 'location', 'organizer', 'priceDisplay', 'status', 'description', 'price'], evtQuery)
+    );
+    if (evtCategory) {
+      const nc = normalizeHaystack(evtCategory);
+      list = list.filter((e) => normalizeHaystack(e.category || '') === nc);
+    }
+    if (evtStatus) {
+      const ns = normalizeHaystack(evtStatus);
+      list = list.filter((e) => normalizeHaystack(e.status || '') === ns);
+    }
+    return list;
+  }, [events, evtQuery, evtCategory, evtStatus]);
+
   const eventDays = useMemo(() => {
     const set = new Set();
-    const all = [...events, ...tours];
-    all.forEach(e => {
+    calendarFilteredEvents.forEach(e => {
       if (!e.startDate) return;
       const start = new Date(e.startDate);
       const end = e.endDate ? new Date(e.endDate) : start;
@@ -559,7 +574,26 @@ export default function ActivitiesHub() {
       }
     });
     return set;
-  }, [events, tours]);
+  }, [calendarFilteredEvents]);
+
+  const calendarDayMetadata = useMemo(() => {
+    const map = {};
+    calendarFilteredEvents.forEach(e => {
+      if (!e.startDate) return;
+      const start = new Date(e.startDate);
+      const end = e.endDate ? new Date(e.endDate) : start;
+      const current = new Date(start);
+      let safety = 0;
+      while (current <= end && safety < 100) {
+        const dStr = current.toISOString().split('T')[0];
+        if (!map[dStr]) map[dStr] = [];
+        if (!map[dStr].includes(e.name)) map[dStr].push(e.name);
+        current.setDate(current.getDate() + 1);
+        safety++;
+      }
+    });
+    return map;
+  }, [calendarFilteredEvents]);
 
   const expFiltersActive = Boolean(expQuery.trim() || expDifficulty || (expDuration && expDuration !== 'any') || expSort !== 'default' || expDate);
   const evtFiltersActive = Boolean(evtQuery.trim() || evtCategory || evtStatus || evtSort !== 'dateDesc' || evtDate);
@@ -656,21 +690,18 @@ export default function ActivitiesHub() {
       <div className="vd-container activities-hub-body">
         <div className="activities-hub-layout">
             <aside className={`activities-hub-sidebar ${showEventsHubView ? 'activities-hub-sidebar--hub' : ''}`}>
-              <div className={showEventsHubView ? 'event-sidebar-card' : 'activities-hub-sidebar-content'}>
+              <div className={showEventsHubView ? 'event-sidebar-card' : 'activities-hub-sidebar-sticky'}>
                 {tab === 'experiences' ? (
                   <div className="activities-hub-sidebar-section">
+                    <h3 className="activities-hub-sidebar-title">
+                      {t('home', 'activitiesHubCategory')}
+                    </h3>
                     <div className="activities-hub-category-list">
-                      <button
-                        className={`activities-hub-category-btn ${!expCategory ? 'activities-hub-category-btn--active' : ''}`}
-                        onClick={() => setExpCategory('')}
-                      >
-                        {t('home', 'activitiesHubCategoryAll')}
-                      </button>
                       {experienceCategories.map((cat) => (
                         <button
                           key={cat.id}
                           className={`activities-hub-category-btn ${expCategory === cat.slug ? 'activities-hub-category-btn--active' : ''}`}
-                          onClick={() => setExpCategory(cat.slug)}
+                          onClick={() => setExpCategory(expCategory === cat.slug ? '' : cat.slug)}
                         >
                           {cat.name}
                         </button>
@@ -687,6 +718,7 @@ export default function ActivitiesHub() {
                           endDate={evtDate}
                           onChange={(s) => setEvtDate(s)}
                           showHint={false}
+                          isRange={false}
                           className="calendar--sidebar"
                           specialDays={Array.from(eventDays)}
                         />
@@ -783,12 +815,14 @@ export default function ActivitiesHub() {
                   endDate={evtDate}
                   onChange={(s) => setEvtDate(s)}
                   showHint={false}
+                  isRange={false}
                   className="calendar--hub"
                   specialDays={Array.from(eventDays)}
+                  dayMetadata={calendarDayMetadata}
                   renderHeader={({ month, year, goPrev, goNext, canPrev, canNext }) => {
                     const monthName = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'long' }).format(new Date(year, month));
-                    // Simple logic to count events for the currently viewed month
-                    const currentMonthEventsCount = events.filter(ev => {
+                    // Simple logic to count events for the currently viewed month (respecting filters)
+                    const currentMonthEventsCount = calendarFilteredEvents.filter(ev => {
                       const d = new Date(ev.date || ev.startDate);
                       return d.getMonth() === month && d.getFullYear() === year;
                     }).length;
