@@ -315,7 +315,7 @@ function DatePickerFilter({ selectedDate, onChange, label, isMobile }) {
   );
 }
 
-/* ─── Mobile Hook ─── */
+/* ─── Layout Hooks ─── */
 function useMobile() {
   const [mobile, setMobile] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth <= 767 : false
@@ -330,11 +330,28 @@ function useMobile() {
   return mobile;
 }
 
+function useHubDesktop() {
+  const [desktop, setDesktop] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1240 : false
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(min-width: 1240px)');
+    const handler = (e) => setDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return desktop;
+}
+
 export default function ActivitiesHub() {
   const { t, lang } = useLanguage();
   const [searchParams] = useSearchParams();
   const tab = searchParams.get('tab') || 'experiences';
   const isMobile = useMobile();
+  const isHubDesktop = useHubDesktop();
+
+  const showEventsHubView = tab === 'events' && isHubDesktop;
 
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
   const [tours, setTours] = useState([]);
@@ -566,7 +583,7 @@ export default function ActivitiesHub() {
   }
 
   return (
-    <div className={`vd activities-hub ${tab === 'events' ? 'activities-hub--events' : 'activities-hub--experiences'}`}>
+    <div className={`vd activities-hub ${tab === 'events' ? 'activities-hub--events' : 'activities-hub--experiences'} ${showEventsHubView ? 'activities-hub--events-hub-view' : ''}`}>
       <header className="activities-hub-hero">
         <div className="vd-container activities-hub-hero-inner">
           <nav className="activities-hub-tabs" aria-label={t('nav', 'activitiesHubTabsLabel')}>
@@ -617,10 +634,14 @@ export default function ActivitiesHub() {
 
       <div className="vd-container activities-hub-body">
         <div className="activities-hub-layout">
-          {!isMobile && (
+          {(!isMobile || showEventsHubView) && (
             <aside className="activities-hub-sidebar">
               <div className="activities-hub-sidebar-sticky">
-                {tab === 'events' && (
+                {/* 
+                   In Hub View (3rd col), we move the calendar to the center.
+                   So on the left sidebar in Hub view, we only show filters.
+                */}
+                {!showEventsHubView && tab === 'events' && (
                   <div className="activities-hub-sidebar-section">
                     <h3 className="activities-hub-sidebar-title">{t('home', 'filterByDate') || 'Pick Date'}</h3>
                     <DateRangeCalendar 
@@ -636,9 +657,9 @@ export default function ActivitiesHub() {
                 
                 <div className="activities-hub-sidebar-section">
                   <h3 className="activities-hub-sidebar-title">
-                    {tab === 'events' ? t('home', 'activitiesHubCategory') : t('home', 'activitiesHubDifficulty')}
+                    {(tab === 'events' && !showEventsHubView) ? t('home', 'activitiesHubCategory') : t('home', 'activitiesHubDifficulty')}
                   </h3>
-                  {tab === 'events' ? (
+                  {(tab === 'events' && !showEventsHubView) ? (
                     <select
                       className="activities-hub-select activities-hub-select--sidebar"
                       value={evtCategory}
@@ -663,7 +684,7 @@ export default function ActivitiesHub() {
                   )}
                 </div>
 
-                {tab === 'events' ? (
+                {((tab === 'events' && !showEventsHubView)) ? (
                   <div className="activities-hub-sidebar-section">
                     <h3 className="activities-hub-sidebar-title">{t('home', 'activitiesHubStatus')}</h3>
                     <select
@@ -678,7 +699,7 @@ export default function ActivitiesHub() {
                     </select>
                   </div>
                 ) : (
-                  anyTourHasDurationHours && (
+                  (anyTourHasDurationHours || showEventsHubView) && (
                     <div className="activities-hub-sidebar-section">
                       <h3 className="activities-hub-sidebar-title">{t('home', 'activitiesHubDuration')}</h3>
                       <select
@@ -708,6 +729,19 @@ export default function ActivitiesHub() {
                 </div>
               </div>
             </aside>
+          )}
+
+          {showEventsHubView && (
+            <div className="activities-hub-calendar-col">
+               <DateRangeCalendar 
+                  startDate={evtDate}
+                  endDate={evtDate}
+                  onChange={(s) => setEvtDate(s)}
+                  showHint={false}
+                  className="calendar--hub"
+                  specialDays={Array.from(eventDays)}
+                />
+            </div>
           )}
 
           <main className="activities-hub-main">
@@ -790,68 +824,92 @@ export default function ActivitiesHub() {
             ) : tab === 'calendar' ? (
               <CalendarPanel events={events} tours={tours} t={t} />
             ) : (
-              <section className="activities-hub-panel" aria-labelledby="hub-events-heading">
-                <header className="activities-hub-panel-header">
-                  <div className="activities-hub-panel-hgroup">
-                    <h2 id="hub-events-heading" className="activities-hub-panel-kicker">
-                      {t('nav', 'megaEvents')}
-                    </h2>
-                    <p className="activities-hub-panel-desc">{t('nav', 'megaEventsDesc')}</p>
-                  </div>
-
-                  <div className="activities-hub-toolbar" role="search">
-                    <label className="activities-hub-search">
-                      <Icon name="search" size={20} className="activities-hub-search-icon" aria-hidden />
-                      <input
-                        type="search"
-                        className="activities-hub-search-input"
-                        placeholder={t('home', 'activitiesHubSearchEvents')}
-                        aria-label={t('home', 'activitiesHubSearchEventsAria')}
-                        value={evtQuery}
-                        onChange={(e) => setEvtQuery(e.target.value)}
-                        autoComplete="off"
-                      />
-                    </label>
-                    <div className="activities-hub-filters">
-                      <select
-                        className="activities-hub-select"
-                        aria-label={t('home', 'activitiesHubSort')}
-                        value={evtSort}
-                        onChange={(e) => setEvtSort(e.target.value)}
-                      >
-                        <option value="dateDesc">{t('home', 'activitiesHubSortDateNew')}</option>
-                        <option value="dateAsc">{t('home', 'activitiesHubSortDateOld')}</option>
-                        <option value="name">{t('home', 'activitiesHubSortName')}</option>
-                      </select>
-
-                      {isMobile && (
-                        <DatePickerFilter 
-                          selectedDate={evtDate} 
-                          onChange={setEvtDate} 
-                          label={t('home', 'filterByDate') || 'Pick Date'} 
-                          isMobile={isMobile}
-                        />
-                      )}
+              <section className={`activities-hub-panel ${showEventsHubView ? 'activities-hub-panel--hub' : ''}`} aria-labelledby="hub-events-heading">
+                {!showEventsHubView && (
+                  <header className="activities-hub-panel-header">
+                    <div className="activities-hub-panel-hgroup">
+                      <h2 id="hub-events-heading" className="activities-hub-panel-kicker">
+                        {t('nav', 'megaEvents')}
+                      </h2>
+                      <p className="activities-hub-panel-desc">{t('nav', 'megaEventsDesc')}</p>
                     </div>
-                  </div>
-                </header>
 
-                {isMobile && (
+                    <div className="activities-hub-toolbar" role="search">
+                      <label className="activities-hub-search">
+                        <Icon name="search" size={20} className="activities-hub-search-icon" aria-hidden />
+                        <input
+                          type="search"
+                          className="activities-hub-search-input"
+                          placeholder={t('home', 'activitiesHubSearchEvents')}
+                          aria-label={t('home', 'activitiesHubSearchEventsAria')}
+                          value={evtQuery}
+                          onChange={(e) => setEvtQuery(e.target.value)}
+                          autoComplete="off"
+                        />
+                      </label>
+                      <div className="activities-hub-filters">
+                        <select
+                          className="activities-hub-select"
+                          aria-label={t('home', 'activitiesHubSort')}
+                          value={evtSort}
+                          onChange={(e) => setEvtSort(e.target.value)}
+                        >
+                          <option value="dateDesc">{t('home', 'activitiesHubSortDateNew')}</option>
+                          <option value="dateAsc">{t('home', 'activitiesHubSortDateOld')}</option>
+                          <option value="name">{t('home', 'activitiesHubSortName')}</option>
+                        </select>
+
+                        {isMobile && (
+                          <DatePickerFilter 
+                            selectedDate={evtDate} 
+                            onChange={setEvtDate} 
+                            label={t('home', 'filterByDate') || 'Pick Date'} 
+                            isMobile={isMobile}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </header>
+                )}
+
+                {showEventsHubView && (
+                  <div className="event-summary-card">
+                    <div className="event-summary-date">
+                      <span className="event-summary-day">{evtDate ? new Date(evtDate).getDate() : new Date().getDate()}</span>
+                      <div className="event-summary-monthyear">
+                        <span className="event-summary-month">
+                          {new Date(evtDate || Date.now()).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'long' })}
+                        </span>
+                        <span className="event-summary-year">{new Date(evtDate || Date.now()).getFullYear()}</span>
+                      </div>
+                    </div>
+                    <div className="event-summary-divider" />
+                    <span className="event-summary-count">
+                      {filteredEvents.length === 1 
+                        ? (t('home', 'oneEventScheduled') || '1 EVENT SCHEDULED') 
+                        : (t('home', 'multipleEventsScheduled') || '{count} EVENTS SCHEDULED').replace('{count}', String(filteredEvents.length))}
+                    </span>
+                  </div>
+                )}
+
+                {isMobile && !showEventsHubView && (
                   <MobileDateStrip selectedDate={evtDate} onChange={setEvtDate} events={events} eventDays={eventDays} />
                 )}
 
-                <p className="activities-hub-results-meta" aria-live="polite">
-                  {t('home', 'activitiesHubResultsOfTotal')
-                    .replace('{shown}', String(filteredEvents.length))
-                    .replace('{total}', String(events.length))}
-                </p>
+                {!showEventsHubView && (
+                  <p className="activities-hub-results-meta" aria-live="polite">
+                    {t('home', 'activitiesHubResultsOfTotal')
+                      .replace('{shown}', String(filteredEvents.length))
+                      .replace('{total}', String(events.length))}
+                  </p>
+                )}
 
                 {events.length === 0 ? (
                   <p className="vd-empty">{t('home', 'noEvents')}</p>
                 ) : filteredEvents.length === 0 ? (
                   <p className="vd-empty">{t('home', 'activitiesHubNoMatches')}</p>
                 ) : (
-                  <div className="vd-grid vd-grid--3 activities-hub-grid">
+                  <div className={`vd-grid ${showEventsHubView ? 'vd-grid--1' : 'vd-grid--3'} activities-hub-grid`}>
                     {filteredEvents.map((event) => (
                       <FullImageCard key={event.id} item={event} type="event" t={t} />
                     ))}
