@@ -1181,13 +1181,14 @@ export default function Explore() {
         </div>
       </section>
 
-      {/* Discover by theme — first; #experience hash targets this block */}
+      {/* 
       <BrowseMapByThemeSection
         t={t}
         lang={lang}
         places={directoryPlaces}
         categories={categories}
       />
+      */}
 
       {topPicks.length > 0 && (
         <TopPicksCarousel places={topPicks} t={t} moreTo={PLACES_DISCOVER_PATH} />

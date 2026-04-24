@@ -28,6 +28,7 @@ export function DateRangeCalendar({
   hintEnd = 'Select end date',
   showHint = true,
   specialDays = [],
+  renderHeader,
 }) {
   const today = new Date();
   const [viewMonth, setViewMonth] = useState(() => {
@@ -112,17 +113,28 @@ export function DateRangeCalendar({
 
   return (
     <div className={`calendar calendar--range ${className || ''}`} role="application" aria-label="Choose date range">
-      <div className="calendar-header">
-        <button type="button" className="calendar-nav" onClick={goPrevMonth} disabled={!canPrev} aria-label="Previous month">
-          <Icon name="chevron_left" size={24} />
-        </button>
-        <h3 className="calendar-title" id="calendar-month">
-          {MONTHS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
-        </h3>
-        <button type="button" className="calendar-nav" onClick={goNextMonth} disabled={!canNext} aria-label="Next month">
-          <Icon name="chevron_right" size={24} />
-        </button>
-      </div>
+      {typeof renderHeader === 'function' ? (
+        renderHeader({
+          month: viewMonth.getMonth(),
+          year: viewMonth.getFullYear(),
+          goPrev: goPrevMonth,
+          goNext: goNextMonth,
+          canPrev,
+          canNext,
+        })
+      ) : (
+        <div className="calendar-header">
+          <button type="button" className="calendar-nav" onClick={goPrevMonth} disabled={!canPrev} aria-label="Previous month">
+            <Icon name="chevron_left" size={24} />
+          </button>
+          <h3 className="calendar-title" id="calendar-month">
+            {MONTHS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
+          </h3>
+          <button type="button" className="calendar-nav" onClick={goNextMonth} disabled={!canNext} aria-label="Next month">
+            <Icon name="chevron_right" size={24} />
+          </button>
+        </div>
+      )}
       <div className="calendar-weekdays" aria-hidden="true">
         {WEEKDAYS.map((wd) => (
           <span key={wd} className="calendar-weekday">{wd}</span>

@@ -283,7 +283,7 @@
 
 @media (min-width: 1240px) {
   .activities-hub--events-hub-view .activities-hub-layout {
-    grid-template-columns: 300px 1.15fr 360px;
+    grid-template-columns: 300px 1.5fr 360px;
     gap: 32px;
     max-width: 1560px;
   }
@@ -451,6 +451,49 @@
   line-height: 1.6;
   color: var(--color-text-secondary, #57534e);
   max-width: 52ch;
+}
+
+/* Category List and Buttons */
+.activities-hub-category-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.activities-hub-category-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid #E2E8F0;
+  background: #F8F9FA;
+  color: #4A5568;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.activities-hub-category-btn:hover {
+  background: #EDF2F7;
+  border-color: #CBD5E0;
+  color: #2D3748;
+  transform: translateY(-1px);
+}
+
+.activities-hub-category-btn--active {
+  background: var(--color-primary, #0d9488);
+  border-color: var(--color-primary, #0d9488);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
+}
+
+.activities-hub-category-btn--active:hover {
+  background: var(--color-primary, #0d9488);
+  border-color: var(--color-primary, #0d9488);
+  color: #fff;
+  transform: translateY(-1px);
+  opacity: 0.95;
 }
 
 /* Search + filters (experiences & events) */
@@ -832,5 +875,248 @@
 
 .activities-hub-footer-cta .vd-btn {
   box-shadow: none;
+}
+
+
+/* ─── 3-Column Hub Refinement (Desktop) ─── */
+@media (min-width: 1240px) {
+  .activities-hub-sidebar--hub {
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+
+  .event-sidebar-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid #EDEDED;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .event-sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .event-sidebar-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: #1A1C1E;
+    text-transform: uppercase;
+  }
+
+  .event-sidebar-select {
+    width: 100%;
+    padding: 12px 16px;
+    background: #F8F9FA;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1A1C1E;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .event-sidebar-select:focus {
+    border-color: var(--color-primary);
+    background: #fff;
+    outline: none;
+  }
+
+  .event-sidebar-clear-link {
+    background: none;
+    border: none;
+    font-size: 13px;
+    color: #0d9488;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 8px;
+    align-self: center;
+    margin-top: 10px;
+  }
+
+  .event-sidebar-clear-link:disabled {
+    color: #A0AEC0;
+    text-decoration: none;
+    cursor: not-allowed;
+  }
+
+  /* Summary Card (Dark Split) */
+  .event-summary-card {
+    background: #1A1C1E;
+    color: #fff;
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  }
+
+  .event-summary-split {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .event-summary-day {
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -2px;
+  }
+
+  .event-summary-monthyear {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  .event-summary-month {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #4A5568; /* Greyish for the labels */
+  }
+
+  .event-summary-year {
+    font-size: 14px;
+    font-weight: 400;
+    color: #fff;
+  }
+
+  .event-summary-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    width: 100%;
+  }
+
+  .event-summary-footer {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+
+  /* Calendar Refinement */
+  .activities-hub-calendar-col .calendar--hub {
+    background: #fff;
+    border-radius: 24px;
+    padding: 40px;
+    border: 1px solid #EDEDED;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    width: 100%;
+    --calendar-max-width: 900px;
+  }
+
+  .calendar--hub .calendar-header {
+    margin-bottom: 30px;
+  }
+
+  .calendar-header-custom {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .calendar-header-monthyear {
+    font-size: 32px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .calendar-header-month {
+    font-weight: 800;
+    color: #1A1C1E;
+  }
+
+  .calendar-header-year {
+    font-weight: 300;
+    color: #A0AEC0;
+  }
+
+  .calendar-header-subtitle {
+    font-size: 10px;
+    font-weight: 800;
+    color: #A0AEC0;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .calendar--hub .calendar-days-grid {
+    border: 0.5px solid #EDEDED;
+  }
+
+  .calendar--hub .calendar-day-cell {
+    border: 0.5px solid #EDEDED;
+    height: 110px;
+    padding: 16px;
+    background: transparent;
+    aspect-ratio: auto;
+  }
+
+  .calendar--hub .calendar-day-cell--selected {
+    background: #EBF2F3 !important;
+  }
+
+  .calendar--hub .calendar-day-num {
+    font-weight: 700;
+    font-size: 18px;
+  }
+
+  .calendar--hub .calendar-nav-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid #EDEDED;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .calendar--hub .calendar-nav-btn:hover {
+    background: #F8F9FA;
+    border-color: #D1D5DB;
+  }
+
+  .calendar-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .calendar-header-dots {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 12px;
+  }
+
+  .calendar-header-dot {
+    width: 20px;
+    height: 3px;
+    background: #E2E8F0;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .calendar-header-dot--active {
+    background: #0d9488;
+  }
 }
 

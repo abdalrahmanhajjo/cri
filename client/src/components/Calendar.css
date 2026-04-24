@@ -3,7 +3,7 @@
 .calendar {
   font-size: 15px;
   width: 100%;
-  max-width: min(320px, 100%);
+  max-width: var(--calendar-max-width, min(320px, 100%));
   box-sizing: border-box;
   padding: 24px;
   background: #fff;

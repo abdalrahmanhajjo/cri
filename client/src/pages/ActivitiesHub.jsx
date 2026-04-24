@@ -360,6 +360,7 @@ export default function ActivitiesHub() {
   const [error, setError] = useState(null);
 
   const [expQuery, setExpQuery] = useState('');
+  const [expCategory, setExpCategory] = useState('');
   const [expDifficulty, setExpDifficulty] = useState('');
   const [expDuration, setExpDuration] = useState('');
   const [expSort, setExpSort] = useState('default');
@@ -368,6 +369,7 @@ export default function ActivitiesHub() {
   const [evtQuery, setEvtQuery] = useState('');
   const [evtCategory, setEvtCategory] = useState('');
   const [evtStatus, setEvtStatus] = useState('');
+  const [evtDuration, setEvtDuration] = useState('');
   const [evtSort, setEvtSort] = useState('dateDesc');
   const [evtDate, setEvtDate] = useState(null);
 
@@ -428,6 +430,8 @@ export default function ActivitiesHub() {
     return [...set].sort((a, b) => collator.compare(a, b));
   }, [tours, collator]);
 
+  const anyTourHasDifficulty = useMemo(() => tours.some(x => x.difficulty), [tours]);
+
   const anyTourHasDurationHours = useMemo(
     () => tours.some((x) => x.durationHours != null && !Number.isNaN(Number(x.durationHours))),
     [tours]
@@ -442,6 +446,16 @@ export default function ActivitiesHub() {
     return [...set].sort((a, b) => collator.compare(a, b));
   }, [events, collator]);
 
+  const experienceCategories = useMemo(() => {
+    const set = new Set();
+    tours.forEach((x) => {
+      const c = String(x.category ?? '').trim();
+      if (c) set.add(c);
+    });
+    const list = [...set].sort((a, b) => collator.compare(a, b));
+    return list.map(name => ({ id: name, name, slug: name }));
+  }, [tours, collator]);
+
   const statusOptions = useMemo(() => {
     const set = new Set();
     events.forEach((e) => {
@@ -455,6 +469,11 @@ export default function ActivitiesHub() {
     let list = tours.filter((x) =>
       matchesQuery(x, ['name', 'duration', 'priceDisplay', 'badge', 'description', 'difficulty', 'locations', 'price'], expQuery)
     );
+
+    if (expCategory) {
+      const nc = normalizeHaystack(expCategory);
+      list = list.filter((x) => normalizeHaystack(x.category || '') === nc);
+    }
 
     if (expDifficulty) {
       const nd = normalizeHaystack(expDifficulty);
@@ -547,6 +566,7 @@ export default function ActivitiesHub() {
 
   const clearExperiences = useCallback(() => {
     setExpQuery('');
+    setExpCategory('');
     setExpDifficulty('');
     setExpDuration('');
     setExpSort('default');
@@ -557,6 +577,7 @@ export default function ActivitiesHub() {
     setEvtQuery('');
     setEvtCategory('');
     setEvtStatus('');
+    setEvtDuration('');
     setEvtSort('dateDesc');
     setEvtDate(null);
   }, []);
@@ -634,61 +655,68 @@ export default function ActivitiesHub() {
 
       <div className="vd-container activities-hub-body">
         <div className="activities-hub-layout">
-          {(!isMobile || showEventsHubView) && (
-            <aside className="activities-hub-sidebar">
-              <div className="activities-hub-sidebar-sticky">
-                {/* 
-                   In Hub View (3rd col), we move the calendar to the center.
-                   So on the left sidebar in Hub view, we only show filters.
-                */}
-                {!showEventsHubView && tab === 'events' && (
+            <aside className={`activities-hub-sidebar ${showEventsHubView ? 'activities-hub-sidebar--hub' : ''}`}>
+              <div className={showEventsHubView ? 'event-sidebar-card' : 'activities-hub-sidebar-content'}>
+                {tab === 'experiences' ? (
                   <div className="activities-hub-sidebar-section">
-                    <h3 className="activities-hub-sidebar-title">{t('home', 'filterByDate') || 'Pick Date'}</h3>
-                    <DateRangeCalendar 
-                      startDate={evtDate}
-                      endDate={evtDate}
-                      onChange={(s) => setEvtDate(s)}
-                      showHint={false}
-                      className="calendar--sidebar"
-                      specialDays={Array.from(eventDays)}
-                    />
+                    <div className="activities-hub-category-list">
+                      <button
+                        className={`activities-hub-category-btn ${!expCategory ? 'activities-hub-category-btn--active' : ''}`}
+                        onClick={() => setExpCategory('')}
+                      >
+                        {t('home', 'activitiesHubCategoryAll')}
+                      </button>
+                      {experienceCategories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          className={`activities-hub-category-btn ${expCategory === cat.slug ? 'activities-hub-category-btn--active' : ''}`}
+                          onClick={() => setExpCategory(cat.slug)}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                ) : (
+                  <>
+                    {!showEventsHubView && (
+                      <div className="activities-hub-sidebar-section">
+                        <h3 className="activities-hub-sidebar-title">{t('home', 'filterByDate') || 'Pick Date'}</h3>
+                        <DateRangeCalendar 
+                          startDate={evtDate}
+                          endDate={evtDate}
+                          onChange={(s) => setEvtDate(s)}
+                          showHint={false}
+                          className="calendar--sidebar"
+                          specialDays={Array.from(eventDays)}
+                        />
+                      </div>
+                    )}
+                    <div className={showEventsHubView ? 'event-sidebar-section' : 'activities-hub-sidebar-section'}>
+                      <h3 className={showEventsHubView ? 'event-sidebar-label' : 'activities-hub-sidebar-title'}>
+                        {t('home', 'activitiesHubCategory')}
+                      </h3>
+                      <select
+                        className={showEventsHubView ? 'event-sidebar-select' : 'activities-hub-select activities-hub-select--sidebar'}
+                        value={evtCategory}
+                        onChange={(e) => setEvtCategory(e.target.value)}
+                      >
+                        <option value="">{t('home', 'activitiesHubCategoryAll')}</option>
+                        {categoryOptions.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
                 )}
-                
-                <div className="activities-hub-sidebar-section">
-                  <h3 className="activities-hub-sidebar-title">
-                    {(tab === 'events' && !showEventsHubView) ? t('home', 'activitiesHubCategory') : t('home', 'activitiesHubDifficulty')}
-                  </h3>
-                  {(tab === 'events' && !showEventsHubView) ? (
-                    <select
-                      className="activities-hub-select activities-hub-select--sidebar"
-                      value={evtCategory}
-                      onChange={(e) => setEvtCategory(e.target.value)}
-                    >
-                      <option value="">{t('home', 'activitiesHubCategoryAll')}</option>
-                      {categoryOptions.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <select
-                      className="activities-hub-select activities-hub-select--sidebar"
-                      value={expDifficulty}
-                      onChange={(e) => setExpDifficulty(e.target.value)}
-                    >
-                      <option value="">{t('home', 'activitiesHubDifficultyAll')}</option>
-                      {difficultyOptions.map((d) => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
 
-                {((tab === 'events' && !showEventsHubView)) ? (
-                  <div className="activities-hub-sidebar-section">
-                    <h3 className="activities-hub-sidebar-title">{t('home', 'activitiesHubStatus')}</h3>
+                {tab === 'events' ? (
+                  <div className={showEventsHubView ? 'event-sidebar-section' : 'activities-hub-sidebar-section'}>
+                    <h3 className={showEventsHubView ? 'event-sidebar-label' : 'activities-hub-sidebar-title'}>
+                      {t('home', 'activitiesHubStatus')}
+                    </h3>
                     <select
-                      className="activities-hub-select activities-hub-select--sidebar"
+                      className={showEventsHubView ? 'event-sidebar-select' : 'activities-hub-select activities-hub-select--sidebar'}
                       value={evtStatus}
                       onChange={(e) => setEvtStatus(e.target.value)}
                     >
@@ -699,37 +727,54 @@ export default function ActivitiesHub() {
                     </select>
                   </div>
                 ) : (
-                  (anyTourHasDurationHours || showEventsHubView) && (
+                  difficultyOptions.length > 0 && (
                     <div className="activities-hub-sidebar-section">
-                      <h3 className="activities-hub-sidebar-title">{t('home', 'activitiesHubDuration')}</h3>
+                      <h3 className="activities-hub-sidebar-title">{t('home', 'activitiesHubDifficulty')}</h3>
                       <select
                         className="activities-hub-select activities-hub-select--sidebar"
-                        value={expDuration}
-                        onChange={(e) => setExpDuration(e.target.value)}
+                        value={expDifficulty}
+                        onChange={(e) => setExpDifficulty(e.target.value)}
                       >
-                        <option value="">{t('home', 'activitiesHubDurationAll')}</option>
-                        <option value="short">{t('home', 'activitiesHubDurationShort')}</option>
-                        <option value="half">{t('home', 'activitiesHubDurationHalf')}</option>
-                        <option value="full">{t('home', 'activitiesHubDurationFull')}</option>
+                        <option value="">{t('home', 'activitiesHubDifficultyAll')}</option>
+                        {difficultyOptions.map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
                       </select>
                     </div>
                   )
                 )}
 
-                <div className="activities-hub-sidebar-section" style={{ marginTop: 'auto' }}>
+                {(tab === 'events' || anyTourHasDurationHours) && (
+                  <div className={showEventsHubView ? 'event-sidebar-section' : 'activities-hub-sidebar-section'}>
+                    <h3 className={showEventsHubView ? 'event-sidebar-label' : 'activities-hub-sidebar-title'}>
+                      {t('home', 'activitiesHubDuration')}
+                    </h3>
+                    <select
+                      className={showEventsHubView ? 'event-sidebar-select' : 'activities-hub-select activities-hub-select--sidebar'}
+                      value={tab === 'events' ? evtDuration : expDuration}
+                      onChange={(e) => tab === 'events' ? setEvtDuration(e.target.value) : setExpDuration(e.target.value)}
+                    >
+                      <option value="">{t('home', 'activitiesHubDurationAll')}</option>
+                      <option value="short">{t('home', 'activitiesHubDurationShort')}</option>
+                      <option value="half">{t('home', 'activitiesHubDurationHalf')}</option>
+                      <option value="full">{t('home', 'activitiesHubDurationFull')}</option>
+                    </select>
+                  </div>
+                )}
+
+                <div className={showEventsHubView ? 'event-sidebar-section' : 'activities-hub-sidebar-section'} style={{ marginTop: 'auto' }}>
                   <button 
                     type="button" 
-                    className="activities-hub-clear activities-hub-clear--sidebar" 
+                    className={showEventsHubView ? 'event-sidebar-clear-link' : 'activities-hub-clear activities-hub-clear--sidebar'} 
                     onClick={tab === 'events' ? clearEvents : clearExperiences}
                     disabled={tab === 'events' ? !evtFiltersActive : !expFiltersActive}
                   >
-                    <Icon name="history" size={18} />
+                    {!showEventsHubView && <Icon name="history" size={18} />}
                     {t('home', 'activitiesHubClear')}
                   </button>
                 </div>
               </div>
             </aside>
-          )}
 
           {showEventsHubView && (
             <div className="activities-hub-calendar-col">
@@ -740,6 +785,41 @@ export default function ActivitiesHub() {
                   showHint={false}
                   className="calendar--hub"
                   specialDays={Array.from(eventDays)}
+                  renderHeader={({ month, year, goPrev, goNext, canPrev, canNext }) => {
+                    const monthName = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'long' }).format(new Date(year, month));
+                    // Simple logic to count events for the currently viewed month
+                    const currentMonthEventsCount = events.filter(ev => {
+                      const d = new Date(ev.date || ev.startDate);
+                      return d.getMonth() === month && d.getFullYear() === year;
+                    }).length;
+
+                    return (
+                      <div className="calendar-header-custom">
+                        <div className="calendar-header-top">
+                          <button type="button" className="calendar-nav-btn" onClick={goPrev} disabled={!canPrev}>
+                            <Icon name="chevron_left" size={20} />
+                          </button>
+                          <div className="calendar-header-monthyear">
+                            <span className="calendar-header-month">{monthName}</span>
+                            <span className="calendar-header-year">{year}</span>
+                          </div>
+                          <button type="button" className="calendar-nav-btn" onClick={goNext} disabled={!canNext}>
+                            <Icon name="chevron_right" size={20} />
+                          </button>
+                        </div>
+                        <div className="calendar-header-subtitle">
+                          {currentMonthEventsCount} {t('home', 'eventsThisMonth') || 'EVENTS THIS MONTH'}
+                        </div>
+                        <div className="calendar-header-dots">
+                          <span className="calendar-header-dot" />
+                          <span className="calendar-header-dot" />
+                          <span className="calendar-header-dot calendar-header-dot--active" />
+                          <span className="calendar-header-dot" />
+                          <span className="calendar-header-dot" />
+                        </div>
+                      </div>
+                    );
+                  }}
                 />
             </div>
           )}
@@ -874,7 +954,7 @@ export default function ActivitiesHub() {
 
                 {showEventsHubView && (
                   <div className="event-summary-card">
-                    <div className="event-summary-date">
+                    <div className="event-summary-split">
                       <span className="event-summary-day">{evtDate ? new Date(evtDate).getDate() : new Date().getDate()}</span>
                       <div className="event-summary-monthyear">
                         <span className="event-summary-month">
@@ -884,7 +964,7 @@ export default function ActivitiesHub() {
                       </div>
                     </div>
                     <div className="event-summary-divider" />
-                    <span className="event-summary-count">
+                    <span className="event-summary-footer">
                       {filteredEvents.length === 1 
                         ? (t('home', 'oneEventScheduled') || '1 EVENT SCHEDULED') 
                         : (t('home', 'multipleEventsScheduled') || '{count} EVENTS SCHEDULED').replace('{count}', String(filteredEvents.length))}
