@@ -142,16 +142,6 @@ function FullImageCard({ item, type, t }) {
               </>
             ) : (
               <>
-                {item.rating && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ display: 'flex', color: '#fbbf24' }}>
-                      {[...Array(5)].map((_, i) => (
-                        <Icon key={i} name="star" size={12} style={{ opacity: i < Math.floor(Number(item.rating)) ? 1 : 0.4 }} />
-                      ))}
-                    </div>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>{item.rating}</span>
-                  </div>
-                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.85)' }}>
                   <Icon name="clock" size={14} />
                   <span>{item.duration || 'Full day'}</span>
@@ -630,17 +620,19 @@ export default function ActivitiesHub() {
           {!isMobile && (
             <aside className="activities-hub-sidebar">
               <div className="activities-hub-sidebar-sticky">
-                <div className="activities-hub-sidebar-section">
-                  <h3 className="activities-hub-sidebar-title">{t('home', 'filterByDate') || 'Pick Date'}</h3>
-                  <DateRangeCalendar 
-                    startDate={tab === 'events' ? evtDate : expDate}
-                    endDate={tab === 'events' ? evtDate : expDate}
-                    onChange={(s) => tab === 'events' ? setEvtDate(s) : setExpDate(s)}
-                    showHint={false}
-                    className="calendar--sidebar"
-                    specialDays={Array.from(eventDays)}
-                  />
-                </div>
+                {tab === 'events' && (
+                  <div className="activities-hub-sidebar-section">
+                    <h3 className="activities-hub-sidebar-title">{t('home', 'filterByDate') || 'Pick Date'}</h3>
+                    <DateRangeCalendar 
+                      startDate={evtDate}
+                      endDate={evtDate}
+                      onChange={(s) => setEvtDate(s)}
+                      showHint={false}
+                      className="calendar--sidebar"
+                      specialDays={Array.from(eventDays)}
+                    />
+                  </div>
+                )}
                 
                 <div className="activities-hub-sidebar-section">
                   <h3 className="activities-hub-sidebar-title">
@@ -773,7 +765,7 @@ export default function ActivitiesHub() {
                   </div>
                 </header>
 
-                {isMobile && (
+                {isMobile && tab === 'events' && (
                   <MobileDateStrip selectedDate={expDate} onChange={setExpDate} events={tours} eventDays={eventDays} />
                 )}
 
@@ -827,8 +819,8 @@ export default function ActivitiesHub() {
                         value={evtSort}
                         onChange={(e) => setEvtSort(e.target.value)}
                       >
-                        <option value="dateDesc">{t('home', 'activitiesHubSortDateDesc')}</option>
-                        <option value="dateAsc">{t('home', 'activitiesHubSortDateAsc')}</option>
+                        <option value="dateDesc">{t('home', 'activitiesHubSortDateNew')}</option>
+                        <option value="dateAsc">{t('home', 'activitiesHubSortDateOld')}</option>
                         <option value="name">{t('home', 'activitiesHubSortName')}</option>
                       </select>
 

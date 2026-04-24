@@ -112,16 +112,6 @@ function FullImageCard({ item, type, t }) {
               </>
             ) : (
               <>
-                {item.rating && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ display: 'flex', color: '#fbbf24' }}>
-                      {[...Array(5)].map((_, i) => (
-                        <Icon key={i} name="star" size={12} style={{ opacity: i < Math.floor(Number(item.rating)) ? 1 : 0.4 }} />
-                      ))}
-                    </div>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>{item.rating}</span>
-                  </div>
-                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.85)' }}>
                   <Icon name="schedule" size={14} />
                   <span>{item.duration || 'Full day'}</span>
