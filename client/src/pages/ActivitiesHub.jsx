@@ -179,7 +179,7 @@ function FullImageCard({ item, type, t }) {
 }
 
 /* ─── Mobile Date Strip ─── */
-function MobileDateStrip({ selectedDate, onChange, events = [] }) {
+function MobileDateStrip({ selectedDate, onChange, events = [], eventDays = new Set() }) {
   const days = useMemo(() => {
     const arr = [];
     const today = new Date();
@@ -191,25 +191,6 @@ function MobileDateStrip({ selectedDate, onChange, events = [] }) {
     }
     return arr;
   }, []);
-
-  // Calculate which YMD strings have events
-  const eventDays = useMemo(() => {
-    const set = new Set();
-    events.forEach(e => {
-      if (!e.startDate) return;
-      const start = new Date(e.startDate);
-      const end = e.endDate ? new Date(e.endDate) : start;
-      const current = new Date(start);
-      // Cap safety for infinite loops
-      let safety = 0;
-      while (current <= end && safety < 100) {
-        set.add(current.toISOString().split('T')[0]);
-        current.setDate(current.getDate() + 1);
-        safety++;
-      }
-    });
-    return set;
-  }, [events]);
 
   return (
     <div className="activities-hub-mobile-datestrip" style={{
@@ -235,7 +216,7 @@ function MobileDateStrip({ selectedDate, onChange, events = [] }) {
       {days.map(d => {
         const ymd = d.toISOString().split('T')[0];
         const active = selectedDate === ymd;
-        const hasEvents = eventDays.has(ymd);
+        const hasEvents = eventDays instanceof Set ? eventDays.has(ymd) : false;
         const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
         const dateNum = d.getDate();
         const monthShort = d.toLocaleDateString('en-US', { month: 'short' });
@@ -536,6 +517,24 @@ export default function ActivitiesHub() {
     return out;
   }, [events, evtQuery, evtCategory, evtStatus, evtSort, evtDate, collator]);
 
+  const eventDays = useMemo(() => {
+    const set = new Set();
+    const all = [...events, ...tours];
+    all.forEach(e => {
+      if (!e.startDate) return;
+      const start = new Date(e.startDate);
+      const end = e.endDate ? new Date(e.endDate) : start;
+      const current = new Date(start);
+      let safety = 0;
+      while (current <= end && safety < 100) {
+        set.add(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+        safety++;
+      }
+    });
+    return set;
+  }, [events, tours]);
+
   const expFiltersActive = Boolean(expQuery.trim() || expDifficulty || (expDuration && expDuration !== 'any') || expSort !== 'default' || expDate);
   const evtFiltersActive = Boolean(evtQuery.trim() || evtCategory || evtStatus || evtSort !== 'dateDesc' || evtDate);
 
@@ -627,230 +626,249 @@ export default function ActivitiesHub() {
       </header>
 
       <div className="vd-container activities-hub-body">
-        {tab === 'experiences' ? (
-          <section className="activities-hub-panel" aria-labelledby="hub-experiences-heading">
-            <header style={{ 
-              marginTop: '40px', 
-              marginBottom: '32px',
-              paddingLeft: '24px',
-              borderLeft: '4px solid var(--color-primary)',
-              position: 'relative'
-            }}>
-              <h2 id="hub-experiences-heading" className="activities-hub-panel-kicker" style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>
-                {t('nav', 'megaExperiences')}
-              </h2>
-              <p className="activities-hub-panel-desc" style={{ margin: '8px 0 0', opacity: 0.8 }}>{t('nav', 'megaExperiencesDesc')}</p>
-            </header>
+        <div className="activities-hub-layout">
+          {!isMobile && (
+            <aside className="activities-hub-sidebar">
+              <div className="activities-hub-sidebar-sticky">
+                <div className="activities-hub-sidebar-section">
+                  <h3 className="activities-hub-sidebar-title">{t('home', 'filterByDate') || 'Pick Date'}</h3>
+                  <DateRangeCalendar 
+                    startDate={tab === 'events' ? evtDate : expDate}
+                    endDate={tab === 'events' ? evtDate : expDate}
+                    onChange={(s) => tab === 'events' ? setEvtDate(s) : setExpDate(s)}
+                    showHint={false}
+                    className="calendar--sidebar"
+                    specialDays={Array.from(eventDays)}
+                  />
+                </div>
+                
+                <div className="activities-hub-sidebar-section">
+                  <h3 className="activities-hub-sidebar-title">
+                    {tab === 'events' ? t('home', 'activitiesHubCategory') : t('home', 'activitiesHubDifficulty')}
+                  </h3>
+                  {tab === 'events' ? (
+                    <select
+                      className="activities-hub-select activities-hub-select--sidebar"
+                      value={evtCategory}
+                      onChange={(e) => setEvtCategory(e.target.value)}
+                    >
+                      <option value="">{t('home', 'activitiesHubCategoryAll')}</option>
+                      {categoryOptions.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <select
+                      className="activities-hub-select activities-hub-select--sidebar"
+                      value={expDifficulty}
+                      onChange={(e) => setExpDifficulty(e.target.value)}
+                    >
+                      <option value="">{t('home', 'activitiesHubDifficultyAll')}</option>
+                      {difficultyOptions.map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
 
-            <div className="activities-hub-toolbar" role="search">
-              <label className="activities-hub-search">
-                <Icon name="search" size={20} className="activities-hub-search-icon" aria-hidden />
-                <input
-                  type="search"
-                  className="activities-hub-search-input"
-                  placeholder={t('home', 'activitiesHubSearchTours')}
-                  aria-label={t('home', 'activitiesHubSearchToursAria')}
-                  value={expQuery}
-                  onChange={(e) => setExpQuery(e.target.value)}
-                  autoComplete="off"
-                />
-              </label>
-              <div className="activities-hub-filters">
-                {difficultyOptions.length > 0 ? (
-                  <select
-                    className="activities-hub-select"
-                    aria-label={t('home', 'activitiesHubDifficulty')}
-                    value={expDifficulty}
-                    onChange={(e) => setExpDifficulty(e.target.value)}
+                {tab === 'events' ? (
+                  <div className="activities-hub-sidebar-section">
+                    <h3 className="activities-hub-sidebar-title">{t('home', 'activitiesHubStatus')}</h3>
+                    <select
+                      className="activities-hub-select activities-hub-select--sidebar"
+                      value={evtStatus}
+                      onChange={(e) => setEvtStatus(e.target.value)}
+                    >
+                      <option value="">{t('home', 'activitiesHubStatusAll')}</option>
+                      {statusOptions.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  anyTourHasDurationHours && (
+                    <div className="activities-hub-sidebar-section">
+                      <h3 className="activities-hub-sidebar-title">{t('home', 'activitiesHubDuration')}</h3>
+                      <select
+                        className="activities-hub-select activities-hub-select--sidebar"
+                        value={expDuration}
+                        onChange={(e) => setExpDuration(e.target.value)}
+                      >
+                        <option value="">{t('home', 'activitiesHubDurationAll')}</option>
+                        <option value="short">{t('home', 'activitiesHubDurationShort')}</option>
+                        <option value="half">{t('home', 'activitiesHubDurationHalf')}</option>
+                        <option value="full">{t('home', 'activitiesHubDurationFull')}</option>
+                      </select>
+                    </div>
+                  )
+                )}
+
+                <div className="activities-hub-sidebar-section" style={{ marginTop: 'auto' }}>
+                  <button 
+                    type="button" 
+                    className="activities-hub-clear activities-hub-clear--sidebar" 
+                    onClick={tab === 'events' ? clearEvents : clearExperiences}
+                    disabled={tab === 'events' ? !evtFiltersActive : !expFiltersActive}
                   >
-                    <option value="">{t('home', 'activitiesHubDifficultyAll')}</option>
-                    {difficultyOptions.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-                {anyTourHasDurationHours ? (
-                  <select
-                    className="activities-hub-select"
-                    aria-label={t('home', 'activitiesHubDuration')}
-                    value={expDuration}
-                    onChange={(e) => setExpDuration(e.target.value)}
-                  >
-                    <option value="">{t('home', 'activitiesHubDurationAll')}</option>
-                    <option value="short">{t('home', 'activitiesHubDurationShort')}</option>
-                    <option value="half">{t('home', 'activitiesHubDurationHalf')}</option>
-                    <option value="full">{t('home', 'activitiesHubDurationFull')}</option>
-                  </select>
-                ) : null}
-                <select
-                  className="activities-hub-select"
-                  aria-label={t('home', 'activitiesHubSort')}
-                  value={expSort}
-                  onChange={(e) => setExpSort(e.target.value)}
-                >
-                  <option value="default">{t('home', 'activitiesHubSortToursDefault')}</option>
-                  <option value="name">{t('home', 'activitiesHubSortName')}</option>
-                  {anyTourHasDurationHours ? (
-                    <>
-                      <option value="durationAsc">{t('home', 'activitiesHubSortDurationAsc')}</option>
-                      <option value="durationDesc">{t('home', 'activitiesHubSortDurationDesc')}</option>
-                    </>
-                  ) : null}
-                  <option value="priceAsc">{t('home', 'activitiesHubSortPriceAsc')}</option>
-                  <option value="ratingDesc">{t('home', 'activitiesHubSortRating')}</option>
-                </select>
-                <DatePickerFilter 
-                  selectedDate={expDate} 
-                  onChange={setExpDate} 
-                  label={t('home', 'filterByDate') || 'Pick Date'} 
-                  isMobile={isMobile}
-                />
-                {expFiltersActive ? (
-                  <button type="button" className="activities-hub-clear" onClick={clearExperiences}>
+                    <Icon name="history" size={18} />
                     {t('home', 'activitiesHubClear')}
                   </button>
-                ) : null}
+                </div>
               </div>
-            </div>
+            </aside>
+          )}
 
-            {isMobile && (
-              <MobileDateStrip selectedDate={expDate} onChange={setExpDate} events={tours} />
-            )}
+          <main className="activities-hub-main">
+            {tab === 'experiences' ? (
+              <section className="activities-hub-panel" aria-labelledby="hub-experiences-heading">
+                <header className="activities-hub-panel-header">
+                  <div className="activities-hub-panel-hgroup">
+                    <h2 id="hub-experiences-heading" className="activities-hub-panel-kicker">
+                      {t('nav', 'megaExperiences')}
+                    </h2>
+                    <p className="activities-hub-panel-desc">{t('nav', 'megaExperiencesDesc')}</p>
+                  </div>
+                  
+                  <div className="activities-hub-toolbar" role="search">
+                    <label className="activities-hub-search">
+                      <Icon name="search" size={20} className="activities-hub-search-icon" aria-hidden />
+                      <input
+                        type="search"
+                        className="activities-hub-search-input"
+                        placeholder={t('home', 'activitiesHubSearchTours')}
+                        aria-label={t('home', 'activitiesHubSearchToursAria')}
+                        value={expQuery}
+                        onChange={(e) => setExpQuery(e.target.value)}
+                        autoComplete="off"
+                      />
+                    </label>
+                    <div className="activities-hub-filters">
+                      <select
+                        className="activities-hub-select"
+                        aria-label={t('home', 'activitiesHubSort')}
+                        value={expSort}
+                        onChange={(e) => setExpSort(e.target.value)}
+                      >
+                        <option value="default">{t('home', 'activitiesHubSortToursDefault')}</option>
+                        <option value="name">{t('home', 'activitiesHubSortName')}</option>
+                        {anyTourHasDurationHours && (
+                          <>
+                            <option value="durationAsc">{t('home', 'activitiesHubSortDurationAsc')}</option>
+                            <option value="durationDesc">{t('home', 'activitiesHubSortDurationDesc')}</option>
+                          </>
+                        )}
+                        <option value="priceAsc">{t('home', 'activitiesHubSortPriceAsc')}</option>
+                        <option value="ratingDesc">{t('home', 'activitiesHubSortRating')}</option>
+                      </select>
+                      
+                      {isMobile && (
+                        <DatePickerFilter 
+                          selectedDate={expDate} 
+                          onChange={setExpDate} 
+                          label={t('home', 'filterByDate') || 'Pick Date'} 
+                          isMobile={isMobile}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </header>
 
-            <p className="activities-hub-results-meta" aria-live="polite">
-              {t('home', 'activitiesHubResultsOfTotal')
-                .replace('{shown}', String(filteredTours.length))
-                .replace('{total}', String(tours.length))}
-            </p>
+                {isMobile && (
+                  <MobileDateStrip selectedDate={expDate} onChange={setExpDate} events={tours} eventDays={eventDays} />
+                )}
 
-            {tours.length === 0 ? (
-              <p className="vd-empty">{t('home', 'noTours')}</p>
-            ) : filteredTours.length === 0 ? (
-              <p className="vd-empty">{t('home', 'activitiesHubNoMatches')}</p>
-            ) : (
-              <div className="vd-grid vd-grid--4 activities-hub-grid">
-                {filteredTours.map((tour) => (
-                  <FullImageCard key={tour.id} item={tour} type="experience" t={t} />
-                ))}
-              </div>
-            )}
-          </section>
-        ) : tab === 'calendar' ? (
-          <CalendarPanel events={events} tours={tours} t={t} />
-        ) : (
-          <section className="activities-hub-panel" aria-labelledby="hub-events-heading">
-            <header style={{ 
-              marginTop: '40px', 
-              marginBottom: '32px',
-              paddingLeft: '24px',
-              borderLeft: '4px solid var(--color-primary)',
-              position: 'relative'
-            }}>
-              <h2 id="hub-events-heading" className="activities-hub-panel-kicker" style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>
-                {t('nav', 'megaEvents')}
-              </h2>
-              <p className="activities-hub-panel-desc" style={{ margin: '8px 0 0', opacity: 0.8 }}>{t('nav', 'megaEventsDesc')}</p>
-            </header>
+                <p className="activities-hub-results-meta" aria-live="polite">
+                  {t('home', 'activitiesHubResultsOfTotal')
+                    .replace('{shown}', String(filteredTours.length))
+                    .replace('{total}', String(tours.length))}
+                </p>
 
-            <div className="activities-hub-toolbar" role="search">
-              <label className="activities-hub-search">
-                <Icon name="search" size={20} className="activities-hub-search-icon" aria-hidden />
-                <input
-                  type="search"
-                  className="activities-hub-search-input"
-                  placeholder={t('home', 'activitiesHubSearchEvents')}
-                  aria-label={t('home', 'activitiesHubSearchEventsAria')}
-                  value={evtQuery}
-                  onChange={(e) => setEvtQuery(e.target.value)}
-                  autoComplete="off"
-                />
-              </label>
-              <div className="activities-hub-filters">
-                {categoryOptions.length > 0 ? (
-                  <select
-                    className="activities-hub-select"
-                    aria-label={t('home', 'activitiesHubCategory')}
-                    value={evtCategory}
-                    onChange={(e) => setEvtCategory(e.target.value)}
-                  >
-                    <option value="">{t('home', 'activitiesHubCategoryAll')}</option>
-                    {categoryOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
+                {tours.length === 0 ? (
+                  <p className="vd-empty">{t('home', 'noTours')}</p>
+                ) : filteredTours.length === 0 ? (
+                  <p className="vd-empty">{t('home', 'activitiesHubNoMatches')}</p>
+                ) : (
+                  <div className="vd-grid vd-grid--3 activities-hub-grid">
+                    {filteredTours.map((tour) => (
+                      <FullImageCard key={tour.id} item={tour} type="experience" t={t} />
                     ))}
-                  </select>
-                ) : null}
-                {statusOptions.length > 0 ? (
-                  <select
-                    className="activities-hub-select"
-                    aria-label={t('home', 'activitiesHubStatus')}
-                    value={evtStatus}
-                    onChange={(e) => setEvtStatus(e.target.value)}
-                  >
-                    <option value="">{t('home', 'activitiesHubStatusAll')}</option>
-                    {statusOptions.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-                <select
-                  className="activities-hub-select"
-                  aria-label={t('home', 'activitiesHubSort')}
-                  value={evtSort}
-                  onChange={(e) => setEvtSort(e.target.value)}
-                >
-                  <option value="dateDesc">{t('home', 'activitiesHubSortDateNew')}</option>
-                  <option value="dateAsc">{t('home', 'activitiesHubSortDateOld')}</option>
-                  <option value="name">{t('home', 'activitiesHubSortName')}</option>
-                </select>
-                <DatePickerFilter 
-                  selectedDate={evtDate} 
-                  onChange={setEvtDate} 
-                  label={t('home', 'filterByDate') || 'Pick Date'} 
-                  isMobile={isMobile}
-                />
-                {evtFiltersActive ? (
-                  <button type="button" className="activities-hub-clear" onClick={clearEvents}>
-                    {t('home', 'activitiesHubClear')}
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            {isMobile && (
-              <MobileDateStrip selectedDate={evtDate} onChange={setEvtDate} events={events} />
-            )}
-
-            <p className="activities-hub-results-meta" aria-live="polite">
-              {t('home', 'activitiesHubResultsOfTotal')
-                .replace('{shown}', String(filteredEvents.length))
-                .replace('{total}', String(events.length))}
-            </p>
-
-            {events.length === 0 ? (
-              <p className="vd-empty">{t('home', 'noEvents')}</p>
-            ) : filteredEvents.length === 0 ? (
-              <p className="vd-empty">{t('home', 'activitiesHubNoMatches')}</p>
+                  </div>
+                )}
+              </section>
+            ) : tab === 'calendar' ? (
+              <CalendarPanel events={events} tours={tours} t={t} />
             ) : (
-              <div className="vd-grid vd-grid--4 activities-hub-grid activities-hub-events-grid">
-                {filteredEvents.map((e) => (
-                  <FullImageCard key={e.id} item={e} type="event" t={t} />
-                ))}
-              </div>
-            )}
-          </section>
-        )}
+              <section className="activities-hub-panel" aria-labelledby="hub-events-heading">
+                <header className="activities-hub-panel-header">
+                  <div className="activities-hub-panel-hgroup">
+                    <h2 id="hub-events-heading" className="activities-hub-panel-kicker">
+                      {t('nav', 'megaEvents')}
+                    </h2>
+                    <p className="activities-hub-panel-desc">{t('nav', 'megaEventsDesc')}</p>
+                  </div>
 
-        <p className="activities-hub-footer-cta">
-          <Link to="/map" className="vd-btn vd-btn--secondary">
-            {t('home', 'viewMap')} <Icon name="arrow_forward" size={20} />
-          </Link>
-        </p>
+                  <div className="activities-hub-toolbar" role="search">
+                    <label className="activities-hub-search">
+                      <Icon name="search" size={20} className="activities-hub-search-icon" aria-hidden />
+                      <input
+                        type="search"
+                        className="activities-hub-search-input"
+                        placeholder={t('home', 'activitiesHubSearchEvents')}
+                        aria-label={t('home', 'activitiesHubSearchEventsAria')}
+                        value={evtQuery}
+                        onChange={(e) => setEvtQuery(e.target.value)}
+                        autoComplete="off"
+                      />
+                    </label>
+                    <div className="activities-hub-filters">
+                      <select
+                        className="activities-hub-select"
+                        aria-label={t('home', 'activitiesHubSort')}
+                        value={evtSort}
+                        onChange={(e) => setEvtSort(e.target.value)}
+                      >
+                        <option value="dateDesc">{t('home', 'activitiesHubSortDateDesc')}</option>
+                        <option value="dateAsc">{t('home', 'activitiesHubSortDateAsc')}</option>
+                        <option value="name">{t('home', 'activitiesHubSortName')}</option>
+                      </select>
+
+                      {isMobile && (
+                        <DatePickerFilter 
+                          selectedDate={evtDate} 
+                          onChange={setEvtDate} 
+                          label={t('home', 'filterByDate') || 'Pick Date'} 
+                          isMobile={isMobile}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </header>
+
+                {isMobile && (
+                  <MobileDateStrip selectedDate={evtDate} onChange={setEvtDate} events={events} eventDays={eventDays} />
+                )}
+
+                <p className="activities-hub-results-meta" aria-live="polite">
+                  {t('home', 'activitiesHubResultsOfTotal')
+                    .replace('{shown}', String(filteredEvents.length))
+                    .replace('{total}', String(events.length))}
+                </p>
+
+                {events.length === 0 ? (
+                  <p className="vd-empty">{t('home', 'noEvents')}</p>
+                ) : filteredEvents.length === 0 ? (
+                  <p className="vd-empty">{t('home', 'activitiesHubNoMatches')}</p>
+                ) : (
+                  <div className="vd-grid vd-grid--3 activities-hub-grid">
+                    {filteredEvents.map((event) => (
+                      <FullImageCard key={event.id} item={event} type="event" t={t} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+          </main>
+        </div>
       </div>
     </div>
   );

@@ -27,6 +27,7 @@ export function DateRangeCalendar({
   hintStart = 'Select start date',
   hintEnd = 'Select end date',
   showHint = true,
+  specialDays = [],
 }) {
   const today = new Date();
   const [viewMonth, setViewMonth] = useState(() => {
@@ -67,6 +68,12 @@ export function DateRangeCalendar({
     if (min && date < min) return true;
     if (max && date > max) return true;
     return false;
+  };
+
+  const isSpecial = (date) => {
+    if (!date) return false;
+    const str = toDateStr(date);
+    return Array.isArray(specialDays) && specialDays.includes(str);
   };
 
   const handleDayClick = (date) => {
@@ -126,17 +133,19 @@ export function DateRangeCalendar({
           const disabled = date ? isDisabled(date) : true;
           const inRange = date && isInRange(date);
           const selected = date && isSelected(date);
+          const special = date && isSpecial(date);
           return (
             <button
               key={i}
               type="button"
-              className={`calendar-day ${!date ? 'calendar-day--pad' : ''} ${disabled ? 'calendar-day--disabled' : ''} ${inRange ? 'calendar-day--range' : ''} ${selected ? 'calendar-day--selected' : ''}`}
+              className={`calendar-day ${!date ? 'calendar-day--pad' : ''} ${disabled ? 'calendar-day--disabled' : ''} ${inRange ? 'calendar-day--range' : ''} ${selected ? 'calendar-day--selected' : ''} ${special ? 'calendar-day--special' : ''}`}
               disabled={disabled}
               onClick={() => handleDayClick(date)}
               aria-label={date ? date.toLocaleDateString(locale) : ''}
               aria-selected={selected}
             >
-              {date ? date.getDate() : ''}
+              <span className="calendar-day-number">{date ? date.getDate() : ''}</span>
+              {special && <span className="calendar-day-special-dot" aria-hidden="true" />}
             </button>
           );
         })}
