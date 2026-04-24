@@ -362,7 +362,7 @@ function useMobile() {
 export default function ActivitiesHub() {
   const { t, lang } = useLanguage();
   const [searchParams] = useSearchParams();
-  const tab = searchParams.get('tab') || 'events';
+  const tab = searchParams.get('tab') || 'experiences';
   const isMobile = useMobile();
 
   const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
