@@ -25,8 +25,8 @@ const GOOGLE_PLACES_CONCURRENCY = 3;
 const GOOGLE_PLACES_DELAY_MS = 200;
 /** Car & walking only (matches product request; avoids transit/bike in web nav). */
 const TRAVEL_MODES = Object.freeze([
-  { id: 'DRIVING', icon: 'directions_car', labelKey: 'travelModeCar' },
-  { id: 'WALKING', icon: 'directions_walk', labelKey: 'travelModeWalk' },
+  { id: 'DRIVING', icon: 'car', labelKey: 'travelModeCar' },
+  { id: 'WALKING', icon: 'walking', labelKey: 'travelModeWalk' },
 ]);
 
 const LIVE_ROUTE_MIN_INTERVAL_MS = 12000;
@@ -371,6 +371,7 @@ export default function MapPage() {
   const [routeDetailsOpen, setRouteDetailsOpen] = useState(false);
   const [liveNavigation, setLiveNavigation] = useState(false);
   const [liveNavDirectionsExpanded, setLiveNavDirectionsExpanded] = useState(false);
+  const [routePanelCollapsed, setRoutePanelCollapsed] = useState(false);
   const [routeRefreshTick, setRouteRefreshTick] = useState(0);
   const [liveNavError, setLiveNavError] = useState(null);
   const [liveNavErrorDebug, setLiveNavErrorDebug] = useState('');
@@ -428,6 +429,17 @@ export default function MapPage() {
   useEffect(() => {
     setLiveNavDirectionsExpanded(false);
   }, [liveNavigation]);
+
+  useEffect(() => {
+    setRoutePanelCollapsed(false);
+  }, [tripFilterName, selectedDayIndex, liveNavigation]);
+
+  useEffect(() => {
+    if (!listOpen || typeof window === 'undefined') return;
+    if (window.matchMedia?.('(max-width: 959px)').matches) {
+      infoWindowRef.current?.close?.();
+    }
+  }, [listOpen]);
 
   useEffect(() => {
     setTravelMode((m) => (m === 'TRANSIT' || m === 'BICYCLING' ? 'DRIVING' : m));
@@ -1575,6 +1587,23 @@ export default function MapPage() {
     location.state,
   ]);
 
+  const handleDirections = useCallback(
+    (place) => {
+      if (!place) return;
+      const pid = String(place.id);
+      const name = place._google?.name || place.name || pid;
+      navigate('/map', {
+        state: {
+          tripPlaceIds: [pid],
+          tripDays: [{ placeIds: [pid] }],
+          tripName: name,
+        },
+      });
+      setListOpen(false);
+    },
+    [navigate]
+  );
+
   const stopLiveNavigation = useCallback(() => {
     setLiveNavigation(false);
     setLiveNavFollowing(false);
@@ -1697,14 +1726,19 @@ export default function MapPage() {
     );
   }
 
-  const routeTimeLabel = travelMode === 'WALKING' ? t('home', 'timeToWalk') : t('home', 'timeToDrive');
   const nextTurnText = routeSummary?.steps?.[0] || routeSummary?.via || '';
+  const hasTripRoutePanel = Boolean(
+    tripFilterName && (placesInTripOrder.length >= 1 || (tripDays?.length > 0))
+  );
+  const showTripRoutePanel = hasTripRoutePanel && (!liveNavigation || liveNavDirectionsExpanded);
 
   return (
     <div
       className={`vd map-page map-page--google${liveNavigation ? ' map-page--live-nav' : ''}${
         liveNavigation && !liveNavDirectionsExpanded ? ' map-page--live-nav-collapsed' : ''
-      }${listOpen ? ' map-page--list-open' : ''}${tripFilterName ? ' map-page--trip-route' : ''}`}
+      }${routePanelCollapsed ? ' map-page--route-panel-collapsed' : ''}${listOpen ? ' map-page--list-open' : ''}${
+        tripFilterName ? ' map-page--trip-route' : ''
+      }`}
       role="main"
       aria-label={t('home', 'mapPageTitle')}
     >
@@ -1857,10 +1891,10 @@ export default function MapPage() {
         </div>
 
         {/* Live navigation: slim peek bar so the map stays visible; tap for full directions */}
-        {tripFilterName &&
+        {hasTripRoutePanel &&
           liveNavigation &&
           !liveNavDirectionsExpanded &&
-          (placesInTripOrder.length >= 1 || (tripDays?.length > 0)) && (
+          (
             <button
               type="button"
               className="map-live-nav-peek"
@@ -1905,10 +1939,37 @@ export default function MapPage() {
           )}
 
         {/* Trip route panel (right sidebar) – when viewing a trip; hidden during live nav until user expands */}
-        {tripFilterName && (placesInTripOrder.length >= 1 || (tripDays?.length > 0)) && (!liveNavigation || liveNavDirectionsExpanded) && (
-          <div className="map-trip-route-panel gm-directions-panel" role="complementary" aria-label={t('home', 'viewingTrip')}>
+        {hasTripRoutePanel && !liveNavigation && routePanelCollapsed && (
+          <button
+            type="button"
+            className="map-route-mobile-show-panel"
+            onClick={() => setRoutePanelCollapsed(false)}
+            aria-label={t('home', 'liveNavPeekExpand')}
+          >
+            <Icon name="keyboard_arrow_up" size={22} />
+            <span>{t('home', 'liveNavPeekExpand')}</span>
+          </button>
+        )}
+
+        {showTripRoutePanel && (
+          <div
+            className={`map-trip-route-panel gm-directions-panel${routePanelCollapsed ? ' map-trip-route-panel--mobile-hidden' : ''}`}
+            role="complementary"
+            aria-label={t('home', 'viewingTrip')}
+          >
             <div className="map-trip-route-panel-inner">
               <div className="map-trip-route-panel-handle" aria-hidden="true" />
+              {!liveNavigation && (
+                <button
+                  type="button"
+                  className="map-route-mobile-hide-panel"
+                  onClick={() => setRoutePanelCollapsed(true)}
+                  aria-label={t('home', 'liveNavCollapseToMap')}
+                >
+                  <Icon name="keyboard_arrow_down" size={22} />
+                  <span>{t('home', 'liveNavCollapseToMap')}</span>
+                </button>
+              )}
               {liveNavigation && (
                 <button
                   type="button"
@@ -1940,199 +2001,154 @@ export default function MapPage() {
                 </div>
               )}
 
-              {/* Route summary: time to drive + distance + roads to pass */}
-              {liveNavError && (
-                <p className="map-live-nav-error" role="alert">
-                  {liveNavError === 'denied'
-                    ? t('home', 'liveNavDenied')
-                    : liveNavError === 'unavailable'
-                      ? t('home', 'liveNavLocationFailed')
-                      : liveNavError === 'noGeolocation'
-                        ? t('home', 'liveNavNoGeo')
-                        : liveNavError === 'insecureContext'
-                          ? t('home', 'liveNavInsecureContext')
-                          : t('home', 'liveNavLocationFailed')}
-                  {liveNavErrorDebug ? ` (${liveNavErrorDebug})` : ''}
-                </p>
-              )}
-
-              {placesInTripOrder.length >= 1 && !liveNavigation && (
-                <div className="map-live-nav-start-wrap">
-                  <div className="map-live-nav-onboarding">
-                    <Icon name="navigation" size={32} className="map-live-nav-onboarding-icon" />
-                    <button
-                      type="button"
-                      className="map-live-nav-start-btn"
-                      onClick={startButtonOpensChrome ? handleOpenInChrome : startLiveNavigation}
-                      disabled={liveNavRequestingPermission}
-                    >
-                      <Icon name={startButtonOpensChrome ? 'open_in_new' : 'navigation'} size={22} />
-                      <span>{startButtonOpensChrome ? t('home', 'liveNavOpenInChrome') : t('home', 'liveNavStart')}</span>
-                    </button>
-                    {!liveNavRequestingPermission && (
-                      <p className="map-live-nav-permission-note">
-                        {t('home', 'liveNavStartHint')}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {routeSummary && (
-                <div className="map-trip-route-summary gm-summary-card">
-                  <div className="gm-summary-header">
-                    <div className="gm-summary-primary-row">
-                      <span className="gm-summary-time">{routeSummary.durationText}</span>
-                      <span className="gm-summary-dot">Â·</span>
-                      <span className="gm-summary-dist">{routeSummary.distanceText}</span>
-                    </div>
-                    <p className="gm-summary-mode-hint">
-                      <Icon name="schedule" size={14} /> {routeTimeLabel}
-                    </p>
-                  </div>
-                  {liveNavigation && nextTurnText && (
-                    <div className="map-live-next-turn-wrap">
-                      <Icon name={getTurnIcon(nextTurnText)} size={24} />
-                      <p className="map-live-next-turn">{nextTurnText}</p>
-                    </div>
-                  )}
-                  <p className="map-trip-route-leave-now">
-                    {liveNavigation ? t('home', 'liveNavUpdatingHint') : t('home', 'leaveNow')}
-                  </p>
-                  {routeSummary.steps?.length > 0 && !liveNavigation && (
-                    <div className="gm-roads-to-pass">
-                      <p className="gm-roads-to-pass-title">
-                        <Icon name="route" size={18} />
-                        <span>{t('home', 'roadsToPass')}</span>
-                      </p>
-                      <ol className="gm-roads-to-pass-list">
-                        {routeSummary.steps.map((step, i) => (
-                          <li key={i} className="gm-roads-to-pass-item">{step}</li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {liveNavigation && (
-                <p className="map-live-nav-pulse" aria-live="polite">
-                  <Icon name="my_location" size={18} /> {t('home', 'liveNavTracking')}
-                </p>
-              )}
-
-              {/* Drive & walk only */}
-              <div className="map-trip-route-modes">
-                {TRAVEL_MODES.map((mode) => (
-                  <button
-                    key={mode.id}
-                    type="button"
-                    className={`map-trip-route-mode-btn ${travelMode === mode.id ? 'map-trip-route-mode-btn--active' : ''}`}
-                    onClick={() => setTravelMode(mode.id)}
-                    aria-pressed={travelMode === mode.id}
-                    title={t('home', mode.labelKey)}
-                  >
-                    <Icon name={mode.icon} size={24} />
-                    <span className="map-trip-route-mode-label">{t('home', mode.labelKey)}</span>
-                    {travelMode === mode.id && routeSummary?.durationText && (
-                      <span className="map-trip-route-mode-duration">{routeSummary.durationText}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Waypoints — simplified while live nav is on */}
-              <div className={`map-trip-route-waypoints${liveNavigation ? ' map-trip-route-waypoints--compact' : ''}`}>
-                {currentDayPlacesForList.map((p, index) => {
-                  const g = p._google;
-                  const name = g?.name || p.name || p.id;
-                  const address = g?.formatted_address || p.location || '';
-                  const isLast = index === currentDayPlacesForList.length - 1;
-                  const isFirst = index === 0;
-                  return (
-                    <div key={p.id} className={`map-trip-route-waypoint ${isFirst ? 'gm-waypoint-start' : ''} ${isLast ? 'gm-waypoint-end' : ''}`}>
-                      <span className="map-trip-route-waypoint-dot" aria-hidden="true">
-                        {isFirst ? (
-                          <div className="gm-waypoint-icon-wrap gm-waypoint-icon-wrap--start">
-                            <Icon name="trip_origin" size={18} />
-                          </div>
-                        ) : isLast ? (
-                          <div className="gm-waypoint-icon-wrap gm-waypoint-icon-wrap--end">
-                            <Icon name="place" size={18} />
-                          </div>
-                        ) : (
-                          <div className="gm-waypoint-icon-wrap gm-waypoint-icon-wrap--mid">
-                            <span className="gm-dot-mid-inner" />
-                          </div>
-                        )}
-                      </span>
-                      <div className="map-trip-route-waypoint-content">
-                        <span className="map-trip-route-waypoint-name">{name}</span>
-                        {address && <span className="map-trip-route-waypoint-address">{address}</span>}
+              {/* NEW PREMIUM DIRECTIONS PANEL */}
+              <div className="map-route-modern-container">
+                <div className="map-route-drag-handle" />
+                
+                {/* 1. High-Contrast Summary Header */}
+                {routeSummary && (
+                  <div className="map-route-header-v2">
+                    <div className="map-route-header-main">
+                      <div className="map-route-eta-group">
+                        <span className="map-route-eta-val">{routeSummary.durationText}</span>
+                        <span className="map-route-eta-sub">{routeSummary.distanceText}</span>
                       </div>
-                      <button type="button" className="map-trip-route-waypoint-menu" aria-label="Options">
-                        <Icon name="more_vert" size={20} />
-                      </button>
+                      <div className="map-route-mode-pill">
+                        <Icon name={travelMode === 'WALKING' ? 'walking' : 'car'} size={18} />
+                        <span>{t('home', travelMode === 'WALKING' ? 'travelModeWalk' : 'travelModeCar')}</span>
+                      </div>
                     </div>
-                  );
-                })}
-                {addingTripStop ? (
-                  <div className="map-add-stop-panel">
-                    <p className="map-add-stop-hint">{t('home', 'mapAddStopHint')}</p>
-                    <button
-                      type="button"
-                      className="map-add-stop-done"
-                      onClick={() => {
-                        setAddingTripStop(false);
-                        setSearchQuery('');
-                      }}
-                    >
-                      {t('home', 'mapAddStopDone')}
-                    </button>
+                    {liveNavigation && nextTurnText && (
+                      <div className="map-route-next-turn-banner">
+                        <div className="map-route-turn-icon">
+                          <Icon name={getTurnIcon(nextTurnText)} size={28} />
+                        </div>
+                        <div className="map-route-turn-text">{nextTurnText}</div>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="map-trip-route-add-dest"
-                    disabled={liveNavigation}
-                    onClick={() => {
-                      setAddingTripStop(true);
-                      setListOpen(true);
-                      setNearbyMode('off');
-                    }}
-                  >
-                    <Icon name="add" size={20} />
-                    <span>{t('home', 'addDestination')}</span>
-                  </button>
                 )}
-              </div>
 
-              {/* Step-by-step (Details) — optional when not in live nav to keep UI calm */}
-              {routeSummary && !liveNavigation && (
-                <div className="map-trip-route-details-wrap">
-                  <button type="button" className="map-trip-route-link gm-details-toggle" onClick={() => setRouteDetailsOpen((o) => !o)}>
-                    {t('home', 'details')}
-                    <Icon name={routeDetailsOpen ? 'expand_less' : 'expand_more'} size={20} />
-                  </button>
-                  {routeDetailsOpen && directionsResult?.routes?.[0]?.legs && (
-                    <div className="map-trip-route-details">
-                      {directionsResult.routes[0].legs.flatMap((leg, legIndex) =>
-                        (leg.steps || []).map((step, stepIndex) => (
-                          <div key={`${legIndex}-${stepIndex}`} className="map-trip-route-step-item">
-                            <Icon name={getTurnIcon(step.instructions)} size={20} className="map-trip-route-step-icon" />
-                            <div className="map-trip-route-step-text-wrap">
-                              <p className="map-trip-route-step-instr">{stripHtml(step.instructions)}</p>
-                              {step.distance?.text && (
-                                <span className="map-trip-route-step-dist">{step.distance.text}</span>
-                              )}
+                <div className="map-route-scroll-area">
+                  {/* 2. Onboarding / Start Action */}
+                  {placesInTripOrder.length >= 1 && !liveNavigation && (
+                    <div className="map-route-action-area">
+                      <button
+                        type="button"
+                        className="map-route-start-btn-v2"
+                        onClick={startButtonOpensChrome ? handleOpenInChrome : startLiveNavigation}
+                        disabled={liveNavRequestingPermission}
+                      >
+                        <Icon name={startButtonOpensChrome ? 'open_in_new' : 'navigation'} size={24} />
+                        <strong>{startButtonOpensChrome ? t('home', 'liveNavOpenInChrome') : t('home', 'liveNavStart')}</strong>
+                      </button>
+                      <p className="map-route-hint-v2">{t('home', 'liveNavStartHint')}</p>
+                    </div>
+                  )}
+
+                  {/* 3. Mode Toggle */}
+                  <div className="map-route-modes-v2">
+                    {TRAVEL_MODES.map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        className={`map-route-mode-tab ${travelMode === mode.id ? 'active' : ''}`}
+                        onClick={() => setTravelMode(mode.id)}
+                        aria-pressed={travelMode === mode.id}
+                        title={t('home', mode.labelKey)}
+                      >
+                        <Icon name={mode.icon} size={20} />
+                        <span>{t('home', mode.labelKey)}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Waypoints Section */}
+                  <div className="map-route-section">
+                    <h4 className="map-route-section-title">{t('home', 'viewingTrip')}</h4>
+                    <div className="map-route-waypoints-v2">
+                      {currentDayPlacesForList.map((p, index) => {
+                        const isLast = index === currentDayPlacesForList.length - 1;
+                        const isFirst = index === 0;
+                        return (
+                          <div key={p.id} className={`map-route-stop ${isFirst ? 'is-start' : ''} ${isLast ? 'is-end' : ''}`}>
+                            <div className="map-route-stop-indicator">
+                              <div className="map-route-stop-line" />
+                              <div className="map-route-stop-point">
+                                {isFirst ? <Icon name="trip_origin" size={16} /> : isLast ? <Icon name="location_on" size={16} /> : <div className="dot-inner" />}
+                              </div>
+                            </div>
+                            <div className="map-route-stop-info">
+                              <span className="map-route-stop-name">{p._google?.name || p.name || p.id}</span>
+                              <span className="map-route-stop-loc">{p._google?.formatted_address || p.location || ''}</span>
                             </div>
                           </div>
-                        ))
+                        );
+                      })}
+                      {addingTripStop ? (
+                        <div className="map-route-add-destination-active">
+                          <p>{t('home', 'mapAddStopHint')}</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAddingTripStop(false);
+                              setSearchQuery('');
+                            }}
+                          >
+                            {t('home', 'mapAddStopDone')}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="map-route-add-destination-btn"
+                          disabled={liveNavigation}
+                          onClick={() => {
+                            setAddingTripStop(true);
+                            setListOpen(true);
+                            setNearbyMode('off');
+                            setSearchQuery('');
+                            setSwipeDeckIndex(0);
+                          }}
+                        >
+                          <Icon name="add" size={20} />
+                          <span>{t('home', 'addDestination')}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Step-by-Step Section */}
+                  {routeSummary && (
+                    <div className="map-route-section map-route-section--steps">
+                      <button
+                        type="button"
+                        className="map-route-expand-steps"
+                        onClick={() => setRouteDetailsOpen(!routeDetailsOpen)}
+                      >
+                        <span>{t('home', 'details')}</span>
+                        <Icon name={routeDetailsOpen ? 'expand_less' : 'expand_more'} size={20} />
+                      </button>
+                      
+                      {routeDetailsOpen && directionsResult?.routes?.[0]?.legs && (
+                        <div className="map-route-steps-list-v2">
+                          {directionsResult.routes[0].legs.flatMap((leg, legIndex) =>
+                            (leg.steps || []).map((step, stepIndex) => (
+                              <div key={`${legIndex}-${stepIndex}`} className="map-route-step-v2">
+                                <Icon name={getTurnIcon(step.instructions)} size={20} className="step-icon" />
+                                <div className="step-content">
+                                  <p className="step-instr">{stripHtml(step.instructions)}</p>
+                                  {step.distance?.text && <span className="step-dist">{step.distance.text}</span>}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
                 </div>
-              )}
+              </div>
 
               {/* Options (Share, Send to phone) */}
               <div className={`map-trip-route-options${liveNavigation ? ' map-trip-route-options--compact' : ''}`}>
@@ -2275,6 +2291,7 @@ export default function MapPage() {
                 t={t}
                 nearbyMode={nearbyMode}
                 onPlaceSelect={addingTripStop ? handlePlaceSelect : undefined}
+                onDirections={handleDirections}
               />
             )}
           </div>
@@ -2288,7 +2305,7 @@ export default function MapPage() {
 
 const MAP_DRAWER_SWIPE_THRESHOLD_PX = 56;
 
-function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode, onPlaceSelect }) {
+function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode, onPlaceSelect, onDirections }) {
   const [dragPx, setDragPx] = useState(0);
   const dragStartXRef = useRef(null);
   const capturingRef = useRef(false);
@@ -2463,6 +2480,13 @@ function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode, on
                         </span>
                       )}
                     </div>
+                    <button
+                      type="button"
+                      className="map-drawer-swipe-directions"
+                      onClick={() => onDirections(p)}
+                    >
+                      {t('home', 'mapDirections')} →
+                    </button>
                     <Link to={`/place/${pid}`} className="map-drawer-swipe-details">
                       {t('home', 'viewDetails')} →
                     </Link>
