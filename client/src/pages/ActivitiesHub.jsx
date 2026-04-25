@@ -348,7 +348,7 @@ function useHubDesktop() {
 export default function ActivitiesHub() {
   const { t, lang } = useLanguage();
   const [searchParams] = useSearchParams();
-  const tab = searchParams.get('tab') || 'experiences';
+  const tab = searchParams.get('tab') || 'events';
   const isMobile = useMobile();
   const isHubDesktop = useHubDesktop();
 
@@ -643,18 +643,6 @@ export default function ActivitiesHub() {
         <div className="vd-container activities-hub-hero-inner">
           <nav className="activities-hub-tabs" aria-label={t('nav', 'activitiesHubTabsLabel')}>
             <Link
-              to="/activities"
-              replace
-              className={`activities-hub-tab ${tab === 'experiences' ? 'activities-hub-tab--active' : ''}`}
-              aria-current={tab === 'experiences' ? 'page' : undefined}
-            >
-              <Icon name="hiking" size={22} aria-hidden />
-              <span className="activities-hub-tab-label">{t('nav', 'activitiesExperiences')}</span>
-              <span className="activities-hub-tab-count" aria-hidden="true">
-                {counts.tours}
-              </span>
-            </Link>
-            <Link
               to="/activities?tab=events"
               replace
               className={`activities-hub-tab ${tab === 'events' ? 'activities-hub-tab--active' : ''}`}
@@ -664,6 +652,18 @@ export default function ActivitiesHub() {
               <span className="activities-hub-tab-label">{t('nav', 'eventsFestivals')}</span>
               <span className="activities-hub-tab-count" aria-hidden="true">
                 {counts.events}
+              </span>
+            </Link>
+            <Link
+              to="/activities?tab=experiences"
+              replace
+              className={`activities-hub-tab ${tab === 'experiences' ? 'activities-hub-tab--active' : ''}`}
+              aria-current={tab === 'experiences' ? 'page' : undefined}
+            >
+              <Icon name="hiking" size={22} aria-hidden />
+              <span className="activities-hub-tab-label">{t('nav', 'activitiesHubNav')}</span>
+              <span className="activities-hub-tab-count" aria-hidden="true">
+                {counts.tours}
               </span>
             </Link>
           </nav>
@@ -690,7 +690,7 @@ export default function ActivitiesHub() {
       <div className="vd-container activities-hub-body">
         <div className="activities-hub-layout">
             <aside className={`activities-hub-sidebar ${showEventsHubView ? 'activities-hub-sidebar--hub' : ''}`}>
-              <div className={showEventsHubView ? 'event-sidebar-card' : 'activities-hub-sidebar-sticky'}>
+              <div className="activities-hub-sidebar-sticky">
                 {tab === 'experiences' ? (
                   <div className="activities-hub-sidebar-section">
                     <h3 className="activities-hub-sidebar-title">
