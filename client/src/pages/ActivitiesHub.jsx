@@ -894,7 +894,7 @@ export default function ActivitiesHub() {
                 )}
 
                 <p className="activities-hub-results-meta" aria-live="polite">
-                  {t('home', 'activitiesHubResultsOfTotal')
+                  {(t('home', 'activitiesHubResultsOfTotal') || '{shown} of {total} shown')
                     .replace('{shown}', String(filteredTours.length))
                     .replace('{total}', String(tours.length))}
                 </p>
@@ -992,7 +992,7 @@ export default function ActivitiesHub() {
 
                 {!showEventsHubView && (
                   <p className="activities-hub-results-meta" aria-live="polite">
-                    {t('home', 'activitiesHubResultsOfTotal')
+                    {(t('home', 'activitiesHubResultsOfTotal') || '{shown} of {total} shown')
                       .replace('{shown}', String(filteredEvents.length))
                       .replace('{total}', String(events.length))}
                   </p>

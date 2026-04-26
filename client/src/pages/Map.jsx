@@ -2221,14 +2221,14 @@ export default function MapPage() {
                 <div className="map-drawer-title-wrap">
                   <h2 className="map-drawer-title">{t('home', 'mapPageTitle')}</h2>
                   <p className="map-drawer-sub">
-                    {nearbyMode === 'off' && t('home', 'mapNearbyCount').replace('{n}', String(drawerPlaces.length))}
+                    {nearbyMode === 'off' && (t('home', 'mapNearbyCount') || '{n} places').replace('{n}', String(drawerPlaces.length))}
                     {nearbyMode === 'me' && nearbyLocating && t('home', 'mapNearbyGettingLocation')}
                     {nearbyMode === 'me' && !nearbyLocating &&
-                      t('home', 'mapNearbyCount').replace('{n}', String(listForDrawer.length))}
+                      (t('home', 'mapNearbyCount') || '{n} places').replace('{n}', String(listForDrawer.length))}
                     {nearbyMode === 'place' &&
-                      t('home', 'mapNearbyCount').replace('{n}', String(listForDrawer.length))}
+                      (t('home', 'mapNearbyCount') || '{n} places').replace('{n}', String(listForDrawer.length))}
                     {nearbyMode === 'trip' &&
-                      t('home', 'mapNearbyCount').replace('{n}', String(listForDrawer.length))}
+                      (t('home', 'mapNearbyCount') || '{n} places').replace('{n}', String(listForDrawer.length))}
                   </p>
                 </div>
                 <button type="button" className="map-drawer-close" onClick={() => setListOpen(false)} aria-label="Close">
