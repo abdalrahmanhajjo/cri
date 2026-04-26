@@ -3551,12 +3551,12 @@ a.vd-top-picks-card-bg--hit {
   transition: all 0.3s var(--ease-out);
 }
 
-/* App Download Badges in Bento section */
-.vd-bento-web-hub .vd-download-app-badge--apple .icon {
+/* App Download Badges Brand Coloring */
+.vd-download-app-badge--apple .icon {
   color: #111 !important; /* Professional Apple Black */
 }
 
-.vd-bento-web-hub .vd-download-app-badge--google .icon {
+.vd-download-app-badge--google .icon {
   color: #008556 !important; /* Android/Play Green */
 }
 

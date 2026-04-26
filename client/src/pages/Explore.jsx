@@ -1164,7 +1164,7 @@ export default function Explore() {
                         className="vd-download-app-badge vd-download-app-badge--apple"
                         aria-label={t('home', 'getOnAppStore')}
                       >
-                        <Icon name="phone_iphone" size={24} />
+                        <Icon name="phone_iphone" size={20} />
                         <span>{t('home', 'getOnAppStore')}</span>
                       </a>
                       <a
