@@ -3530,25 +3530,58 @@ a.vd-top-picks-card-bg--hit {
 }
 
 .vd-bento-web-hub {
-  overflow: visible;
+  overflow: hidden;
+  position: relative;
+}
+
+.vd-bento-web-hub-blur {
+  position: absolute;
+  top: -10%;
+  right: -10%;
+  width: 120%;
+  height: 120%;
+  background: radial-gradient(
+    circle at 70% 30%, 
+    rgba(15, 118, 110, 0.15) 0%, 
+    rgba(20, 184, 166, 0.1) 40%,
+    transparent 70%
+  );
+  filter: blur(60px);
+  z-index: 1;
+  pointer-events: none;
+  animation: vd-liquid-pulse 8s ease-in-out infinite alternate;
+}
+
+@keyframes vd-liquid-pulse {
+  0% { transform: scale(1) translate(0, 0); opacity: 0.6; }
+  100% { transform: scale(1.1) translate(-5%, 5%); opacity: 0.8; }
 }
 
 .vd-bento-web-hub-inner {
   position: relative;
   flex: 1;
   min-width: 0;
-  min-height: clamp(200px, 24vw, 280px);
+  min-height: clamp(220px, 26vw, 320px);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(10px, 1.6vw, 14px);
-  padding: clamp(20px, 3vw, 28px);
-  border-radius: clamp(22px, 2.5vw, 30px);
-  background: var(--color-surface);
+  gap: clamp(12px, 1.8vw, 16px);
+  padding: clamp(24px, 3.5vw, 32px);
+  border-radius: clamp(24px, 3vw, 32px);
+  /* Liquid Glassmorphism */
+  background: linear-gradient(145deg, 
+    rgba(255, 255, 255, 0.85) 0%, 
+    rgba(240, 249, 248, 0.65) 60%,
+    rgba(224, 242, 241, 0.5) 100%
+  );
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
   color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-card);
-  transition: transform 0.2s var(--ease-out);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 
+    0 8px 32px rgba(15, 118, 110, 0.08),
+    0 1px 2px rgba(255, 255, 255, 0.3) inset;
+  transition: all 0.4s var(--ease-out);
 }
 
 .vd-bento-web-hub-kicker {
@@ -3573,17 +3606,18 @@ a.vd-top-picks-card-bg--hit {
 }
 
 .vd-bento-web-hub-name {
-  margin: 0 0 10px 0;
+  margin: 0 0 12px 0;
   font-family: var(--font-serif);
-  font-size: clamp(18px, 2.2vw, 22px);
-  font-weight: 700;
-  color: var(--color-text-primary);
-  letter-spacing: -0.02em;
-  line-height: 1.22;
+  font-size: clamp(20px, 2.4vw, 26px);
+  font-weight: 800;
+  color: var(--color-primary-dark);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
   max-width: 42ch;
   padding-inline-end: 4px;
   font-optical-sizing: auto;
   text-wrap: balance;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
 }
 
 .vd-bento-web-hub-sub {
@@ -3641,13 +3675,35 @@ a.vd-top-picks-card-bg--hit {
 
 .vd-bento-web-hub-facts li {
   margin: 0;
-  padding-inline-start: 14px;
-  border-inline-start: 2px solid var(--color-border);
+  padding-inline-start: 18px;
+  position: relative;
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--color-text-secondary);
+  transition: transform 0.2s ease;
+}
+
+.vd-bento-web-hub-facts li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.6em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 8px var(--color-primary-light);
+}
+
+.vd-bento-web-hub-facts li:hover {
+  transform: translateX(4px);
+  color: var(--color-text-primary);
+}
+
+[dir='rtl'] .vd-bento-web-hub-facts li:hover {
+  transform: translateX(-4px);
 }
 
 .vd-bento-web-hub-footnote {
@@ -3671,20 +3727,22 @@ a.vd-bento-web-hub-cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  margin-top: 4px;
-  padding: 12px 20px;
-  border-radius: 999px;
-  background: var(--color-primary);
+  margin-top: 8px;
+  padding: 14px 24px;
+  border-radius: 16px;
+  background: var(--color-primary-dark);
   color: #fff;
   font-family: var(--font-sans);
   font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  transition: transform 0.15s var(--ease-out);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 
+    0 4px 12px rgba(15, 118, 110, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  border: none;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .vd-bento-web-hub-cta .vd-bento-web-hub-cta-label {

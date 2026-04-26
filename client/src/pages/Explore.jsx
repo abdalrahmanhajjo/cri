@@ -101,6 +101,18 @@ function formatDirectoryCount(n, lang) {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(safe);
 }
 
+/** Simple utility to render **text** as <strong>. */
+function renderTextWithBold(text) {
+  if (!text) return null;
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
 function tripoliWeatherApiUrl() {
   const base = getApiOrigin();
   const path = '/api/public/weather/tripoli';
@@ -1062,6 +1074,7 @@ export default function Explore() {
             </div>
 
             <div className="vd-bento-card vd-bento-hero-side vd-bento-web-hub">
+              <div className="vd-bento-web-hub-blur" aria-hidden="true" />
               <div className="vd-bento-web-hub-inner">
                 <p className="vd-bento-web-hub-kicker">{t('home', 'useWebCta')}</p>
                 <div className="vd-bento-web-hub-header">
@@ -1071,9 +1084,9 @@ export default function Explore() {
                   </div>
                 </div>
                 <ul className="vd-bento-web-hub-facts">
-                  <li>{t('home', 'bentoWebHubFact1')}</li>
-                  <li>{t('home', 'bentoWebHubFact2')}</li>
-                  <li>{t('home', 'bentoWebHubFact3')}</li>
+                  <li>{renderTextWithBold(t('home', 'bentoWebHubFact1'))}</li>
+                  <li>{renderTextWithBold(t('home', 'bentoWebHubFact2'))}</li>
+                  <li>{renderTextWithBold(t('home', 'bentoWebHubFact3'))}</li>
                 </ul>
                 <p className="vd-bento-web-hub-footnote">{t('home', 'bentoWebHubFootnote')}</p>
                 <Link to="/plan" className="vd-bento-web-hub-cta">
