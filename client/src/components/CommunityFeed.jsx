@@ -197,7 +197,7 @@ function MobileStoryCard({ post, t }) {
           background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
           border: '1px solid rgba(255,255,255,0.2)', borderRadius: '99px',
           padding: '4px 11px', color: '#fff', fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em',
-        }}>▶ Reel</div>
+        }}>▶ {t('home', 'communityReel')}</div>
       )}
 
       {/* Bottom content */}
@@ -292,7 +292,7 @@ export function CommunityFeedStrip({ posts, t, moreTo, layout = 'scroll' }) {
                 background: '#0d9488', flexShrink: 0,
                 boxShadow: '0 0 0 3px rgba(13,148,136,0.2)',
               }} />
-              Live
+              {t('home', 'communityFeedLiveEyebrow')}
             </div>
             <h2 style={{
               margin: 0, fontFamily: 'var(--font-serif, Georgia, serif)',
@@ -311,7 +311,7 @@ export function CommunityFeedStrip({ posts, t, moreTo, layout = 'scroll' }) {
               background: 'rgba(13,92,84,0.07)', border: '1.5px solid rgba(13,92,84,0.18)',
               color: '#0d5c54', fontSize: '12px', fontWeight: 700, textDecoration: 'none',
             }}>
-              See all →
+              {t('home', 'seeAll')} →
             </Link>
           )}
         </div>

@@ -356,9 +356,9 @@ button.nav-icon {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 4px 8px;
+  padding: 6px 12px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--color-text-primary);
   text-decoration: none;
@@ -1320,7 +1320,7 @@ button.nav-icon {
 
   .nav--vd .nav-link {
     padding: 8px 12px;
-    font-size: 14.5px;
+    font-size: 15px;
   }
 
   .nav--vd.nav--main {
@@ -1357,7 +1357,7 @@ button.nav-icon {
 
   .nav--vd .nav-link {
     padding: 8px 14px;
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .nav--vd.nav--main {

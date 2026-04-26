@@ -7,7 +7,7 @@ import Icon from './Icon';
 function FullImageCard({ item, type, t }) {
   const imgSrc = item.image ? getPlaceImageUrl(item.image) : null;
   const isFree = !item.price || Number(item.price) === 0;
-  const priceLabel = item.priceDisplay || (isFree ? 'Free' : `$${item.price}`);
+  const priceLabel = item.priceDisplay || (isFree ? t('home', 'free') : `$${item.price}`);
   
   // Date formatting for events
   const dateObj = item.startDate ? new Date(item.startDate) : null;
@@ -56,7 +56,7 @@ function FullImageCard({ item, type, t }) {
           color: '#fff', fontSize: '9px', fontWeight: 800,
           padding: '5px 12px', borderRadius: '20px', letterSpacing: '0.12em', textTransform: 'uppercase'
         }}>
-          {item.category || (type === 'event' ? 'Event' : 'Tour')}
+          {item.category || (type === 'event' ? t('home', 'events') : t('home', 'tours'))}
         </span>
         <span style={{
           background: '#fff', color: '#000',
@@ -130,7 +130,7 @@ function FullImageCard({ item, type, t }) {
              border: '1px solid rgba(255,255,255,0.2)',
              transition: 'background 0.2s',
            }}>
-             {type === 'event' ? 'Event Details' : 'Tour Details'}
+             {type === 'event' ? t('home', 'eventDetails') : t('home', 'tourDetails')}
              <Icon name="arrow_forward" size={15} />
            </span>
         </div>
@@ -187,14 +187,14 @@ export default function EventsAndToursSection({ events = [], tours = [], t }) {
                 fontSize: '10px', fontWeight: 800, color: 'var(--color-primary)', 
                 letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px'
               }}>
-                This Week in Tripoli
+                {t('home', 'thisWeek')}
               </div>
               <h2 style={{ 
                 margin: 0, fontFamily: 'var(--font-serif, Georgia, serif)',
                 fontSize: 'clamp(28px, 5vw, 38px)', fontWeight: 800, color: 'var(--color-text-primary)',
                 letterSpacing: '-0.02em', lineHeight: 1.1
               }}>
-                {activeTab === 'events' ? (t ? t('nav', 'eventsFestivals') : 'Events & Festivals') : (t ? t('nav', 'activitiesExperiences') : 'Exclusive Tours')}
+                {activeTab === 'events' ? (t ? t('nav', 'eventsFestivals') : t('home', 'events')) : (t ? t('nav', 'activitiesExperiences') : t('home', 'exclusiveTours'))}
               </h2>
             </div>
 
@@ -214,7 +214,7 @@ export default function EventsAndToursSection({ events = [], tours = [], t }) {
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-primary-light)'; e.currentTarget.style.color = 'var(--color-primary)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-surface-variant)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
             >
-              {isMobile ? 'All' : 'See all'}
+              {isMobile ? t('home', 'all') : t('home', 'seeAll')}
               <Icon name="arrow_forward" size={14} />
             </Link>
           </div>
@@ -227,8 +227,8 @@ export default function EventsAndToursSection({ events = [], tours = [], t }) {
               width: 'fit-content'
             }}>
               {[
-                { key: 'events', label: 'Events', icon: 'calendar_month' },
-                { key: 'tours', label: 'Tours', icon: 'explore' }
+                { key: 'events', label: t('home', 'events'), icon: 'calendar_month' },
+                { key: 'tours', label: t('home', 'tours'), icon: 'explore' }
               ].map(tgl => (
                 <button 
                   key={tgl.key}
@@ -289,7 +289,7 @@ export default function EventsAndToursSection({ events = [], tours = [], t }) {
             <Icon name="arrow_forward" size={20} />
           </div>
           <span style={{ fontWeight: 800, fontSize: '11px', letterSpacing: '0.04em', textAlign: 'center', padding: '0 8px', textTransform: 'uppercase' }}>
-            {activeTab === 'events' ? 'All Events' : 'All Tours'}
+            {activeTab === 'events' ? t('home', 'allEvents') : t('home', 'allTours')}
           </span>
         </Link>
       </div>

@@ -141,9 +141,8 @@ export default function Layout() {
                 <Link to="/login" className="nav-icon nav-icon--profile" onClick={closeMenu} aria-label={t('nav', 'signIn')}><Icon name="person" size={22} /></Link>
               )}
             </div>
+            <div style={{ flex: 1 }} aria-hidden="true" />
             
-
-
             <nav className={`nav nav--vd nav--main ${menuOpen ? 'nav-open' : ''}`}>
               <Link to="/" className={`nav-link nav-link--home ${isHome ? 'nav-link--active' : ''}`} onClick={closeMenu}>{t('nav', 'home')}</Link>
               <Link
