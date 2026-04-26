@@ -50,95 +50,52 @@ function FullImageCard({ item, type }) {
   return (
     <Link 
       to={`/${type === 'event' ? 'event' : 'tour'}/${item.id}`}
-      className="activities-hub-card-link"
-      style={{
-        display: 'block', textDecoration: 'none', width: '100%',
-        height: '420px', position: 'relative',
-        borderRadius: '24px', overflow: 'hidden',
-        background: '#f1f5f9',
-        boxShadow: 'var(--shadow-card)',
-        transition: 'transform 0.4s cubic-bezier(0.2, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.2, 1, 0.3, 1)',
-      }}
+      className={`activities-hub-card activities-hub-card--${type}`}
     >
-      {/* Media Background */}
-      <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+      <div className="activities-hub-card-media">
         {imgSrc ? (
-          <img src={imgSrc} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={imgSrc} alt="" className="activities-hub-card-img" loading="lazy" />
         ) : (
-          <div style={{ 
-            width: '100%', height: '100%', 
-            background: type === 'event' ? 'linear-gradient(135deg, #0d9488, #115e59)' : 'linear-gradient(135deg, #0ea5e9, #0369a1)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
+          <div className="activities-hub-card-fallback">
             <Icon name={type === 'event' ? 'calendar' : 'compass'} size={64} style={{ color: 'rgba(255,255,255,0.15)' }} />
           </div>
         )}
-        {/* Bottom-heavy gradient for readability */}
-        <div style={{ 
-          position: 'absolute', inset: 0, 
-          background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 45%, transparent 80%)' 
-        }} />
+        <div className="activities-hub-card-scrim" />
       </div>
 
-      {/* Floating Badges */}
-      <div style={{ position: 'relative', zIndex: 2, padding: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <span style={{
-          background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255,255,255,0.3)',
-          color: '#fff', fontSize: '9px', fontWeight: 800,
-          padding: '5px 12px', borderRadius: '20px', letterSpacing: '0.12em', textTransform: 'uppercase'
-        }}>
+      <div className="activities-hub-card-badge-row">
+        <span className="activities-hub-card-category">
           {item.category || (type === 'event' ? 'Event' : 'Tour')}
         </span>
-        <span style={{
-          background: '#fff', color: '#000',
-          fontSize: '11px', fontWeight: 900,
-          padding: '5px 14px', borderRadius: '20px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-        }}>
+        <span className="activities-hub-card-price">
           {priceLabel}
         </span>
       </div>
 
-      {/* Floating Date (for Events) */}
       {type === 'event' && dayNum && (
-        <div style={{
-          position: 'absolute', top: '65px', left: '18px', zIndex: 2,
-          background: '#fff', borderRadius: '14px', padding: '10px 14px',
-          textAlign: 'center', boxShadow: 'var(--shadow-card)',
-          minWidth: '58px'
-        }}>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-primary)', letterSpacing: '0.05em', marginBottom: '2px' }}>{monthStr}</div>
-          <div style={{ fontSize: '26px', fontWeight: 900, color: '#000', lineHeight: 1 }}>{dayNum}</div>
+        <div className="activities-hub-card-date">
+          <div className="activities-hub-card-month">{monthStr}</div>
+          <div className="activities-hub-card-day">{dayNum}</div>
         </div>
       )}
 
-      {/* Bottom Content Area */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2,
-        padding: '24px 20px',
-        display: 'flex', flexDirection: 'column', gap: '14px'
-      }}>
+      <div className="activities-hub-card-content">
         <div>
-          <h3 style={{
-            margin: '0 0 8px', fontSize: '19px', fontWeight: 800, color: '#fff',
-            lineHeight: 1.2, letterSpacing: '-0.01em',
-            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-          }}>
+          <h3 className="activities-hub-card-title">
             {translateDynamicField(item, 'name', lang)}
           </h3>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+          <div className="activities-hub-card-meta">
             {type === 'event' ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>
-                  <Icon name="map-pin" size={14} style={{ color: '#fff' }} />
+                <div className="activities-hub-card-meta-item">
+                  <Icon name="map-pin" size={14} />
                   <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {translateDynamicField(item, 'location', lang) || 'Tripoli'}
                   </span>
                 </div>
                 {weekday && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.85)' }}>
+                  <div className="activities-hub-card-meta-item">
                     <Icon name="clock" size={14} />
                     <span>{weekday}</span>
                   </div>
@@ -146,7 +103,7 @@ function FullImageCard({ item, type }) {
               </>
             ) : (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.85)' }}>
+                <div className="activities-hub-card-meta-item">
                   <Icon name="clock" size={14} />
                   <span>{item.duration || 'Full day'}</span>
                 </div>
@@ -155,17 +112,9 @@ function FullImageCard({ item, type }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-           <span style={{ 
-             background: 'rgba(255,255,255,0.18)', color: '#fff',
-             fontSize: '12px', fontWeight: 800, padding: '10px 18px', borderRadius: '12px',
-             display: 'flex', alignItems: 'center', gap: '8px',
-             backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-             border: '1px solid rgba(255,255,255,0.2)',
-           }}>
-             {type === 'event' ? t('home', 'eventDetails') : t('home', 'tourDetails')}
-             <Icon name="arrow_forward" size={15} />
-           </span>
+        <div className="activities-hub-card-btn">
+           {type === 'event' ? t('home', 'eventDetails') : t('home', 'tourDetails')}
+           <Icon name="arrow_forward" size={15} />
         </div>
       </div>
     </Link>
@@ -189,8 +138,8 @@ function MobileDateStrip({ selectedDate, onChange, events = [], eventDays = new 
 
   return (
     <div className="activities-hub-mobile-datestrip" style={{
-      display: 'flex', gap: '10px', overflowX: 'auto', padding: '12px 4px 20px',
-      margin: '0 -20px', paddingLeft: '20px', paddingRight: '20px',
+      display: 'flex', gap: '10px', overflowX: 'auto', padding: '12px 0 20px',
+      margin: '0', 
       scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch'
     }}>
       <button
@@ -266,7 +215,8 @@ function DatePickerFilter({ selectedDate, onChange, label, isMobile }) {
     return () => document.removeEventListener('mousedown', clickOutside);
   }, [open]);
 
-  if (isMobile) return null; // Mobile uses DateStrip
+  // On mobile, we still allow it so users can pick any date via the calendar
+  // if (isMobile) return null; 
 
   const display = selectedDate 
     ? new Date(selectedDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -274,6 +224,12 @@ function DatePickerFilter({ selectedDate, onChange, label, isMobile }) {
 
   return (
     <div className="date-picker-wrapper" ref={dropdownRef} style={{ position: 'relative' }}>
+      {isMobile && open && (
+        <div 
+          onClick={() => setOpen(false)}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999 }} 
+        />
+      )}
       <button 
         type="button"
         className={`activities-hub-select ${selectedDate ? 'activities-hub-select--active' : ''}`}
@@ -302,11 +258,24 @@ function DatePickerFilter({ selectedDate, onChange, label, isMobile }) {
       </button>
 
       {open && (
-        <div style={{ 
+        <div style={isMobile ? {
+          position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+          zIndex: 1000, width: '90%', maxWidth: '340px',
+          background: '#fff', borderRadius: '28px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          padding: '16px', border: '1px solid rgba(0,0,0,0.1)'
+        } : { 
           position: 'absolute', top: '100%', right: 0, zIndex: 100, marginTop: '12px',
           background: '#fff', borderRadius: '24px', boxShadow: '0 15px 45px rgba(0,0,0,0.22)',
           padding: '8px', border: '1px solid rgba(0,0,0,0.06)'
         }}>
+          {isMobile && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', padding: '0 8px' }}>
+              <span style={{ fontWeight: 800, fontSize: '16px' }}>{label}</span>
+              <button onClick={() => setOpen(false)} style={{ border: 'none', background: 'none', padding: '4px' }}>
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+          )}
           <DateRangeCalendar 
             startDate={selectedDate}
             endDate={selectedDate}
@@ -897,28 +866,30 @@ export default function ActivitiesHub() {
                         <option value="default">{t('home', 'activitiesHubSortToursDefault')}</option>
                         <option value="name">{t('home', 'activitiesHubSortName')}</option>
                         {anyTourHasDurationHours && (
-                          <>
-                            <option value="durationAsc">{t('home', 'activitiesHubSortDurationAsc')}</option>
-                            <option value="durationDesc">{t('home', 'activitiesHubSortDurationDesc')}</option>
-                          </>
+                          <option value="durationAsc">{t('home', 'activitiesHubSortDurationAsc')}</option>
                         )}
+                        <option value="durationDesc">{t('home', 'activitiesHubSortDurationDesc') || 'Duration (Longest)'}</option>
                         <option value="priceAsc">{t('home', 'activitiesHubSortPriceAsc')}</option>
                         <option value="ratingDesc">{t('home', 'activitiesHubSortRating')}</option>
                       </select>
                       
                       {isMobile && (
-                        <DatePickerFilter 
-                          selectedDate={expDate} 
-                          onChange={setExpDate} 
-                          label={t('home', 'filterByDate') || 'Pick Date'} 
-                          isMobile={isMobile}
-                        />
+                        <select
+                          className="activities-hub-select"
+                          value={expCategory}
+                          onChange={(e) => setExpCategory(e.target.value)}
+                        >
+                          <option value="">{t('home', 'activitiesHubCategoryAll')}</option>
+                          {experienceCategories.map((cat) => (
+                            <option key={cat.id} value={cat.slug}>{cat.name}</option>
+                          ))}
+                        </select>
                       )}
                     </div>
                   </div>
                 </header>
 
-                {isMobile && tab === 'events' && (
+                {isMobile && (
                   <MobileDateStrip selectedDate={expDate} onChange={setExpDate} events={tours} eventDays={eventDays} />
                 )}
 
@@ -979,12 +950,16 @@ export default function ActivitiesHub() {
                         </select>
 
                         {isMobile && (
-                          <DatePickerFilter 
-                            selectedDate={evtDate} 
-                            onChange={setEvtDate} 
-                            label={t('home', 'filterByDate') || 'Pick Date'} 
-                            isMobile={isMobile}
-                          />
+                          <select
+                            className="activities-hub-select"
+                            value={evtCategory}
+                            onChange={(e) => setEvtCategory(e.target.value)}
+                          >
+                            <option value="">{t('home', 'activitiesHubCategoryAll')}</option>
+                            {categoryOptions.map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
                         )}
                       </div>
                     </div>

@@ -74,6 +74,18 @@ function EventFormModal({ event, onClose, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErr(null);
+
+    // Validation: Start date cannot be in the past for new events
+    if (!event && form.startDate) {
+      const selectedDate = new Date(form.startDate);
+      const now = new Date();
+      // Allow a small buffer (e.g. 5 minutes) for the user to submit
+      if (selectedDate.getTime() < now.getTime() - 300000) {
+        setErr('Cannot create an event with a past start date.');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const customId = (form.id || '').trim();

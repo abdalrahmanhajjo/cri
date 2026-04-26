@@ -2266,16 +2266,37 @@
 @media (min-width: 640px) {
   .event-venue-card {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: center;
+    gap: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .event-venue-card {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 32px;
+    align-items: center;
+    padding: 32px;
   }
 }
 
 .event-venue-gallery {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  flex: 0 0 auto;
+  gap: 8px;
+  flex: 0 1 auto;
   max-width: 100%;
+  justify-content: flex-end;
+}
+
+@media (min-width: 1024px) {
+  .event-venue-gallery {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    justify-content: stretch;
+  }
 }
 
 .event-venue-gallery-item {
@@ -2283,7 +2304,16 @@
   height: 96px;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+@media (min-width: 1024px) {
+  .event-venue-gallery-item {
+    width: 100%;
+    aspect-ratio: 1;
+    height: auto;
+  }
 }
 
 .event-venue-gallery-img {
@@ -2299,10 +2329,13 @@
 }
 
 .event-venue-name {
+  display: block;
   font-weight: 800;
-  font-size: 1.1rem;
-  color: var(--color-primary);
+  font-size: 1.5rem;
+  color: var(--color-text-primary);
   text-decoration: none;
+  margin-bottom: 8px;
+  line-height: 1.2;
 }
 
 .event-venue-name:hover {
@@ -2316,7 +2349,29 @@
 }
 
 .event-venue-actions {
-  margin-top: 10px;
+  margin-top: 20px;
+}
+
+.event-venue-actions .detail-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--color-primary-light, rgba(15, 118, 110, 0.08));
+  color: var(--color-primary);
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  border: 1px solid transparent;
+}
+
+.event-venue-actions .detail-text-link:hover {
+  background: var(--color-primary);
+  color: #fff;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2);
 }
 
 .detail-plan-hint {
@@ -2653,11 +2708,11 @@
 }
 
 .place-detail--experience .event-venue-card {
-  border-radius: 18px;
-  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   background: var(--color-surface);
-  padding: clamp(16px, 3vw, 22px);
+  padding: clamp(20px, 4vw, 32px);
 }
 
 .place-detail--experience .event-venue-gallery-item {

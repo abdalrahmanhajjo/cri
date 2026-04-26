@@ -413,7 +413,7 @@ function TopPicksCarousel({ places, t, moreTo }) {
                         fetchPriority={slideIndex === 0 ? 'high' : undefined}
                       />
                     ) : (
-                      <span className="vd-top-picks-fallback">Place</span>
+                      <span className="vd-top-picks-fallback">{t('home', 'place')}</span>
                     )}
                   </Link>
                   <div className="vd-top-picks-card-body">
@@ -644,7 +644,7 @@ function FindYourWayPracticalSection({ t, places = [], showMap = true, showTips:
       <div className="vd-container">
         <header className="vd-find-your-way-header vd-find-your-way-header--practical">
           <h2 id="find-your-way-practical-title" className="vd-find-your-way-title">
-            Find your way — navigation & maps
+            {safeT('home', 'findYourWayPracticalTitle')}
           </h2>
           <p className="vd-find-your-way-sub">{safeT('home', 'findYourWayPracticalSub')}</p>
         </header>
