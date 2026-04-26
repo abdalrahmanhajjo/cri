@@ -2283,13 +2283,14 @@ export default function MapPage() {
                       : t('home', 'mapDrawerEmptyNoLocations')}
               </p>
             ) : (
-              <MapDrawerSwipeDeck
-                places={listForDrawer}
-                index={swipeDeckIndex}
-                setIndex={setSwipeDeckIndex}
-                apiKey={apiKey}
-                t={t}
-                nearbyMode={nearbyMode}
+                <MapDrawerSwipeDeck
+                  places={listForDrawer}
+                  index={swipeDeckIndex}
+                  setIndex={setSwipeDeckIndex}
+                  apiKey={apiKey}
+                  t={t}
+                  lang={lang}
+                  nearbyMode={nearbyMode}
                 onPlaceSelect={addingTripStop ? handlePlaceSelect : undefined}
                 onDirections={handleDirections}
               />
@@ -2305,7 +2306,7 @@ export default function MapPage() {
 
 const MAP_DRAWER_SWIPE_THRESHOLD_PX = 56;
 
-function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode, onPlaceSelect, onDirections }) {
+function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, lang, nearbyMode, onPlaceSelect, onDirections }) {
   const [dragPx, setDragPx] = useState(0);
   const dragStartXRef = useRef(null);
   const capturingRef = useRef(false);
@@ -2517,7 +2518,7 @@ function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode, on
         </button>
       </div>
       <p className="map-drawer-swipe-counter" aria-live="polite">
-        {t('home', 'mapSwipeCounter')
+        {(t('home', 'mapSwipeCounter') || '{current} of {total}')
           .replace('{current}', String(index + 1))
           .replace('{total}', String(places.length))}
       </p>
@@ -2527,7 +2528,7 @@ function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode, on
 
 function buildInfoContent(p, apiKey = '', strings = {}, isDark = false) {
   const s = {
-    viewDetails: strings.viewDetails ?? `${t('home', 'viewDetails')} ${lang === 'ar' ? '←' : '→'}`,
+    viewDetails: strings.viewDetails ?? 'View Details →',
     directions: strings.directions ?? 'Directions →',
   };
   const placeId = p.id;
