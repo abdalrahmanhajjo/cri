@@ -4,8 +4,8 @@
 
 export const languages = [
   { code: 'en', label: 'English', dir: 'ltr' },
-  { code: 'ar', label: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', dir: 'rtl' },
-  { code: 'fr', label: 'Fran\u00e7ais', dir: 'ltr' },
+  { code: 'ar', label: 'العربية', dir: 'rtl' },
+  { code: 'fr', label: 'Français', dir: 'ltr' },
 ];
 
 export const translations = {
@@ -38,6 +38,10 @@ export const translations = {
       languageSelect: 'Language',
       globalSearchNoResults: 'No matching places. Try another word or see all results.',
       globalSearchSeeAll: 'See all results',
+      maintenanceMode: 'We’re updating Tripoli Explorer. Some features may be limited.',
+      learnMore: 'Learn more',
+      welcomeBanner: 'Welcome to {siteName}, {name}! Your account is verified.',
+      welcomeBannerEmail: ' — we also sent a short welcome message to your inbox.',
       visitTripoli: 'Visit Tripoli',
       navBrandTagline: 'Best spots · experiences · plans',
       tripoliLebanon: 'Tripoli, Lebanon',
@@ -703,6 +707,9 @@ export const translations = {
     },
     home: {
       heroTitle: 'Explore Tripoli',
+      eventDetails: 'Event Details',
+      tourDetails: 'Tour Details',
+      place: 'Place',
       heroTagline:
         "Discover Tripoli's best spots, local experiences, and ready-made plans — all in one place.",
       discoverMore: 'See more',
@@ -1806,6 +1813,10 @@ export const translations = {
       search: 'بحث',
       globalSearchNoResults: 'لا توجد أماكن مطابقة. جرّب كلمة أخرى أو اعرض كل النتائج.',
       globalSearchSeeAll: 'عرض كل النتائج',
+      maintenanceMode: 'نحن نقوم بتحديث طرابلس إكسبلورر. قد تكون بعض الميزات محدودة.',
+      learnMore: 'لمعرفة المزيد',
+      welcomeBanner: 'مرحبًا بك في {siteName}، {name}! تم التحقق من حسابك.',
+      welcomeBannerEmail: ' — أرسلنا أيضًا رسالة ترحيب قصيرة إلى بريدك الوارد.',
       visitTripoli: 'زيارة طرابلس',
       navBrandTagline: 'أفضل الأماكن · التجارب · الخطط',
       tripoliLebanon: 'طرابلس، لبنان',
@@ -1867,13 +1878,13 @@ export const translations = {
       megaNeighbourhoodsDesc: 'استكشف أحياء ومناطق المدينة.',
     },
     authPage: {
-      loginHeroTitle: '\u062e\u0637\u0637\u0643 \u0644\u0632\u064a\u0627\u0631\u0629 \u0637\u0631\u0627\u0628\u0644\u0633 \u0645\u062d\u0641\u0648\u0638\u0629',
+      loginHeroTitle: 'خططك لزيارة طرابلس محفوظة',
       loginHeroSub:
-        '\u0627\u062d\u0641\u0638 \u0627\u0644\u0645\u0643\u0627\u0646 \u0648\u0627\u0628\u0646\u064e \u0627\u0644\u0631\u062d\u0644\u0627\u062a \u0648\u062a\u0627\u0628\u0639 \u0639\u0644\u0649 \u0627\u0644\u0648\u064a\u0628 \u0623\u0648 \u0627\u0644\u062a\u0637\u0628\u064a\u0642. \u062a\u0633\u062c\u064a\u0644 \u0622\u0645\u0646\u060c \u0648\u0644\u0646 \u0646\u0646\u0634\u0631 \u0646\u064a\u0627\u0628\u0629.',
-      loginDividerOr: '\u0623\u0648',
-      emailPasswordSection: '\u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631',
-      googleLoading: '\u062c\u0627\u0631\u064d \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0628\u0640Google\u2026',
-      googleUnavailable: '\u062a\u0633\u062c\u064a\u0644 Google \u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631.',
+        'احفظ المكان وابنَ الرحلات وتابع على الويب أو التطبيق. تسجيل آمن، ولن ننشر نيابة.',
+      loginDividerOr: 'أو',
+      emailPasswordSection: 'البريد وكلمة المرور',
+      googleLoading: 'جارٍ الاتصال بـGoogle…',
+      googleUnavailable: 'تسجيل Google غير متوفر.',
     },
     aboutTripoli: {
       title: 'طرابلس، لبنان',
@@ -1916,7 +1927,7 @@ export const translations = {
       sec_overview_h: 'نظرة عامة',
       sec_names_h: 'الأسماء والاشتقاق',
       sec_names_p:
-        'وردت في المصادر القديمة أسماء مثل «أثار» في العصر الفينيقي Ùˆ«تريبوليس» في اليونانية للدلالة على اتحاد أحياء مينائية. العربية «طَرَابُلُس» Ùˆ«طَرَابُلُس الشاÙ…» تميز المدينة اللبنانية عن نظيرتها في المغرب العربي.\n\nلقب «الفيحاء» يستحضر عبق أزهار الحمضيات حين كانت البساتين تحيط بالمدينة.',
+        'وردت في المصادر القديمة أسماء مثل «أثار» في العصر الفينيقي و«تريبوليس» في اليونانية للدلالة على اتحاد أحياء مينائية. العربية «طَرَابُلُس» و«طَرَابُلُس الشام» تميز المدينة اللبنانية عن نظيرتها في المغرب العربي.\n\nلقب «الفيحاء» يستحضر عبق أزهار الحمضيات حين كانت البساتين تحيط بالمدينة.',
       sec_history_h: 'التاريخ',
       sec_history_sub: 'وسّع أي فترة لقراءة موجزة.',
       hist_ancient_sum: 'العصور القديمة',
@@ -2027,22 +2038,22 @@ export const translations = {
       aiTripSaved: 'تم حفظ الرحلة. جارٍ فتح المخطط…',
       registerCheckEmail: 'تم إنشاء الحساب. تحقّق من بريدك للتفعيل.',
       loginFailed: 'فشل تسجيل الدخول. تحقّق من البيانات.',
-      googleSignInFailed: '\u0641\u0634\u0644 \u062a\u0633\u062c\u064a\u0644 Google. \u062d\u0627\u0648\u0644 \u0645\u0631\u0629.',
+      googleSignInFailed: 'فشل تسجيل Google. حاول مرة.',
       googleAccountMismatch:
-        '\u0647\u0630\u0627 \u0627\u0644\u0628\u0631\u064a\u062f \u0645\u0631\u062a\u0628\u0637 \u0628\u062d\u0633\u0627\u0628 Google \u0622\u062e\u0631. \u0633\u062c\u0644 \u062f\u062e\u0648\u0644 \u0628\u0630\u0644\u0643 \u0627\u0644\u062d\u0633\u0627\u0628 \u0623\u0648 \u0628\u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631.',
+        'هذا البريد مرتبط بحساب Google آخر. سجل دخول بذلك الحساب أو بالبريد وكلمة المرور.',
       googleUsePassword:
-        '\u0647\u0630\u0627 \u0627\u0644\u0628\u0631\u064a\u062f \u0645\u0633\u062c\u0644 \u0628\u062d\u0633\u0627\u0628 \u0648\u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631. \u0633\u062c\u0644 \u062f\u062e\u0648\u0644\u0643 \u0628\u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631.',
+        'هذا البريد مسجل بحساب وكلمة مرور. سجل دخولك بالبريد وكلمة المرور.',
       googleNotConfigured:
-        '\u062a\u0633\u062c\u064a\u0644 Google \u063a\u064a\u0631 \u0645\u0641\u0639\u0644 \u0639\u0644\u0649 \u0627\u0644\u062e\u0627\u062f\u0645. \u0623\u0636\u0641 GOOGLE_CLIENT_ID.',
-      googleUnavailable: '\u062a\u0633\u062c\u064a\u0644 Google \u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631.',
+        'تسجيل Google غير مفعل على الخادم. أضف GOOGLE_CLIENT_ID.',
+      googleUnavailable: 'تسجيل Google غير متوفر.',
       googleUnavailableHint:
-        '\u0644\u0644\u0645\u0634\u0631\u0641: \u0625\u0639\u062f\u0627\u062f\u0627\u062a \u0627\u0644\u0645\u0648\u0642\u0639 \u2192 \u0627\u0644\u0645\u064a\u0632\u0627\u062a \u2192 \u0627\u0644\u0635\u0642 \u0645\u0639\u0631\u0641 \u0639\u0645\u064a\u0644 OAuth \u0644\u0644\u0648\u064a\u0628 \u0645\u0646 Google \u0648\u0627\u062d\u0641\u0638.',
+        'للمشرف: إعدادات الموقع → الميزات → الصق معرف عميل OAuth للويب من Google واحفظ.',
       googleGsiInitFailed:
-        '\u062a\u0639\u0630\u0631 \u062a\u0634\u063a\u064a\u0644 Google. \u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u0645\u0639\u0631\u0641 \u0648\u0623\u0636\u0641 \u0627\u0644\u0645\u0648\u0642\u0639 \u062a\u062d\u062a JavaScript \u0645\u0635\u0631\u062d \u0645\u0646 Google.',
+        'تعذر تشغيل Google. تحقق من المعرف وأضف الموقع تحت JavaScript مصرح من Google.',
       googleGsiScriptBlocked:
-        '\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0633\u0643\u0631\u064a\u0628\u062a Google (\u062d\u0627\u062c\u0628 \u0623\u0648 \u0634\u0628\u0643\u0629). \u062c\u0631\u0628 \u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631.',
+        'تعذر تحميل سكريبت Google (حاجب أو شبكة). جرب البريد وكلمة المرور.',
       googleButtonDidNotRender:
-        '\u0644\u0645 \u064a\u0638\u0647\u0631 \u0632\u0631 Google. \u062c\u0631\u0628 \u062a\u0639\u0637\u064a\u0644 \u0627\u0644\u062d\u0627\u062c\u0628\u0627\u062a \u0623\u0648 \u0627\u0644\u0628\u0631\u064a\u062f.',
+        'لم يظهر زر Google. جرب تعطيل الحاجبات أو البريد.',
       actionFailed: 'حدث خطأ. حاول مرة أخرى.',
       resetCodeSent: 'إذا كان البريد مسجّلًا، ستصلك رسالة برمز الاستعادة قريبًا.',
       resetPasswordDone: 'تم تحديث كلمة المرور. يمكنك تسجيل الدخول الآن.',
@@ -2101,10 +2112,10 @@ export const translations = {
       tripBriefTitle: 'ملخص الرحلة',
       tripBriefHint: 'هذه الإعدادات تشكل الاقتراح الأولي قبل إرسال رسالتك.',
       plannerFlowAria: 'خطوات المخطط',
-      plannerFlow1: '1. \u0627\u0644\u0628\u062f\u0621',
-      plannerFlow2: '2. \u0636\u0628\u0637 \u0627\u0644\u0631\u062d\u0644\u0629',
-      plannerFlow3: '3. \u0627\u0644\u0648\u0635\u0641',
-      plannerFlow4: '4. \u0627\u0644\u0645\u0631\u0627\u062c\u0639\u0629',
+      plannerFlow1: '1. البدء',
+      plannerFlow2: '2. ضبط الرحلة',
+      plannerFlow3: '3. الوصف',
+      plannerFlow4: '4. المراجعة',
       sectionStepLabel: 'الخطوة {n}',
       briefComposerTitle: 'وصفك',
       briefComposerSub: 'اكتب جملة واحدة واضحة عن نوع الرحلة التي تريدها.',
@@ -2141,19 +2152,19 @@ export const translations = {
       chatLoadingPlaces: 'جاري تحميل الأماكن للمخطط…',
       chatEmptyTitle: 'خطتك تبدأ برسالة واحدة',
       chatEmptyHint:
-        'اضغط مزاجًا أعلاه أو اكتب ما تريد. عند ظهور الخطة يمكنك تعديل الأوقات أو تغيير محطة أو الحÙ ظ Ù ي رحلاتك.',
+        'اضغط مزاجًا أعلاه أو اكتب ما تريد. عند ظهور الخطة يمكنك تعديل الأوقات أو تغيير محطة أو الحف ظ ف ي رحلاتك.',
       chatEmptyTip:
         'البداية الجيدة تذكر غالباً لمن الرحلة، والطابع المرغوب، ومدى المشي، وأي أشياء تريد تجنبها.',
-      eventsFestivals: 'اÙ„Ù عاليات والمهرجانات',
-      eventsSub: 'ما الذي يحدث Ù ي طرابلس',
+      eventsFestivals: 'الف عاليات والمهرجانات',
+      eventsSub: 'ما الذي يحدث ف ي طرابلس',
       filterByDate: 'اختر التاريخ',
       planTitle: 'خطط لزيارتك',
-      composerGuide: 'أÙ ضل رسالة أولى',
+      composerGuide: 'أف ضل رسالة أولى',
       composerTip:
-        'اذكر الطابع الذي تريده، من سيكون معك، ومدى النشاط المناسب، وأي أماكن لا تريد Ù وتها أو مكانات تتجنبها.',
+        'اذكر الطابع الذي تريده، من سيكون معك، ومدى النشاط المناسب، وأي أماكن لا تريد ف وتها أو مكانات تتجنبها.',
       proposedPlan: 'برنامج مقترح',
       planUpdatedToast:
-        'تم تحديث البرنامج — راجع الملخص، ثم احÙ ظ Ù ي رحلاتك عندما يناسبك.',
+        'تم تحديث البرنامج — راجع الملخص، ثم احف ظ ف ي رحلاتك عندما يناسبك.',
       planUpdatedTitle: 'تم تغيير البرنامج',
       planUpdatedBody:
         'راجع الملخص والمحطات أدناه. لن يتم الحفظ حتى تضيفه إلى رحلاتك.',
@@ -2270,10 +2281,10 @@ export const translations = {
         'بعد أول رد سترى ملخص المسار وبطاقات الأيام. أعد الجولة من الرأس.',
       onboardingSaveTitle: 'الحفظ والنسخ والرأي',
       onboardingSaveBody:
-        '«حفظ في رحلاتÙŠ» يخزّن المسودة. نسخ النص. الإبهام والملاحظة اختيارية. لفترة أيام يظهر شريط الأيام أسفل.',
+        '«حفظ في رحلاتي» يخزّن المسودة. نسخ النص. الإبهام والملاحظة اختيارية. لفترة أيام يظهر شريط الأيام أسفل.',
       onboardingSaveWaitTitle: 'الحفظ عند الجداوة',
       onboardingSaveWaitBody:
-        'مع موجود خطة يظهر زر الحفظ وشريط للتنقل بين الأيام. الحفظ في «رحلاتÙŠ» يؤكد التخزين.',
+        'مع موجود خطة يظهر زر الحفظ وشريط للتنقل بين الأيام. الحفظ في «رحلاتي» يؤكد التخزين.',
       onboardingNext: 'التالي',
       onboardingBack: 'السابق',
       onboardingSkip: 'تخطى الجولة',
@@ -2322,7 +2333,7 @@ export const translations = {
       eyebrow: 'طعام وشراب',
       title: 'دليل المطاعم في طرابلس',
       subtitle:
-        'مقاهٍ، حلويات، بحري ومأكولات تقليدية — من نفس فئة «الطعاÙ…» في الصفحة الرئيسية. ابحث، صفّ حسب الأسلوب، ثم افتح المكان أو أضفه لرحلتك.',
+        'مقاهٍ، حلويات، بحري ومأكولات تقليدية — من نفس فئة «الطعام» في الصفحة الرئيسية. ابحث، صفّ حسب الأسلوب، ثم افتح المكان أو أضفه لرحلتك.',
       searchLabel: 'البحث في قائمة الطعام',
       topPicksTitle: 'أبرز الاختيارات',
       topPicksSub: 'الأعلى تقييماً ضمن عواملك الحالية',
@@ -2372,7 +2383,7 @@ export const translations = {
       sponsorshipNav: 'الرعاية',
       sponsorshipTitle: 'ظهور مموّل',
       sponsorshipLead:
-        'اشترِ ظهوراً مموّلاً لمدة محددة على الصفحة الرئيسية والاستكشاف وخلاصة المجتمع (حيث يُفعّل). يبقى إعلان «مُÙ…ÙˆÙ‘Ù„» لشفافية.',
+        'اشترِ ظهوراً مموّلاً لمدة محددة على الصفحة الرئيسية والاستكشاف وخلاصة المجتمع (حيث يُفعّل). يبقى إعلان «مُموف‘ل» لشفافية.',
       sponsorshipPickPlace: 'اختر مكاناً تديره',
       sponsorshipDuration: '{days} يوماً',
       sponsorshipPriceLine: '{amount} · دفعة واحدة',
@@ -2390,6 +2401,9 @@ export const translations = {
     },
     home: {
       heroTitle: 'استكشف طرابلس',
+      eventDetails: 'تفاصيل الفعالية',
+      tourDetails: 'تفاصيل الجولة',
+      place: 'مكان',
       heroTagline:
         'اكتشف أفضل أماكن طرابلس، تجارب محلية، وخططاً جاهزة — كل ذلك في مكان واحد.',
       discoverMore: 'اكتشف المزيد',
@@ -2442,7 +2456,7 @@ export const translations = {
         'طرابلس بإيجاز: تخطيط المدينة، الوصول، الإقامة، وآداب الزيارة العملية.',
       planTripTipsSectionTitle: 'ملاحظات عملية',
       planTripTipsSectionSub:
-        'الآداب والفصول وأكثر — الأحياء والمواصلات في «اعثر على طرÙŠÙ‚Ùƒ» (تحت «من المجتمع» عند عرض الموجز).',
+        'الآداب والفصول وأكثر — الأحياء والمواصلات في «اعثر على طريقك» (تحت «من المجتمع» عند عرض الموجز).',
       planTripLinkAreas: 'الأحياء والمناطق',
       planTripTipsFallback: 'خطط المسارات في مُخطّط الرحلات أو افتح دليل الأماكن الكامل.',
       planText: 'استخدم الخريطة الرسمية لاستكشاف طرابلس، احفظ أماكنك المفضلة وخطط لرحلتك.',
@@ -3141,6 +3155,10 @@ export const translations = {
       languageSelect: 'Langue',
       globalSearchNoResults: 'Aucun lieu correspondant. Essayez un autre mot ou affichez tous les résultats.',
       globalSearchSeeAll: 'Voir tous les résultats',
+      maintenanceMode: 'Nous mettons à jour Tripoli Explorer. Certaines fonctionnalités peuvent être limitées.',
+      learnMore: 'En savoir plus',
+      welcomeBanner: 'Bienvenue sur {siteName}, {name} ! Votre compte est vérifié.',
+      welcomeBannerEmail: ' — nous avons également envoyé un court message de bienvenue dans votre boîte de réception.',
       visitTripoli: 'Visiter Tripoli',
       navBrandTagline: 'Meilleurs lieux · expériences · parcours',
       tripoliLebanon: 'Tripoli, Liban',
@@ -3202,12 +3220,12 @@ export const translations = {
       megaNeighbourhoodsDesc: 'Explorez les quartiers et zones de la ville.',
     },
     authPage: {
-      loginHeroTitle: 'Vos id\u00e9es de voyage \u00e0 Tripoli, sauvegard\u00e9es',
+      loginHeroTitle: 'Vos idées de voyage à Tripoli, sauvegardées',
       loginHeroSub:
-        'Enregistrez des lieux, cr\u00e9ez des itin\u00e9raires et poursuivez sur le site ou dans l\u2019app. Connexion s\u00e9curis\u00e9e \u2014 nous ne publions jamais en votre nom.',
+        'Enregistrez des lieux, créez des itinéraires et poursuivez sur le site ou dans l’app. Connexion sécurisée — nous ne publions jamais en votre nom.',
       loginDividerOr: 'ou',
       emailPasswordSection: 'E-mail et mot de passe',
-      googleLoading: 'Connexion \u00e0 Google\u2026',
+      googleLoading: 'Connexion à Google…',
       googleUnavailable: 'Connexion Google indisponible sur cette version.',
     },
         aboutTripoli: {
@@ -3241,6 +3259,20 @@ export const translations = {
       infobox_demo_v: 'Tripolitain',
       infobox_nick_l: 'Surnom',
       infobox_nick_v: 'Cité du savoir et des savants',
+      infobox_country_l: 'Pays',
+      infobox_country_v: 'Liban',
+      infobox_gov_l: 'Gouvernorat',
+      infobox_gov_v: 'Liban-Nord',
+      infobox_district_l: 'District',
+      infobox_district_v: 'District de Tripoli',
+      infobox_pop_l: 'Population (ville)',
+      infobox_pop_v: '~229 400',
+      infobox_area_l: 'Superficie',
+      infobox_area_v: '27,39 km²',
+      infobox_demo_l: 'Gentilé',
+      infobox_demo_v: 'Tripolitain',
+      infobox_coord_l: 'Coordonnées',
+      infobox_coord_v: '34°26′N 35°50′E',
       infobox_coord_l: 'Coordonnées',
       infobox_coord_v: '34°26′N 35°50′E',
       infobox_web_l: 'Site web',
@@ -3291,7 +3323,7 @@ export const translations = {
       sec_econ_h: 'Économie',
       sec_econ_p: 'Les métiers historiques incluaient la soie et le savon ; aujourd’hui, la zone économique spéciale de Tripoli vise à diversifier l’industrie.',
       sec_sister_h: 'Relations internationales',
-      sec_sister_p: 'Partنariats municipaux avec Naples, Toulouse et d’autres.',
+      sec_sister_p: 'Partenariats municipaux avec Naples, Toulouse et d’autres.',
       notes_heading: 'Notes aux visiteurs',
       notes_p1: 'Portez des vêtements modestes dans les mosquées ; demandez le consentement avant de photographier les habitants.',
       notes_p2: 'Associez les visites monumentales aux quartiers artisanaux et à une dégustation de pâtisseries.',
@@ -3307,9 +3339,32 @@ export const translations = {
       facts_6: 'Renommée pour ses pâtisseries orientales et son savon à l’huile d’olive.',
       facts_7: 'Climat méditerranéen à été chaud.',
       facts_8: 'Surnommée « Cité du savoir et des savants ».',
+      infobox_nick_l: 'Surnom',
+      infobox_nick_v: 'Cité du savoir et des savants',
+      infobox_country_l: 'Pays',
+      infobox_country_v: 'Liban',
+      infobox_gov_l: 'Gouvernorat',
+      infobox_gov_v: 'Liban-Nord',
+      infobox_district_l: 'District',
+      infobox_district_v: 'District de Tripoli',
+      infobox_pop_l: 'Population (ville)',
+      infobox_pop_v: '~229 400',
+      infobox_area_l: 'Superficie',
+      infobox_area_v: '27,39 km²',
+      infobox_demo_l: 'Gentilé',
+      infobox_demo_v: 'Tripolitain',
+      infobox_coord_l: 'Coordonnées',
+      infobox_coord_v: '34°26′N 35°50′E',
+      toc_sister: 'Villes jumelées',
+      link_old_city: 'Guide de la vieille ville',
+      link_souks: 'Guide des souks',
+      link_sweets: 'Guide des pâtisseries',
     },
     home: {
       heroTitle: 'Explorer Tripoli',
+      eventDetails: "Détails de l'événement",
+      tourDetails: 'Détails de la visite',
+      place: 'Lieu',
       heroTagline:
         "Découvrez les meilleurs spots de Tripoli, les expériences locales et des parcours tout prêts — le tout au même endroit.",
       discoverMore: 'Voir plus',
@@ -3336,6 +3391,38 @@ export const translations = {
       communityViewPlace: 'Voir le lieu',
       communityViewPost: 'Voir la publication',
       communityWatchVideo: 'Voir la vidéo',
+      activitiesHubCategory: 'Catégorie',
+      activitiesHubCategoryAll: 'Toutes les catégories',
+      activitiesHubStatus: 'Statut',
+      activitiesHubStatusAll: 'Tous les statuts',
+      activitiesHubDifficulty: 'Difficulté',
+      activitiesHubDifficultyAll: 'Toutes les difficultés',
+      activitiesHubDuration: 'Durée',
+      activitiesHubDurationAll: 'Toutes les durées',
+      activitiesHubDurationShort: 'Court (0-3h)',
+      activitiesHubDurationHalf: 'Demi-journée (3-6h)',
+      activitiesHubDurationFull: 'Journée entière (>6h)',
+      activitiesHubAll: 'Tout',
+      activitiesHubEventDetails: 'Détails de l’événement',
+      activitiesHubTourDetails: 'Détails du tour',
+      activitiesHubPickDate: 'Choisir une date',
+      eventsThisMonth: 'ÉVÉNEMENTS CE MOIS',
+      oneEventScheduled: '1 ÉVÉNEMENT PRÉVU',
+      multipleEventsScheduled: '{count} ÉVÉNEMENTS PRÉVUS',
+      activitiesHubSort: 'Trier par',
+      activitiesHubSortDateNew: 'Date (récent)',
+      activitiesHubSortDateOld: 'Date (ancien)',
+      activitiesHubSortName: 'Nom (A-Z)',
+      activitiesHubSortToursDefault: 'Recommandé',
+      activitiesHubSortDurationAsc: 'Durée (croissante)',
+      activitiesHubSortDurationDesc: 'Durée (décroissante)',
+      activitiesHubSortPriceAsc: 'Prix (croissant)',
+      activitiesHubSortRating: 'Note',
+      activitiesHubResultsOfTotal: '{shown} sur {total} affichés',
+      activitiesHubNoMatches: 'Aucun résultat correspondant.',
+      activitiesHubClear: 'Effacer les filtres',
+      activitiesHubSearchTours: 'Rechercher des visites…',
+      activitiesHubSearchEvents: 'Rechercher des événements…',
       signInToSave: 'Connectez-vous pour enregistrer dans les favoris',
       addToFavourites: 'Ajouter aux lieux enregistrés',
       removeFromFavourites: 'Retirer des lieux enregistrés',
@@ -3393,81 +3480,8 @@ const OVERRIDES_KEY = 'visit-tripoli-translation-overrides';
 /** API-fetched overrides (source of truth when set). Null = use localStorage fallback. */
 let apiOverrides = null;
 
-function looksLikeMojibake(value) {
-  if (typeof value !== 'string' || value.length === 0) return false;
-  return /(?:Ã.|Â.|â.|Ø.|Ù.|Ê.|á.)/.test(value);
-}
-
-const CP1252_REVERSE_MAP = {
-  0x20ac: 0x80,
-  0x201a: 0x82,
-  0x0192: 0x83,
-  0x201e: 0x84,
-  0x2026: 0x85,
-  0x2020: 0x86,
-  0x2021: 0x87,
-  0x02c6: 0x88,
-  0x2030: 0x89,
-  0x0160: 0x8a,
-  0x2039: 0x8b,
-  0x0152: 0x8c,
-  0x017d: 0x8e,
-  0x2018: 0x91,
-  0x2019: 0x92,
-  0x201c: 0x93,
-  0x201d: 0x94,
-  0x2022: 0x95,
-  0x2013: 0x96,
-  0x2014: 0x97,
-  0x02dc: 0x98,
-  0x2122: 0x99,
-  0x0161: 0x9a,
-  0x203a: 0x9b,
-  0x0153: 0x9c,
-  0x017e: 0x9e,
-  0x0178: 0x9f,
-};
-
-function decodeLatin1Utf8(value) {
-  try {
-    const bytes = Uint8Array.from(
-      Array.from(value, (ch) => {
-        const code = ch.charCodeAt(0);
-        if (code <= 0xff) return code;
-        return CP1252_REVERSE_MAP[code] ?? 0x3f;
-      })
-    );
-    return new TextDecoder('utf-8').decode(bytes);
-  } catch {
-    return value;
-  }
-}
-
-function normalizeMojibakeString(value) {
-  if (!looksLikeMojibake(value)) return value;
-  let next = value;
-  for (let i = 0; i < 2; i += 1) {
-    const decoded = decodeLatin1Utf8(next);
-    if (!decoded || decoded === next) break;
-    next = decoded;
-    if (!looksLikeMojibake(next)) break;
-  }
-  return next;
-}
-
-function normalizeTranslationValue(value) {
-  if (typeof value === 'string') return normalizeMojibakeString(value);
-  if (Array.isArray(value)) return value.map(normalizeTranslationValue);
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, inner]) => [key, normalizeTranslationValue(inner)])
-    );
-  }
-  return value;
-}
-
 export function setApiOverrides(data) {
-  apiOverrides = normalizeTranslationValue(data && typeof data === 'object' ? data : {});
+  apiOverrides = (data && typeof data === 'object' ? data : {});
 }
 
 export function getTranslationOverrides() {
@@ -3528,11 +3542,23 @@ export function getTranslation(lang, namespace, key) {
   const overrides = getTranslationOverrides();
   const override = overrides[lang]?.[namespace]?.[key];
   if (translationOverrideAllowed(namespace, key) && override !== undefined) {
-    return normalizeTranslationValue(override);
+    return override;
   }
   const base = translations[lang]?.[namespace]?.[key];
   const enFallback = lang !== 'en' ? translations.en?.[namespace]?.[key] : undefined;
-  return normalizeTranslationValue(base ?? enFallback ?? key);
+  return base ?? enFallback ?? key;
+}
+
+/** 
+ * Translates a dynamic field from a database object (e.g. name, description).
+ * Checks item.translations[lang][field], then falls back to item[field].
+ */
+export function translateDynamicField(item, field, lang) {
+  if (!item) return '';
+  if (item.translations?.[lang]?.[field]) {
+    return item.translations[lang][field];
+  }
+  return item[field] || '';
 }
 
 export function getStoredLanguage() {

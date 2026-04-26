@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 import { Link } from 'react-router-dom';
 import { getPlaceImageUrl } from '../api/client';
 import Icon from './Icon';
 
 /* ─── Premium Full-Image Card ────────────────────────────── */
-function FullImageCard({ item, type, t }) {
+function FullImageCard({ item, type }) {
+  const { t, lang } = useLanguage();
   const imgSrc = item.image ? getPlaceImageUrl(item.image) : null;
   const isFree = !item.price || Number(item.price) === 0;
   const priceLabel = item.priceDisplay || (isFree ? t('home', 'free') : `$${item.price}`);
   
   // Date formatting for events
   const dateObj = item.startDate ? new Date(item.startDate) : null;
-  const dayNum = dateObj ? dateObj.toLocaleDateString('en-US', { day: '2-digit' }) : '';
-  const monthStr = dateObj ? dateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() : '';
-  const weekday = dateObj ? dateObj.toLocaleDateString('en-US', { weekday: 'short' }) : '';
+  const dayNum = dateObj ? dateObj.toLocaleDateString(lang, { day: '2-digit' }) : '';
+  const monthStr = dateObj ? dateObj.toLocaleDateString(lang, { month: 'short' }).toUpperCase() : '';
+  const weekday = dateObj ? dateObj.toLocaleDateString(lang, { weekday: 'short' }) : '';
 
   return (
     <Link 
@@ -131,7 +133,7 @@ function FullImageCard({ item, type, t }) {
              transition: 'background 0.2s',
            }}>
              {type === 'event' ? t('home', 'eventDetails') : t('home', 'tourDetails')}
-             <Icon name="arrow_forward" size={15} />
+             <Icon name={lang === "ar" ? "arrow_back" : "arrow_forward"} size={15} />
            </span>
         </div>
       </div>
@@ -155,6 +157,7 @@ function useMobile() {
 }
 
 export default function EventsAndToursSection({ events = [], tours = [], t }) {
+  const { lang } = useLanguage();
   const [tab, setTab] = useState('events');
   const isMobile = useMobile();
 
@@ -215,7 +218,7 @@ export default function EventsAndToursSection({ events = [], tours = [], t }) {
               onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-surface-variant)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
             >
               {isMobile ? t('home', 'all') : t('home', 'seeAll')}
-              <Icon name="arrow_forward" size={14} />
+              <Icon name={lang === "ar" ? "arrow_back" : "arrow_forward"} size={14} />
             </Link>
           </div>
 
@@ -262,7 +265,7 @@ export default function EventsAndToursSection({ events = [], tours = [], t }) {
         WebkitOverflowScrolling: 'touch'
       }}>
         {items.map(item => (
-          <FullImageCard key={item.id} item={item} type={activeTab === 'events' ? 'event' : 'tour'} t={t} />
+          <FullImageCard key={item.id} item={item} type={activeTab === 'events' ? 'event' : 'tour'} />
         ))}
         
         {/* Compact Icon-Focused View All Card */}
@@ -286,7 +289,7 @@ export default function EventsAndToursSection({ events = [], tours = [], t }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
           }}>
-            <Icon name="arrow_forward" size={20} />
+            <Icon name={lang === "ar" ? "arrow_back" : "arrow_forward"} size={20} />
           </div>
           <span style={{ fontWeight: 800, fontSize: '11px', letterSpacing: '0.04em', textAlign: 'center', padding: '0 8px', textTransform: 'uppercase' }}>
             {activeTab === 'events' ? t('home', 'allEvents') : t('home', 'allTours')}

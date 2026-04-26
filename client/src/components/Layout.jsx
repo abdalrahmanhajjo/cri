@@ -419,8 +419,10 @@ export default function Layout() {
           }}
         >
           <p className="site-settings-banner-text" style={{ color: '#fff', textAlign: 'left', flex: 1 }}>
-            Welcome to {settings.siteName?.trim() || 'Visit Tripoli'}, {verifyWelcomeBanner.name}! Your account is verified
-            {verifyWelcomeBanner.emailSent ? ' — we also sent a short welcome message to your inbox.' : '.'}
+            {t('nav', 'welcomeBanner')
+              .replace('{siteName}', settings.siteName?.trim() || 'Visit Tripoli')
+              .replace('{name}', verifyWelcomeBanner.name)}
+            {verifyWelcomeBanner.emailSent ? t('nav', 'welcomeBannerEmail') : '.'}
           </p>
           <button
             type="button"
@@ -436,7 +438,7 @@ export default function Layout() {
 
       {settings.maintenanceMode && (
         <div className="site-settings-banner site-settings-banner--maintenance" role="status">
-          <p className="site-settings-banner-text">We’re updating Tripoli Explorer. Some features may be limited.</p>
+          <p className="site-settings-banner-text">{t('nav', 'maintenanceMode')}</p>
         </div>
       )}
       {settings.announcementEnabled && settings.announcementText?.trim() && (
@@ -444,7 +446,7 @@ export default function Layout() {
           <p className="site-settings-banner-text">{settings.announcementText}</p>
           {settings.announcementUrl?.trim() ? (
             <a href={settings.announcementUrl} className="site-settings-banner-link" target="_blank" rel="noopener noreferrer">
-              Learn more
+              {t('nav', 'learnMore')}
             </a>
           ) : null}
         </div>

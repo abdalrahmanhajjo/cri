@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { useLanguage } from '../context/LanguageContext';
 import { Link } from 'react-router-dom';
 import { getImageUrl, fixImageUrlExtension, getPlaceImageUrl } from '../api/client';
 import Icon from './Icon';
@@ -68,6 +69,7 @@ function useMobile() {
 
 /* ─── DESKTOP card (unchanged) ──────────────────────────── */
 export function CommunityFeedCard({ post, t }) {
+  const { lang } = useLanguage();
   const isVideo = isCommunityFeedVideo(post);
   const fullCap = post.caption != null ? String(post.caption) : '';
   const caption = fullCap.slice(0, 160);
@@ -140,7 +142,7 @@ export function CommunityFeedCard({ post, t }) {
           {placeId && (
             <Link to={`${COMMUNITY_PATH}#feed-post-${post.id}`} className="vd-community-feed-cta">
               {t('home', 'communityViewPost')}
-              <Icon name="arrow_forward" size={16} className="vd-btn-arrow" />
+              <Icon name={lang === "ar" ? "arrow_back" : "arrow_forward"} size={16} className="vd-btn-arrow" />
             </Link>
           )}
         </div>
@@ -151,6 +153,7 @@ export function CommunityFeedCard({ post, t }) {
 
 /* ─── MOBILE premium story card ─────────────────────────── */
 function MobileStoryCard({ post, t }) {
+  const { lang } = useLanguage();
   const isVideo = isCommunityFeedVideo(post);
   const fullCap = post.caption != null ? String(post.caption) : '';
   const caption = fullCap.slice(0, 90);
@@ -161,7 +164,7 @@ function MobileStoryCard({ post, t }) {
   const img = firstRaw ? feedMediaUrl(firstRaw) : '';
   const vid = post.video_url ? feedMediaUrl(post.video_url) : '';
   const showVideo = isVideo && vid && isLikelyDirectStreamableVideo(vid, post.video_url);
-  const shortName = placeName; // show full name, CSS handles overflow
+  const shortName = placeName || t('home', 'place'); // show full name, CSS handles overflow
 
   return (
     <article style={{
@@ -230,14 +233,18 @@ function MobileStoryCard({ post, t }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             {shortName && (
               <span style={{
-                display: 'block', color: '#f5f0e8', fontSize: '12px', fontWeight: 700,
+                display: 'block', color: '#f5f0e8', fontSize: '13px', fontWeight: 800,
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                textAlign: lang === 'ar' ? 'right' : 'left',
+                width: '100%'
               }}>{shortName}</span>
             )}
             {uploaderName && (
               <span style={{
-                display: 'block', color: 'rgba(245,240,232,0.55)', fontSize: '10px',
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '1px',
+                display: 'block', color: 'rgba(245,240,232,0.6)', fontSize: '11px',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', 
+                marginTop: '2px', textAlign: lang === 'ar' ? 'right' : 'left',
+                width: '100%'
               }}>{uploaderName}</span>
             )}
           </div>
@@ -248,12 +255,13 @@ function MobileStoryCard({ post, t }) {
               backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
               border: '1.5px solid rgba(255,255,255,0.5)',
               color: '#fff',
-              padding: '9px 24px', borderRadius: '99px',
-              fontSize: '12px', fontWeight: 700, textDecoration: 'none',
+              padding: '8px 18px', borderRadius: '99px',
+              fontSize: '12px', fontWeight: 800, textDecoration: 'none',
               boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
               whiteSpace: 'nowrap', letterSpacing: '0.01em',
+              maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis'
             }}>
-              {t('home', 'communityViewPost')} →
+              {t('home', 'communityViewPost')} {lang === 'ar' ? '←' : '→'}
             </Link>
           )}
         </div>

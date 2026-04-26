@@ -13,5 +13,9 @@
   "devDependencies": {
     "concurrently": "^9.1.2",
     "supabase": "^2.84.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "mongodb": "^7.2.0"
   }
 }

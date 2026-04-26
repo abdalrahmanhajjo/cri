@@ -406,7 +406,7 @@ export default function MapPage() {
 
   const infoWindowStrings = useMemo(
     () => ({
-      viewDetails: `${t('home', 'viewDetails')} →`,
+      viewDetails: `${t('home', 'viewDetails')} ${lang === 'ar' ? '←' : '→'}`,
       directions: `${t('home', 'mapDirections')} →`,
     }),
     [t, lang]
@@ -2488,7 +2488,7 @@ function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode, on
                       {t('home', 'mapDirections')} →
                     </button>
                     <Link to={`/place/${pid}`} className="map-drawer-swipe-details">
-                      {t('home', 'viewDetails')} →
+                      {t('home', 'viewDetails')} {lang === 'ar' ? '←' : '→'}
                     </Link>
                     {onPlaceSelect && (
                       <button
@@ -2527,7 +2527,7 @@ function MapDrawerSwipeDeck({ places, index, setIndex, apiKey, t, nearbyMode, on
 
 function buildInfoContent(p, apiKey = '', strings = {}, isDark = false) {
   const s = {
-    viewDetails: strings.viewDetails ?? 'View details →',
+    viewDetails: strings.viewDetails ?? `${t('home', 'viewDetails')} ${lang === 'ar' ? '←' : '→'}`,
     directions: strings.directions ?? 'Directions →',
   };
   const placeId = p.id;

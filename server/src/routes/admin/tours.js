@@ -3,6 +3,7 @@ const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 const { invalidateSitemapCache } = require('../../seo/seoRoutes');
+const { autoTranslateTourBackground } = require('../../ai/translation/autoTranslate');
 
 const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
@@ -50,6 +51,7 @@ router.post('/', async (req, res) => {
 
     await toursColl.replaceOne({ id }, doc, { upsert: true });
     invalidateSitemapCache();
+    autoTranslateTourBackground(id, doc);
     res.status(201).json({ id, message: 'Tour saved' });
   } catch (err) {
     console.error(err);
@@ -99,6 +101,11 @@ router.put('/:id', async (req, res) => {
     
     if (result.matchedCount === 0) return res.status(404).json({ error: 'Tour not found' });
     invalidateSitemapCache();
+    
+    // Auto-translate updated tour
+    const updated = await toursColl.findOne({ id });
+    if (updated) autoTranslateTourBackground(id, updated);
+
     res.json({ id, message: 'Tour updated' });
   } catch (err) {
     console.error(err);

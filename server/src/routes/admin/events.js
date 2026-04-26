@@ -3,6 +3,7 @@ const { getCollection } = require('../../mongo');
 const { authMiddleware } = require('../../middleware/auth');
 const { invalidateSitemapCache } = require('../../seo/seoRoutes');
 const { adminMiddleware } = require('../../middleware/admin');
+const { autoTranslateEventBackground } = require('../../ai/translation/autoTranslate');
 
 const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
@@ -44,6 +45,7 @@ router.post('/', async (req, res) => {
 
     await eventsColl.replaceOne({ id }, doc, { upsert: true });
     invalidateSitemapCache();
+    autoTranslateEventBackground(id, doc);
     res.status(201).json({ id, message: 'Event saved' });
   } catch (err) {
     console.error(err);
@@ -96,6 +98,11 @@ router.put('/:id', async (req, res) => {
     
     if (result.matchedCount === 0) return res.status(404).json({ error: 'Event not found' });
     invalidateSitemapCache();
+    
+    // Auto-translate updated event
+    const updated = await eventsColl.findOne({ id });
+    if (updated) autoTranslateEventBackground(id, updated);
+
     res.json({ id, message: 'Event updated' });
   } catch (err) {
     console.error(err);

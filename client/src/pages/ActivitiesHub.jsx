@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
+import { translateDynamicField } from '../i18n/translations';
 import Icon from '../components/Icon';
 import './Explore.css';
 import './Events.css';
@@ -34,16 +35,17 @@ function clipDescription(raw, maxLen = 110) {
 }
 
 /* ─── Premium Full-Image Card (Adapted for Activities Grid) ──────────────── */
-function FullImageCard({ item, type, t }) {
+function FullImageCard({ item, type }) {
+  const { t, lang } = useLanguage();
   const imgSrc = item.image ? getPlaceImageUrl(item.image) : null;
   const isFree = !item.price || (item.price != null && Number(item.price) === 0);
-  const priceLabel = item.priceDisplay || (isFree ? 'Free' : `$${item.price}`);
+  const priceLabel = item.priceDisplay || (isFree ? t('home', 'free') : `$${item.price}`);
   
   // Date formatting for events
   const dateObj = item.startDate ? new Date(item.startDate) : null;
-  const dayNum = dateObj ? dateObj.toLocaleDateString('en-US', { day: '2-digit' }) : '';
-  const monthStr = dateObj ? dateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() : '';
-  const weekday = dateObj ? dateObj.toLocaleDateString('en-US', { weekday: 'short' }) : '';
+  const dayNum = dateObj ? dateObj.toLocaleDateString(lang, { day: '2-digit' }) : '';
+  const monthStr = dateObj ? dateObj.toLocaleDateString(lang, { month: 'short' }).toUpperCase() : '';
+  const weekday = dateObj ? dateObj.toLocaleDateString(lang, { weekday: 'short' }) : '';
 
   return (
     <Link 
@@ -123,7 +125,7 @@ function FullImageCard({ item, type, t }) {
             lineHeight: 1.2, letterSpacing: '-0.01em',
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
           }}>
-            {item.name}
+            {translateDynamicField(item, 'name', lang)}
           </h3>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
@@ -131,7 +133,9 @@ function FullImageCard({ item, type, t }) {
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>
                   <Icon name="map-pin" size={14} style={{ color: '#fff' }} />
-                  <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.location || 'Tripoli'}</span>
+                  <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {translateDynamicField(item, 'location', lang) || 'Tripoli'}
+                  </span>
                 </div>
                 {weekday && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.85)' }}>
@@ -159,7 +163,7 @@ function FullImageCard({ item, type, t }) {
              backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
              border: '1px solid rgba(255,255,255,0.2)',
            }}>
-             {type === 'event' ? 'Event Details' : 'Tour Details'}
+             {type === 'event' ? t('home', 'eventDetails') : t('home', 'tourDetails')}
              <Icon name="arrow_forward" size={15} />
            </span>
         </div>
@@ -170,6 +174,7 @@ function FullImageCard({ item, type, t }) {
 
 /* ─── Mobile Date Strip ─── */
 function MobileDateStrip({ selectedDate, onChange, events = [], eventDays = new Set() }) {
+  const { lang, t } = useLanguage();
   const days = useMemo(() => {
     const arr = [];
     const today = new Date();
@@ -201,15 +206,15 @@ function MobileDateStrip({ selectedDate, onChange, events = [], eventDays = new 
           boxShadow: !selectedDate ? '0 8px 20px rgba(13, 148, 136, 0.25)' : 'none'
         }}
       >
-        All
+        {t('home', 'activitiesHubAll')}
       </button>
       {days.map(d => {
         const ymd = d.toISOString().split('T')[0];
         const active = selectedDate === ymd;
         const hasEvents = eventDays instanceof Set ? eventDays.has(ymd) : false;
-        const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+        const dayName = d.toLocaleDateString(lang, { weekday: 'short' });
         const dateNum = d.getDate();
-        const monthShort = d.toLocaleDateString('en-US', { month: 'short' });
+        const monthShort = d.toLocaleDateString(lang, { month: 'short' });
         
         return (
           <button
@@ -403,7 +408,7 @@ export default function ActivitiesHub() {
   const subtitle = tab === 'events' ? t('home', 'eventsSub') : t('home', 'experiencesSub');
 
   useEffect(() => {
-    document.title = `${title} | Visit Tripoli`;
+    document.title = `${title} | ${t('nav', 'visitTripoli')}`;
     return () => {
       document.title = 'Visit Tripoli';
     };
@@ -930,7 +935,7 @@ export default function ActivitiesHub() {
                 ) : (
                   <div className="vd-grid vd-grid--3 activities-hub-grid">
                     {filteredTours.map((tour) => (
-                      <FullImageCard key={tour.id} item={tour} type="experience" t={t} />
+                      <FullImageCard key={tour.id} item={tour} type="experience" />
                     ))}
                   </div>
                 )}
@@ -992,7 +997,7 @@ export default function ActivitiesHub() {
                       <span className="event-summary-day">{evtDate ? new Date(evtDate).getDate() : new Date().getDate()}</span>
                       <div className="event-summary-monthyear">
                         <span className="event-summary-month">
-                          {new Date(evtDate || Date.now()).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'long' })}
+                          {new Date(evtDate || Date.now()).toLocaleDateString(lang, { month: 'long' })}
                         </span>
                         <span className="event-summary-year">{new Date(evtDate || Date.now()).getFullYear()}</span>
                       </div>
@@ -1025,7 +1030,7 @@ export default function ActivitiesHub() {
                 ) : (
                   <div className={`vd-grid ${showEventsHubView ? 'vd-grid--1' : 'vd-grid--3'} activities-hub-grid`}>
                     {filteredEvents.map((event) => (
-                      <FullImageCard key={event.id} item={event} type="event" t={t} />
+                      <FullImageCard key={event.id} item={event} type="event" />
                     ))}
                   </div>
                 )}
