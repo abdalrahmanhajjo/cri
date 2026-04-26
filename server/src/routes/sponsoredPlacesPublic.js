@@ -1,6 +1,8 @@
 const express = require('express');
 const { getCollection } = require('../mongo');
 
+const { getTranslation } = require('../repositories/publicContent');
+
 const router = express.Router();
 const ROW_ID = 'default';
 
@@ -28,9 +30,15 @@ function isSurfaceEnabled(settings, surface) {
   return Boolean(v);
 }
 
-function rowToSponsored(r) {
+function rowToSponsored(r, lang = 'en') {
   const images = Array.isArray(r.place_images) ? r.place_images : [];
   const image = images.length ? images[0] : null;
+
+  // Localize name and description using the helper correctly
+  const tr = getTranslation(r.place_doc, lang);
+  const localizedName = tr?.name || r.place_doc?.name || '';
+  const localizedDescription = tr?.description || r.place_doc?.description || '';
+
   return {
     id: String(r.id),
     placeId: String(r.place_id),
@@ -46,7 +54,8 @@ function rowToSponsored(r) {
     ctaUrl: r.cta_url || null,
     place: {
       id: String(r.place_id),
-      name: r.place_name || '',
+      name: localizedName,
+      description: localizedDescription,
       category: r.place_category || '',
       location: r.place_location || '',
       images,
@@ -55,9 +64,10 @@ function rowToSponsored(r) {
   };
 }
 
-/** GET /api/sponsored-places?surface=home|discover|feed|dining|hotels */
+/** GET /api/sponsored-places?surface=home|discover|feed|dining|hotels&lang=en|ar|fr */
 router.get('/', async (req, res) => {
   const surface = normalizeSurface(req.query.surface);
+  const lang = req.query.lang || 'en';
   const now = new Date();
   try {
     const settings = await loadSiteSettings();
@@ -93,7 +103,7 @@ router.get('/', async (req, res) => {
           subtitle_override: 1,
           image_override_url: 1,
           cta_url: 1,
-          place_name: '$placeObj.name',
+          place_doc: '$placeObj',
           place_category: '$placeObj.category',
           place_location: '$placeObj.location',
           place_images: '$placeObj.images'
@@ -102,7 +112,7 @@ router.get('/', async (req, res) => {
       { $limit: 40 }
     ]).toArray();
 
-    res.json({ items: items.map(rowToSponsored), enabled: true });
+    res.json({ items: items.map(r => rowToSponsored(r, lang)), enabled: true });
   } catch (err) {
     console.error(err);
     res.json({ items: [], enabled: true });

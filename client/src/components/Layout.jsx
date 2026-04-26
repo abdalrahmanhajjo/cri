@@ -98,12 +98,12 @@ export default function Layout() {
     <div className="layout">
       <header id="site-header" className={`header header--vd ${menuOpen ? 'menu-open' : ''}`}>
         <div className="header-inner">
-          <div className="header-row header-row--main">
+          <div className="header-row header-row--main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <button
               type="button"
               className="nav-toggle"
               onClick={() => setMenuOpen((o) => !o)}
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-label={menuOpen ? t('nav', 'closeMenu') : t('nav', 'openMenu')}
               aria-expanded={menuOpen}
             >
               <span className="nav-toggle-bar" />
@@ -141,6 +141,8 @@ export default function Layout() {
                 <Link to="/login" className="nav-icon nav-icon--profile" onClick={closeMenu} aria-label={t('nav', 'signIn')}><Icon name="person" size={22} /></Link>
               )}
             </div>
+            
+
 
             <nav className={`nav nav--vd nav--main ${menuOpen ? 'nav-open' : ''}`}>
               <Link to="/" className={`nav-link nav-link--home ${isHome ? 'nav-link--active' : ''}`} onClick={closeMenu}>{t('nav', 'home')}</Link>
@@ -173,7 +175,7 @@ export default function Layout() {
                 className={`nav-link ${isAboutTripoliPage ? 'nav-link--active' : ''}`}
                 onClick={closeMenu}
               >
-                {t('nav', 'megaAboutTripoli') || 'About Tripoli'}
+                {t('nav', 'megaAboutTripoli')}
               </Link>
               <Link to="/plan" className={`nav-link nav-link--plan ${isPlan ? 'nav-link--active' : ''}`} onClick={closeMenu}>
                 {t('nav', 'planYourVisit')}
@@ -188,7 +190,7 @@ export default function Layout() {
                   onClick={() => setLangOpen((o) => !o)}
                   aria-haspopup="listbox"
                   aria-expanded={langOpen}
-                  aria-label="Language"
+                  aria-label={t('nav', 'languageSelect')}
                 >
                   <span className="nav-lang-label">{langLabels[lang] || lang.toUpperCase()}</span>
                   <Icon name="expand_more" className="nav-chevron" size={20} />
@@ -227,10 +229,10 @@ export default function Layout() {
             {user ? (
               <>
                 {user.isAdmin && (
-                  <Link to="/admin" className="nav-link nav-link--auth" onClick={closeMenu}>Admin</Link>
+                  <Link to="/admin" className="nav-link nav-link--auth" onClick={closeMenu}>{t('nav', 'admin')}</Link>
                 )}
                 {user && (user.isBusinessOwner || (user.ownedPlaceCount ?? 0) > 0) && (
-                  <Link to="/business" className="nav-link nav-link--auth" onClick={closeMenu}>My business</Link>
+                  <Link to="/business" className="nav-link nav-link--auth" onClick={closeMenu}>{t('nav', 'myBusiness')}</Link>
                 )}
                 <Link to="/messages" className="nav-link nav-link--auth" onClick={closeMenu}>
                   {t('nav', 'venueMessages')}
@@ -262,7 +264,7 @@ export default function Layout() {
               type="button"
               className="header-drawer__close"
               onClick={closeMenu}
-              aria-label="Close menu"
+              aria-label={t('nav', 'closeMenu')}
             >
               <Icon name="close" size={24} />
             </button>
@@ -309,7 +311,7 @@ export default function Layout() {
               className={`nav-link ${isAboutTripoliPage ? 'nav-link--active' : ''}`}
               onClick={closeMenu}
             >
-              {t('nav', 'megaAboutTripoli') || 'About Tripoli'}
+              {t('nav', 'megaAboutTripoli')}
             </Link>
             <Link to="/plan" className={`nav-link nav-link--plan ${isPlan ? 'nav-link--active' : ''}`} onClick={closeMenu}>
               {t('nav', 'planYourVisit')}
@@ -357,10 +359,10 @@ export default function Layout() {
             {user ? (
               <>
                 {user.isAdmin && (
-                  <Link to="/admin" className="btn-drawer-footer" onClick={closeMenu}>Admin</Link>
+                  <Link to="/admin" className="btn-drawer-footer" onClick={closeMenu}>{t('nav', 'admin')}</Link>
                 )}
                 {user && (user.isBusinessOwner || (user.ownedPlaceCount ?? 0) > 0) && (
-                  <Link to="/business" className="btn-drawer-footer" onClick={closeMenu}>My business</Link>
+                  <Link to="/business" className="btn-drawer-footer" onClick={closeMenu}>{t('nav', 'myBusiness')}</Link>
                 )}
                 <Link to="/messages" className="btn-drawer-footer" onClick={closeMenu}>
                   {t('nav', 'venueMessages')}

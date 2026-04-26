@@ -1,11 +1,80 @@
 const { getMongoDb, getCollection } = require('../mongo');
 const { mergeDiningProfileLayers } = require('../utils/diningProfileMerge');
+const { translatePlaceFields } = require('../utils/translation');
 
 function getTranslation(doc, lang) {
-  if (!doc || !doc.translations || typeof doc.translations !== 'object') return null;
-  const hit = doc.translations[lang];
-  return hit && typeof hit === 'object' ? hit : null;
+  if (!doc) return null;
+  
+  // 1. Try nested translations object (standard)
+  if (doc.translations && typeof doc.translations === 'object') {
+    const hit = doc.translations[lang];
+    if (hit && typeof hit === 'object') return hit;
+  }
+  
+  // 2. Try top-level underscore fields (e.g. name_ar, description_ar) as fallback
+  if (lang && lang !== 'en') {
+    const suffix = `_${lang}`;
+    if (doc[`name${suffix}`] || doc[`description${suffix}`]) {
+      return {
+        name: doc[`name${suffix}`],
+        description: doc[`description${suffix}`],
+        location: doc[`location${suffix}`],
+        category: doc[`category${suffix}`],
+        duration: doc[`duration${suffix}`],
+        price: doc[`price${suffix}`],
+        best_time: doc[`best_time${suffix}`] || doc[`bestTime${suffix}`],
+        tags: doc[`tags${suffix}`]
+      };
+    }
+  }
+
+  return null;
 }
+
+/**
+ * Enhanced translation getter that can trigger AI translation if missing.
+ */
+async function getTranslationWithFallback(doc, lang, collectionName) {
+  const existing = getTranslation(doc, lang);
+  if (existing || lang === 'en') return existing;
+
+  // Trigger background translation if missing
+  // For critical fields, we might want to wait, but for now we'll do it background
+  // to avoid blocking user response. Next load will have it.
+  
+  // If collection name is provided, we can auto-save to DB
+  (async () => {
+    try {
+      const sourceFields = {
+        name: doc.name,
+        description: doc.description,
+        location: doc.location,
+        category: doc.category,
+        duration: doc.duration,
+        price: doc.price,
+        best_time: doc.best_time || doc.bestTime
+      };
+
+      console.log(`[Auto-Translate] Translating ${doc.id || doc.name} to ${lang}...`);
+      const translated = await translatePlaceFields(sourceFields, lang);
+      
+      if (translated && collectionName) {
+        const collection = await getCollection(collectionName);
+        const updateKey = `translations.${lang}`;
+        await collection.updateOne(
+          { _id: doc._id },
+          { $set: { [updateKey]: translated } }
+        );
+        console.log(`[Auto-Translate] Cached ${lang} for ${doc.id || doc.name}`);
+      }
+    } catch (e) {
+      console.warn(`[Auto-Translate] Failed:`, e.message);
+    }
+  })();
+
+  return null; // Return null (defaults to English in callers) while translating in background
+}
+
 
 /**
  * List all categories with their place counts.
@@ -21,8 +90,8 @@ async function listCategories(lang) {
   
   const countMap = new Map(placeCounts.map((row) => [String(row._id || ''), Number(row.count || 0)]));
 
-  const categories = docs.map((doc) => {
-    const tr = getTranslation(doc, lang);
+  const categories = await Promise.all(docs.map(async (doc) => {
+    const tr = await getTranslationWithFallback(doc, lang, 'categories');
     return {
       id: doc.id,
       name: tr?.name || doc.name,
@@ -32,7 +101,7 @@ async function listCategories(lang) {
       count: countMap.get(String(doc.id)) ?? Number(doc.count || 0),
       color: doc.color || '#666666',
     };
-  });
+  }));
   
   categories.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   return { source: 'mongo', categories };
@@ -45,8 +114,8 @@ async function listInterests(lang) {
   const collection = await getCollection('interests');
   const docs = await collection.find({}).toArray();
   
-  const interests = docs.map((doc) => {
-    const tr = getTranslation(doc, lang);
+  const interests = await Promise.all(docs.map(async (doc) => {
+    const tr = await getTranslationWithFallback(doc, lang, 'interests');
     return {
       id: doc.id,
       name: tr?.name || doc.name,
@@ -57,7 +126,7 @@ async function listInterests(lang) {
       popularity: Number(doc.popularity || 0),
       tags: Array.isArray(tr?.tags) ? tr.tags : Array.isArray(doc.tags) ? doc.tags : [],
     };
-  });
+  }));
   
   interests.sort((a, b) => {
     if ((b.popularity || 0) !== (a.popularity || 0)) return (b.popularity || 0) - (a.popularity || 0);
@@ -77,8 +146,8 @@ async function listPlaces(lang, { limit, offset, usePagination } = {}) {
   // but eventually this should be done in DB if the dataset is large.
   const docs = await collection.find({}).toArray();
   
-  const places = docs.map((doc) => {
-    const tr = getTranslation(doc, lang);
+  const places = await Promise.all(docs.map(async (doc) => {
+    const tr = await getTranslationWithFallback(doc, lang, 'places');
     return {
       id: doc.id,
       name: tr?.name || doc.name,
@@ -105,7 +174,7 @@ async function listPlaces(lang, { limit, offset, usePagination } = {}) {
       app_avg_rating: doc.app_avg_rating ?? null,
       app_review_count: doc.app_review_count ?? 0,
     };
-  });
+  }));
   
   places.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   
@@ -124,7 +193,9 @@ async function listPlaces(lang, { limit, offset, usePagination } = {}) {
 }
 
 module.exports = {
+  getTranslation,
   listCategories,
   listInterests,
   listPlaces,
 };
+

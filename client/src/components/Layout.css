@@ -139,6 +139,9 @@
   padding-bottom: 4px;
   min-height: 52px;
   border-radius: 0;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
 }
 
 .header-inner {
@@ -154,9 +157,9 @@
 .header-row--main {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: flex-start;
   min-height: 48px;
+  gap: 12px;
 }
 
 /* Row 2: global search (desktop), favourites, profile/sign in/sign up */
@@ -230,6 +233,11 @@ button.nav-icon {
   gap: 6px;
   text-decoration: none;
   flex-shrink: 0;
+  min-width: 200px;
+  max-width: 340px;
+  margin-right: 12px;
+  position: relative;
+  z-index: 10;
 }
 
 .logo-wrap .logo-tagline {
@@ -283,6 +291,7 @@ button.nav-icon {
   letter-spacing: -0.02em;
   line-height: 1.2;
   transition: color var(--duration-fast);
+  white-space: nowrap;
 }
 
 .header--vd .logo-tagline {
@@ -336,30 +345,33 @@ button.nav-icon {
 .nav--vd.nav--main {
   display: flex;
   align-items: center;
-  /* Explicit column gap so spacing matches between every item (links + mega menu wrap). */
-  gap: 2px 8px;
+  gap: 4px;
   flex-wrap: nowrap;
-  flex: 1;
-  min-width: 0;
   justify-content: flex-end;
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 .nav--vd .nav-link {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 16px;
+  gap: 3px;
+  padding: 4px 8px;
   border-radius: 999px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--color-text-primary);
   text-decoration: none;
   transition: background var(--duration-fast), color var(--duration-fast);
+  white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
 .nav--vd .nav-link--home.nav-link--active {
   background: var(--color-primary);
   color: #fff !important;
+  margin-left: 0 !important;
+  transform: none !important;
 }
 
 .nav--vd .nav-link--home:hover {
@@ -1307,12 +1319,12 @@ button.nav-icon {
   }
 
   .nav--vd .nav-link {
-    padding: 9px 16px;
+    padding: 8px 12px;
     font-size: 14.5px;
   }
 
   .nav--vd.nav--main {
-    gap: 2px 10px;
+    gap: 2px 6px;
   }
 
   .main--contained {
@@ -1344,12 +1356,12 @@ button.nav-icon {
   }
 
   .nav--vd .nav-link {
-    padding: 10px 18px;
+    padding: 8px 14px;
     font-size: 15px;
   }
 
   .nav--vd.nav--main {
-    gap: 2px 12px;
+    gap: 2px 8px;
   }
 
   .header-meta {

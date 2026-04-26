@@ -115,7 +115,11 @@ function normalizeDiningProfileShape(dp) {
   return out;
 }
 
-function docToPlace(doc, baseUrl) {
+const { getTranslation } = require('../repositories/publicContent');
+
+function docToPlace(doc, baseUrl, lang) {
+  const tr = lang ? getTranslation(doc, lang) : null;
+  
   let images = Array.isArray(doc.images) ? doc.images : [];
   images = resolveImageUrls(images, baseUrl);
   const diningProfile = normalizeDiningProfileShape(mergeDiningProfileFromDoc(doc));
@@ -143,34 +147,35 @@ function docToPlace(doc, baseUrl) {
       
   const result = {
     id: doc.id,
-    name: normalizeDbText(doc.name),
-    description: normalizeDbText(doc.description || ''),
-    location: normalizeDbText(doc.location || ''),
+    name: normalizeDbText(tr?.name || doc.name),
+    description: normalizeDbText(tr?.description || doc.description || ''),
+    location: normalizeDbText(tr?.location || doc.location || ''),
     latitude: doc.latitude ?? null,
     longitude: doc.longitude ?? null,
     images,
-    category: normalizeDbText(doc.category || ''),
+    category: normalizeDbText(tr?.category || doc.category || ''),
     categoryId: doc.categoryId ?? doc.category_id ?? null,
-    duration: doc.duration != null ? normalizeDbText(String(doc.duration)) : doc.duration,
-    price: doc.price != null ? normalizeDbText(String(doc.price)) : doc.price,
+    duration: (tr?.duration || doc.duration) != null ? normalizeDbText(String(tr?.duration || doc.duration)) : (tr?.duration || doc.duration),
+    price: (tr?.price || doc.price) != null ? normalizeDbText(String(tr?.price || doc.price)) : (tr?.price || doc.price),
     bestTime:
-      doc.bestTime != null
-        ? normalizeDbText(String(doc.bestTime))
+      (tr?.best_time || tr?.bestTime || doc.bestTime) != null
+        ? normalizeDbText(String(tr?.best_time || tr?.bestTime || doc.bestTime))
         : doc.best_time != null
           ? normalizeDbText(String(doc.best_time))
-          : doc.bestTime,
+          : (tr?.best_time || tr?.bestTime || doc.bestTime),
     rating: rating != null && Number.isFinite(rating) ? rating : null,
     reviewCount:
       reviewCount != null && Number.isFinite(reviewCount) ? Math.round(reviewCount) : null,
     hours: typeof doc.hours === 'string' ? normalizeDbText(doc.hours) : doc.hours,
     diningProfile,
-    tags: normalizeTags(doc.tags),
+    tags: normalizeTags(tr?.tags || doc.tags),
     searchName: doc.searchName != null ? normalizeDbText(String(doc.searchName)) : doc.searchName
   };
   if (doc.latitude != null && doc.longitude != null) result.coordinates = { lat: doc.latitude, lng: doc.longitude };
   if (images.length === 1) result.image = images[0];
   return result;
 }
+
 
 function getUploadsBaseUrl(req) {
   if (process.env.UPLOADS_BASE_URL) return process.env.UPLOADS_BASE_URL;
@@ -195,7 +200,7 @@ router.get('/', cachePublicList(60, 300), async (req, res) => {
     });
     
     const total = result.total ?? 0;
-    const places = result.places.map((r) => docToPlace(r, baseUrl));
+    const places = result.places.map((r) => docToPlace(r, baseUrl, lang));
     
     const response = {
       popular: places,
@@ -529,7 +534,7 @@ router.get('/:id', async (req, res) => {
     });
     
     if (!place) return res.status(404).json({ error: 'Place not found' });
-    res.json(docToPlace(place, baseUrl));
+    res.json(docToPlace(place, baseUrl, lang));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch place' });
