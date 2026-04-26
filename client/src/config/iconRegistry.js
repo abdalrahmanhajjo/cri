@@ -37,7 +37,7 @@ export const ICON_DOCS = {
   android: {
     variant: 'brand',
     description: 'Indicates the Android download / Play-style app badge on the marketing home bento.',
-    flaticonAnimated: 'Android robot or Play-style badge animation from Flaticon (Android app).',
+    flaticonAnimated: 'Android robot icon (custom SVG) for the Play Store badge.',
   },
   arrow_back: {
     variant: 'nav',
@@ -378,7 +378,7 @@ export const ICON_DOCS = {
   phone_iphone: {
     variant: 'brand',
     description: 'iOS / App Store style download badge on marketing blocks.',
-    flaticonAnimated: 'Phone outline or App Store style device from Flaticon (iOS app).',
+    flaticonAnimated: 'Apple logo icon (custom SVG) for the App Store badge.',
   },
   photo_camera: {
     variant: 'media',
