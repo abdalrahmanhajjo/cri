@@ -1074,7 +1074,6 @@ export default function Explore() {
             </div>
 
             <div className="vd-bento-card vd-bento-hero-side vd-bento-web-hub">
-              <div className="vd-bento-web-hub-blur" aria-hidden="true" />
               <div className="vd-bento-web-hub-inner">
                 <p className="vd-bento-web-hub-kicker">{t('home', 'useWebCta')}</p>
                 <div className="vd-bento-web-hub-header">
