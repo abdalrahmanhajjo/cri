@@ -41,11 +41,22 @@ function FullImageCard({ item, type }) {
   const isFree = !item.price || (item.price != null && Number(item.price) === 0);
   const priceLabel = item.priceDisplay || (isFree ? t('home', 'free') : `$${item.price}`);
   
-  // Date formatting for events
-  const dateObj = item.startDate ? new Date(item.startDate) : null;
-  const dayNum = dateObj ? dateObj.toLocaleDateString(lang, { day: '2-digit' }) : '';
-  const monthStr = dateObj ? dateObj.toLocaleDateString(lang, { month: 'short' }).toUpperCase() : '';
-  const weekday = dateObj ? dateObj.toLocaleDateString(lang, { weekday: 'short' }) : '';
+  const startDateObj = item.startDate ? new Date(item.startDate) : null;
+  const endDateObj = item.endDate ? new Date(item.endDate) : null;
+  const dayNum = startDateObj ? startDateObj.toLocaleDateString(lang, { day: '2-digit' }) : '';
+  const monthStr = startDateObj ? startDateObj.toLocaleDateString(lang, { month: 'short' }).toUpperCase() : '';
+  
+  let dateRangeStr = '';
+  if (startDateObj) {
+    const startDay = startDateObj.toLocaleDateString(lang, { day: 'numeric' });
+    const startMonth = startDateObj.toLocaleDateString(lang, { month: 'short' }).toUpperCase();
+    dateRangeStr = `${startDay} ${startMonth}`;
+    if (endDateObj && endDateObj.getTime() !== startDateObj.getTime()) {
+      const endDay = endDateObj.toLocaleDateString(lang, { day: 'numeric' });
+      const endMonth = endDateObj.toLocaleDateString(lang, { month: 'short' }).toUpperCase();
+      dateRangeStr += ` - ${endDay} ${endMonth}`;
+    }
+  }
 
   return (
     <Link 
@@ -72,10 +83,14 @@ function FullImageCard({ item, type }) {
         </span>
       </div>
 
-      {type === 'event' && dayNum && (
-        <div className="activities-hub-card-date">
-          <div className="activities-hub-card-month">{monthStr}</div>
-          <div className="activities-hub-card-day">{dayNum}</div>
+      {type === 'event' && dateRangeStr && (
+        <div className="activities-hub-card-date" style={{
+          padding: '8px 14px', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexDirection: 'row', gap: '4px', borderRadius: '12px'
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: 900, color: '#000', textTransform: 'uppercase', whiteSpace: 'nowrap', letterSpacing: '0.02em' }}>
+            {dateRangeStr}
+          </span>
         </div>
       )}
 
@@ -94,10 +109,10 @@ function FullImageCard({ item, type }) {
                     {translateDynamicField(item, 'location', lang) || 'Tripoli'}
                   </span>
                 </div>
-                {weekday && (
+                {dateRangeStr && (
                   <div className="activities-hub-card-meta-item">
                     <Icon name="clock" size={14} />
-                    <span>{weekday}</span>
+                    <span>{dateRangeStr}</span>
                   </div>
                 )}
               </>
@@ -122,7 +137,7 @@ function FullImageCard({ item, type }) {
 }
 
 /* ─── Mobile Date Strip ─── */
-function MobileDateStrip({ selectedDate, onChange, events = [], eventDays = new Set() }) {
+function MobileDateStrip({ selectedDate, onChange, events = [], eventDays = new Set(), dayMetadata = {} }) {
   const { lang, t } = useLanguage();
   const days = useMemo(() => {
     const arr = [];
@@ -138,21 +153,20 @@ function MobileDateStrip({ selectedDate, onChange, events = [], eventDays = new 
 
   return (
     <div className="activities-hub-mobile-datestrip" style={{
-      display: 'flex', gap: '10px', overflowX: 'auto', padding: '12px 0 20px',
+      display: 'flex', gap: '8px', overflowX: 'auto', padding: '12px 0 24px',
       margin: '0', 
       scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch'
     }}>
       <button
         onClick={() => onChange(null)}
         style={{
-          flexShrink: 0, padding: '8px 20px', borderRadius: '16px', 
-          border: '1.5px solid',
+          flexShrink: 0, padding: '0 20px', borderRadius: '10px', 
+          border: '1px solid',
           borderColor: !selectedDate ? 'var(--color-primary)' : 'var(--color-border)',
-          background: !selectedDate ? 'var(--color-primary)' : 'var(--color-surface)',
+          background: !selectedDate ? 'var(--color-primary)' : 'transparent',
           color: !selectedDate ? '#fff' : 'var(--color-text-primary)',
-          fontSize: '13px', fontWeight: 800, transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-          height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: !selectedDate ? '0 8px 20px rgba(13, 148, 136, 0.25)' : 'none'
+          fontSize: '13px', fontWeight: 600, transition: 'all 0.2s ease',
+          height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
         {t('home', 'activitiesHubAll')}
@@ -160,7 +174,8 @@ function MobileDateStrip({ selectedDate, onChange, events = [], eventDays = new 
       {days.map(d => {
         const ymd = d.toISOString().split('T')[0];
         const active = selectedDate === ymd;
-        const hasEvents = eventDays instanceof Set ? eventDays.has(ymd) : false;
+        const eventNames = dayMetadata[ymd] || [];
+        const eventName = eventNames.length > 0 ? eventNames[0] : null;
         const dayName = d.toLocaleDateString(lang, { weekday: 'short' });
         const dateNum = d.getDate();
         const monthShort = d.toLocaleDateString(lang, { month: 'short' });
@@ -170,28 +185,47 @@ function MobileDateStrip({ selectedDate, onChange, events = [], eventDays = new 
             key={ymd}
             onClick={() => onChange(active ? null : ymd)}
             style={{
-              flexShrink: 0, padding: '8px 0', borderRadius: '16px', 
-              border: '1.5px solid',
+              flexShrink: 0, 
+              padding: eventName ? '0 16px 0 12px' : '0 14px', 
+              borderRadius: '10px', 
+              border: '1px solid',
               borderColor: active ? 'var(--color-primary)' : 'var(--color-border)',
-              background: active ? 'var(--color-primary)' : 'var(--color-surface)',
+              background: active ? 'var(--color-primary)' : '#fff',
               color: active ? '#fff' : 'var(--color-text-primary)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              minWidth: '58px', height: '64px', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: active ? '0 10px 24px rgba(13, 148, 136, 0.3)' : 'none',
-              transform: active ? 'scale(1.05)' : 'none',
-              position: 'relative'
+              display: 'flex', 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              gap: eventName ? '12px' : '0',
+              height: '52px', 
+              transition: 'all 0.2s ease',
+              position: 'relative',
+              textAlign: 'left'
             }}
           >
-            <span style={{ fontSize: '9px', fontWeight: 800, opacity: active ? 0.9 : 0.5, textTransform: 'uppercase', lineHeight: 1 }}>{dayName}</span>
-            <span style={{ fontSize: '20px', fontWeight: 900, lineHeight: 1.1, marginTop: '2px' }}>{dateNum}</span>
-            <span style={{ fontSize: '8px', fontWeight: 700, opacity: 0.5, marginTop: '1px' }}>{monthShort}</span>
-            
-            {hasEvents && !active && (
-              <div style={{
-                position: 'absolute', bottom: '6px', width: '4px', height: '4px',
-                borderRadius: '50%', background: 'var(--color-primary)',
-                boxShadow: '0 0 4px var(--color-primary)'
-              }} />
+            {eventName ? (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '28px' }}>
+                  <span style={{ fontSize: '9px', fontWeight: 600, opacity: active ? 0.9 : 0.5, letterSpacing: '0.5px', textTransform: 'uppercase' }}>{dayName}</span>
+                  <span style={{ fontSize: '18px', fontWeight: 700, lineHeight: 1.1, marginTop: '1px' }}>{dateNum}</span>
+                </div>
+                
+                <div style={{ width: '1px', height: '24px', background: active ? 'rgba(255,255,255,0.3)' : 'var(--color-border)' }} />
+                
+                <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '130px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {eventName}
+                  </span>
+                  <span style={{ fontSize: '10px', fontWeight: 500, opacity: active ? 0.8 : 0.5, marginTop: '2px' }}>
+                    {monthShort} Event
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '28px' }}>
+                <span style={{ fontSize: '9px', fontWeight: 600, opacity: active ? 0.9 : 0.5, letterSpacing: '0.5px', textTransform: 'uppercase' }}>{dayName}</span>
+                <span style={{ fontSize: '18px', fontWeight: 700, lineHeight: 1.1, marginTop: '1px' }}>{dateNum}</span>
+              </div>
             )}
           </button>
         );
@@ -987,7 +1021,7 @@ export default function ActivitiesHub() {
                 )}
 
                 {isMobile && !showEventsHubView && (
-                  <MobileDateStrip selectedDate={evtDate} onChange={setEvtDate} events={events} eventDays={eventDays} />
+                  <MobileDateStrip selectedDate={evtDate} onChange={setEvtDate} events={events} eventDays={eventDays} dayMetadata={calendarDayMetadata} />
                 )}
 
                 {!showEventsHubView && (

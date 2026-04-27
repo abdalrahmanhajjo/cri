@@ -11,11 +11,22 @@ function FullImageCard({ item, type }) {
   const isFree = !item.price || Number(item.price) === 0;
   const priceLabel = item.priceDisplay || (isFree ? t('home', 'free') : `$${item.price}`);
   
-  // Date formatting for events
-  const dateObj = item.startDate ? new Date(item.startDate) : null;
-  const dayNum = dateObj ? dateObj.toLocaleDateString(lang, { day: '2-digit' }) : '';
-  const monthStr = dateObj ? dateObj.toLocaleDateString(lang, { month: 'short' }).toUpperCase() : '';
-  const weekday = dateObj ? dateObj.toLocaleDateString(lang, { weekday: 'short' }) : '';
+  const startDateObj = item.startDate ? new Date(item.startDate) : null;
+  const endDateObj = item.endDate ? new Date(item.endDate) : null;
+  const dayNum = startDateObj ? startDateObj.toLocaleDateString(lang, { day: '2-digit' }) : '';
+  const monthStr = startDateObj ? startDateObj.toLocaleDateString(lang, { month: 'short' }).toUpperCase() : '';
+  
+  let dateRangeStr = '';
+  if (startDateObj) {
+    const startDay = startDateObj.toLocaleDateString(lang, { day: 'numeric' });
+    const startMonth = startDateObj.toLocaleDateString(lang, { month: 'short' }).toUpperCase();
+    dateRangeStr = `${startDay} ${startMonth}`;
+    if (endDateObj && endDateObj.getTime() !== startDateObj.getTime()) {
+      const endDay = endDateObj.toLocaleDateString(lang, { day: 'numeric' });
+      const endMonth = endDateObj.toLocaleDateString(lang, { month: 'short' }).toUpperCase();
+      dateRangeStr += ` - ${endDay} ${endMonth}`;
+    }
+  }
 
   return (
     <Link 
@@ -71,15 +82,16 @@ function FullImageCard({ item, type }) {
       </div>
 
       {/* Floating Date (for Events) */}
-      {type === 'event' && dayNum && (
+      {type === 'event' && dateRangeStr && (
         <div style={{
           position: 'absolute', top: '65px', left: '18px', zIndex: 2,
-          background: '#fff', borderRadius: '14px', padding: '10px 14px',
-          textAlign: 'center', boxShadow: 'var(--shadow-card)',
-          minWidth: '58px'
+          background: '#fff', borderRadius: '12px', padding: '8px 14px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: 'var(--shadow-card)'
         }}>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-primary)', letterSpacing: '0.05em', marginBottom: '2px' }}>{monthStr}</div>
-          <div style={{ fontSize: '26px', fontWeight: 900, color: '#000', lineHeight: 1 }}>{dayNum}</div>
+          <span style={{ fontSize: '13px', fontWeight: 900, color: '#000', textTransform: 'uppercase', whiteSpace: 'nowrap', letterSpacing: '0.02em' }}>
+            {dateRangeStr}
+          </span>
         </div>
       )}
 
@@ -105,10 +117,10 @@ function FullImageCard({ item, type }) {
                   <Icon name="location_on" size={14} style={{ color: '#fff' }} />
                   <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.location || 'Tripoli'}</span>
                 </div>
-                {weekday && (
+                {dateRangeStr && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.85)' }}>
                     <Icon name="schedule" size={14} />
-                    <span>{weekday}</span>
+                    <span>{dateRangeStr}</span>
                   </div>
                 )}
               </>
