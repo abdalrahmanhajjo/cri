@@ -5,7 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import Icon from './Icon';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
-import './GlobalSearchBar.css';
+import './css/GlobalSearchBar.css';
 
 const MAX_SUGGESTIONS = 8;
 

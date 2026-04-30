@@ -5,4 +5,4 @@
  *
  * Prefer: VITE_GOOGLE_CLIENT_ID in CI, or deploy the API with GOOGLE_CLIENT_ID + updated site-settings.
  */
-export const FALLBACK_GOOGLE_WEB_CLIENT_ID = '';
+export const FALLBACK_GOOGLE_WEB_CLIENT_ID = '242210292228-5v0p7d2u863864c45u57s4t31234c567.apps.googleusercontent.com';

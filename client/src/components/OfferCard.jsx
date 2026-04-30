@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Icon from './Icon';
 import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
-import './OfferCard.css';
+import './css/OfferCard.css';
 
 function isCouponItem(item) {
   const id = item?.id != null ? String(item.id) : '';

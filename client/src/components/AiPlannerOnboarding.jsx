@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useId } from 'react';
 import { createPortal } from 'react-dom';
 import Icon from './Icon';
-import './AiPlannerOnboarding.css';
+import './css/AiPlannerOnboarding.css';
 
 /**
  * Full-screen coach overlay: dimmed backdrop, optional spotlight hole, floating step card.

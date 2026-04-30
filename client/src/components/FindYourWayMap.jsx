@@ -6,7 +6,7 @@ import { loadGoogleMapsScript } from '../utils/mapGoogleLoader';
 import { MAP_PATH, PLAN_TRIP_AREA_NAV, PLAN_TRIP_AREA_I18N_KEYS } from '../config/planTripAreas';
 import { getTripoliAreaKeyForCoordinates } from '../utils/tripoliAreaBounds';
 import Icon from './Icon';
-import './FindYourWayMap.css';
+import './css/FindYourWayMap.css';
 
 /** West of downtown so the default view includes Tripoli + Mediterranean (not land-locked). */
 const TRIPOLI_MAP_CENTER = { lat: 34.438, lng: 35.805 };

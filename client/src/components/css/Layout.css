@@ -25,9 +25,9 @@
 }
 
 .header {
-  background: transparent;
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
-  box-shadow: var(--shadow-nav);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
   position: sticky;
   top: 0;
   z-index: 320;
@@ -57,9 +57,9 @@
 }
 
 .site-settings-banner--announcement {
-  background: rgba(224, 242, 254, 0.92);
-  color: #0c4a6e;
-  border-bottom: 1px solid #7dd3fc;
+  background: color-mix(in oklab, var(--color-primary) 5%, var(--color-surface));
+  color: var(--color-primary-dark);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .site-settings-banner-link {
@@ -76,11 +76,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px var(--page-padding);
-  background: linear-gradient(135deg, var(--color-primary, #1a5f4a) 0%, #0d3d2e 100%);
+  gap: 16px;
+  padding: 12px var(--page-padding);
+  background: var(--color-text-primary);
   color: #fff;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   flex-wrap: wrap;
 }
 .ai-plan-banner-text {
@@ -290,7 +290,7 @@ button.nav-icon {
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
   line-height: 1.2;
-  transition: color var(--duration-fast);
+  transition: all var(--duration-normal) var(--ease-out);
   white-space: nowrap;
 }
 
@@ -329,6 +329,7 @@ button.nav-icon {
 
 .logo-wrap:hover .logo {
   color: var(--color-primary);
+  transform: scale(1.02);
 }
 .logo-wrap:hover .logo-tagline {
   color: var(--color-text-secondary);
@@ -355,23 +356,26 @@ button.nav-icon {
 .nav--vd .nav-link {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 6px 12px;
-  border-radius: 999px;
+  gap: 4px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
   font-size: 14px;
   font-weight: 500;
   color: var(--color-text-primary);
   text-decoration: none;
-  transition: background var(--duration-fast), color var(--duration-fast);
+  transition: all var(--duration-fast) var(--ease-out);
   white-space: nowrap;
   letter-spacing: -0.01em;
 }
 
 .nav--vd .nav-link--home.nav-link--active {
-  background: var(--color-primary);
-  color: #fff !important;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary) !important;
+  background: transparent;
   margin-left: 0 !important;
   transform: none !important;
+  font-weight: 600;
 }
 
 .nav--vd .nav-link--home:hover {
@@ -381,28 +385,33 @@ button.nav-icon {
 }
 
 .nav--vd .nav-link--home.nav-link--active:hover {
-  background: var(--color-primary-dark);
-  color: #fff !important;
+  background: var(--color-primary-light);
+  color: var(--color-primary) !important;
 }
 
 .nav--vd .nav-link:not(.nav-link--home):hover {
   color: var(--color-primary);
   text-decoration: none;
-  background: rgba(15, 118, 110, 0.08);
+  background: var(--color-primary-light);
+  transform: translateY(-1px);
 }
 
 .nav--vd .nav-link--active:not(.nav-link--home) {
+  border: 1px solid var(--color-primary);
   color: var(--color-primary);
   background: transparent;
+  font-weight: 600;
 }
 
 .nav--vd .nav-link--plan {
-  border: 1px solid color-mix(in oklab, var(--color-primary) 36%, transparent);
-  background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+  /* No special styles when not selected */
 }
 
 .nav--vd .nav-link--plan:hover {
-  background: color-mix(in oklab, var(--color-primary) 16%, transparent);
+  color: var(--color-primary);
+  text-decoration: none;
+  background: var(--color-primary-light);
+  transform: translateY(-1px);
 }
 
 .nav--vd .nav-link:focus-visible,
@@ -441,7 +450,7 @@ button.nav-icon {
   align-items: center;
   gap: 4px;
   padding: 8px 16px;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
   color: var(--color-text-primary);
@@ -461,7 +470,8 @@ button.nav-icon {
 
 .nav-dropdown-trigger:hover {
   color: var(--color-primary);
-  background: rgba(15, 118, 110, 0.08);
+  background: var(--color-primary-light);
+  transform: translateY(-1px);
 }
 
 .nav-dropdown-trigger--open {
@@ -490,21 +500,27 @@ button.nav-icon {
   left: 50%;
   right: auto;
   transform: translateX(-50%);
-  min-width: 200px;
+  min-width: 210px;
   margin: 0;
-  padding: 8px 0;
+  padding: 8px;
   list-style: none;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-card-hover);
   z-index: 110;
+  animation: slideUp var(--duration-fast) var(--ease-out);
 }
 
 [dir="rtl"] .nav-dropdown-menu {
   left: 50%;
   right: auto;
   transform: translateX(-50%);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .nav-dropdown-item {
@@ -640,7 +656,7 @@ button.nav-icon {
   min-width: 36px;
   height: 36px;
   padding: 0 10px;
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--color-text-secondary);
   font-size: 16px;
   text-decoration: none;
@@ -673,7 +689,7 @@ button.nav-icon {
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 600;
-  border-radius: 20px;
+  border-radius: 6px;
   min-height: 36px;
   transition: transform var(--duration-fast), box-shadow var(--duration-fast), background var(--duration-fast);
 }
@@ -702,7 +718,7 @@ button.nav-icon {
   color: var(--color-text-secondary);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: color var(--duration-fast), background var(--duration-fast), border-color var(--duration-fast);
 }
@@ -971,7 +987,7 @@ button.nav-icon {
     flex-shrink: 0;
     width: 44px;
     height: 44px;
-    border-radius: 50%;
+    border-radius: 6px;
     background: #e5e7eb;
     color: #374151;
   }
@@ -1044,7 +1060,7 @@ button.nav-icon {
   .header-drawer__close {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
+    border-radius: 6px;
     border: none;
     background: #e5e7eb;
     color: #374151;
@@ -1664,7 +1680,7 @@ button.nav-icon {
   .header-drawer .nav--main .nav-link,
   .header-drawer .nav--main .nav-link--with-chevron,
   .header-drawer .nav--main .nav-dropdown-trigger {
-    border-radius: 14px;
+    border-radius: 6px;
     border: 1px solid color-mix(in oklab, var(--color-border) 84%, transparent);
     background: color-mix(in oklab, var(--color-surface) 92%, #fff);
     box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);

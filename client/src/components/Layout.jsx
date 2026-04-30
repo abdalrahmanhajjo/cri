@@ -7,7 +7,7 @@ import { useSiteSettings } from '../context/SiteSettingsContext';
 import Icon from './Icon';
 import GlobalSearchBar from './GlobalSearchBar';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
-import './Layout.css';
+import './css/Layout.css';
 
 const langLabels = { en: 'EN', ar: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', fr: 'FR' };
 const AI_BANNER_DISMISSED_KEY = 'tripoli_ai_banner_dismissed';

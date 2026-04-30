@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import './HciSettingsPanel.css';
+import './css/HciSettingsPanel.css';
 
 const HCI_IDS = [
   { id: 'feedback', highlight: true },

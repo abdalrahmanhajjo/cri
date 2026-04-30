@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import DeliveryImg from './DeliveryImg';
 import Icon from './Icon';
 import { getPlaceImageUrl, getImageUrl } from '../api/client';
-import './SponsoredPlaceCard.css';
+import './css/SponsoredPlaceCard.css';
 
 function resolveImageUrl(item) {
   const override = item?.imageOverrideUrl ? String(item.imageOverrideUrl).trim() : '';

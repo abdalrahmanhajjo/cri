@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Icon from './Icon';
 import { formatYMD } from '../utils/tripPlannerHelpers';
-import './Calendar.css';
+import './css/Calendar.css';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
