@@ -1840,38 +1840,39 @@ export const translations = {
       photoHint: 'JPG, PNG, WebP, GIF, or HEIC. Square works best.',
       photoChange: 'Change photo',
       photoUploading: 'Uploading…',
+    },
     hci: {
-      fabLabel: 'التفاعل والملاحظات',
-      fabAria: 'فتح مكونات التفاعل والملاحظات',
-      closeBackdrop: 'إغلاق اللوحة',
-      panelTitle: 'المكونات الخمسة للتفاعل',
+      fabLabel: 'HCI & feedback',
+      fabAria: 'Open HCI components and feedback',
+      closeBackdrop: 'Close panel',
+      panelTitle: 'Five components of interaction',
       panelIntro:
-        'يسلط التفاعل بين الإنسان والحاسوب الضوء على كيفية عمل الأشخاص والأنظمة معاً. هذه الأفكار الخمسة مدمجة في Visit Tripoli - خاصة الملاحظات الواضحة عند القيام بأي إجراء.',
-      feedbackBadge: 'مبدأ أساسي',
-      feedbackTitle: 'الملاحظات (Feedback)',
+        'Human–computer interaction highlights how people and systems work together. These five ideas are built into Visit Tripoli — especially clear feedback when you act.',
+      feedbackBadge: 'Core principle',
+      feedbackTitle: 'Feedback',
       feedbackDesc:
-        'يستجيب النظام لما تفعله: مؤشرات التحميل، التأكيدات، رسائل الخطأ، والنتائج المرئية - حتى تعرف دائماً ما حدث.',
-      inputTitle: 'المدخلات (Input)',
+        'The system responds to what you do: loading indicators, confirmations, error messages, and visible results — so you always know what happened.',
+      inputTitle: 'Input',
       inputDesc:
-        'الطرق التي تتفاعل بها مع الموقع: البحث، النماذج، الأزرار، العناصر المحفوظة، وعناصر التحكم في الخريطة - تبقى واضحة وسهلة الوصول.',
-      outputTitle: 'المخرجات (Output)',
+        'Ways you act on the site: search, forms, buttons, saved items, and map controls — kept obvious and reachable.',
+      outputTitle: 'Output',
       outputDesc:
-        'ما تعرضه لك الواجهة: العناوين، القوائم، الخرائط، الصور، والجداول الزمنية - مرتبة بحيث يمكنك المسح والفهم بسرعة.',
-      memoryTitle: 'الذاكرة (Memory)',
+        'What the interface shows you: labels, lists, maps, images, and timelines — ordered so you can scan and understand quickly.',
+      memoryTitle: 'Memory',
       memoryDesc:
-        'يتذكر الموقع السياق المفيد (اللغة، الأماكن المحفوظة، المسودات) بشكل آمن حتى تكرر أقل وتكمل من حيث توقفت.',
-      contextTitle: 'السياق (Context)',
+        'The site recalls helpful context (language, saved places, drafts) securely so you repeat less and pick up where you left off.',
+      contextTitle: 'Context',
       contextDesc:
-        'يساعدك التنقل وعناوين الصفحات والتخطيط (بما في ذلك اللغة العربية من اليمين إلى اليسار) على البقاء متوجهاً وفهم مكانك.',
-      formTitle: 'أرسل لنا ملاحظاتك',
-      formHint: 'أخبرنا عما شعرت أنه غير واضح أو بطيء أو معطل. نحن نقرأ كل رسالة.',
-      messageLabel: 'رسالتك',
-      messagePlaceholder: 'مثلاً: على الهاتف المحمول لم أتمكن من العثور على...',
-      emailLabel: 'البريد الإلكتروني (اختياري)',
+        'Navigation, page titles, and layout (including right-to-left Arabic) help you stay oriented and understand where you are.',
+      formTitle: 'Send us feedback',
+      formHint: 'Tell us what felt unclear, slow, or broken. We read every message.',
+      messageLabel: 'Your message',
+      messagePlaceholder: 'e.g. On mobile I could not find…',
+      emailLabel: 'Email (optional)',
       emailPlaceholder: 'you@example.com',
-      sendEmail: 'فتح مسودة بريد إلكتروني',
-      messageTooShort: 'يرجى كتابة بضع كلمات على الأقل (4 أحرف فأكثر).',
-      close: 'إغلاق',
+      sendEmail: 'Open email draft',
+      messageTooShort: 'Please write at least a few words (4+ characters).',
+      close: 'Close',
     },
   },
   ar: {
@@ -3270,6 +3271,7 @@ export const translations = {
       feedOwnerImageUrl: 'رابط صورة الغلاف (اختياري)',
       feedOwnerVideoUrl: 'رابط الفيديو (اختياري)',
       feedOwnerSave: 'حفظ التغييرات',
+    },
     profilePage: {
       hciFeedbackHeading: 'تجربة تفاعلية وملاحظات',
       title: 'الملف الشخصي',
@@ -3329,6 +3331,7 @@ export const translations = {
       photoHint: 'JPG أو PNG أو WebP أو GIF أو HEIC. الصور المربعة تعمل بشكل أفضل.',
       photoChange: 'تغيير الصورة',
       photoUploading: 'جاري الرفع...',
+    },
     hci: {
       fabLabel: 'التفاعل والملاحظات',
       fabAria: 'فتح مكونات التفاعل والملاحظات',
@@ -4100,6 +4103,7 @@ export const translations = {
       areasMapSub: 'Explorez Tripoli par zone — sélectionnez un quartier pour voir les points forts sur la carte.',
       viewMapCta: 'Voir la carte',
       gettingThereCta: 'S’y rendre',
+    },
     profilePage: {
       hciFeedbackHeading: 'Expérience interactive et retours',
       title: 'Profil',
@@ -4308,6 +4312,7 @@ export const translations = {
       close: 'Fermer',
     },
   },
+};
 
 const STORAGE_KEY = 'visit-tripoli-lang';
 const OVERRIDES_KEY = 'visit-tripoli-translation-overrides';
