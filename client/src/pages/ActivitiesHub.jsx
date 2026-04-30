@@ -1102,8 +1102,8 @@ export default function ActivitiesHub() {
                   <MobileDateStrip selectedDate={evtDate} onChange={setEvtDate} events={events} eventDays={eventDays} dayMetadata={calendarDayMetadata} />
                 )}
 
-                {/* ── Multi-event horizontal reel (mobile OR desktop, day selected, 2+ events) ── */}
-                {evtDate && filteredEvents.length > 1 && (isMobile ? !showEventsHubView : showEventsHubView) && (
+                {/* ── Multi-event horizontal reel (2+ events, mobile OR desktop hub) ── */}
+                {filteredEvents.length > 1 && (isMobile ? !showEventsHubView : showEventsHubView) && (
                   <div style={{ margin: '0 0 8px' }}>
                     {/* Header */}
                     <div style={{
@@ -1120,7 +1120,9 @@ export default function ActivitiesHub() {
                           {filteredEvents.length}
                         </span>
                         <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                          events on {new Date(evtDate).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}
+                          {evtDate
+                            ? `events on ${new Date(evtDate).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}`
+                            : `${filteredEvents.length} events`}
                         </span>
                       </div>
                       {isMobile && (
@@ -1222,7 +1224,7 @@ export default function ActivitiesHub() {
                   </div>
                 )}
 
-                {!showEventsHubView && !(evtDate && filteredEvents.length > 1) && (
+                {!showEventsHubView && !(filteredEvents.length > 1) && (
                   <p className="activities-hub-results-meta" aria-live="polite">
                     {(t('home', 'activitiesHubResultsOfTotal') || '{shown} of {total} shown')
                       .replace('{shown}', String(filteredEvents.length))
@@ -1234,7 +1236,7 @@ export default function ActivitiesHub() {
                   <p className="vd-empty">{t('home', 'noEvents')}</p>
                 ) : filteredEvents.length === 0 ? (
                   <p className="vd-empty">{t('home', 'activitiesHubNoMatches')}</p>
-                ) : !(evtDate && filteredEvents.length > 1) && (
+                ) : !(filteredEvents.length > 1) && (
                   <div className="vd-grid vd-grid--3 activities-hub-grid">
                     {filteredEvents.map((event) => (
                       <FullImageCard key={event.id} item={event} type="event" />
