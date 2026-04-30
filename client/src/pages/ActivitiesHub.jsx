@@ -1046,21 +1046,55 @@ export default function ActivitiesHub() {
 
                 {showEventsHubView && (
                   <div className="event-summary-card">
-                    <div className="event-summary-split">
-                      <span className="event-summary-day">{evtDate ? new Date(evtDate).getDate() : today.getDate()}</span>
-                      <div className="event-summary-monthyear">
-                        <span className="event-summary-month">
-                          {(evtDate ? new Date(evtDate) : today).toLocaleDateString(lang, { month: 'long' })}
+                    {evtDate ? (
+                      /* ── A specific date is selected ── */
+                      <>
+                        <div className="event-summary-split">
+                          <span className="event-summary-day">{new Date(evtDate).getDate()}</span>
+                          <div className="event-summary-monthyear">
+                            <span className="event-summary-month">
+                              {new Date(evtDate).toLocaleDateString(lang, { month: 'long' }).toUpperCase()}
+                            </span>
+                            <span className="event-summary-year">{new Date(evtDate).getFullYear()}</span>
+                          </div>
+                        </div>
+                        <div className="event-summary-divider" />
+                        <span className="event-summary-footer">
+                          {filteredEvents.length === 1
+                            ? (t('home', 'oneEventScheduled') || '1 EVENT SCHEDULED')
+                            : (t('home', 'multipleEventsScheduled') || '{count} EVENTS SCHEDULED').replace('{count}', String(filteredEvents.length))}
                         </span>
-                        <span className="event-summary-year">{(evtDate ? new Date(evtDate) : today).getFullYear()}</span>
-                      </div>
-                    </div>
-                    <div className="event-summary-divider" />
-                    <span className="event-summary-footer">
-                      {filteredEvents.length === 1 
-                        ? (t('home', 'oneEventScheduled') || '1 EVENT SCHEDULED') 
-                        : (t('home', 'multipleEventsScheduled') || '{count} EVENTS SCHEDULED').replace('{count}', String(filteredEvents.length))}
-                    </span>
+                        <button
+                          onClick={() => setEvtDate(null)}
+                          style={{
+                            marginTop: '12px', border: 'none',
+                            background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)',
+                            fontSize: '11px', fontWeight: 700, padding: '6px 14px',
+                            borderRadius: '20px', cursor: 'pointer', letterSpacing: '0.04em',
+                            display: 'flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-start',
+                          }}
+                        >
+                          <Icon name="close" size={12} /> Clear date
+                        </button>
+                      </>
+                    ) : (
+                      /* ── No date selected — show all-events summary ── */
+                      <>
+                        <div className="event-summary-split" style={{ opacity: 0.6 }}>
+                          <Icon name="celebration" size={40} style={{ color: '#fff' }} />
+                        </div>
+                        <div className="event-summary-divider" />
+                        <span className="event-summary-footer">
+                          {(t('home', 'multipleEventsScheduled') || '{count} EVENTS SCHEDULED').replace('{count}', String(filteredEvents.length))}
+                        </span>
+                        <span style={{
+                          fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.5)',
+                          letterSpacing: '0.06em', marginTop: '4px', textTransform: 'uppercase'
+                        }}>
+                          {t('home', 'activitiesHubAll') || 'All dates'}
+                        </span>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -1068,8 +1102,8 @@ export default function ActivitiesHub() {
                   <MobileDateStrip selectedDate={evtDate} onChange={setEvtDate} events={events} eventDays={eventDays} dayMetadata={calendarDayMetadata} />
                 )}
 
-                {/* ── Multi-event horizontal reel (mobile, day selected, 2+ events) ── */}
-                {isMobile && !showEventsHubView && evtDate && filteredEvents.length > 1 && (
+                {/* ── Multi-event horizontal reel (mobile OR desktop, day selected, 2+ events) ── */}
+                {evtDate && filteredEvents.length > 1 && (isMobile ? !showEventsHubView : showEventsHubView) && (
                   <div style={{ margin: '0 0 8px' }}>
                     {/* Header */}
                     <div style={{
@@ -1086,27 +1120,27 @@ export default function ActivitiesHub() {
                           {filteredEvents.length}
                         </span>
                         <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                          {(t('home', 'multipleEventsScheduled') || '{count} EVENTS SCHEDULED')
-                            .replace('{count}', '').trim()
-                            .replace(/^\d+\s*/, '') || 'events on this day'}
+                          events on {new Date(evtDate).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}
                         </span>
                       </div>
-                      <button
-                        onClick={() => setEvtDate(null)}
-                        style={{
-                          border: 'none', background: 'none', padding: '4px 8px',
-                          fontSize: '12px', color: 'var(--color-text-tertiary)',
-                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
-                        }}
-                      >
-                        <Icon name="close" size={14} /> Clear
-                      </button>
+                      {isMobile && (
+                        <button
+                          onClick={() => setEvtDate(null)}
+                          style={{
+                            border: 'none', background: 'none', padding: '4px 8px',
+                            fontSize: '12px', color: 'var(--color-text-tertiary)',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+                          }}
+                        >
+                          <Icon name="close" size={14} /> Clear
+                        </button>
+                      )}
                     </div>
 
                     {/* Horizontal scrollable reel */}
                     <div style={{
-                      display: 'flex', gap: '12px', overflowX: 'auto',
-                      padding: '4px 0 16px',
+                      display: 'flex', gap: '16px', overflowX: 'auto',
+                      padding: '4px 0 20px',
                       scrollbarWidth: 'none', msOverflowStyle: 'none',
                       WebkitOverflowScrolling: 'touch',
                     }}>
@@ -1118,32 +1152,32 @@ export default function ActivitiesHub() {
                         const dateStr = startDateObj
                           ? startDateObj.toLocaleDateString(lang, { day: 'numeric', month: 'short' }).toUpperCase()
                           : '';
+                        const cardW = showEventsHubView ? '260px' : '220px';
+                        const cardH = showEventsHubView ? '320px' : '280px';
                         return (
                           <Link
                             key={event.id}
                             to={`/event/${event.id}`}
                             style={{
-                              flexShrink: 0, width: '220px', height: '280px',
-                              borderRadius: '18px', overflow: 'hidden',
+                              flexShrink: 0, width: cardW, height: cardH,
+                              borderRadius: '20px', overflow: 'hidden',
                               position: 'relative', display: 'block',
-                              textDecoration: 'none',
-                              background: '#111',
-                              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                              textDecoration: 'none', background: '#111',
+                              boxShadow: '0 6px 28px rgba(0,0,0,0.18)',
+                              transition: 'transform 0.25s ease, box-shadow 0.25s ease',
                             }}
+                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.25)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 6px 28px rgba(0,0,0,0.18)'; }}
                           >
-                            {/* Image */}
                             {imgSrc ? (
                               <img src={imgSrc} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
                             ) : (
                               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,#0d9488,#115e59)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Icon name="calendar_today" size={48} style={{ color: 'rgba(255,255,255,0.15)' }} />
+                                <Icon name="calendar_today" size={56} style={{ color: 'rgba(255,255,255,0.12)' }} />
                               </div>
                             )}
-                            {/* Scrim */}
-                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 50%, transparent 80%)' }} />
-
-                            {/* Top badges */}
-                            <div style={{ position: 'absolute', top: '12px', left: '12px', right: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 2 }}>
+                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.25) 50%, transparent 80%)' }} />
+                            <div style={{ position: 'absolute', top: '14px', left: '14px', right: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 2 }}>
                               <span style={{
                                 background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)',
                                 border: '1px solid rgba(255,255,255,0.3)', color: '#fff',
@@ -1156,27 +1190,25 @@ export default function ActivitiesHub() {
                                 {priceLabel}
                               </span>
                             </div>
-
-                            {/* Bottom content */}
-                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px 14px', zIndex: 2 }}>
+                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '18px 16px', zIndex: 2 }}>
                               <h3 style={{
-                                margin: '0 0 6px', fontSize: '15px', fontWeight: 800, color: '#fff',
-                                lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2,
+                                margin: '0 0 6px', fontSize: showEventsHubView ? '17px' : '15px',
+                                fontWeight: 800, color: '#fff', lineHeight: 1.2,
+                                display: '-webkit-box', WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical', overflow: 'hidden'
                               }}>
                                 {event.name}
                               </h3>
                               {dateStr && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'rgba(255,255,255,0.8)' }}>
-                                  <Icon name="schedule" size={12} />
-                                  <span>{dateStr}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'rgba(255,255,255,0.75)' }}>
+                                  <Icon name="schedule" size={12} /><span>{dateStr}</span>
                                 </div>
                               )}
                               <div style={{
-                                marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                marginTop: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px',
                                 background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)',
                                 border: '1px solid rgba(255,255,255,0.2)',
-                                padding: '7px 14px', borderRadius: '10px',
+                                padding: '8px 16px', borderRadius: '10px',
                                 fontSize: '11px', fontWeight: 800, color: '#fff'
                               }}>
                                 {t('home', 'eventDetails')}
@@ -1190,7 +1222,7 @@ export default function ActivitiesHub() {
                   </div>
                 )}
 
-                {!showEventsHubView && !(isMobile && evtDate && filteredEvents.length > 1) && (
+                {!showEventsHubView && !(evtDate && filteredEvents.length > 1) && (
                   <p className="activities-hub-results-meta" aria-live="polite">
                     {(t('home', 'activitiesHubResultsOfTotal') || '{shown} of {total} shown')
                       .replace('{shown}', String(filteredEvents.length))
@@ -1202,7 +1234,7 @@ export default function ActivitiesHub() {
                   <p className="vd-empty">{t('home', 'noEvents')}</p>
                 ) : filteredEvents.length === 0 ? (
                   <p className="vd-empty">{t('home', 'activitiesHubNoMatches')}</p>
-                ) : !(isMobile && evtDate && filteredEvents.length > 1) && (
+                ) : !(evtDate && filteredEvents.length > 1) && (
                   <div className={`vd-grid ${showEventsHubView ? 'vd-grid--1' : 'vd-grid--3'} activities-hub-grid`}>
                     {filteredEvents.map((event) => (
                       <FullImageCard key={event.id} item={event} type="event" />
