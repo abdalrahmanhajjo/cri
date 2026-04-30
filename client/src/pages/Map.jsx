@@ -1304,7 +1304,6 @@ export default function MapPage() {
     let origin;
     let destination;
     let waypoints;
-
     const ul = userLocationRef.current;
     const hasUserLoc = ul && ul.lat != null && ul.lng != null;
 
@@ -1789,7 +1788,7 @@ export default function MapPage() {
         )}
         {tripFilterName && (
           <div
-            className={`map-trip-banner${liveNavigation ? ' map-trip-banner--hidden' : ''}`}
+            className={`map-trip-banner${(liveNavigation || showTripRoutePanel) ? ' map-trip-banner--hidden' : ''}`}
             role="status"
           >
             <span className="map-trip-banner-label">
@@ -2053,7 +2052,9 @@ export default function MapPage() {
                           <span>{t('home', travelMode === 'WALKING' ? 'travelModeWalk' : 'travelModeCar')}</span>
                         </div>
                       </div>
-                      {liveNavigation && nextTurnText && (
+                    </div>
+                  )}
+                    {liveNavigation && nextTurnText && (
                         <div className="map-route-next-turn-banner">
                           <div className="map-route-turn-icon">
                             <Icon name={getTurnIcon(nextTurnText)} size={28} />
@@ -2094,6 +2095,15 @@ export default function MapPage() {
                         <span>{t('home', mode.labelKey)}</span>
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      className="map-route-mode-tab map-route-exit-trip-btn"
+                      onClick={handleShowAllPlaces}
+                      title={t('home', 'showAllPlaces')}
+                    >
+                      <Icon name="grid_view" size={20} />
+                      <span>{t('home', 'showAllPlaces') || 'Show all places'}</span>
+                    </button>
                   </div>
 
                   {/* Waypoints Section */}
