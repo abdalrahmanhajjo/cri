@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { mergeWithSiteSettingsDefaults } from '../../config/siteSettingsDefaults';
 import AdminTranslationsPanel from './AdminTranslationsPanel';
-import './Admin.css';
+import './css/Admin.css';
 
 function SettingsIcon() {
   return (

@@ -11,7 +11,7 @@ import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { trackEvent } from '../utils/analytics';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH, discoverPlaceFeedPath } from '../utils/discoverPaths';
 import { useSiteSettings } from '../context/SiteSettingsContext';
-import './Discover.css';
+import './css/Discover.css';
 
 const TABS = [
   { id: 'feed', icon: 'dynamic_feed', labelKey: 'tabFeed' },

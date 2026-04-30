@@ -11,7 +11,7 @@ import {
   PASSWORD_REQUIREMENTS,
   isPasswordValid,
 } from '../utils/passwordRequirements';
-import './Profile.css';
+import './css/Profile.css';
 
 function formatMemberSince(date, locale) {
   if (!date) return { full: '', short: '' };

@@ -5,7 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
-import './Explore.css';
+import './css/Explore.css';
 
 function TourCard({ tour }) {
   const img = getPlaceImageUrl(tour.image) || null;

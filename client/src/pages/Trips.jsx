@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { useToast } from '../context/ToastContext';
-import './Trips.css';
+import './css/Trips.css';
 
 function formatTripRange(startDate, endDate) {
   const a = startDate ? new Date(startDate).toLocaleDateString() : '';

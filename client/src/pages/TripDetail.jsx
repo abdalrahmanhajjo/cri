@@ -12,7 +12,7 @@ import {
   placeIdsFromDay,
   getDateForDayIndex,
 } from '../utils/tripPlannerHelpers';
-import './TripDetail.css';
+import './css/TripDetail.css';
 
 function formatClockHm(t) {
   if (t == null || String(t).trim() === '') return null;

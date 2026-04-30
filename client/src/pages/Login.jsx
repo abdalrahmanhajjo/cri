@@ -8,7 +8,7 @@ import { FALLBACK_GOOGLE_WEB_CLIENT_ID } from '../config/googleSignIn';
 import { readGoogleWebClientIdFromPage } from '../utils/googleWebClientId';
 import { api } from '../api/client';
 import Icon from '../components/Icon';
-import './Auth.css';
+import './css/Auth.css';
 
 /** @param {unknown} v */
 function mapGoogleErrorMessage(err, v, t) {

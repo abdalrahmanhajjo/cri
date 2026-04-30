@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
-import './Admin.css';
-import './AdminSponsoredPlaces.css';
+import './css/Admin.css';
+import './css/AdminSponsoredPlaces.css';
 
 function toLocalInput(iso) {
   if (!iso) return '';

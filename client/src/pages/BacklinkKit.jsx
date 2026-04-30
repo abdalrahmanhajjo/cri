@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import api, { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
-import './BacklinkKit.css';
+import './css/BacklinkKit.css';
 
 const TARGETS = [
   {

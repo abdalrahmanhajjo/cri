@@ -39,7 +39,7 @@ import {
   clearAiPlannerOnboarding,
 } from '../utils/aiPlannerOnboardingStorage';
 import AiPlannerOnboarding from '../components/AiPlannerOnboarding';
-import './AiPlanner.css';
+import './css/AiPlanner.css';
 
 function getTourEffectiveScrollY() {
   if (typeof document === 'undefined') return 0;

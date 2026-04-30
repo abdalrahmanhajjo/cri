@@ -7,7 +7,7 @@ import {
   ACCEPT_IMAGES_WITH_HEIC,
   ACCEPT_FEED_REEL_VIDEOS,
 } from '../../utils/imageUploadAccept';
-import './Admin.css';
+import './css/Admin.css';
 
 function contentKind(t) {
   const x = String(t || '').toLowerCase();

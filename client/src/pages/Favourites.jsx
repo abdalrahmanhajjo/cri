@@ -7,8 +7,8 @@ import { useFavourites } from '../context/FavouritesContext';
 import Icon from '../components/Icon';
 import { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
-import './Explore.css';
-import './Favourites.css';
+import './css/Explore.css';
+import './css/Favourites.css';
 import { orderPlacesByIds } from '../utils/orderPlacesByIds';
 
 function PlaceCardWithRemove({ place, onRemove, removeLabel }) {

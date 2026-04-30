@@ -13,7 +13,7 @@ import {
   checkUsernameRequirements,
   USERNAME_REQUIREMENTS,
 } from '../utils/usernameRequirements';
-import './Auth.css';
+import './css/Auth.css';
 
 export default function Register() {
   const [name, setName] = useState('');

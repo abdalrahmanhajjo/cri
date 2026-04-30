@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, NavLink, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import './Admin.css';
+import './css/Admin.css';
 
 const navItems = [
   { to: '/admin', end: true, icon: 'dashboard', label: 'Dashboard' },

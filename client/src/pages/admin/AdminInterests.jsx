@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { api } from '../../api/client';
-import './Admin.css';
+import './css/Admin.css';
 
 function InterestModal({ interest, onClose, onSaved }) {
   useEffect(() => {

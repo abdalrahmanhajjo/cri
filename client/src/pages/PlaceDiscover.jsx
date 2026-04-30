@@ -24,7 +24,7 @@ import {
   isDedicatedGuideListing,
 } from '../utils/placeGuideExclusions';
 import { PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
-import './PlaceDiscover.css';
+import './css/PlaceDiscover.css';
 
 function formatTripRange(trip, locale) {
   const a = trip.startDate ? new Date(trip.startDate) : null;

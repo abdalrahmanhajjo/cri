@@ -5,8 +5,8 @@ import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
-import './Explore.css';
-import './Events.css';
+import './css/Explore.css';
+import './css/Events.css';
 
 function clipDescription(raw, maxLen = 110) {
   const s = String(raw || '')

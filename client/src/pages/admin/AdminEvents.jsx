@@ -4,7 +4,7 @@ import { api } from '../../api/client';
 import { suggestPublicId } from '../../utils/adminContentHelpers';
 import MapPicker from '../../components/MapPicker';
 import { AdminCoverImageField, AdminSinglePlacePicker } from './AdminFormPickers';
-import './Admin.css';
+import './css/Admin.css';
 
 const EVENT_CATEGORY_QUICK = ['Festival', 'Concert', 'Culture', 'Food & drink', 'Family', 'Sports', 'Workshop'];
 

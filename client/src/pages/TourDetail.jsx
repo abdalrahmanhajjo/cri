@@ -5,7 +5,7 @@ import DeliveryImg from '../components/DeliveryImg';
 import Icon from '../components/Icon';
 import { getDeliveryImgProps } from '../utils/responsiveImages.js';
 import { useLanguage } from '../context/LanguageContext';
-import './Detail.css';
+import './css/Detail.css';
 
 function InfoRow({ icon, label, value }) {
   if (value == null || value === '') return null;

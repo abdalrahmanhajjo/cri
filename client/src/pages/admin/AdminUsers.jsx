@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useSiteSettings } from '../../context/SiteSettingsContext';
-import './Admin.css';
+import './css/Admin.css';
 
 function buildUserListParams(debouncedQ, provider, isAdmin, isBusinessOwner, emailVerified, blocked) {
   const p = { limit: 200, offset: 0 };

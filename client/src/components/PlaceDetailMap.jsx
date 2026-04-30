@@ -156,5 +156,5 @@ export default function PlaceDetailMap({ lat, lng, title, t }) {
     );
   }
 
-  return <div ref={mapElRef} className="place-detail-map-canvas" aria-hidden />;
+  return <div ref={mapElRef} className="place-detail-map-canvas" dir="ltr" aria-hidden />;
 }

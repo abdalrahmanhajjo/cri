@@ -5,9 +5,9 @@ import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import { translateDynamicField } from '../i18n/translations';
 import Icon from '../components/Icon';
-import './Explore.css';
-import './Events.css';
-import './ActivitiesHub.css';
+import './css/Explore.css';
+import './css/Events.css';
+import './css/ActivitiesHub.css';
 import { DateRangeCalendar } from '../components/Calendar';
 
 function normalizeHaystack(s) {

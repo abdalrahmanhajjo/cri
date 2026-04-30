@@ -3,7 +3,7 @@ import { Outlet, NavLink, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import api from '../../api/client';
-import './Business.css';
+import './css/Business.css';
 
 export function BusinessNavSections({ places, onNavClick }) {
   const afterNav = onNavClick || undefined;

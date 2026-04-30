@@ -1,4 +1,4 @@
-import './Business.css';
+import './css/Business.css';
 
 const DEFAULT_MESSAGE = 'Verifying your workspace…';
 

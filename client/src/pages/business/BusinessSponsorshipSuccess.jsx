@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
-import './BusinessSponsorship.css';
+import './css/BusinessSponsorship.css';
 
 export default function BusinessSponsorshipSuccess() {
   const { t } = useLanguage();

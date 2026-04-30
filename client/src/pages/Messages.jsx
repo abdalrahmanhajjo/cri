@@ -5,8 +5,8 @@ import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
 import api from '../api/client';
 import Icon from '../components/Icon';
-import './Discover.css';
-import './Messages.css';
+import './css/Discover.css';
+import './css/Messages.css';
 
 function threadCountLabel(count, t) {
   const n = Number(count) || 0;

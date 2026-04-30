@@ -496,7 +496,7 @@ export default function FindYourWayMap({ places = [], t, loadEager = false }) {
 
       <div className="fym-map-stage">
         <div className="fym-map-wrap" ref={mapWrapRef}>
-          <div ref={mapRef} className="fym-map-canvas" role="application" aria-label={safeT('home', 'findYourWayMapAria')} />
+          <div ref={mapRef} className="fym-map-canvas" dir="ltr" role="application" aria-label={safeT('home', 'findYourWayMapAria')} />
           <div className="fym-map-overlay fym-map-overlay--top">
             <div className="fym-live-badge">
               <span className="fym-live-dot" aria-hidden />

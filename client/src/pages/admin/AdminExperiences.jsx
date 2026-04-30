@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { suggestPublicId, linesToStringArray, parseItineraryJson } from '../../utils/adminContentHelpers';
 import { AdminCoverImageField, AdminPlaceIdsPicker } from './AdminFormPickers';
-import './Admin.css';
+import './css/Admin.css';
 
 const CURRENCY_OPTIONS = ['USD', 'EUR', 'LBP'];
 const DIFFICULTY_OPTIONS = ['Easy', 'Moderate', 'Challenging'];

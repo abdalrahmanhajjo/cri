@@ -1,4 +1,4 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
@@ -120,9 +120,11 @@ app.use(
           'https://*.google-analytics.com',
           /** GIS token / FedCM may connect to accounts.google.com */
           'https://accounts.google.com',
+          'https://maps.googleapis.com',
         ],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
         frameSrc: ["'self'", 'https://www.googletagmanager.com', 'https://accounts.google.com'],
+        workerSrc: ["'self'", "blob:"],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
       },

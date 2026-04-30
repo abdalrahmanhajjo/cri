@@ -8,8 +8,8 @@ import { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { filterGeneralDirectoryPlaces } from '../utils/placeGuideExclusions';
-import './Explore.css';
-import './Spots.css';
+import './css/Explore.css';
+import './css/Spots.css';
 
 function SpotCard({ place, viewMode, onMapClick, viewDetailsLabel }) {
   const img = getPlaceImageUrl(place.image || (place.images && place.images[0])) || null;

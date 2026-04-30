@@ -9,7 +9,7 @@ import {
   PASSWORD_REQUIREMENTS,
   isPasswordValid,
 } from '../utils/passwordRequirements';
-import './Auth.css';
+import './css/Auth.css';
 
 export default function ForgotPassword() {
   const { t } = useLanguage();

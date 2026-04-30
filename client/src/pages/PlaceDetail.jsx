@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useFavourites } from '../context/FavouritesContext';
 import { useToast } from '../context/ToastContext';
 import { discoverPlaceFeedPath } from '../utils/discoverPaths';
-import './Detail.css';
+import './css/Detail.css';
 
 /** Resolved, unique image URLs for gallery (primary `image` + `images[]`). */
 function collectPlaceImageUrls(place) {

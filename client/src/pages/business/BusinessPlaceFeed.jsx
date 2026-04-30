@@ -8,7 +8,7 @@ import {
   ACCEPT_IMAGES_WITH_HEIC,
   ACCEPT_FEED_REEL_VIDEOS,
 } from '../../utils/imageUploadAccept';
-import './Business.css';
+import './css/Business.css';
 
 const BASE_TITLE = 'Business — Visit Tripoli';
 

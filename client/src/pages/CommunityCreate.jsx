@@ -4,7 +4,7 @@ import api from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import { COMMUNITY_PATH } from '../utils/discoverPaths';
-import './CommunityCreate.css';
+import './css/CommunityCreate.css';
 
 function parseCommaList(s) {
   return String(s || '')

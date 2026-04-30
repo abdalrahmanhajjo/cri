@@ -45,8 +45,8 @@ import {
   clearManualTripBuilderTour,
 } from '../utils/manualTripOnboardingStorage';
 import AiPlannerOnboarding from '../components/AiPlannerOnboarding';
-import './Explore.css';
-import './Plan.css';
+import './css/Explore.css';
+import './css/Plan.css';
 
 function getTourEffectiveScrollY() {
   if (typeof document === 'undefined') return 0;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
-import './Admin.css';
+import './css/Admin.css';
 
 function toDatetimeLocalValue(iso) {
   if (!iso) return '';

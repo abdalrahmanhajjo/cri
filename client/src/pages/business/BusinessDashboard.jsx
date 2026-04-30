@@ -3,7 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getPlaceImageUrl } from '../../api/client';
 import { placePublicPagePath } from '../../utils/discoverPaths';
-import './Business.css';
+import './css/Business.css';
 
 const BASE_TITLE = 'Business — Visit Tripoli';
 

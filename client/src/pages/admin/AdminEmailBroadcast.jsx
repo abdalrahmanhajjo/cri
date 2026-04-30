@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../../api/client';
-import './Admin.css';
+import './css/Admin.css';
 
 export default function AdminEmailBroadcast() {
   const [subject, setSubject] = useState('');

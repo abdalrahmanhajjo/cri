@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api, { getPlaceImageUrl } from '../api/client';
 import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
-import './SeoLanding.css';
+import './css/SeoLanding.css';
 
 function AboutSplitParagraphs({ text, firstClassName = 'seo-landing__p', className = 'seo-landing__p' }) {
   const parts = String(text || '')

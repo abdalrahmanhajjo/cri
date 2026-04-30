@@ -4,8 +4,8 @@ import { api } from '../../api/client';
 import { mergeWithSiteSettingsDefaults, mergeHotelsGuide } from '../../config/siteSettingsDefaults';
 import { getCategoriesForWay } from '../../utils/findYourWayGrouping';
 import { HOTELS_PATH } from '../../utils/discoverPaths';
-import './Admin.css';
-import './AdminDiningGuide.css';
+import './css/Admin.css';
+import './css/AdminDiningGuide.css';
 
 const LOCALE_TABS = [
   { id: 'en', label: 'English' },

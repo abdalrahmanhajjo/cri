@@ -12,7 +12,7 @@ import {
 } from '../utils/findYourWayGrouping';
 import { COMMUNITY_PATH } from '../utils/discoverPaths';
 import { filterGeneralDirectoryPlaces } from '../utils/placeGuideExclusions';
-import './Explore.css';
+import './css/Explore.css';
 
 function PlaceCard({ place }) {
   if (!place || place.id == null) return null;

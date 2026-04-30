@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import api from '../../api/client';
 import { useLanguage } from '../../context/LanguageContext';
-import './BusinessSponsorship.css';
+import './css/BusinessSponsorship.css';
 
 function formatMoney(cents, currency, lang) {
   const cur = String(currency || 'usd').toUpperCase();

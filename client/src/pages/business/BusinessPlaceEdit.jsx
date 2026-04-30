@@ -4,7 +4,7 @@ import api, { getImageUrl, fixImageUrlExtension, getImageUrlAlternate } from '..
 import { ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
 import MapPicker from '../../components/MapPicker';
 import { placePublicPagePath } from '../../utils/discoverPaths';
-import './Business.css';
+import './css/Business.css';
 
 const DURATION_OPTIONS = ['', '15 mins', '30 mins', '45 mins', '1 hour', '1-2 hours', '2-3 hours', 'Half day', 'Full day'];
 const PRICE_OPTIONS = ['', 'Free', '0', '5', '10', '15', '20', '25', '30', '$', '$$', '$$$'];

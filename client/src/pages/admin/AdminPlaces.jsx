@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api, getImageUrl, fixImageUrlExtension, getImageUrlAlternate } from '../../api/client';
 import { ACCEPT_IMAGES_WITH_HEIC } from '../../utils/imageUploadAccept';
 import MapPicker from '../../components/MapPicker';
-import './Admin.css';
+import './css/Admin.css';
 
 function AdminImageWithFallback({ url }) {
   const primary = getImageUrl(fixImageUrlExtension(url));

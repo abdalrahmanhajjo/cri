@@ -12,8 +12,8 @@ import { filterGeneralDirectoryPlaces } from '../utils/placeGuideExclusions';
 import { asyncPool } from '../utils/asyncPool';
 import { loadGoogleMapsScript } from '../utils/mapGoogleLoader';
 import { placeIdsFromDay, getDateForDayIndex } from '../utils/tripPlannerHelpers';
-import './Map.css';
-import './Explore.css';
+import './css/Map.css';
+import './css/Explore.css';
 
 // Same reference as Flutter `lib/map/tripoli_geo.dart` + `map_constants.dart` (VisitTripoliApp)
 const TRIPOLI_CENTER = { lat: 34.43692, lng: 35.83846 };
@@ -1743,7 +1743,7 @@ export default function MapPage() {
       aria-label={t('home', 'mapPageTitle')}
     >
       <div className="map-full-bleed">
-        <div ref={mapRef} className="map-canvas" />
+        <div ref={mapRef} className="map-canvas" dir="ltr" />
         {liveNavigation && (
           <button type="button" className="map-live-nav-exit" onClick={stopLiveNavigation}>
             <Icon name="close" size={22} /> {t('home', 'liveNavStop')}

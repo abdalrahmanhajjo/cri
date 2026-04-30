@@ -41,11 +41,11 @@ import {
 } from '../utils/placeGuideExclusions';
 import { supabaseOptimizeForThumbnail } from '../utils/supabaseImage.js';
 import { useFavourites } from '../context/FavouritesContext';
-import './Explore.css';
-import './CommunityFeedRedesign.css';
-import './PlanYourVisitRedesign.css';
-import './FindYourWayRedesign.css';
-import './BrowseThemesRedesign.css';
+import './css/Explore.css';
+import './css/CommunityFeedRedesign.css';
+import './css/PlanYourVisitRedesign.css';
+import './css/FindYourWayRedesign.css';
+import './css/BrowseThemesRedesign.css';
 
 const TRIPOLI_TIMEZONE = 'Asia/Beirut';
 

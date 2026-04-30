@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
 import Icon from '../components/Icon';
-import './Auth.css';
+import './css/Auth.css';
 
 export default function VerifyEmail() {
   const [email, setEmail] = useState('');
