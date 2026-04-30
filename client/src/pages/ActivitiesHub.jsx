@@ -1068,7 +1068,129 @@ export default function ActivitiesHub() {
                   <MobileDateStrip selectedDate={evtDate} onChange={setEvtDate} events={events} eventDays={eventDays} dayMetadata={calendarDayMetadata} />
                 )}
 
-                {!showEventsHubView && (
+                {/* ── Multi-event horizontal reel (mobile, day selected, 2+ events) ── */}
+                {isMobile && !showEventsHubView && evtDate && filteredEvents.length > 1 && (
+                  <div style={{ margin: '0 0 8px' }}>
+                    {/* Header */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '0 4px', marginBottom: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{
+                          background: 'var(--color-primary)', color: '#fff',
+                          fontSize: '11px', fontWeight: 900,
+                          padding: '4px 10px', borderRadius: '20px',
+                          letterSpacing: '0.04em'
+                        }}>
+                          {filteredEvents.length}
+                        </span>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                          {(t('home', 'multipleEventsScheduled') || '{count} EVENTS SCHEDULED')
+                            .replace('{count}', '').trim()
+                            .replace(/^\d+\s*/, '') || 'events on this day'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setEvtDate(null)}
+                        style={{
+                          border: 'none', background: 'none', padding: '4px 8px',
+                          fontSize: '12px', color: 'var(--color-text-tertiary)',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+                        }}
+                      >
+                        <Icon name="close" size={14} /> Clear
+                      </button>
+                    </div>
+
+                    {/* Horizontal scrollable reel */}
+                    <div style={{
+                      display: 'flex', gap: '12px', overflowX: 'auto',
+                      padding: '4px 0 16px',
+                      scrollbarWidth: 'none', msOverflowStyle: 'none',
+                      WebkitOverflowScrolling: 'touch',
+                    }}>
+                      {filteredEvents.map((event) => {
+                        const imgSrc = event.image ? getPlaceImageUrl(event.image) : null;
+                        const isFree = !event.price || Number(event.price) === 0;
+                        const priceLabel = event.priceDisplay || (isFree ? t('home', 'free') : `$${event.price}`);
+                        const startDateObj = event.startDate ? new Date(event.startDate) : null;
+                        const dateStr = startDateObj
+                          ? startDateObj.toLocaleDateString(lang, { day: 'numeric', month: 'short' }).toUpperCase()
+                          : '';
+                        return (
+                          <Link
+                            key={event.id}
+                            to={`/event/${event.id}`}
+                            style={{
+                              flexShrink: 0, width: '220px', height: '280px',
+                              borderRadius: '18px', overflow: 'hidden',
+                              position: 'relative', display: 'block',
+                              textDecoration: 'none',
+                              background: '#111',
+                              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                            }}
+                          >
+                            {/* Image */}
+                            {imgSrc ? (
+                              <img src={imgSrc} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
+                            ) : (
+                              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,#0d9488,#115e59)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Icon name="calendar_today" size={48} style={{ color: 'rgba(255,255,255,0.15)' }} />
+                              </div>
+                            )}
+                            {/* Scrim */}
+                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 50%, transparent 80%)' }} />
+
+                            {/* Top badges */}
+                            <div style={{ position: 'absolute', top: '12px', left: '12px', right: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 2 }}>
+                              <span style={{
+                                background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)',
+                                border: '1px solid rgba(255,255,255,0.3)', color: '#fff',
+                                fontSize: '9px', fontWeight: 800, padding: '4px 10px',
+                                borderRadius: '20px', letterSpacing: '0.1em', textTransform: 'uppercase'
+                              }}>
+                                {event.category || 'Event'}
+                              </span>
+                              <span style={{ background: '#fff', color: '#000', fontSize: '10px', fontWeight: 900, padding: '4px 10px', borderRadius: '20px' }}>
+                                {priceLabel}
+                              </span>
+                            </div>
+
+                            {/* Bottom content */}
+                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px 14px', zIndex: 2 }}>
+                              <h3 style={{
+                                margin: '0 0 6px', fontSize: '15px', fontWeight: 800, color: '#fff',
+                                lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                              }}>
+                                {event.name}
+                              </h3>
+                              {dateStr && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'rgba(255,255,255,0.8)' }}>
+                                  <Icon name="schedule" size={12} />
+                                  <span>{dateStr}</span>
+                                </div>
+                              )}
+                              <div style={{
+                                marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                padding: '7px 14px', borderRadius: '10px',
+                                fontSize: '11px', fontWeight: 800, color: '#fff'
+                              }}>
+                                {t('home', 'eventDetails')}
+                                <Icon name={lang === 'ar' ? 'arrow_back' : 'arrow_forward'} size={13} />
+                              </div>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {!showEventsHubView && !(isMobile && evtDate && filteredEvents.length > 1) && (
                   <p className="activities-hub-results-meta" aria-live="polite">
                     {(t('home', 'activitiesHubResultsOfTotal') || '{shown} of {total} shown')
                       .replace('{shown}', String(filteredEvents.length))
@@ -1080,7 +1202,7 @@ export default function ActivitiesHub() {
                   <p className="vd-empty">{t('home', 'noEvents')}</p>
                 ) : filteredEvents.length === 0 ? (
                   <p className="vd-empty">{t('home', 'activitiesHubNoMatches')}</p>
-                ) : (
+                ) : !(isMobile && evtDate && filteredEvents.length > 1) && (
                   <div className={`vd-grid ${showEventsHubView ? 'vd-grid--1' : 'vd-grid--3'} activities-hub-grid`}>
                     {filteredEvents.map((event) => (
                       <FullImageCard key={event.id} item={event} type="event" />
