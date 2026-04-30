@@ -1304,10 +1304,15 @@ export default function MapPage() {
     let destination;
     let waypoints;
 
-    if (liveNavigation) {
-      const ul = userLocationRef.current;
-      if (!ul || ul.lat == null || ul.lng == null) {
-        return () => {};
+    const ul = userLocationRef.current;
+    const hasUserLoc = ul && ul.lat != null && ul.lng != null;
+
+    if (liveNavigation || (ordered.length === 1 && hasUserLoc)) {
+      if (!hasUserLoc) {
+        // If live nav is active but we still have no fix, don't clear, just wait for position update.
+        if (liveNavigation) return () => {};
+        clearRoute();
+        return;
       }
       origin = { lat: Number(ul.lat), lng: Number(ul.lng) };
       destination = { lat: Number(lastStop.latitude), lng: Number(lastStop.longitude) };
@@ -1615,6 +1620,24 @@ export default function MapPage() {
     setRouteRefreshTick((t) => t + 1);
   }, []);
 
+  /**
+   * On map load with a trip: attempt a one-time location fix to enable routing immediately.
+   * This fixes "no route" on desktop for 1-stop trips where userLocation was previously null.
+   */
+  useEffect(() => {
+    if (!tripFilterName || userLocation || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        userLocationRef.current = loc;
+        setUserLocation(loc);
+        setRouteRefreshTick((t) => t + 1);
+      },
+      () => { /* ignore failures for auto-locate */ },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+    );
+  }, [tripFilterName, !!userLocation]);
+
   useEffect(() => {
     if (!liveNavigation || typeof navigator === 'undefined' || !navigator.geolocation) return undefined;
     const onPosition = (pos) => {
@@ -1773,10 +1796,16 @@ export default function MapPage() {
               <Icon name="route" size={20} />{' '}
               {tripDayLabel || `${t('home', 'viewingTrip')}: ${tripFilterName}`}
               {placesInTripOrder.length >= 2 && !directionsError && (
-                <span className="map-trip-banner-route"> Â· {t('home', 'routeShown') || 'Route shown'}</span>
+                <span className="map-trip-banner-route"> {'\u00B7'} {t('home', 'routeShown') || 'Route shown'}</span>
               )}
               {directionsError && (
-                <span className="map-trip-banner-route map-trip-banner-route--error"> Â· {t('home', 'routeUnavailable') || 'Route unavailable'}</span>
+                <span className="map-trip-banner-route map-trip-banner-route--error">
+                  {' '}
+                  {'\u00B7'}{' '}
+                  {directionsError === 'ZERO_RESULTS'
+                    ? (t('home', 'routeNoResults') || (ordered.length === 1 ? 'No route found from your location' : 'No route found for this mode'))
+                    : (t('home', 'routeUnavailable') || 'Route unavailable')}
+                </span>
               )}
             </span>
             <button type="button" className="map-trip-banner-btn" onClick={handleShowAllPlaces}>
@@ -1958,7 +1987,6 @@ export default function MapPage() {
             aria-label={t('home', 'viewingTrip')}
           >
             <div className="map-trip-route-panel-inner">
-              <div className="map-trip-route-panel-handle" aria-hidden="true" />
               {!liveNavigation && (
                 <button
                   type="button"
@@ -2005,31 +2033,30 @@ export default function MapPage() {
               <div className="map-route-modern-container">
                 <div className="map-route-drag-handle" />
                 
-                {/* 1. High-Contrast Summary Header */}
-                {routeSummary && (
-                  <div className="map-route-header-v2">
-                    <div className="map-route-header-main">
-                      <div className="map-route-eta-group">
-                        <span className="map-route-eta-val">{routeSummary.durationText}</span>
-                        <span className="map-route-eta-sub">{routeSummary.distanceText}</span>
-                      </div>
-                      <div className="map-route-mode-pill">
-                        <Icon name={travelMode === 'WALKING' ? 'walking' : 'car'} size={18} />
-                        <span>{t('home', travelMode === 'WALKING' ? 'travelModeWalk' : 'travelModeCar')}</span>
-                      </div>
-                    </div>
-                    {liveNavigation && nextTurnText && (
-                      <div className="map-route-next-turn-banner">
-                        <div className="map-route-turn-icon">
-                          <Icon name={getTurnIcon(nextTurnText)} size={28} />
-                        </div>
-                        <div className="map-route-turn-text">{nextTurnText}</div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 <div className="map-route-scroll-area">
+                  {/* 1. High-Contrast Summary Header */}
+                  {routeSummary && (
+                    <div className="map-route-header-v2">
+                      <div className="map-route-header-main">
+                        <div className="map-route-eta-group">
+                          <span className="map-route-eta-val">{routeSummary.durationText}</span>
+                          <span className="map-route-eta-sub">{routeSummary.distanceText}</span>
+                        </div>
+                        <div className="map-route-mode-pill">
+                          <Icon name={travelMode === 'WALKING' ? 'walking' : 'car'} size={18} />
+                          <span>{t('home', travelMode === 'WALKING' ? 'travelModeWalk' : 'travelModeCar')}</span>
+                        </div>
+                      </div>
+                      {liveNavigation && nextTurnText && (
+                        <div className="map-route-next-turn-banner">
+                          <div className="map-route-turn-icon">
+                            <Icon name={getTurnIcon(nextTurnText)} size={28} />
+                          </div>
+                          <div className="map-route-turn-text">{nextTurnText}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {/* 2. Onboarding / Start Action */}
                   {placesInTripOrder.length >= 1 && !liveNavigation && (
                     <div className="map-route-action-area">

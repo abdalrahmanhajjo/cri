@@ -313,6 +313,11 @@
   .map-page--live-nav-collapsed .map-zoom-controls {
     bottom: calc(118px + env(safe-area-inset-bottom, 0px));
   }
+
+  /* Keep Recenter button above the large trip panel on mobile */
+  .map-page--trip-route .map-live-nav-recenter {
+    bottom: calc(75vh + 32px) !important;
+  }
 }
 
 .map-trip-route-waypoints--compact {
@@ -366,13 +371,11 @@
   background: #e8eaed;
 }
 
-/* Same as FindYourWayMap: site-wide img max-width breaks tile layers */
 .map-canvas img {
   max-width: none !important;
   max-height: none !important;
 }
 
-/* Trip filter banner – when viewing a trip's places from Plan */
 .map-trip-banner {
   position: absolute;
   top: 16px;
