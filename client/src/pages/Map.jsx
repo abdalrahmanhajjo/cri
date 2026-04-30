@@ -366,7 +366,8 @@ export default function MapPage() {
   const [tripDayLabel, setTripDayLabel] = useState(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [directionsError, setDirectionsError] = useState(null);
-  const [travelMode, setTravelMode] = useState('DRIVING');
+  const [locationDenied, setLocationDenied] = useState(false);
+  const [travelMode, setTravelMode] = useState('WALKING');
   const [directionsResult, setDirectionsResult] = useState(null);
   const [routeDetailsOpen, setRouteDetailsOpen] = useState(false);
   const [liveNavigation, setLiveNavigation] = useState(false);
@@ -1357,12 +1358,6 @@ export default function MapPage() {
       unitSystem: maps.UnitSystem.METRIC,
       /** Driving: ask for traffic-aware times (`duration_in_traffic`) and fastest corridor among alternates. */
       provideRouteAlternatives: isDriving,
-      drivingOptions: isDriving
-        ? {
-            departureTime: new Date(),
-            trafficModel: maps.TrafficModel.BEST_GUESS,
-          }
-        : undefined,
     };
 
     const directionsService = new maps.DirectionsService();
@@ -1534,6 +1529,7 @@ export default function MapPage() {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.panTo(loc);
       }
+      infoWindowRef.current?.close?.();
     };
     setLiveNavRequestingPermission(true);
     getCurrentPositionWithSafariFallback()
@@ -1605,6 +1601,7 @@ export default function MapPage() {
         },
       });
       setListOpen(false);
+      infoWindowRef.current?.close?.();
     },
     [navigate]
   );
@@ -1631,9 +1628,12 @@ export default function MapPage() {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         userLocationRef.current = loc;
         setUserLocation(loc);
+        setLocationDenied(false);
         setRouteRefreshTick((t) => t + 1);
       },
-      () => { /* ignore failures for auto-locate */ },
+      () => { 
+        setLocationDenied(true);
+      },
       { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
     );
   }, [tripFilterName, !!userLocation]);
@@ -1796,14 +1796,20 @@ export default function MapPage() {
               <Icon name="route" size={20} />{' '}
               {tripDayLabel || `${t('home', 'viewingTrip')}: ${tripFilterName}`}
               {placesInTripOrder.length >= 2 && !directionsError && (
-                <span className="map-trip-banner-route"> {'\u00B7'} {t('home', 'routeShown') || 'Route shown'}</span>
+                <span className="map-trip-banner-route"> | {t('home', 'routeShown') || 'Route shown'}</span>
+              )}
+              {!directionsError && !directionsResult && hasTripRoutePanel && (placesInTripOrder.length === 1 && !userLocation) && (
+                <span className="map-trip-banner-route">
+                  {' '}
+                  | {locationDenied ? (t('home', 'locationRequired') || 'Location required') : (t('home', 'locatingYou') || 'Locating you...')}
+                </span>
               )}
               {directionsError && (
                 <span className="map-trip-banner-route map-trip-banner-route--error">
                   {' '}
-                  {'\u00B7'}{' '}
+                  |{' '}
                   {directionsError === 'ZERO_RESULTS'
-                    ? (t('home', 'routeNoResults') || (ordered.length === 1 ? 'No route found from your location' : 'No route found for this mode'))
+                    ? (t('home', 'routeNoResults') || (placesInTripOrder.length === 1 ? 'No route found from your location' : 'No route found for this mode'))
                     : (t('home', 'routeUnavailable') || 'Route unavailable')}
                 </span>
               )}
