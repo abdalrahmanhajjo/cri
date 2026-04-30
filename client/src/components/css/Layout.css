@@ -369,6 +369,23 @@ button.nav-icon {
   letter-spacing: -0.01em;
 }
 
+@media (min-width: 1200px) and (max-width: 1400px) {
+  .nav--vd.nav--main {
+    gap: 2px;
+  }
+  .nav--vd .nav-link {
+    padding: 8px 8px;
+    font-size: 13px;
+  }
+  .logo-wrap {
+    min-width: auto;
+    margin-right: 8px;
+  }
+  .logo-wrap .logo-tagline {
+    display: none !important;
+  }
+}
+
 .nav--vd .nav-link--home.nav-link--active {
   border: 1px solid var(--color-primary);
   color: var(--color-primary) !important;
