@@ -359,6 +359,7 @@ export default function ActivitiesHub() {
   const tab = searchParams.get('tab') || 'events';
   const isMobile = useMobile();
   const isHubDesktop = useHubDesktop();
+  const [today] = useState(() => new Date());
 
   const showEventsHubView = tab === 'events' && isHubDesktop;
 
@@ -1003,12 +1004,12 @@ export default function ActivitiesHub() {
                 {showEventsHubView && (
                   <div className="event-summary-card">
                     <div className="event-summary-split">
-                      <span className="event-summary-day">{evtDate ? new Date(evtDate).getDate() : new Date().getDate()}</span>
+                      <span className="event-summary-day">{evtDate ? new Date(evtDate).getDate() : today.getDate()}</span>
                       <div className="event-summary-monthyear">
                         <span className="event-summary-month">
-                          {new Date(evtDate || Date.now()).toLocaleDateString(lang, { month: 'long' })}
+                          {(evtDate ? new Date(evtDate) : today).toLocaleDateString(lang, { month: 'long' })}
                         </span>
-                        <span className="event-summary-year">{new Date(evtDate || Date.now()).getFullYear()}</span>
+                        <span className="event-summary-year">{(evtDate ? new Date(evtDate) : today).getFullYear()}</span>
                       </div>
                     </div>
                     <div className="event-summary-divider" />
