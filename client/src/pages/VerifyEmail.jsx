@@ -63,11 +63,11 @@ export default function VerifyEmail() {
             <Icon name="mark_email_read" size={28} />
           </div>
           <h1 className="auth-brand-title">Visit Tripoli</h1>
-          <p className="auth-brand-sub">Enter the code we emailed you</p>
+          <p className="auth-brand-sub">{t('authPage', 'verifyEmailSub')}</p>
         </div>
 
         <div className="auth-card card">
-          <h2 className="auth-title">Verify email</h2>
+          <h2 className="auth-title">{t('authPage', 'verifyEmailTitle')}</h2>
           {noSmtpHint ? (
             <div className="auth-error auth-error--info" role="status" style={{ marginBottom: 16 }}>
               Outgoing mail may not be configured on this server. Your 6-digit code was printed in the API server log —
@@ -76,9 +76,7 @@ export default function VerifyEmail() {
             </div>
           ) : null}
           <p className="auth-verify-lead">
-            New accounts must verify this email before you can sign in and use the site. Use the 6-digit code from your
-            inbox (or the Tripoli app). You can return here anytime from <strong>Log in</strong> (“Enter 6-digit
-            verification code”) or <code className="auth-code-inline">/verify-email</code>.
+            {t('authPage', 'verifyLead')}
           </p>
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
             {error && (
@@ -89,7 +87,7 @@ export default function VerifyEmail() {
 
             <div className="auth-field">
               <label htmlFor="verify-email" className="auth-label">
-                Email address
+                {t('authPage', 'emailLabel')}
               </label>
               <div className="auth-input-wrap">
                 <Icon name="mail" className="auth-input-icon" size={22} />
@@ -97,7 +95,7 @@ export default function VerifyEmail() {
                   id="verify-email"
                   type="email"
                   className={`auth-input ${error ? 'auth-input--error' : ''}`}
-                  placeholder="you@example.com"
+                  placeholder={t('authPage', 'emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -109,7 +107,7 @@ export default function VerifyEmail() {
 
             <div className="auth-field">
               <label htmlFor="verify-code" className="auth-label">
-                6-digit code
+                {t('authPage', 'verifyCodeLabel')}
               </label>
               <div className="auth-input-wrap">
                 <Icon name="confirmation_number" className="auth-input-icon" size={22} />
@@ -120,7 +118,7 @@ export default function VerifyEmail() {
                   pattern="[0-9]*"
                   maxLength={6}
                   className={`auth-input ${error ? 'auth-input--error' : ''}`}
-                  placeholder="000000"
+                  placeholder={t('authPage', 'verifyCodePlaceholder')}
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   autoComplete="one-time-code"
@@ -130,14 +128,14 @@ export default function VerifyEmail() {
             </div>
 
             <button type="submit" className="btn-primary auth-submit" disabled={loading} aria-busy={loading}>
-              {loading ? 'Verifying…' : 'Verify and continue'}
+               {loading ? t('authPage', 'verifying') : t('authPage', 'verifyBtnLong')}
             </button>
           </form>
 
           <p className="auth-footer">
-            <Link to="/login">Back to sign in</Link>
+             <Link to="/login">{t('authPage', 'backToLogin')}</Link>
             {' · '}
-            <Link to="/forgot-password">Forgot password</Link>
+             <Link to="/forgot-password">{t('authPage', 'forgotPassword')}</Link>
           </p>
         </div>
       </div>

@@ -142,11 +142,11 @@ export default function Register() {
             <Icon name="person_add" size={28} />
           </div>
           <h1 className="auth-brand-title">Visit Tripoli</h1>
-          <p className="auth-brand-sub">Create your account</p>
+          <p className="auth-brand-sub">{t('authPage', 'registerSub')}</p>
         </div>
 
         <div className="auth-card card">
-          <h2 className="auth-title">Sign up</h2>
+          <h2 className="auth-title">{t('authPage', 'registerTitle')}</h2>
           <form onSubmit={handleSubmit} className="auth-form" noValidate>
             {error && (
               <div id="register-error" className="auth-error" role="alert">
@@ -156,7 +156,7 @@ export default function Register() {
 
             <div className="auth-field">
               <label htmlFor="register-name" className="auth-label">
-                Full name
+                {t('authPage', 'fullNameLabel')}
               </label>
               <div className="auth-input-wrap">
                 <Icon name="person" className="auth-input-icon" size={22} />
@@ -164,7 +164,7 @@ export default function Register() {
                   id="register-name"
                   type="text"
                   className={`auth-input ${error ? 'auth-input--error' : ''}`}
-                  placeholder="Your name"
+                  placeholder={t('authPage', 'fullNamePlaceholder')}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoComplete="name"
@@ -178,7 +178,7 @@ export default function Register() {
 
             <div className="auth-field">
               <label htmlFor="register-username" className="auth-label">
-                Username
+                {t('authPage', 'usernameLabel')}
               </label>
               <div className="auth-input-wrap">
                 <Icon name="alternate_email" className="auth-input-icon" size={22} />
@@ -187,7 +187,7 @@ export default function Register() {
                   id="register-username"
                   type="text"
                   className={`auth-input ${usernameTaken || error ? 'auth-input--error' : ''}`}
-                  placeholder="your_handle"
+                  placeholder={t('authPage', 'usernamePlaceholder')}
                   value={username}
                   onChange={(e) => {
                     setUsername(e.target.value);
@@ -247,7 +247,7 @@ export default function Register() {
 
             <div className="auth-field">
               <label htmlFor="register-email" className="auth-label">
-                Email address
+                {t('authPage', 'emailLabel')}
               </label>
               <div className="auth-input-wrap">
                 <Icon name="mail" className="auth-input-icon" size={22} />
@@ -255,7 +255,7 @@ export default function Register() {
                   id="register-email"
                   type="email"
                   className={`auth-input ${error ? 'auth-input--error' : ''}`}
-                  placeholder="you@example.com"
+                  placeholder={t('authPage', 'emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -271,7 +271,7 @@ export default function Register() {
 
             <div className="auth-field">
               <label htmlFor="register-password" className="auth-label">
-                Password
+                {t('authPage', 'passwordLabel')}
               </label>
               <div className="auth-input-wrap">
                 <Icon name="key" className="auth-input-icon" size={22} />
@@ -292,7 +292,7 @@ export default function Register() {
                   type="button"
                   className="auth-toggle-password"
                   onClick={() => setShowPassword((s) => !s)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? t('authPage', 'hidePassword') : t('authPage', 'showPassword')}
                   tabIndex={-1}
                 >
                   <Icon name={showPassword ? 'visibility_off' : 'visibility'} size={22} />
@@ -318,7 +318,7 @@ export default function Register() {
 
             <div className="auth-field">
               <label htmlFor="register-confirm" className="auth-label">
-                Confirm password
+                {t('authPage', 'passwordLabel')}
               </label>
               <div className="auth-input-wrap">
                 <Icon name="key" className="auth-input-icon" size={22} />
@@ -339,7 +339,7 @@ export default function Register() {
                   type="button"
                   className="auth-toggle-password"
                   onClick={() => setShowConfirm((s) => !s)}
-                  aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                  aria-label={showConfirm ? t('authPage', 'hidePassword') : t('authPage', 'showPassword')}
                   tabIndex={-1}
                 >
                   <Icon name={showConfirm ? 'visibility_off' : 'visibility'} size={22} />
@@ -368,18 +368,18 @@ export default function Register() {
               disabled={loading || !canSubmit}
               aria-busy={loading}
             >
-              {loading ? 'Creating account…' : 'Create account'}
+              {loading ? t('authPage', 'registering') : t('authPage', 'registerBtn')}
             </button>
           </form>
 
           <p className="auth-footer">
-            Already have an account? <Link to="/login">Log in</Link>
+            {t('authPage', 'alreadyHaveAccount')} <Link to="/login">{t('nav', 'signIn')}</Link>
           </p>
         </div>
 
         <div className="auth-secure-note" role="status">
           <Icon name="verified_user" size={20} />
-          <span>Your data is protected. We use encryption and never share your information.</span>
+          <span>{t('authPage', 'secureNote')}</span>
         </div>
       </div>
     </div>

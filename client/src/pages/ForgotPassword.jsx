@@ -86,15 +86,15 @@ export default function ForgotPassword() {
             <div className="auth-brand-icon" aria-hidden="true">
               <Icon name="check_circle" size={28} />
             </div>
-            <h1 className="auth-brand-title">Password reset</h1>
-            <p className="auth-brand-sub">You can now sign in with your new password.</p>
+            <h1 className="auth-brand-title">{t('authPage', 'resetSuccessTitle')}</h1>
+            <p className="auth-brand-sub">{t('authPage', 'resetSuccessSub')}</p>
           </div>
           <div className="auth-card card">
             <p className="auth-footer" style={{ marginTop: 0, textAlign: 'center' }}>
-              Your password has been updated successfully.
+              {t('authPage', 'resetSuccessMsg')}
             </p>
             <Link to="/login" className="btn-primary auth-submit" style={{ display: 'block', textAlign: 'center', marginTop: 20 }}>
-              Back to Log in
+              {t('authPage', 'backToLogin')}
             </Link>
           </div>
         </div>
@@ -110,7 +110,7 @@ export default function ForgotPassword() {
             <div className="auth-brand-icon" aria-hidden="true">
               <Icon name="lock" size={28} />
             </div>
-            <h1 className="auth-brand-title">Reset password</h1>
+            <h1 className="auth-brand-title">{t('authPage', 'forgotPasswordTitle')}</h1>
             <p className="auth-brand-sub">
               {resetEmailDelivered
                 ? `Enter the 6-digit code we sent to ${email}`
@@ -124,7 +124,7 @@ export default function ForgotPassword() {
                 the API server log (development) or ask your administrator to configure outgoing mail (SMTP).
               </div>
             )}
-            <h2 className="auth-title">New password</h2>
+            <h2 className="auth-title">{t('authPage', 'forgotPasswordTitle')}</h2>
             <form onSubmit={handleResetPassword} className="auth-form" noValidate>
               {error && (
                 <div className="auth-error" role="alert">
@@ -133,7 +133,7 @@ export default function ForgotPassword() {
               )}
 
               <div className="auth-field">
-                <label htmlFor="forgot-code" className="auth-label">Code</label>
+                <label htmlFor="forgot-code" className="auth-label">{t('authPage', 'verifyCodeLabel')}</label>
                 <div className="auth-input-wrap">
                   <Icon name="confirmation_number" className="auth-input-icon" size={22} />
                   <input
@@ -143,7 +143,7 @@ export default function ForgotPassword() {
                     pattern="[0-9]*"
                     maxLength={6}
                     className="auth-input"
-                    placeholder="000000"
+                    placeholder={t('authPage', 'verifyCodePlaceholder')}
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
                     autoComplete="one-time-code"
@@ -153,14 +153,14 @@ export default function ForgotPassword() {
               </div>
 
               <div className="auth-field">
-                <label htmlFor="forgot-new-password" className="auth-label">New password</label>
+                <label htmlFor="forgot-new-password" className="auth-label">{t('authPage', 'passwordLabel')}</label>
                 <div className="auth-input-wrap">
                   <Icon name="key" className="auth-input-icon" size={22} />
                   <input
                     id="forgot-new-password"
                     type={showNew ? 'text' : 'password'}
                     className="auth-input"
-                    placeholder="••••••••"
+                    placeholder={t('authPage', 'passwordPlaceholder')}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     autoComplete="new-password"
@@ -170,7 +170,7 @@ export default function ForgotPassword() {
                     type="button"
                     className="auth-toggle-password"
                     onClick={() => setShowNew((s) => !s)}
-                    aria-label={showNew ? 'Hide password' : 'Show password'}
+                    aria-label={showNew ? t('authPage', 'hidePassword') : t('authPage', 'showPassword')}
                     tabIndex={-1}
                   >
                     <Icon name={showNew ? 'visibility_off' : 'visibility'} size={22} />
@@ -194,14 +194,14 @@ export default function ForgotPassword() {
               </div>
 
               <div className="auth-field">
-                <label htmlFor="forgot-confirm" className="auth-label">Confirm new password</label>
+                <label htmlFor="forgot-confirm" className="auth-label">{t('authPage', 'passwordLabel')}</label>
                 <div className="auth-input-wrap">
                   <Icon name="key" className="auth-input-icon" size={22} />
                   <input
                     id="forgot-confirm"
                     type="password"
                     className={`auth-input ${confirmPassword && newPassword !== confirmPassword ? 'auth-input--error' : ''}`}
-                    placeholder="••••••••"
+                    placeholder={t('authPage', 'passwordPlaceholder')}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     autoComplete="new-password"
@@ -211,7 +211,7 @@ export default function ForgotPassword() {
                 </div>
                 {confirmPassword && newPassword !== confirmPassword && (
                   <p className="auth-requirement" style={{ color: 'var(--color-error)' }}>
-                    Passwords do not match
+                    {t('authPage', 'passwordsMismatch')}
                   </p>
                 )}
               </div>
@@ -222,7 +222,7 @@ export default function ForgotPassword() {
                 disabled={loading || !canReset}
                 aria-busy={loading}
               >
-                {loading ? 'Resetting…' : 'Reset password'}
+                {loading ? t('authPage', 'resettingBtn') : t('authPage', 'forgotPasswordTitle')}
               </button>
             </form>
             <p className="auth-footer">
@@ -232,7 +232,7 @@ export default function ForgotPassword() {
                 style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit' }}
                 onClick={() => { setStep('email'); setError(''); setCode(''); setNewPassword(''); setConfirmPassword(''); }}
               >
-                ← Use a different email
+                {t('authPage', 'useDifferentEmail')}
               </button>
               {' · '}
               <button
@@ -242,7 +242,7 @@ export default function ForgotPassword() {
                 onClick={handleSendCode}
                 disabled={loading}
               >
-                Resend code
+                {t('authPage', 'resendCode')}
               </button>
             </p>
           </div>
@@ -259,12 +259,12 @@ export default function ForgotPassword() {
             <Icon name="lock" size={28} />
           </div>
           <h1 className="auth-brand-title">Visit Tripoli</h1>
-          <p className="auth-brand-sub">Reset your password</p>
+          <p className="auth-brand-sub">{t('authPage', 'forgotPasswordTitle')}</p>
         </div>
         <div className="auth-card card">
-          <h2 className="auth-title">Forgot password?</h2>
+          <h2 className="auth-title">{t('authPage', 'forgotPassword')}</h2>
           <p className="auth-footer" style={{ marginTop: 0, marginBottom: 16, textAlign: 'left' }}>
-            Enter your email and we’ll send you a 6-digit code to reset your password.
+            {t('authPage', 'forgotPasswordNote')}
           </p>
           <form onSubmit={handleSendCode} className="auth-form" noValidate>
             {error && (
@@ -273,14 +273,14 @@ export default function ForgotPassword() {
               </div>
             )}
             <div className="auth-field">
-              <label htmlFor="forgot-email" className="auth-label">Email address</label>
+              <label htmlFor="forgot-email" className="auth-label">{t('authPage', 'emailLabel')}</label>
               <div className="auth-input-wrap">
                 <Icon name="mail" className="auth-input-icon" size={22} />
                 <input
                   id="forgot-email"
                   type="email"
                   className="auth-input"
-                  placeholder="you@example.com"
+                  placeholder={t('authPage', 'emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -295,16 +295,16 @@ export default function ForgotPassword() {
               disabled={loading}
               aria-busy={loading}
             >
-              {loading ? 'Sending…' : 'Send code'}
+              {loading ? t('authPage', 'sendingResetCode') : t('authPage', 'sendResetCode')}
             </button>
           </form>
           <p className="auth-footer">
-            <Link to="/login">← Back to Log in</Link>
+            <Link to="/login">← {t('authPage', 'backToLogin')}</Link>
           </p>
         </div>
         <div className="auth-secure-note" role="status">
           <Icon name="verified_user" size={20} />
-          <span>We never share your email. The code expires in 15 minutes.</span>
+          <span>{t('authPage', 'forgotPasswordSecure')}</span>
         </div>
       </div>
     </div>

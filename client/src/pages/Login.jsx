@@ -348,7 +348,7 @@ export default function Login() {
 
                 <div className="auth-field">
                   <label htmlFor="login-email" className="auth-label">
-                    Email or username
+                    {t('authPage', 'emailLabel')}
                   </label>
                   <div className="auth-input-wrap">
                     <Icon name="mail" className="auth-input-icon" size={22} />
@@ -356,7 +356,7 @@ export default function Login() {
                       id="login-email"
                       type="text"
                       className={`auth-input ${showFieldError ? 'auth-input--error' : ''}`}
-                      placeholder="you@example.com or your_handle"
+                      placeholder={t('authPage', 'emailPlaceholder')}
                       value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);
@@ -378,7 +378,7 @@ export default function Login() {
 
                 <div className="auth-field">
                   <label htmlFor="login-password" className="auth-label">
-                    Password
+                    {t('authPage', 'passwordLabel')}
                   </label>
                   <div className="auth-input-wrap">
                     <Icon name="key" className="auth-input-icon" size={22} />
@@ -386,7 +386,7 @@ export default function Login() {
                       id="login-password"
                       type={showPassword ? 'text' : 'password'}
                       className={`auth-input ${showFieldError ? 'auth-input--error' : ''}`}
-                      placeholder="••••••••"
+                      placeholder={t('authPage', 'passwordPlaceholder')}
                       value={password}
                       onChange={(e) => {
                         setPassword(e.target.value);
@@ -405,7 +405,7 @@ export default function Login() {
                       type="button"
                       className="auth-toggle-password"
                       onClick={() => setShowPassword((s) => !s)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={showPassword ? t('authPage', 'hidePassword') : t('authPage', 'showPassword')}
                       tabIndex={-1}
                     >
                       <Icon name={showPassword ? 'visibility_off' : 'visibility'} size={22} />
@@ -415,7 +415,7 @@ export default function Login() {
 
                 <div className="auth-actions">
                   <Link to="/forgot-password" className="auth-link">
-                    Forgot password?
+                    {t('authPage', 'forgotPassword')}
                   </Link>
                 </div>
 
@@ -425,7 +425,7 @@ export default function Login() {
                   disabled={loading || googleLoading}
                   aria-busy={loading}
                 >
-                  {loading ? 'Signing in…' : 'Sign in'}
+                  {loading ? t('authPage', 'signingIn') : t('authPage', 'signInBtn')}
                 </button>
               </form>
 
@@ -438,15 +438,15 @@ export default function Login() {
                     navigate(`/verify-email?email=${encodeURIComponent(verifyAddr)}`);
                   }}
                 >
-                  Enter 6-digit verification code
+                  {t('authPage', 'enterVerifyCode')}
                 </button>
               )}
 
               <p className="auth-footer">
-                Don’t have an account? <Link to="/register">Sign up</Link>
+                {t('authPage', 'dontHaveAccount')} <Link to="/register">{t('authPage', 'signUpLink')}</Link>
               </p>
               <p className="auth-footer-note">
-                <Link to="/verify-email">Open the verification code page</Link>
+                <Link to="/verify-email">{t('authPage', 'openVerifyPage')}</Link>
                 {' — '}
                 <span className="auth-footer-note-path">/verify-email</span>
               </p>
@@ -454,7 +454,7 @@ export default function Login() {
 
             <div className="auth-secure-note" role="status">
               <Icon name="verified_user" size={20} />
-              <span>Your connection is secure. We never share your data.</span>
+              <span>{t('authPage', 'secureNote')}</span>
             </div>
           </div>
         </div>
