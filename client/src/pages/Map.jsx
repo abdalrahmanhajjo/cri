@@ -134,15 +134,6 @@ function getFirstWatchPosition(options = {}, timeoutMs = 25000) {
   });
 }
 
-function formatGeoErrorDebug(err) {
-  if (!err) return '';
-  const code = err?.code != null ? String(err.code) : '';
-  const msg = err?.message ? String(err.message).trim() : '';
-  if (code && msg) return `code ${code}: ${msg}`;
-  if (code) return `code ${code}`;
-  if (msg) return msg;
-  return '';
-}
 
 function isPermissionDeniedError(err) {
   const code = err?.code;
@@ -493,7 +484,7 @@ export default function MapPage() {
     const qParam = (searchParams.get('q') || '').trim();
     setLiveNavigation(false);
     setLiveNavError(null);
-    setLiveNavErrorDebug('');
+    
     setLiveNavRequestingPermission(false);
     setAddingTripStop(false);
     setGooglePlaceData({});
@@ -944,7 +935,7 @@ export default function MapPage() {
       const handoffCode = handoff?.code ? String(handoff.code) : '';
       if (!handoffCode) {
         setLiveNavError('unavailable');
-        setLiveNavErrorDebug(t('home', 'liveNavChromeHandoffFailed'));
+        
         return;
       }
     const targetUrl = buildChromeMapHandoffUrl({
@@ -958,13 +949,13 @@ export default function MapPage() {
     const chromeUrl = buildChromeAppUrl(targetUrl);
       if (!chromeUrl) {
         setLiveNavError('unavailable');
-        setLiveNavErrorDebug(t('home', 'liveNavChromeHandoffFailed'));
+        
         return;
       }
       window.location.assign(chromeUrl);
     } catch {
       setLiveNavError('unavailable');
-      setLiveNavErrorDebug(t('home', 'liveNavChromeHandoffFailed'));
+      
     }
   }, [currentDayPlaceIds, tripFilterName, travelMode, t]);
 
@@ -1503,7 +1494,7 @@ export default function MapPage() {
 
   const startLiveNavigation = useCallback(() => {
     setLiveNavError(null);
-    setLiveNavErrorDebug('');
+    
     if (!navigator.geolocation) {
       setLiveNavError('noGeolocation');
       return;
@@ -1546,7 +1537,7 @@ export default function MapPage() {
       .catch((err) => {
         setLiveNavRequestingPermission(false);
         const denied = isPermissionDeniedError(err);
-        setLiveNavErrorDebug(formatGeoErrorDebug(err));
+        
         if (denied) {
           if (canRedirectToChrome) {
             // No extra manual steps: jump to the same trip + live nav in Chrome.
@@ -1609,7 +1600,7 @@ export default function MapPage() {
     setLiveNavFollowing(false);
     setLiveNavDirectionsExpanded(false);
     setLiveNavError(null);
-    setLiveNavErrorDebug('');
+    
     setLiveNavRequestingPermission(false);
     prevWatchPositionRef.current = null;
     setRouteRefreshTick((t) => t + 1);
@@ -1657,7 +1648,7 @@ export default function MapPage() {
     const watchId = navigator.geolocation.watchPosition(
       onPosition,
       (err) => {
-        setLiveNavErrorDebug(formatGeoErrorDebug(err));
+        
         if (isPermissionDeniedError(err)) setLiveNavError('denied');
         else if (err?.code != null) setLiveNavError('unavailable');
       },
