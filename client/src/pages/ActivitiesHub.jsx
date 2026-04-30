@@ -1235,7 +1235,7 @@ export default function ActivitiesHub() {
                 ) : filteredEvents.length === 0 ? (
                   <p className="vd-empty">{t('home', 'activitiesHubNoMatches')}</p>
                 ) : !(evtDate && filteredEvents.length > 1) && (
-                  <div className={`vd-grid ${showEventsHubView ? 'vd-grid--1' : 'vd-grid--3'} activities-hub-grid`}>
+                  <div className="vd-grid vd-grid--3 activities-hub-grid">
                     {filteredEvents.map((event) => (
                       <FullImageCard key={event.id} item={event} type="event" />
                     ))}
