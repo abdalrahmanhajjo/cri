@@ -175,49 +175,92 @@ function MobileDateStrip({ selectedDate, onChange, events = [], eventDays = new 
         const ymd = d.toISOString().split('T')[0];
         const active = selectedDate === ymd;
         const eventNames = dayMetadata[ymd] || [];
-        const eventName = eventNames.length > 0 ? eventNames[0] : null;
+        const eventCount = eventNames.length;
+        const eventName = eventCount > 0 ? eventNames[0] : null;
+        const hasMultiple = eventCount > 1;
         const dayName = d.toLocaleDateString(lang, { weekday: 'short' });
         const dateNum = d.getDate();
         const monthShort = d.toLocaleDateString(lang, { month: 'short' });
-        
+
         return (
           <button
             key={ymd}
             onClick={() => onChange(active ? null : ymd)}
             style={{
-              flexShrink: 0, 
-              padding: eventName ? '0 16px 0 12px' : '0 14px', 
-              borderRadius: '10px', 
-              border: '1px solid',
-              borderColor: active ? 'var(--color-primary)' : 'var(--color-border)',
-              background: active ? 'var(--color-primary)' : '#fff',
+              flexShrink: 0,
+              padding: eventName ? '0 16px 0 12px' : '0 14px',
+              borderRadius: '10px',
+              border: hasMultiple && !active ? '1.5px solid var(--color-primary)' : '1px solid',
+              borderColor: active
+                ? 'var(--color-primary)'
+                : hasMultiple
+                ? 'var(--color-primary)'
+                : 'var(--color-border)',
+              background: active
+                ? 'var(--color-primary)'
+                : hasMultiple
+                ? 'var(--color-primary-light, #f0fdfa)'
+                : '#fff',
               color: active ? '#fff' : 'var(--color-text-primary)',
-              display: 'flex', 
-              flexDirection: 'row', 
-              alignItems: 'center', 
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
               justifyContent: 'center',
               gap: eventName ? '12px' : '0',
-              height: '52px', 
+              height: hasMultiple ? '58px' : '52px',
               transition: 'all 0.2s ease',
               position: 'relative',
-              textAlign: 'left'
+              textAlign: 'left',
+              boxShadow: hasMultiple && !active ? '0 2px 10px rgba(13,148,136,0.15)' : 'none',
             }}
           >
             {eventName ? (
               <>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '28px' }}>
-                  <span style={{ fontSize: '9px', fontWeight: 600, opacity: active ? 0.9 : 0.5, letterSpacing: '0.5px', textTransform: 'uppercase' }}>{dayName}</span>
-                  <span style={{ fontSize: '18px', fontWeight: 700, lineHeight: 1.1, marginTop: '1px' }}>{dateNum}</span>
+                {/* Date column */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '28px', position: 'relative' }}>
+                  <span style={{ fontSize: '9px', fontWeight: 600, opacity: active ? 0.9 : 0.55, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                    {dayName}
+                  </span>
+                  <span style={{ fontSize: '18px', fontWeight: 700, lineHeight: 1.1, marginTop: '1px', color: active ? '#fff' : hasMultiple ? 'var(--color-primary)' : 'inherit' }}>
+                    {dateNum}
+                  </span>
+                  {/* Multi-event count badge */}
+                  {hasMultiple && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      right: '-8px',
+                      background: active ? 'rgba(255,255,255,0.9)' : 'var(--color-primary)',
+                      color: active ? 'var(--color-primary)' : '#fff',
+                      fontSize: '9px',
+                      fontWeight: 900,
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      letterSpacing: '-0.5px',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                    }}>
+                      {eventCount}
+                    </span>
+                  )}
                 </div>
-                
+
                 <div style={{ width: '1px', height: '24px', background: active ? 'rgba(255,255,255,0.3)' : 'var(--color-border)' }} />
-                
+
+                {/* Event info column */}
                 <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '130px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span style={{
+                    fontSize: '12px', fontWeight: 700,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    color: active ? '#fff' : hasMultiple ? 'var(--color-primary-dark, #115e59)' : 'inherit',
+                  }}>
                     {eventName}
                   </span>
-                  <span style={{ fontSize: '10px', fontWeight: 500, opacity: active ? 0.8 : 0.5, marginTop: '2px' }}>
-                    {monthShort} Event
+                  <span style={{ fontSize: '10px', fontWeight: 500, opacity: active ? 0.85 : 0.6, marginTop: '2px', color: active ? '#fff' : hasMultiple ? 'var(--color-primary)' : 'inherit' }}>
+                    {hasMultiple ? `+${eventCount - 1} more · ${monthShort}` : `${monthShort} Event`}
                   </span>
                 </div>
               </>
