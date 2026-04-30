@@ -375,7 +375,6 @@ export default function MapPage() {
   const [routePanelCollapsed, setRoutePanelCollapsed] = useState(false);
   const [routeRefreshTick, setRouteRefreshTick] = useState(0);
   const [liveNavError, setLiveNavError] = useState(null);
-  const [liveNavErrorDebug, setLiveNavErrorDebug] = useState('');
   /** True while waiting for the browser geolocation prompt / first fix. */
   const [liveNavRequestingPermission, setLiveNavRequestingPermission] = useState(false);
   const [liveNavFollowing, setLiveNavFollowing] = useState(false);
@@ -2052,9 +2051,7 @@ export default function MapPage() {
                           <span>{t('home', travelMode === 'WALKING' ? 'travelModeWalk' : 'travelModeCar')}</span>
                         </div>
                       </div>
-                    </div>
-                  )}
-                    {liveNavigation && nextTurnText && (
+                      {liveNavigation && nextTurnText && (
                         <div className="map-route-next-turn-banner">
                           <div className="map-route-turn-icon">
                             <Icon name={getTurnIcon(nextTurnText)} size={28} />
