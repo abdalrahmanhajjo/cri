@@ -33,6 +33,7 @@ import {
   topMemoryCategoriesForRanker,
 } from '../utils/aiPlannerUserMemory';
 import { loadPlannerPrefs, savePlannerPrefs } from '../utils/aiPlannerPrefs';
+import { savePlannerDraft, loadPlannerDraft, clearPlannerDraft } from '../utils/aiPlannerDraft';
 import {
   isAiPlannerOnboardingDone,
   setAiPlannerOnboardingDone,
@@ -387,7 +388,14 @@ export default function AiPlanner() {
   const [plannerPrefsReady, setPlannerPrefsReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    // Attempt a quick restore from the current user's draft (or 'anon') on first render.
+    try {
+      const draft = loadPlannerDraft(storageUserId);
+      if (draft && draft.length > 0) return draft;
+    } catch { /* ignore */ }
+    return [];
+  });
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -416,6 +424,20 @@ export default function AiPlanner() {
   const [tourOpen, setTourOpen] = useState(false);
   const [tourStep, setTourStep] = useState(0);
   const [tourHighlightRect, setTourHighlightRect] = useState(null);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+
+  useEffect(() => {
+    let interval;
+    if (sending) {
+      setTimerSeconds(0);
+      interval = setInterval(() => {
+        setTimerSeconds((s) => s + 1);
+      }, 1000);
+    } else {
+      setTimerSeconds(0);
+    }
+    return () => clearInterval(interval);
+  }, [sending]);
 
   const [plannerMemory, setPlannerMemory] = useState(() => createEmptyPlannerMemory());
   const [profilePlannerHints, setProfilePlannerHints] = useState({});
@@ -479,6 +501,22 @@ export default function AiPlanner() {
   useEffect(() => {
     setPlannerMemory(loadPlannerMemory(storageUserId));
   }, [storageUserId]);
+
+  // ── Draft: restore draft messages once storageUserId is known ──────────────
+  useEffect(() => {
+    if (!storageUserId) return;
+    setMessages((prev) => {
+      const userDraft = loadPlannerDraft(storageUserId);
+      if (!userDraft || userDraft.length === 0) return prev;
+      return userDraft;
+    });
+  }, [storageUserId]);
+
+  // ── Draft: auto-save messages on every change ─────────────────────────────
+  useEffect(() => {
+    if (!storageUserId) return;
+    savePlannerDraft(storageUserId, messages);
+  }, [storageUserId, messages]);
 
   useEffect(() => {
     const p = loadPlannerPrefs(storageUserId);
@@ -903,6 +941,7 @@ export default function AiPlanner() {
       ...s,
       placeId: String(s.placeId),
       suggestedTime: normalizeSuggestedTime(s.suggestedTime),
+      endTime: s.endTime ? normalizeSuggestedTime(s.endTime) : null,
       dayIndex: Math.min(durationDays - 1, Math.max(0, s.dayIndex ?? 0)),
       reason: s.reason != null ? String(s.reason) : null,
     }),
@@ -1042,9 +1081,9 @@ export default function AiPlanner() {
           conversationHistory,
           userMessage: trimmed,
           places,
-          durationDays,
-          placesPerDay,
-          budget,
+          durationDays: inferred?.durationDays ?? durationDays,
+          placesPerDay: inferred?.placesPerDay ?? placesPerDay,
+          budget: inferred?.budget ?? budget,
           selectedDate: tripStartForApi,
           userInterests: interestNames,
           activityContext,
@@ -1185,9 +1224,9 @@ export default function AiPlanner() {
         conversationHistory,
         userMessage: userLine,
         places,
-        durationDays,
-        placesPerDay,
-        budget,
+        durationDays: inferred?.durationDays ?? durationDays,
+        placesPerDay: inferred?.placesPerDay ?? placesPerDay,
+        budget: inferred?.budget ?? budget,
         selectedDate: tripStartForReplaceApi,
         userInterests: interestNames,
         activityContext,
@@ -1418,6 +1457,7 @@ export default function AiPlanner() {
         days,
       });
       showToast(t('feedback', 'aiTripSaved'), 'success');
+      clearPlannerDraft(storageUserId);
       navigate(`/plan?edit=${encodeURIComponent(trip.id)}`);
     } catch (e) {
       const overlap = e?.data?.code === 'TRIP_DATE_OVERLAP';
@@ -2008,6 +2048,24 @@ export default function AiPlanner() {
                             <span>{t('aiPlanner', 'routeOverviewTitle')}</span>
                             <Icon name={routeOverviewOpen ? 'expand_less' : 'expand_more'} size={20} aria-hidden />
                           </button>
+                        <button
+                            type="button"
+                            className="ai-planner__route-overview-copy"
+                            onClick={() => {
+                              const days = slotsToTripDays(lastSlots || [], durationDays, selectedDate || new Date());
+                              navigate('/map', {
+                                state: {
+                                  tripPlaceIds: lastPlaces?.map((p) => String(p.id)) || [],
+                                  tripDays: days,
+                                  tripName: t('aiPlanner', 'planUnsavedRoute'),
+                                },
+                              });
+                            }}
+                            title={t('home', 'viewMapCta')}
+                            aria-label={t('home', 'viewMapCta')}
+                          >
+                            <Icon name="map" size={20} aria-hidden />
+                          </button>
                           <button
                             type="button"
                             className="ai-planner__route-overview-copy"
@@ -2083,7 +2141,7 @@ export default function AiPlanner() {
                                     <div className="ai-planner__stop-card__main">
                                       <div className="ai-planner__stop-card__row1">
                                         {editable ? (
-                                          <>
+                                          <div className="ai-planner__stop-time-group">
                                             <label
                                               className="ai-planner__sr-only"
                                               htmlFor={`ai-time-${i}-${slotIndex}`}
@@ -2101,6 +2159,22 @@ export default function AiPlanner() {
                                                 })
                                               }
                                             />
+                                            {s.endTime && (
+                                              <>
+                                                <span className="ai-planner__time-separator" style={{ margin: '0 4px', color: 'var(--te-text-muted)' }}>–</span>
+                                                <input
+                                                  aria-label={t('aiPlanner', 'endTime')}
+                                                  type="time"
+                                                  className="ai-planner__stop-time-input"
+                                                  value={normalizeSuggestedTime(s.endTime)}
+                                                  onChange={(e) =>
+                                                    patchSlotField(i, slotIndex, {
+                                                      endTime: e.target.value,
+                                                    })
+                                                  }
+                                                />
+                                              </>
+                                            )}
                                             {durationDays > 1 && (
                                               <select
                                                 className="ai-planner__stop-day-select"
@@ -2122,11 +2196,12 @@ export default function AiPlanner() {
                                                 ))}
                                               </select>
                                             )}
-                                          </>
+                                          </div>
                                         ) : (
                                           <span className="ai-planner__stop-time-readonly">
                                             {durationDays > 1 ? `D${(s.dayIndex ?? 0) + 1} · ` : ''}
                                             {normalizeSuggestedTime(s.suggestedTime)}
+                                            {s.endTime ? ` – ${normalizeSuggestedTime(s.endTime)}` : ''}
                                           </span>
                                         )}
                                         {editable && (
@@ -2333,6 +2408,15 @@ export default function AiPlanner() {
               <div className="ai-planner__thinking-copy">
                 <span className="ai-planner__thinking-head">{t('aiPlanner', 'thinkingHeadline')}</span>
                 <span className="ai-planner__thinking-sub">{t('aiPlanner', 'thinkingSub')}</span>
+                <div className="ai-planner__thinking-timer" aria-live="off">
+                  <span className="ai-planner__timer-val">{Math.min(100, Math.round((timerSeconds / 23) * 100))}%</span>
+                  <div className="ai-planner__timer-progress">
+                    <div 
+                      className="ai-planner__timer-bar" 
+                      style={{ width: `${Math.min(100, (timerSeconds / 23) * 100)}%` }} 
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}

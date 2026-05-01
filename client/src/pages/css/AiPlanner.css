@@ -848,6 +848,36 @@ html[data-guided-tour='1'] .ai-planner__messages {
   color: var(--color-text-secondary, #57534e);
 }
 
+.ai-planner__thinking-timer {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-planner__timer-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary, #0f766e);
+  min-width: 24px;
+}
+
+.ai-planner__timer-progress {
+  flex: 1;
+  height: 4px;
+  background: rgba(15, 118, 110, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  min-width: 80px;
+}
+
+.ai-planner__timer-bar {
+  height: 100%;
+  background: var(--color-primary, #0f766e);
+  border-radius: 2px;
+  transition: width 1s linear;
+}
+
 @keyframes ai-planner-thinking-pulse {
   0%,
   100% {
@@ -1216,14 +1246,16 @@ html[data-guided-tour='1'] .ai-planner__messages {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 10px 20px;
   border-radius: 999px;
   border: none;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.15s ease, transform 0.1s ease;
+  line-height: 1;
 }
 
 .ai-planner__btn:disabled {
@@ -1525,6 +1557,64 @@ html[data-guided-tour='1'] .ai-planner__messages {
   .ai-planner__flow {
     gap: 6px;
   }
+
+  /* Fresh-plan alert buttons: stack vertically, full-width */
+  .ai-planner__plan-alert-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ai-planner__plan-alert-actions .ai-planner__btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Route overview toolbar: ensure icon buttons don't shrink */
+  .ai-planner__route-overview-toolbar {
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .ai-planner__route-overview-toggle span {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Stop card main: reduce padding */
+  .ai-planner__stop-card__main {
+    padding: 10px 10px 10px 8px;
+  }
+
+  /* Stop name smaller on phone */
+  .ai-planner__stop-name {
+    font-size: 14px;
+  }
+
+  /* Day-dock save button: shorter label */
+  .ai-planner__day-dock-apply {
+    font-size: 12px;
+    padding: 10px 10px;
+  }
+
+  /* Stop card action icon buttons: tighter on phone */
+  .ai-planner__icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  /* Time separator dash: slightly reduce space */
+  .ai-planner__time-separator {
+    margin: 0 2px !important;
+  }
+
+  /* Day dock tabs: smaller text */
+  .ai-planner__day-dock-tab {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
 }
 
 /* Sheet: settings */
@@ -1702,8 +1792,13 @@ html[data-guided-tour='1'] .ai-planner__messages {
   background: var(--color-surface, #fff);
   border-radius: 14px;
   border: 1px solid var(--color-border, #e7e5e4);
-  box-shadow: 0 2px 8px rgba(28, 25, 23, 0.04);
+  box-shadow: 0 1px 4px rgba(28, 25, 23, 0.04);
   overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ai-planner__stop-card:hover {
+  box-shadow: 0 4px 12px rgba(28, 25, 23, 0.08);
 }
 
 .ai-planner__stop-card--warn {
@@ -1712,7 +1807,7 @@ html[data-guided-tour='1'] .ai-planner__messages {
 }
 
 .ai-planner__stop-card__rail {
-  width: 4px;
+  width: 5px;
   flex-shrink: 0;
   background: linear-gradient(180deg, var(--color-primary, #0f766e), rgba(15, 118, 110, 0.45));
 }
@@ -1720,15 +1815,86 @@ html[data-guided-tour='1'] .ai-planner__messages {
 .ai-planner__stop-card__main {
   flex: 1;
   min-width: 0;
-  padding: 12px 12px 12px 10px;
+  padding: 14px 14px 14px 12px;
 }
 
 .ai-planner__stop-card__row1 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 8px;
+}
+
+/* On mobile, stack time block on its own line, push actions below */
+/* On mobile, optimize the top row to fit time and actions better */
+@media (max-width: 639px) {
+  .ai-planner__stop-card__row1 {
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+    width: 100%;
+  }
+
+  .ai-planner__stop-time-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .ai-planner__stop-time-input {
+    font-size: 16px;
+    padding: 10px 12px;
+    flex: 0 0 120px;
+    min-width: 0;
+    max-width: 130px;
+    text-align: center;
+    background: var(--color-surface-variant, #f5f5f4);
+    border: 1px solid var(--color-border, #e7e5e4);
+    border-radius: 12px;
+    font-weight: 700;
+    color: var(--color-text-primary, #1c1917);
+  }
+
+  .ai-planner__time-separator {
+    margin: 0 4px !important;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text-tertiary, #a8a29e);
+  }
+
+  .ai-planner__stop-day-select {
+    width: 100%;
+    max-width: none;
+    margin-top: 4px;
+    text-align: center;
+  }
+
+  .ai-planner__stop-actions {
+    margin-inline-start: 0;
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    width: 100%;
+  }
+
+  .ai-planner__icon-btn {
+    width: 56px;
+    height: 48px;
+    background: var(--color-surface-elevated, #fafaf9);
+    border: 1px solid var(--color-border, #e7e5e4);
+    border-radius: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  }
+
+  .ai-planner__icon-btn .icon {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 .ai-planner__stop-time-input {
@@ -1867,7 +2033,15 @@ html[data-guided-tour='1'] .ai-planner__messages {
 .ai-planner__stop-cat {
   margin-top: 4px;
   font-size: 12px;
-  color: var(--color-text-secondary, #78716c);
+  font-weight: 500;
+  color: var(--color-primary, #0f766e);
+}
+
+.ai-planner__plan-reason {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #57534e);
 }
 
 .ai-planner__stop-conflict {

@@ -700,9 +700,11 @@ export async function applySmartScheduleToAiSlots(slots, durationDays, selectedD
       const timed = sortAndAssignSmartSlotTimes(apiShape, placeMap, ctx);
       timed.forEach((row) => {
         const hm = row.startTime ? String(row.startTime).slice(0, 5) : '09:00';
+        const em = row.endTime ? String(row.endTime).slice(0, 5) : null;
         out.push({
           placeId: row.placeId,
           suggestedTime: normalizeSuggestedTime(hm),
+          endTime: em ? normalizeSuggestedTime(em) : null,
           dayIndex: d,
           reason: row.notes != null ? String(row.notes) : null,
         });
@@ -980,7 +982,7 @@ async function buildPlacesPromptPayload(places, ctx) {
     userMessage,
     interestNames: userInterests,
     budget,
-    maxForPrompt: 56,
+    maxForPrompt: 70,
     learnedCategoryHints: Array.isArray(learnedCategoryHints) ? learnedCategoryHints : [],
   };
 
@@ -1113,10 +1115,12 @@ Within each dayIndex, use suggestedTime values in **chronological order** from f
 If the user wants 2 or more days, you MUST set dayIndex on every slot: 0 = first day, 1 = second day, etc. Spread places evenly across days.${exactCountNote}
 If you are just chatting or asking for more details, do NOT include PLAN_JSON.
 
-When the user asks to change trip settings (start date, trip length / number of days, stops per day, budget, or themes/interests), you MUST reflect that in the UI by adding at the very END of your reply (after PLAN_JSON if any):
+CRITICAL EXPLICIT INSTRUCTION FOR PLACES: You MUST prioritize places that EXACTLY match the user's requested interests and themes. Check the 'category', 'tags', and 'name' of the Available places carefully. Do not substitute one requested category for an unrequested one (e.g., do not suggest mosques if the user specifically asked for churches). If a specific requested category is NOT found in the Available places list, fill the remaining stops with places from the user's OTHER requested themes, rather than inserting unrelated places.
+
+When the user asks to change trip settings, OR provides constraints in their prompt (such as trip length, start date, how many stops fit in a day, budget, or themes/interests), you MUST update the trip settings based on it. You MUST reflect that in the UI by adding at the very END of your reply (after PLAN_JSON if any):
 TRIP_SETTINGS_JSON:
 {"startDate":"YYYY-MM-DD","durationDays":3,"placesPerDay":4,"budget":"moderate","interests":["Culture","Food"]}
-Include ONLY fields that actually change. budget must be one of: low, moderate, luxury. interests is optional — short labels in the user's language that match themes they asked for. If they only change one field, output a one-key JSON object.`;
+Include ONLY fields that actually change or were requested. budget must be one of: low, moderate, luxury. interests is optional — short labels in the user's language that match themes they asked for. If they only change one field, output a one-key JSON object.`;
 
   const daySchedulingNote =
     durationDays <= 1
@@ -1166,17 +1170,16 @@ If the user asks to change or replace ONLY ONE stop, output a full PLAN_JSON arr
     ) {
       replaceOneStopNote = `
 
-MANDATORY — SINGLE SLOT REPLACE (app-enforced):
-- The user is replacing ONLY the stop at slot index ${singleReplaceSlotIndex} (0-based). Slot order is the order of objects in your PLAN_JSON (index 0 = first object, etc.).
-- Your PLAN_JSON MUST be a JSON array with EXACTLY ${previousSlots.length} objects — same length as the current plan. Each object is one slot in order.
-- For every index i where i ≠ ${singleReplaceSlotIndex}: use the EXACT same placeId, suggestedTime, dayIndex, and reason as in the current plan (you may copy those fields verbatim).
-- Only index ${singleReplaceSlotIndex} may use a different placeId from the available list and an updated reason. Keep suggestedTime and dayIndex for that slot the same as now unless the user explicitly asked to change the time.
-- Do not reorder, add, or remove slots.${
-        durationDays >= 2
-          ? `
-- This trip has ${durationDays} days: keep the SAME dayIndex on every slot as in the list above (only placeId/reason may change at index ${singleReplaceSlotIndex}).`
-          : ''
-      }`;
+MANDATORY — SINGLE SLOT REPLACE (EXTREME QUALITY MODE):
+- The user is replacing ONLY the stop at slot index ${singleReplaceSlotIndex}.
+- Your PLAN_JSON MUST have EXACTLY ${previousSlots.length} objects — same length as now.
+- For every index i where i ≠ ${singleReplaceSlotIndex}: use the EXACT same placeId, suggestedTime, dayIndex, and reason as in the current plan. DO NOT CHANGE THEM.
+- For index ${singleReplaceSlotIndex}: You MUST be extremely smart. Pick a place from the "Available places" list that is a **perfect** match for the user's intent. 
+- Look deep at "tags", "area hint", and "category" to find the most high-quality, relevant substitute that fits the current day's area and vibe.
+- Provide a detailed, smart "reason" why this specific new place is better than the original for this trip.
+- Keep the original suggestedTime and dayIndex for the new place.
+- Do not reorder, add, or remove slots.
+- This trip spans ${durationDays} days: keep the same dayIndex on every slot as in the list above.`;
     }
 
     currentPlanBlock = `
@@ -1477,10 +1480,11 @@ export function slotsToTripDays(slots, durationDays, startDate) {
     const dateStr = dayDate.toISOString().slice(0, 10);
     const slotsOut = list.map((s) => {
       const hm = normalizeSuggestedTime(s.suggestedTime);
+      const em = s.endTime ? normalizeSuggestedTime(s.endTime) : null;
       return {
         placeId: s.placeId,
         startTime: hm.length === 5 && hm.includes(':') ? `${hm}:00` : '09:00:00',
-        endTime: null,
+        endTime: em?.length === 5 && em.includes(':') ? `${em}:00` : null,
         notes: s.reason || null,
       };
     });

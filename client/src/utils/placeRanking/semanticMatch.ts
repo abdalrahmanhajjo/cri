@@ -27,6 +27,7 @@ const DEFAULT_SYNONYMS: Record<string, string[]> = {
   old_city: ['old', 'city', 'souk', 'souq', 'khan', 'citadel'],
   souk: ['souq', 'market', 'bazaar', 'shopping'],
   food: ['restaurant', 'cafe', 'coffee', 'dessert', 'breakfast', 'lunch', 'dinner'],
+  foodie: ['restaurant', 'cafe', 'coffee', 'dessert', 'breakfast', 'lunch', 'dinner', 'food'],
   sweets: ['dessert', 'sweet', 'baklava', 'knafeh', 'hallab'],
   seafood: ['fish', 'mina', 'port', 'harbor', 'harbour'],
   scenic: ['view', 'panorama', 'sunset', 'seafront', 'corniche', 'waterfront'],
@@ -34,6 +35,8 @@ const DEFAULT_SYNONYMS: Record<string, string[]> = {
   family: ['kids', 'children', 'family-friendly', 'easy'],
   shopping: ['market', 'souk', 'souq', 'bazaar', 'craft'],
   faith: ['mosque', 'church', 'spiritual', 'religious'],
+  church: ['churches', 'faith', 'religious', 'cathedral', 'shrine'],
+  mosque: ['mosques', 'faith', 'religious', 'masjid', 'jami'],
 };
 
 function norm(s: string): string {
@@ -63,6 +66,12 @@ function expandIntentTokens(tokens: string[], synonyms: Record<string, string[]>
     if (syns) {
       for (const syn of syns) out.add(norm(syn));
     }
+    // Basic auto-pluralization & singularization
+    if (token.endsWith('s') && token.length > 3) out.add(token.slice(0, -1));
+    if (token.endsWith('es') && token.length > 4) out.add(token.slice(0, -2));
+    if (token.endsWith('ies') && token.length > 4) out.add(token.slice(0, -3) + 'y');
+    out.add(token + 's');
+    if (!token.endsWith('e')) out.add(token + 'es');
   }
   if (out.has('history') || out.has('heritage') || out.has('historic')) {
     ['citadel', 'khan', 'souk', 'souq', 'old', 'mamluk', 'ottoman'].forEach((x) => out.add(x));

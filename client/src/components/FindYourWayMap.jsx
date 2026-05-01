@@ -104,7 +104,7 @@ function firstPlaceImage(p) {
 /**
  * Home “Find your way” — default Google roadmap, area filters, detail sheet, nearby list.
  */
-export default function FindYourWayMap({ places = [], t, loadEager = false }) {
+export default function FindYourWayMap({ places = [], t, loadEager = false, simpleMode = false }) {
   const safeT = (ns, key) => (t && typeof t === 'function' ? t(ns, key) : key);
   const apiKey = typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -458,72 +458,78 @@ export default function FindYourWayMap({ places = [], t, loadEager = false }) {
   }
 
   return (
-    <div className="fym" ref={rootRef}>
-      <div className="fym-rail" aria-hidden="true" />
+    <div className="fym" ref={rootRef} style={simpleMode ? { height: '100%' } : {}}>
+      {!simpleMode && <div className="fym-rail" aria-hidden="true" />}
 
-      <div className="fym-controls">
-        <div className="fym-toolbar-scroll">
-          <div className="fym-toolbar" role="toolbar" aria-label={safeT('home', 'findYourWayMapAreaFilterAria')}>
-            <button
-              type="button"
-              className={`fym-chip ${areaFilter == null ? 'fym-chip--active' : ''}`}
-              onClick={() => setAreaFilter(null)}
-            >
-              {safeT('home', 'findYourWayMapFilterAll')}
-            </button>
-            {areaChips.map(({ key, label }) => (
+      {!simpleMode && (
+        <div className="fym-controls">
+          <div className="fym-toolbar-scroll">
+            <div className="fym-toolbar" role="toolbar" aria-label={safeT('home', 'findYourWayMapAreaFilterAria')}>
               <button
-                key={key}
                 type="button"
-                className={`fym-chip ${areaFilter === key ? 'fym-chip--active' : ''}`}
-                onClick={() => setAreaFilter(key)}
-                style={{ '--fym-chip-dot': FYM_AREA_UI_DOT }}
+                className={`fym-chip ${areaFilter == null ? 'fym-chip--active' : ''}`}
+                onClick={() => setAreaFilter(null)}
               >
-                <span className="fym-chip-dot" aria-hidden />
-                {label}
+                {safeT('home', 'findYourWayMapFilterAll')}
               </button>
-            ))}
-          </div>
-        </div>
-        <div className="fym-meta">
-          <span className="fym-meta-count">{placesCountLabel}</span>
-          <button type="button" className="fym-recenter" onClick={handleRecenter} disabled={visibleMarkers.length === 0}>
-            <Icon name="my_location" size={18} aria-hidden />
-            {safeT('home', 'findYourWayMapRecenter')}
-          </button>
-        </div>
-      </div>
-
-      <div className="fym-map-stage">
-        <div className="fym-map-wrap" ref={mapWrapRef}>
-          <div ref={mapRef} className="fym-map-canvas" dir="ltr" role="application" aria-label={safeT('home', 'findYourWayMapAria')} />
-          <div className="fym-map-overlay fym-map-overlay--top">
-            <div className="fym-live-badge">
-              <span className="fym-live-dot" aria-hidden />
-              <span>{safeT('home', 'findYourWayMapLiveBadge')}</span>
+              {areaChips.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`fym-chip ${areaFilter === key ? 'fym-chip--active' : ''}`}
+                  onClick={() => setAreaFilter(key)}
+                  style={{ '--fym-chip-dot': FYM_AREA_UI_DOT }}
+                >
+                  <span className="fym-chip-dot" aria-hidden />
+                  {label}
+                </button>
+              ))}
             </div>
-            <Link to={MAP_PATH} className="fym-expand-map">
-              {safeT('home', 'findYourWayMapExpand')}
-              <Icon name="open_in_new" size={16} aria-hidden />
-            </Link>
           </div>
-          <div className="fym-map-overlay fym-map-overlay--bottom">
-            <div className="fym-legend" role="group" aria-label={safeT('home', 'findYourWayMapLegend')}>
-              <span className="fym-legend-kicker">{safeT('home', 'findYourWayMapLegend')}</span>
-              <div className="fym-legend-items">
-                {areaChips.map(({ key, label }) => (
-                  <span key={key} className="fym-legend-item">
+          <div className="fym-meta">
+            <span className="fym-meta-count">{placesCountLabel}</span>
+            <button type="button" className="fym-recenter" onClick={handleRecenter} disabled={visibleMarkers.length === 0}>
+              <Icon name="my_location" size={18} aria-hidden />
+              {safeT('home', 'findYourWayMapRecenter')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="fym-map-stage" style={simpleMode ? { flex: 1, height: '100%', display: 'flex' } : {}}>
+        <div className="fym-map-wrap" ref={mapWrapRef} style={simpleMode ? { maxWidth: '100%', height: '100%', aspectRatio: 'auto', borderRadius: 0, border: 'none' } : {}}>
+          <div ref={mapRef} className="fym-map-canvas" dir="ltr" role="application" aria-label={safeT('home', 'findYourWayMapAria')} style={simpleMode ? { borderRadius: 0 } : {}} />
+          {!simpleMode && (
+            <div className="fym-map-overlay fym-map-overlay--top">
+              <div className="fym-live-badge">
+                <span className="fym-live-dot" aria-hidden />
+                <span>{safeT('home', 'findYourWayMapLiveBadge')}</span>
+              </div>
+              <Link to={MAP_PATH} className="fym-expand-map">
+                {safeT('home', 'findYourWayMapExpand')}
+                <Icon name="open_in_new" size={16} aria-hidden />
+              </Link>
+            </div>
+          )}
+          {!simpleMode && (
+            <div className="fym-map-overlay fym-map-overlay--bottom">
+              <div className="fym-legend" role="group" aria-label={safeT('home', 'findYourWayMapLegend')}>
+                <span className="fym-legend-kicker">{safeT('home', 'findYourWayMapLegend')}</span>
+                <div className="fym-legend-items">
+                  {areaChips.map(({ key, label }) => (
+                    <span key={key} className="fym-legend-item">
+                      <span className="fym-legend-swatch" style={{ background: FYM_AREA_UI_DOT }} />
+                      {label}
+                    </span>
+                  ))}
+                  <span className="fym-legend-item fym-legend-item--muted">
                     <span className="fym-legend-swatch" style={{ background: FYM_AREA_UI_DOT }} />
-                    {label}
+                    {safeT('home', 'findYourWayMapOtherArea')}
                   </span>
-                ))}
-                <span className="fym-legend-item fym-legend-item--muted">
-                  <span className="fym-legend-swatch" style={{ background: FYM_AREA_UI_DOT }} />
-                  {safeT('home', 'findYourWayMapOtherArea')}
-                </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
           {mapError && (
             <div className="fym-error" role="alert">
               {mapError}
@@ -538,7 +544,7 @@ export default function FindYourWayMap({ places = [], t, loadEager = false }) {
         </div>
       </div>
 
-      {selected && (
+      {!simpleMode && selected && (
         <aside
           className="fym-panel"
           aria-live="polite"

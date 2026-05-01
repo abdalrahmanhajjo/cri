@@ -85,8 +85,8 @@ async function callGroqOnce(messages, temperature = 0.5, maxTokens = 2048, model
 const MAX_GROQ_RETRIES = 3;
 const MAX_RATE_LIMIT_WAIT_MS = 20000;
 
-async function callGroq(messages, temperature = 0.5, maxTokens = 2048) {
-  const models = groqModels();
+async function callGroq(messages, temperature = 0.5, maxTokens = 2048, preferredModel = null) {
+  const models = preferredModel ? [preferredModel, ...groqModels()] : groqModels();
   let lastErr;
   for (const model of models) {
     for (let attempt = 0; attempt <= MAX_GROQ_RETRIES; attempt += 1) {
@@ -255,7 +255,7 @@ Return a JSON array of objects with exactly 'id', 'aiRelevance' (0-10) and 'reas
 Candidates:\n${candidates.map(c => `- ${c.id}: ${c.name}`).join('\n')}`;
 
   try {
-    const { text } = await callGroq([{ role: 'user', content: prompt }], 0.2, 2048);
+    const { text } = await callGroq([{ role: 'user', content: prompt }], 0.2, 2048, 'llama-3.1-8b-instant');
     const match = text.match(/\[[\s\S]*\]/);
     if (!match) throw new Error('Failed to parse array');
     const scoredIds = JSON.parse(match[0]);

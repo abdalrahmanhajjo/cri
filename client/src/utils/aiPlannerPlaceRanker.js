@@ -73,7 +73,7 @@ export async function rankPlacesForPlanner(places, options = {}) {
   if (!list.length) return { ordered: [], hintLines: [] };
 
   const intentText = [userMessage, ...(interestNames || [])].filter(Boolean).join(' ');
-  const retrieved = await retrieveCandidates(list, intentText, 90);
+  const retrieved = await retrieveCandidates(list, intentText, 45);
   const rerankedList = await aiRerankPlaces(retrieved, intentText);
   const ranked = rankPlaces(rerankedList, intentText, { budget, interestNames });
   const head = ranked.slice(0, Math.min(90, ranked.length));
