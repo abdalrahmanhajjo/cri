@@ -376,15 +376,32 @@ export default function AiPlanner() {
   const [dataLoading, setDataLoading] = useState(true);
   const [aiConfigured, setAiConfigured] = useState(true);
 
-  const [durationDays, setDurationDays] = useState(1);
-  const [placesPerDay, setPlacesPerDay] = useState(4);
-  const [budget, setBudget] = useState('moderate');
+  const [durationDays, setDurationDays] = useState(() => {
+    const p = loadPlannerPrefs(storageUserId);
+    return p?.durationDays ?? 1;
+  });
+  const [placesPerDay, setPlacesPerDay] = useState(() => {
+    const p = loadPlannerPrefs(storageUserId);
+    return p?.placesPerDay ?? 4;
+  });
+  const [budget, setBudget] = useState(() => {
+    const p = loadPlannerPrefs(storageUserId);
+    return p?.budget ?? 'moderate';
+  });
   const [selectedDate, setSelectedDate] = useState(() => {
+    const p = loadPlannerPrefs(storageUserId);
+    if (p?.startDate) {
+      const d = new Date(p.startDate);
+      if (!isNaN(d.getTime())) return d;
+    }
     const d = new Date();
     d.setDate(d.getDate() + 1);
     return d;
   });
-  const [interestIds, setInterestIds] = useState(() => new Set());
+  const [interestIds, setInterestIds] = useState(() => {
+    const p = loadPlannerPrefs(storageUserId);
+    return new Set(p?.interestIds ?? []);
+  });
   const [plannerPrefsReady, setPlannerPrefsReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
