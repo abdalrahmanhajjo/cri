@@ -1132,12 +1132,12 @@
   /* Calendar Refinement */
   .activities-hub-calendar-col .calendar--hub {
     background: #fff;
-    border-radius: 24px;
-    padding: 40px;
+    border-radius: 18px;
+    padding: 20px 24px;
     border: 1px solid #EDEDED;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
     width: 100%;
-    --calendar-max-width: 900px;
+    max-width: 520px;
   }
 
   .calendar--hub .calendar-header {
@@ -1150,11 +1150,11 @@
   }
 
   .calendar-header-monthyear {
-    font-size: 32px;
+    font-size: 22px;
     display: flex;
     justify-content: center;
-    gap: 12px;
-    margin-bottom: 8px;
+    gap: 8px;
+    margin-bottom: 6px;
   }
 
   .calendar-header-month {
@@ -1181,8 +1181,8 @@
 
   .calendar--hub .calendar-day-cell {
     border: 0.5px solid #EDEDED;
-    height: 110px;
-    padding: 16px;
+    height: 64px;
+    padding: 8px 10px;
     background: transparent;
     aspect-ratio: auto;
   }
@@ -1193,7 +1193,7 @@
 
   .calendar--hub .calendar-day-num {
     font-weight: 700;
-    font-size: 18px;
+    font-size: 13px;
   }
 
   .calendar--hub .calendar-nav-btn {
