@@ -1,4 +1,13 @@
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
+
+// MODULE LOAD LOG
+try {
+  fs.writeFileSync(path.join(process.cwd(), 'trips_module_load.log'), `Loaded at ${new Date().toISOString()} in ${process.cwd()}\n`);
+} catch (e) {}
+
+const { ObjectId } = require('mongodb');
 const { authMiddleware } = require('../middleware/auth');
 const { getCollection } = require('../mongo');
 const { parsePlaceId, parseTripId } = require('../utils/validate');
@@ -605,15 +614,44 @@ router.get('/favourites', async (req, res) => {
     await ensureSavedPlacesIndexes(favsColl);
     const rows = await favsColl.find({ user_id: userId }).toArray();
     const sorted = sortSavedPlaceDocs(rows);
-    const placeIds = sorted
+    const placeIdsRaw = sorted
       .map((r) => String(r.place_id))
       .filter((pid) => pid && pid !== 'undefined' && pid !== 'null');
+
+    // Resolve canonical IDs to prevent mismatches in the frontend FavouritesContext
+    let placeIds = placeIdsRaw;
+    try {
+      const placesColl = await getCollection('places');
+      const resolvedDocs = await placesColl.find({
+        $or: [
+          { id: { $in: placeIdsRaw } },
+          { searchName: { $in: placeIdsRaw } },
+          { name: { $in: placeIdsRaw } }
+        ]
+      }, { projection: { id: 1, searchName: 1, name: 1 } }).toArray();
+
+      const idMap = new Map();
+      resolvedDocs.forEach(d => {
+        if (d.searchName) idMap.set(d.searchName, d.id);
+        if (d.name) idMap.set(d.name, d.id);
+        idMap.set(d.id, d.id);
+      });
+
+      placeIds = placeIdsRaw.map(pid => idMap.get(pid) || pid);
+    } catch (e) {
+      console.warn('[GET favourites] ID resolution failed:', e.message);
+    }
+
     const items = sorted
       .filter((r) => r.place_id != null && String(r.place_id) !== 'undefined' && String(r.place_id) !== 'null')
-      .map((r) => ({
-        placeId: String(r.place_id),
-        savedAt: r.created_at ? new Date(r.created_at).toISOString() : null,
-      }));
+      .map((r) => {
+        const pid = String(r.place_id);
+        return {
+          placeId: pid,
+          savedAt: r.created_at ? new Date(r.created_at).toISOString() : null,
+        };
+      });
+
     res.setHeader('Cache-Control', 'private, no-store');
     res.json({ placeIds, items });
   } catch (err) {
@@ -665,22 +703,82 @@ router.post('/favourites', async (req, res) => {
 
 router.delete('/favourites/:placeId', async (req, res) => {
   const userId = req.user.userId;
-  const parsed = parsePlaceId(req.params.placeId);
+  const rawPlaceId = req.params.placeId;
+  
+  // LOG IMMEDIATELY
+  try {
+    const logMsg = `[${new Date().toISOString()}] RECV DELETE fav: user=${userId} rawPlaceId=${rawPlaceId}\n`;
+    fs.appendFileSync(path.join(process.cwd(), 'fav_debug.log'), logMsg);
+  } catch (e) { /* ignore */ }
+
+  const parsed = parsePlaceId(rawPlaceId);
   if (!parsed.valid) return res.status(400).json({ error: 'Invalid place id' });
-  const placeId = parsed.value;
+  const placeId = parsed.value; // trimmed
+
   try {
     const favsColl = await getCollection('saved_places');
     await ensureSavedPlacesIndexes(favsColl);
 
     const idAsNum = parseInt(placeId, 10);
-    const filter = { user_id: userId, $or: [{ place_id: placeId }] };
-    if (!isNaN(idAsNum) && String(idAsNum) === placeId) {
-      filter.$or.push({ place_id: idAsNum });
+    // Build a filter that is extremely likely to catch any variation of this saved place
+    const placeRegex = new RegExp('^' + placeId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, '[_\\s]') + '$', 'i');
+    const rawRegex = new RegExp('^' + rawPlaceId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, '[_\\s]') + '$', 'i');
+
+    const filter = {
+      user_id: userId,
+      $or: [
+        { place_id: placeRegex },
+        { place_id: rawRegex },
+        { id: `${userId}_${placeId}` },
+        { id: `${userId}_${rawPlaceId}` },
+        { _id: placeId }
+      ]
+    };
+
+    // If it looks like a hex ObjectId, try that too
+    if (/^[0-9a-fA-F]{24}$/.test(placeId)) {
+      try {
+        const oid = new ObjectId(placeId);
+        filter.$or.push({ place_id: oid });
+        filter.$or.push({ _id: oid });
+      } catch (e) { /* ignore */ }
     }
 
-    await favsColl.deleteMany(filter);
-    res.json({ ok: true });
+    if (!isNaN(idAsNum) && String(idAsNum) === placeId) {
+      filter.$or.push({ place_id: idAsNum });
+      filter.$or.push({ id: `${userId}_${idAsNum}` });
+    }
+
+    // CRITICAL: Resolve canonical ID if the client is using an alias (searchName or Name)
+    try {
+      const placesColl = await getCollection('places');
+      const placeDoc = await placesColl.findOne({
+        $or: [
+          { id: placeId },
+          { searchName: placeId },
+          { name: new RegExp('^' + placeId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+        ]
+      });
+      if (placeDoc) {
+        if (placeDoc.id && placeDoc.id !== placeId) {
+          filter.$or.push({ place_id: placeDoc.id });
+          filter.$or.push({ id: `${userId}_${placeDoc.id}` });
+        }
+        if (placeDoc.searchName && placeDoc.searchName !== placeId) {
+          filter.$or.push({ place_id: placeDoc.searchName });
+          filter.$or.push({ id: `${userId}_${placeDoc.searchName}` });
+        }
+      }
+    } catch (e) {
+      console.warn('[DELETE fav] Failed to resolve canonical ID:', e.message);
+    }
+
+    const result = await favsColl.deleteMany(filter);
+    res.json({ ok: true, deletedCount: result.deletedCount });
   } catch (err) {
+    try {
+      fs.appendFileSync(path.join(process.cwd(), 'fav_debug.log'), `[${new Date().toISOString()}] ERROR: ${err.message}\n${err.stack}\n`);
+    } catch (e) { /* ignore */ }
     console.error(err);
     res.status(500).json({ error: 'Failed to remove favourite' });
   }
