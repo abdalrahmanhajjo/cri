@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import Icon from './Icon';
 import GlobalSearchBar from './GlobalSearchBar';
+import BackToTop from './BackToTop';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import './css/Layout.css';
 
@@ -488,6 +489,7 @@ export default function Layout() {
       >
         <Outlet />
       </main>
+      <BackToTop />
     </div>
   );
 }
