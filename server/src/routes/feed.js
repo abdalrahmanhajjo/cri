@@ -390,4 +390,82 @@ router.post('/post/:postId/save', authMiddleware, async (req, res) => {
   }
 });
 
+/** PATCH comment — author only. */
+router.patch('/post/:postId/comments/:commentId', authMiddleware, async (req, res) => {
+  const { postId, commentId } = req.params;
+  const userId = req.user.userId;
+  const { body } = req.body;
+
+  if (!body || body.length > 2000) return res.status(400).json({ error: 'Invalid comment body' });
+
+  try {
+    const commentsColl = await getCollection('feed_comments');
+    const comment = await commentsColl.findOne({ id: commentId, post_id: postId });
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+    if (comment.user_id !== userId) {
+      // Check if admin
+      const usersColl = await getCollection('users');
+      const user = await usersColl.findOne({ id: userId });
+      if (!user?.is_admin) {
+        return res.status(403).json({ error: 'Not authorized to edit this comment' });
+      }
+    }
+
+    await commentsColl.updateOne(
+      { id: commentId },
+      { $set: { body, updated_at: new Date() } }
+    );
+
+    const updated = await commentsColl.findOne({ id: commentId });
+    res.json({
+      comment: {
+        id: updated.id,
+        body: updated.body,
+        updatedAt: updated.updated_at
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update comment' });
+  }
+});
+
+/** DELETE comment — author or admin. */
+router.delete('/post/:postId/comments/:commentId', authMiddleware, async (req, res) => {
+  const { postId, commentId } = req.params;
+  const userId = req.user.userId;
+
+  try {
+    const commentsColl = await getCollection('feed_comments');
+    const comment = await commentsColl.findOne({ id: commentId, post_id: postId });
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+    let canDelete = comment.user_id === userId;
+    if (!canDelete) {
+      const usersColl = await getCollection('users');
+      const user = await usersColl.findOne({ id: userId });
+      if (user?.is_admin) canDelete = true;
+    }
+
+    if (!canDelete) {
+      return res.status(403).json({ error: 'Not authorized to delete this comment' });
+    }
+
+    // Delete comment and its direct replies (one level supported by nestComments)
+    await commentsColl.deleteMany({
+      $or: [
+        { id: commentId },
+        { parent_id: commentId }
+      ]
+    });
+
+    const newCount = await commentsColl.countDocuments({ post_id: postId });
+    res.json({ ok: true, comments_count: newCount });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete comment' });
+  }
+});
+
 module.exports = router;

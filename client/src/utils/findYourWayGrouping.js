@@ -181,3 +181,10 @@ export function groupPlacesByWay(places, categories) {
   byWay.forEach((list) => list.sort((a, b) => (Number(b?.rating) || 0) - (Number(a?.rating) || 0)));
   return byWay;
 }
+
+/** Latin digits for stat tiles (consistent with mixed-language UI). */
+export function formatDirectoryCount(n, lang) {
+  const safe = Number.isFinite(n) ? Math.max(0, Math.floor(Number(n))) : 0;
+  const locale = lang === 'fr' ? 'fr' : 'en';
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(safe);
+}

@@ -606,12 +606,12 @@ router.get('/favourites', async (req, res) => {
     const rows = await favsColl.find({ user_id: userId }).toArray();
     const sorted = sortSavedPlaceDocs(rows);
     const placeIds = sorted
-      .map((r) => r.place_id)
-      .filter((pid) => pid && String(pid) !== 'undefined' && String(pid) !== 'null');
+      .map((r) => String(r.place_id))
+      .filter((pid) => pid && pid !== 'undefined' && pid !== 'null');
     const items = sorted
-      .filter((r) => r.place_id && String(r.place_id) !== 'undefined' && String(r.place_id) !== 'null')
+      .filter((r) => r.place_id != null && String(r.place_id) !== 'undefined' && String(r.place_id) !== 'null')
       .map((r) => ({
-        placeId: r.place_id,
+        placeId: String(r.place_id),
         savedAt: r.created_at ? new Date(r.created_at).toISOString() : null,
       }));
     res.setHeader('Cache-Control', 'private, no-store');
@@ -637,18 +637,22 @@ router.post('/favourites', async (req, res) => {
   try {
     const favsColl = await getCollection('saved_places');
     await ensureSavedPlacesIndexes(favsColl);
-    await favsColl.updateOne(
-      { user_id: userId, place_id: placeId },
-      {
-        $set: {
-          user_id: userId,
-          place_id: placeId,
-          id: compositeId,
-        },
-        $setOnInsert: { created_at: new Date() },
-      },
-      { upsert: true }
-    );
+
+    const idAsNum = parseInt(placeId, 10);
+    const filter = { user_id: userId, $or: [{ place_id: placeId }] };
+    if (!isNaN(idAsNum) && String(idAsNum) === placeId) {
+      filter.$or.push({ place_id: idAsNum });
+    }
+
+    // Use deleteMany to clean up any potential duplicates or type-mismatched old data
+    await favsColl.deleteMany(filter);
+    await favsColl.insertOne({
+      id: compositeId,
+      user_id: userId,
+      place_id: placeId,
+      created_at: new Date(),
+    });
+
     res.json({ ok: true });
   } catch (err) {
     if (err && err.code === 11000) {
@@ -667,7 +671,14 @@ router.delete('/favourites/:placeId', async (req, res) => {
   try {
     const favsColl = await getCollection('saved_places');
     await ensureSavedPlacesIndexes(favsColl);
-    await favsColl.deleteOne({ user_id: userId, place_id: placeId });
+
+    const idAsNum = parseInt(placeId, 10);
+    const filter = { user_id: userId, $or: [{ place_id: placeId }] };
+    if (!isNaN(idAsNum) && String(idAsNum) === placeId) {
+      filter.$or.push({ place_id: idAsNum });
+    }
+
+    await favsColl.deleteMany(filter);
     res.json({ ok: true });
   } catch (err) {
     console.error(err);

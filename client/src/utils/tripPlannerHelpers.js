@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shared trip planning helpers (Visit Trioli web + parity with VisitTripoliApp Flutter):
  * calendar-day span, TripDay/TripSlot JSON, overlap checks, ordering: best time → duration → rating.
  */
