@@ -721,8 +721,8 @@ router.delete('/favourites/:placeId', async (req, res) => {
 
     const idAsNum = parseInt(placeId, 10);
     // Build a filter that is extremely likely to catch any variation of this saved place
-    const placeRegex = new RegExp('^' + placeId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, '[_\\s]') + '$', 'i');
-    const rawRegex = new RegExp('^' + rawPlaceId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, '[_\\s]') + '$', 'i');
+    const placeRegex = new RegExp('^\\s*' + placeId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, '[_\\s]') + '\\s*$', 'i');
+    const rawRegex = new RegExp('^\\s*' + rawPlaceId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, '[_\\s]') + '\\s*$', 'i');
 
     const filter = {
       user_id: userId,

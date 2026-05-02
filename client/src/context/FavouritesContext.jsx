@@ -38,6 +38,38 @@ export function FavouritesProvider({ children }) {
   const [favouriteIds, setFavouriteIds] = useState(() => new Set());
   const [loading, setLoading] = useState(false);
   const [busyIds, setBusyIds] = useState(() => new Set());
+  
+  /** 
+   * Local "Recently Deleted" blacklist. 
+   * Items added here stay hidden even if the server briefly returns them (lag/race).
+   * Persisted to localStorage to handle hard refreshes (F5).
+   */
+  const [locallyDeleted, setLocallyDeleted] = useState(() => {
+    try {
+      const raw = localStorage.getItem('favourites_deleted_recently');
+      if (!raw) return new Set();
+      const parsed = JSON.parse(raw);
+      // Only keep entries from the last 5 minutes to prevent permanent accidental blocking
+      const now = Date.now();
+      const validIds = Object.entries(parsed)
+        .filter(([_, timestamp]) => now - timestamp < 300000)
+        .map(([id]) => id);
+      return new Set(validIds);
+    } catch {
+      return new Set();
+    }
+  });
+
+  // Sync locallyDeleted to localStorage
+  useEffect(() => {
+    try {
+      const obj = {};
+      const now = Date.now();
+      locallyDeleted.forEach(id => { obj[id] = now; });
+      localStorage.setItem('favourites_deleted_recently', JSON.stringify(obj));
+    } catch { /* ignore quota */ }
+  }, [locallyDeleted]);
+
   const fetchAbortRef = useRef(null);
   const refreshSeqRef = useRef(0);
   const busyRef = useRef(new Set());
@@ -60,9 +92,14 @@ export function FavouritesProvider({ children }) {
     try {
       const res = await api.user.favourites({ signal: ac.signal });
       if (ac.signal.aborted || mySeq !== refreshSeqRef.current) return;
-      const ids = Array.isArray(res?.placeIds)
+      
+      const rawIds = Array.isArray(res?.placeIds)
         ? res.placeIds.map(String).filter((x) => x && x !== 'undefined' && x !== 'null')
         : [];
+      
+      // FILTER OUT locally deleted items
+      const ids = rawIds.filter(id => !locallyDeleted.has(id));
+      
       setFavouriteIds(new Set(ids));
     } catch (e) {
       if (isAbortError(e)) return;
@@ -73,7 +110,7 @@ export function FavouritesProvider({ children }) {
         setLoading(false);
       }
     }
-  }, [userId]);
+  }, [userId, locallyDeleted]);
 
   useEffect(() => {
     if (userId == null) {
@@ -91,9 +128,9 @@ export function FavouritesProvider({ children }) {
   const isFavourite = useCallback(
     (placeId) => {
       const id = normalizePlaceIdForFavourite(placeId);
-      return id != null && favouriteIds.has(id);
+      return id != null && favouriteIds.has(id) && !locallyDeleted.has(id);
     },
-    [favouriteIds]
+    [favouriteIds, locallyDeleted]
   );
 
   const isBusy = useCallback(
@@ -122,8 +159,19 @@ export function FavouritesProvider({ children }) {
       setFavouriteIds((prev) => {
         wasFav = prev.has(id);
         const next = new Set(prev);
-        if (wasFav) next.delete(id);
-        else next.add(id);
+        if (wasFav) {
+          next.delete(id);
+          // MARK AS LOCALLY DELETED immediately
+          setLocallyDeleted(prevLocal => new Set(prevLocal).add(id));
+        } else {
+          next.add(id);
+          // UN-MARK if re-added
+          setLocallyDeleted(prevLocal => {
+            const nl = new Set(prevLocal);
+            nl.delete(id);
+            return nl;
+          });
+        }
         return next;
       });
 
@@ -141,20 +189,25 @@ export function FavouritesProvider({ children }) {
             if (err?.status !== 409) throw err;
           }
         }
-        // Re-fetch list; may race with other refreshes or briefly lag POST — reconcile below.
+        
+        // Re-fetch list; the fetch already handles filtering out `locallyDeleted`
         await refreshFavourites({ silent: true });
-        setFavouriteIds((prev) => {
-          const next = new Set(prev);
-          if (wasFav) next.delete(id);
-          else next.add(id);
-          return next;
-        });
+        
         return { ok: true, added: !wasFav };
       } catch (err) {
+        // Rollback
         setFavouriteIds((prev) => {
           const next = new Set(prev);
-          if (wasFav) next.add(id);
-          else next.delete(id);
+          if (wasFav) {
+            next.add(id);
+            setLocallyDeleted(prevLocal => {
+              const nl = new Set(prevLocal);
+              nl.delete(id);
+              return nl;
+            });
+          } else {
+            next.delete(id);
+          }
           return next;
         });
         return { ok: false, error: err };
