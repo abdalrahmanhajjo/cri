@@ -89,7 +89,13 @@ router.post('/', async (req, res) => {
       return res.status(409).json({ error: 'This user is already linked to this place' });
     }
 
-    await ownersColl.insertOne({ user_id: userId, place_id: placeId, created_at: new Date() });
+    const crypto = require('crypto');
+    await ownersColl.insertOne({ 
+      id: crypto.randomUUID(),
+      user_id: userId, 
+      place_id: placeId, 
+      created_at: new Date() 
+    });
     res.status(201).json({ ok: true, userId, placeId });
   } catch (err) {
     console.error(err);

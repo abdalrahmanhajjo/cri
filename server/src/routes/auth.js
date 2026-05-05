@@ -99,7 +99,11 @@ async function buildAuthSessionPayload(user) {
   const placeOwners = await getCollection('place_owners');
   const ownedPlaceCount = await placeOwners.countDocuments({ user_id: user.id });
   const profile = user.profile || {};
-  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  const token = jwt.sign(
+    { userId: user.id, tokenVersion: user.token_version || 1 },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
   return {
     token,
     user: {
@@ -385,26 +389,8 @@ router.post('/login', sanitizeLoginInput, async (req, res) => {
       });
     }
     
-    // Count owned places
-    const placeOwners = await getCollection('place_owners');
-    const ownedPlaceCount = await placeOwners.countDocuments({ user_id: user.id });
-
-    const profile = user.profile || {};
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        name: user.name || user.email.split('@')[0],
-        username: profile.username || '',
-        email: user.email,
-        emailVerified: true,
-        onboardingCompleted: profile.onboarding_completed === true,
-        isBusinessOwner: user.is_business_owner === true,
-        isAdmin: user.is_admin === true,
-        ownedPlaceCount: ownedPlaceCount,
-      },
-    });
+    const payload = await buildAuthSessionPayload(user);
+    res.json(payload);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });
@@ -556,27 +542,8 @@ router.post('/google', async (req, res) => {
       user = await users.findOne({ id: user.id });
     }
 
-    const placeOwners = await getCollection('place_owners');
-    const ownedPlaceCount = await placeOwners.countDocuments({ user_id: user.id });
-
-    const profile = user.profile || {};
-    const username = profile.username || '';
-
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        name: user.name || user.email.split('@')[0],
-        username,
-        email: user.email,
-        emailVerified: true,
-        onboardingCompleted: profile.onboarding_completed === true,
-        isBusinessOwner: user.is_business_owner === true,
-        isAdmin: user.is_admin === true,
-        ownedPlaceCount,
-      },
-    });
+    const sessionPayload = await buildAuthSessionPayload(user);
+    res.json(sessionPayload);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Google sign-in failed' });
@@ -738,26 +705,10 @@ router.post('/verify-email', async (req, res) => {
       console.warn('[verify-email] welcome email:', e.message);
     }
     
-    // Count owned places
-    const placeOwners = await getCollection('place_owners');
-    const ownedPlaceCount = await placeOwners.countDocuments({ user_id: user.id });
-
-    const vProfile = user.profile || {};
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const payload = await buildAuthSessionPayload(user);
     res.json({
-      token,
-      welcomeEmailDelivered,
-      user: {
-        id: user.id,
-        name: user.name || emailRaw.split('@')[0],
-        username: vProfile.username || '',
-        email: user.email,
-        emailVerified: true,
-        onboardingCompleted: vProfile.onboarding_completed === true,
-        isBusinessOwner: user.is_business_owner === true,
-        isAdmin: user.is_admin === true,
-        ownedPlaceCount: ownedPlaceCount,
-      },
+      ...payload,
+      welcomeEmailDelivered
     });
   } catch (err) {
     console.error(err);

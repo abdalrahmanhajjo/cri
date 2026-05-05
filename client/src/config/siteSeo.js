@@ -1,8 +1,8 @@
 /** Default metadata (fallback when admin site settings have no description). Keep in sync with index.html <title>. */
-export const SITE_DEFAULT_TITLE = 'Visit Tripoli – Best spots, experiences & plans';
+export const SITE_DEFAULT_TITLE = 'Visit Tripoli – Best Places, Events & Ai planner';
 
 /** Shown after admin “Site name” in `<title>` when name is custom */
-export const SITE_TITLE_SUFFIX = 'Best spots, experiences & plans';
+export const SITE_TITLE_SUFFIX = 'Best Places, Events & Ai planner';
 
 export const SITE_BRAND_NAME = 'Visit Tripoli';
 

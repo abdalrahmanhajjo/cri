@@ -4,6 +4,7 @@ const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 
 const router = express.Router();
+const { logAuditEvent } = require('../../utils/audit');
 router.use(authMiddleware, adminMiddleware);
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -119,6 +120,10 @@ router.patch('/:id', async (req, res) => {
       isBusinessOwner: r.is_business_owner === true,
       isBlocked: r.is_blocked === true,
     });
+
+    // Audit log
+    const actor = { userId: req.user.userId, email: req.user.email || 'admin', ip: req.ip };
+    logAuditEvent('update_user', actor, { targetUserId: id, changes: setObj });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update user' });
@@ -136,6 +141,11 @@ router.delete('/:id', async (req, res) => {
     const usersColl = await getCollection('users');
     const result = await usersColl.deleteOne({ id });
     if (result.deletedCount === 0) return res.status(404).json({ error: 'User not found' });
+
+    // Audit log
+    const actor = { userId: req.user.userId, email: req.user.email || 'admin', ip: req.ip };
+    logAuditEvent('delete_user', actor, { targetUserId: id });
+
     res.status(204).send();
   } catch (err) {
     console.error(err);

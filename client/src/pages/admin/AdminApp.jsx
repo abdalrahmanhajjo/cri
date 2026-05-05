@@ -13,7 +13,6 @@ import AdminInterests from './AdminInterests';
 import AdminPlaceOwners from './AdminPlaceOwners';
 import AdminOffers from './AdminOffers';
 import AdminEmailBroadcast from './AdminEmailBroadcast';
-import AdminSponsoredPlaces from './AdminSponsoredPlaces';
 
 export default function AdminApp() {
   return (
@@ -34,7 +33,6 @@ export default function AdminApp() {
         <Route path="interests" element={<AdminInterests />} />
         <Route path="place-owners" element={<AdminPlaceOwners />} />
         <Route path="offers" element={<AdminOffers />} />
-        <Route path="sponsored-places" element={<AdminSponsoredPlaces />} />
       </Route>
     </Routes>
   );

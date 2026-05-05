@@ -3350,6 +3350,7 @@ a.vd-top-picks-card-bg--hit {
     object-position: center 38%;
   }
 }
+
 @media (prefers-reduced-motion: no-preference) {
   .vd-bento-hero-main-photo {
     filter: saturate(1.07) contrast(1.04);
@@ -3553,11 +3554,13 @@ a.vd-top-picks-card-bg--hit {
 
 /* App Download Badges Brand Coloring */
 .vd-download-app-badge--apple .icon {
-  color: #111 !important; /* Professional Apple Black */
+  color: #111 !important;
+  /* Professional Apple Black */
 }
 
 .vd-download-app-badge--google .icon {
-  color: #008556 !important; /* Android/Play Green */
+  color: #008556 !important;
+  /* Android/Play Green */
 }
 
 .vd-bento-web-hub-kicker {
@@ -3714,7 +3717,7 @@ a.vd-bento-web-hub-cta {
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  box-shadow: 
+  box-shadow:
     0 4px 12px rgba(15, 118, 110, 0.25),
     0 0 0 1px rgba(255, 255, 255, 0.1) inset;
   border: none;
@@ -7264,6 +7267,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
     min-height: 0;
   }
 }
+
 .vd-home>.vd-section {
   padding-top: var(--home-band-y);
   padding-bottom: var(--home-band-y);
@@ -7854,7 +7858,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   /* Each card: portrait story format */
   .vd-community-feed--showcase .vd-community-feed-card,
   .vd-community-feed-bento-shell .vd-community-feed-card,
-  .vd-community-feed-grid--bento > .vd-community-feed-card {
+  .vd-community-feed-grid--bento>.vd-community-feed-card {
     flex: 0 0 70vw !important;
     width: 70vw !important;
     max-width: 280px !important;
@@ -7877,7 +7881,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   /* First card slightly taller and wider */
   .vd-community-feed--showcase .vd-community-feed-card:nth-child(1),
   .vd-community-feed-bento-shell .vd-community-feed-card:nth-child(1),
-  .vd-community-feed-grid--bento > .vd-community-feed-card:nth-child(1) {
+  .vd-community-feed-grid--bento>.vd-community-feed-card:nth-child(1) {
     flex: 0 0 75vw !important;
     width: 75vw !important;
     max-width: 300px !important;
@@ -7889,7 +7893,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   /* Full-bleed image */
   .vd-community-feed--showcase .vd-community-feed-card-media,
   .vd-community-feed-bento-shell .vd-community-feed-card-media,
-  .vd-community-feed-grid--bento > .vd-community-feed-card .vd-community-feed-card-media {
+  .vd-community-feed-grid--bento>.vd-community-feed-card .vd-community-feed-card-media {
     position: absolute !important;
     inset: 0 !important;
     width: 100% !important;
@@ -7911,7 +7915,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   /* Cinematic gradient body */
   .vd-community-feed--showcase .vd-community-feed-card-body,
   .vd-community-feed-bento-shell .vd-community-feed-card-body,
-  .vd-community-feed-grid--bento > .vd-community-feed-card .vd-community-feed-card-body {
+  .vd-community-feed-grid--bento>.vd-community-feed-card .vd-community-feed-card-body {
     position: absolute !important;
     inset: 0 !important;
     z-index: 2 !important;
@@ -7919,13 +7923,11 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
     flex-direction: column !important;
     justify-content: flex-end !important;
     padding: 18px !important;
-    background: linear-gradient(
-      to top,
-      rgba(0, 0, 0, 0.9) 0%,
-      rgba(0, 0, 0, 0.55) 38%,
-      rgba(0, 0, 0, 0.08) 68%,
-      transparent 100%
-    ) !important;
+    background: linear-gradient(to top,
+        rgba(0, 0, 0, 0.9) 0%,
+        rgba(0, 0, 0, 0.55) 38%,
+        rgba(0, 0, 0, 0.08) 68%,
+        transparent 100%) !important;
     border-radius: 22px !important;
     gap: 0 !important;
     border-top: none !important;
@@ -7942,7 +7944,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
   /* Caption */
   .vd-community-feed--showcase .vd-community-feed-caption,
   .vd-community-feed-bento-shell .vd-community-feed-caption,
-  .vd-community-feed-grid--bento > .vd-community-feed-card .vd-community-feed-caption {
+  .vd-community-feed-grid--bento>.vd-community-feed-card .vd-community-feed-caption {
     font-size: 14px !important;
     line-height: 1.45 !important;
     color: #fff !important;
@@ -7950,7 +7952,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
     -webkit-line-clamp: 3 !important;
     line-clamp: 3 !important;
     margin-bottom: 0 !important;
-    text-shadow: 0 1px 8px rgba(0,0,0,0.55) !important;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55) !important;
   }
 
   /* Glass pill row at the bottom */
@@ -7967,7 +7969,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
     border-radius: 16px !important;
     padding: 9px 12px !important;
     margin-top: 12px !important;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.18) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18) !important;
   }
 
   /* Show place/name meta */
@@ -7990,7 +7992,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
 
   .vd-community-feed--showcase .vd-community-feed-uploader,
   .vd-community-feed-bento-shell .vd-community-feed-uploader {
-    color: rgba(255,255,255,0.68) !important;
+    color: rgba(255, 255, 255, 0.68) !important;
     font-size: 10px !important;
   }
 
@@ -8005,7 +8007,7 @@ a.vd-bento-stat--link.vd-bento-stat--light:hover {
     border-radius: 99px !important;
     font-size: 12px !important;
     font-weight: 800 !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.16) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16) !important;
   }
 
   .vd-community-feed--showcase .vd-community-feed-cta:hover,

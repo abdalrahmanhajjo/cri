@@ -131,20 +131,6 @@ export const admin = {
     get: () => baseApi.get('/api/admin/site-settings'),
     save: (settings) => baseApi.put('/api/admin/site-settings', { settings }),
   },
-  sponsoredPlaces: {
-    list: () => baseApi.get('/api/admin/sponsored-places'),
-    create: (body) => baseApi.post('/api/admin/sponsored-places', body),
-    update: (id, body) => baseApi.patch(`/api/admin/sponsored-places/${encodeURIComponent(id)}`, body),
-    delete: (id) => baseApi.delete(`/api/admin/sponsored-places/${encodeURIComponent(id)}`),
-  },
-  sponsorshipPurchases: {
-    list: (params) => {
-      const qs = new URLSearchParams();
-      if (params?.limit) qs.set('limit', String(params.limit));
-      const q = qs.toString();
-      return baseApi.get(`/api/admin/sponsorship-purchases${q ? `?${q}` : ''}`);
-    },
-  },
   emailBroadcast: (body) => baseApi.post('/api/admin/email-broadcast', body),
   content: {
     get: () => baseApi.get('/api/admin/content'),

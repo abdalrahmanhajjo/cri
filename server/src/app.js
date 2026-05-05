@@ -7,7 +7,7 @@ const cors = require('cors');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
-const { sanitizeBody } = require('./middleware/security');
+const { sanitizeRequest } = require('./middleware/security');
 
 const healthRoutes = require('./routes/health');
 const metricsRoutes = require('./routes/metrics');
@@ -36,8 +36,6 @@ const adminInterestsRoutes = require('./routes/admin/interests');
 const adminPlaceOwnersRoutes = require('./routes/admin/placeOwners');
 const adminSiteSettingsRoutes = require('./routes/admin/siteSettings');
 const adminPlacePromotionsRoutes = require('./routes/admin/placePromotions');
-const adminSponsoredPlacesRoutes = require('./routes/admin/sponsoredPlaces');
-const adminSponsorshipPurchasesRoutes = require('./routes/admin/sponsorshipPurchases');
 const adminCouponsMgmtRoutes = require('./routes/admin/couponsMgmt');
 const adminEmailBroadcastRoutes = require('./routes/admin/emailBroadcast');
 const siteSettingsPublicRoutes = require('./routes/siteSettingsPublic');
@@ -47,7 +45,6 @@ const feedPublicRoutes = require('./routes/feed');
 const promotionsPublicRoutes = require('./routes/promotionsPublic');
 const couponsRoutes = require('./routes/coupons');
 const aiRoutes = require('./routes/ai');
-const sponsoredPlacesPublicRoutes = require('./routes/sponsoredPlacesPublic');
 const { seoRouter, makeSeoResponder } = require('./seo/seoRoutes');
 const { injectAbsoluteFaviconLinks, getBaseUrl } = require('./seo/seoUtils');
 const { isDatabaseConnectivityError, userFacingDbUnavailableMessage } = require('./utils/dbHttpError');
@@ -151,12 +148,8 @@ app.use(
 
 app.use(compression());
 
-/** Stripe webhooks require raw body for signature verification (must run before express.json). */
-const stripeWebhookRouter = require('./routes/stripeWebhook');
-app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookRouter);
-
 app.use(express.json({ limit: JSON_BODY_LIMIT, strict: true }));
-app.use(sanitizeBody);
+app.use(sanitizeRequest);
 
 if (isProd && !rawCors) {
   console.error('CRITICAL: CORS_ORIGIN is missing in production. Requests from browsers will be rejected.');
@@ -270,7 +263,6 @@ app.use('/api/promotions', promotionsPublicRoutes);
 app.use('/api/coupons', couponsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/site-settings', siteSettingsPublicRoutes);
-app.use('/api/sponsored-places', sponsoredPlacesPublicRoutes);
 app.use('/api/user/feed', require('./routes/userFeed'));
 app.use('/api/user', profileRoutes);
 app.use('/api/user', tripsRoutes);
@@ -288,8 +280,6 @@ app.use('/api/admin/interests', adminInterestsRoutes);
 app.use('/api/admin/place-owners', adminPlaceOwnersRoutes);
 app.use('/api/admin/site-settings', adminSiteSettingsRoutes);
 app.use('/api/admin/place-promotions', adminPlacePromotionsRoutes);
-app.use('/api/admin/sponsored-places', adminSponsoredPlacesRoutes);
-app.use('/api/admin/sponsorship-purchases', adminSponsorshipPurchasesRoutes);
 app.use('/api/admin/coupons', adminCouponsMgmtRoutes);
 app.use('/api/admin/email-broadcast', adminEmailBroadcastRoutes);
 app.use('/api/business', businessRoutes);

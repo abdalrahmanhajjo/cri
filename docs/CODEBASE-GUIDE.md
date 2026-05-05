@@ -30,7 +30,7 @@ This file explains how the project is wired. It uses **line-by-line notes** for 
 |------|------|
 | `package.json` (root) | Runs **client** and **server** together (`npm run dev`), build, test, migrate. |
 | `client/` | React + Vite SPA (public site, admin, business portal). |
-| `server/` | Express API: Postgres (Supabase-compatible), JWT, uploads, Stripe, optional MongoDB. |
+| `server/` | Express API: Postgres (Supabase-compatible), JWT, uploads, optional MongoDB. |
 | `docs/` | Documentation (this file). |
 
 **Data flow:** Browser → Vite dev proxy `/api` → Express → Postgres/Mongo/services → JSON to React.
@@ -72,7 +72,7 @@ This file explains how the project is wired. It uses **line-by-line notes** for 
 |------|---------|
 | 1–5 | **`main`: `src/index.js`** — process entry. |
 | 6–14 | `start` / `dev` (watch), `test`, DB/export/mongo/recompress scripts. |
-| 16–37 | Express, `pg`, JWT, bcrypt, CORS, helmet, rate limit, multer, sharp, Stripe, Sentry, MongoDB, etc. |
+| 16–37 | Express, `pg`, JWT, bcrypt, CORS, helmet, rate limit, multer, sharp, Sentry, MongoDB, etc. |
 | 39–41 | Jest + Supertest. |
 
 ---
@@ -129,8 +129,7 @@ This file explains how the project is wired. It uses **line-by-line notes** for 
 | 95–100 | Request UUID `req.id` + `X-Request-Id`. |
 | 102–151 | **Helmet** CSP and related headers (Maps, GTM, Google Sign-In, etc.). |
 | 153 | `compression()`. |
-| 155–158 | **Stripe webhook** with `express.raw` before JSON parser. |
-| 160–162 | `express.json`, `sanitizeBody`. |
+| 155–157 | `express.json`, `sanitizeBody`. |
 | 169–201 | **CORS** middleware. |
 | 203–211 | Optional `X-Session-Code` → `req.sessionCode`. |
 | 213–215 | Health + metrics routes. |
@@ -206,23 +205,22 @@ Read in layers: (1) **URL/image helpers** and `getApiOrigin`; (2) **session** st
 - **`auth.js`** — Auth endpoints.
 - **`places.js`**, **`tours.js`**, **`events.js`**, **`categories.js`**, **`interests.js`** — Public catalogs.
 - **`feed.js`**, **`userFeed.js`** — Community feed.
-- **`promotionsPublic.js`**, **`coupons.js`**, **`siteSettingsPublic.js`**, **`sponsoredPlacesPublic.js`**, **`weatherPublic.js`** — Public APIs.
+- **`promotionsPublic.js`**, **`coupons.js`**, **`siteSettingsPublic.js`**, **`weatherPublic.js`** — Public APIs.
 - **`profile.js`**, **`trips.js`** — User profile and trips.
 - **`ai.js`** — AI planner backend.
-- **`stripeWebhook.js`** — Stripe webhooks.
 
 ### `routes/admin/*`
-- CRUD and moderation: places, categories, tours, events, content, upload, stats, users, all-trips, feed, interests, place-owners, site-settings, place-promotions, sponsored-places, sponsorship-purchases, coupons, email-broadcast.
+- CRUD and moderation: places, categories, tours, events, content, upload, stats, users, all-trips, feed, interests, place-owners, site-settings, place-promotions, coupons, email-broadcast.
 
 ### `routes/business/*`
 - **`index.js`** — Mounts business routers.
-- **`places.js`**, **`feed.js`**, **`upload.js`**, **`promotions.js`**, **`sponsorship.js`**, **`insights.js`**, **`messagingBlocks.js`**, **`proposals.js`** — Owner flows.
+- **`places.js`**, **`feed.js`**, **`upload.js`**, **`promotions.js`**, **`insights.js`**, **`messagingBlocks.js`**, **`proposals.js`** — Owner flows.
 
 ### `seo/`
 - **`seoRoutes.js`**, **`seoUtils.js`** — SEO HTML when serving `client/dist`.
 
 ### `services/`
-- **`emailService.js`**, **`sponsorshipStripe.js`** — Email and Stripe helpers.
+- **`emailService.js`** — Email helpers.
 
 ### `utils/` (server)
 - Validation (`validate*`, username/password validators), **`dbHttpError`**, **`logger`**, **`requestLang`**, **`normalizeDbText`**, **`sqlIdentifiers`**, **`uploadLimits`**, image/feed/video helpers (`imageUpload`, `imagekit`, `feedPost*`, `reelVideoTranscode`), **`businessPlaceValidation`**, **`authAbuseTracking`**, **`publicOffers`**, **`activeOfferFilters`**, **`geo`**, **`messagingBlocks`**, **`inquiryFollowups`**, **`siteSettingsLoad`**.
@@ -262,7 +260,7 @@ Read in layers: (1) **URL/image helpers** and `getApiOrigin`; (2) **session** st
 - **`AdminApp`**, **`AdminLayout`**, dashboards and CRUD screens for places, users, settings, feed, translations, email, etc.
 
 ### `pages/business/`
-- **`BusinessApp`**, dashboard, place edit, feed, sponsorship flows.
+- **`BusinessApp`**, dashboard, place edit, feed.
 
 ### `services/aiPlannerService.js`
 - Client-side AI planner orchestration.
@@ -316,8 +314,6 @@ Read in layers: (1) **URL/image helpers** and `getApiOrigin`; (2) **session** st
 | `routes/admin/placePromotions.js` | Admin API: per-place promotion scheduling. |
 | `routes/admin/places.js` | Admin API: full places CRUD and related fields. |
 | `routes/admin/siteSettings.js` | Admin API: key/value site settings. |
-| `routes/admin/sponsoredPlaces.js` | Admin API: sponsored discovery slots. |
-| `routes/admin/sponsorshipPurchases.js` | Admin API: view sponsorship purchase records. |
 | `routes/admin/stats.js` | Admin API: dashboard statistics queries. |
 | `routes/admin/tours.js` | Admin API: tours CRUD. |
 | `routes/admin/upload.js` | Admin API: image/file uploads (disk or cloud pipeline). |
@@ -331,7 +327,6 @@ Read in layers: (1) **URL/image helpers** and `getApiOrigin`; (2) **session** st
 | `routes/business/places.js` | Business API: update owned place fields (non-admin). |
 | `routes/business/promotions.js` | Business API: owner-managed promotions. |
 | `routes/business/proposals.js` | Business API: proposals or partnerships workflow. |
-| `routes/business/sponsorship.js` | Business API: start sponsorship checkout, status. |
 | `routes/business/upload.js` | Business API: uploads for owner content. |
 | `routes/categories.js` | Public API: list categories for browsing filters. |
 | `routes/coupons.js` | Public API: validate or redeem coupons per rules. |
@@ -344,8 +339,6 @@ Read in layers: (1) **URL/image helpers** and `getApiOrigin`; (2) **session** st
 | `routes/profile.js` | Authenticated API: profile fields, favourites sync hooks, related user endpoints. |
 | `routes/promotionsPublic.js` | Public API: active promotions for map/cards. |
 | `routes/siteSettingsPublic.js` | Public API: non-secret site settings for SPA boot. |
-| `routes/sponsoredPlacesPublic.js` | Public API: sponsored placements for home/discover. |
-| `routes/stripeWebhook.js` | `POST` Stripe webhook: verify signature, update orders/subscriptions. |
 | `routes/tours.js` | Public API: tours listing and detail. |
 | `routes/trips.js` | Authenticated API: user trips CRUD. |
 | `routes/userFeed.js` | Authenticated API: personalized feed / follows. |
@@ -353,7 +346,6 @@ Read in layers: (1) **URL/image helpers** and `getApiOrigin`; (2) **session** st
 | `seo/seoRoutes.js` | Special routes when serving `client/dist` (bot-friendly responses). |
 | `seo/seoUtils.js` | HTML helpers: canonical base URL, inject favicon links in `index.html`. |
 | `services/emailService.js` | Nodemailer transport: send transactional emails. |
-| `services/sponsorshipStripe.js` | Stripe Checkout/Customer helpers for sponsorship products. |
 | `utils/activeOfferFilters.js` | SQL WHERE fragments or filters for time-valid offers. |
 | `utils/authAbuseTracking.js` | Track login/forgot-password abuse in DB or memory. |
 | `utils/businessPlaceValidation.js` | Shared validation for business-submitted place payloads. |
@@ -400,7 +392,6 @@ Read in layers: (1) **URL/image helpers** and `getApiOrigin`; (2) **session** st
 | `components/MapPicker.jsx` | Draggable marker / click map to set lat/lng (forms). |
 | `components/OfferCard.jsx` | Card UI for promotional offers. |
 | `components/ScrollToTop.jsx` | On `location` change, `window.scrollTo(0,0)`. |
-| `components/SponsoredPlaceCard.jsx` | Card for sponsored place placements. |
 | `config/featherIconMap.js` | Maps icon keys to Feather SVG paths. |
 | `config/googleSignIn.js` | Loads Google Identity Services script; exposes sign-in helpers. |
 | `config/homeBentoVisuals.js` | Data for home bento tiles (images, links). |
@@ -437,7 +428,6 @@ Read in layers: (1) **URL/image helpers** and `getApiOrigin`; (2) **session** st
 | `pages/admin/AdminPlaceOwners.jsx` | Manage which users own which places. |
 | `pages/admin/AdminPlaces.jsx` | Full admin CRUD table + editor for places. |
 | `pages/admin/AdminSettings.jsx` | Form for global site settings keys. |
-| `pages/admin/AdminSponsoredPlaces.jsx` | Configure sponsored placements. |
 | `pages/admin/AdminTranslationsPanel.jsx` | Edit translation strings (or keys) in admin. |
 | `pages/admin/AdminUsers.jsx` | User list, roles, admin toggles. |
 | `pages/admin/AdminUserTrips.jsx` | Inspect trips for support. |
@@ -449,8 +439,6 @@ Read in layers: (1) **URL/image helpers** and `getApiOrigin`; (2) **session** st
 | `pages/business/BusinessLayout.jsx` | Business portal shell: nav for owner tools. |
 | `pages/business/BusinessPlaceEdit.jsx` | Large form editing owned place fields + media. |
 | `pages/business/BusinessPlaceFeed.jsx` | Owner view to create/edit feed posts. |
-| `pages/business/BusinessSponsorship.jsx` | Purchase or manage sponsorship (Stripe UI). |
-| `pages/business/BusinessSponsorshipSuccess.jsx` | Thank-you / confirmation page after checkout. |
 | `pages/CommunityCreate.jsx` | Form for users to create a community feed post. |
 | `pages/Discover.jsx` | Community discover experience (map/list hybrid). |
 | `pages/EventDetail.jsx` | Single event page: description, date, location, share. |

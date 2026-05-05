@@ -11,7 +11,6 @@ import {
   events, 
   categories, 
   interests, 
-  sponsoredPlaces, 
   publicPromotions 
 } from './content';
 import { user, coupons } from './user';
@@ -34,7 +33,6 @@ export const api = {
   admin,
   business,
   ai,
-  sponsoredPlaces,
   communityFeed,
   feedPublic,
   publicPromotions,

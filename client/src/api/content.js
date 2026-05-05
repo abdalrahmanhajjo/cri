@@ -65,17 +65,6 @@ export const interests = {
   },
 };
 
-export const sponsoredPlaces = (params) => {
-  const qs = new URLSearchParams();
-  if (params && typeof params === 'object') {
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
-    });
-  }
-  const q = qs.toString();
-  return baseApi.get(`/api/sponsored-places${q ? `?${q}` : ''}`);
-};
-
 export const publicPromotions = (params) => {
   const qs = new URLSearchParams();
   if (params?.limit != null && params.limit !== '') qs.set('limit', String(params.limit));

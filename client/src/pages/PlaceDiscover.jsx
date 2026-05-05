@@ -7,7 +7,6 @@ import { useAuth } from '../context/AuthContext';
 import { useFavourites } from '../context/FavouritesContext';
 import Icon from '../components/Icon';
 import GlobalSearchBar from '../components/GlobalSearchBar';
-import SponsoredPlaceCard from '../components/SponsoredPlaceCard';
 import { filterPlacesByQuery } from '../utils/searchFilter';
 import { sortDiscoverPlaces } from '../utils/placeDiscoverRank';
 import {
@@ -181,7 +180,6 @@ export default function PlaceDiscover() {
   /** 1 = choose trip only; 2 = day & time only (clearer UX). */
   const [tripModalStep, setTripModalStep] = useState(1);
   const [toast, setToast] = useState(null);
-  const [sponsoredDiscover, setSponsoredDiscover] = useState([]);
   const { settings } = useSiteSettings();
 
   const searchParamsRef = useRef(searchParams);
@@ -193,7 +191,6 @@ export default function PlaceDiscover() {
     window.setTimeout(() => setToast(null), 3200);
   }, []);
 
-  const sponsoredDiscoverEnabled = settings?.sponsoredPlacesEnabled?.discover !== false;
   useEffect(() => {
     setQDraft(qParam);
   }, [qParam]);
@@ -254,26 +251,6 @@ export default function PlaceDiscover() {
   }, [langParam]);
 
   useEffect(() => {
-    let cancelled = false;
-    if (!sponsoredDiscoverEnabled) {
-      setSponsoredDiscover([]);
-      return undefined;
-    }
-    api
-      .sponsoredPlaces({ surface: 'discover', lang: langParam })
-      .then((r) => {
-        if (cancelled) return;
-        setSponsoredDiscover(Array.isArray(r.items) ? r.items : []);
-      })
-      .catch(() => {
-        if (!cancelled) setSponsoredDiscover([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [langParam, sponsoredDiscoverEnabled]);
-
-  useEffect(() => {
     if (!tripPickPlace || !user) {
       setTripModalTrips([]);
       return;
@@ -295,24 +272,6 @@ export default function PlaceDiscover() {
       cancelled = true;
     };
   }, [tripPickPlace, user]);
-
-  const placeMap = useMemo(() => {
-    const m = {};
-    (places || []).forEach((p) => {
-      const id = resolveDiscoverPlaceId(p);
-      if (id) m[id] = p;
-    });
-    return m;
-  }, [places]);
-
-  const sponsoredPlaceIdSet = useMemo(() => {
-    const s = new Set();
-    (sponsoredDiscover || []).forEach((it) => {
-      if (it?.placeId != null) s.add(String(it.placeId));
-      if (it?.place?.id != null) s.add(String(it.place.id));
-    });
-    return s;
-  }, [sponsoredDiscover]);
 
   const hiddenRestaurantIds = useMemo(() => {
     const ids = settings?.discoverGuide?.hiddenRestaurantPlaceIds;
@@ -339,14 +298,7 @@ export default function PlaceDiscover() {
       const narrow = filterPlacesByQuery(base, q);
       base = narrow.length > 0 ? narrow : base;
     }
-    const sorted = sortDiscoverPlaces(base, { query: qParam, sort: sortParam === 'rating' || sortParam === 'name' ? sortParam : 'recommended' });
-    if (sponsoredPlaceIdSet.size === 0) return sorted;
-    return sorted.slice().sort((a, b) => {
-      const sa = sponsoredPlaceIdSet.has(resolveDiscoverPlaceId(a)) ? 1 : 0;
-      const sb = sponsoredPlaceIdSet.has(resolveDiscoverPlaceId(b)) ? 1 : 0;
-      if (sa !== sb) return sb - sa;
-      return 0;
-    });
+    return sortDiscoverPlaces(base, { query: qParam, sort: sortParam === 'rating' || sortParam === 'name' ? sortParam : 'recommended' });
   }, [
     places,
     hiddenRestaurantIds,
@@ -355,19 +307,7 @@ export default function PlaceDiscover() {
     categoryParam,
     qParam,
     sortParam,
-    sponsoredPlaceIdSet,
   ]);
-
-  const sponsoredDiscoverVisible = useMemo(() => {
-    if (!Array.isArray(sponsoredDiscover) || sponsoredDiscover.length === 0) return [];
-    return sponsoredDiscover.filter((item) => {
-      const pid = item.placeId ?? item.place?.id;
-      if (pid == null) return false;
-      const pl = placeMap[String(pid)] || item.place;
-      if (!pl) return false;
-      return !isDedicatedGuideListing(pl, foodCategoryIds, stayCategoryIds);
-    });
-  }, [sponsoredDiscover, placeMap, foodCategoryIds, stayCategoryIds]);
 
   const setParam = useCallback(
     (key, value) => {
@@ -692,21 +632,6 @@ export default function PlaceDiscover() {
             </div>
           </div>
         </section>
-
-        {sponsoredDiscoverVisible.length > 0 ? (
-          <section className="pd-sponsored-xp" aria-label={t('placeDiscover', 'sponsoredStripTitle')}>
-            <header className="pd-sponsored-xp__head">
-              <h2 className="pd-sponsored-xp__title">{t('placeDiscover', 'sponsoredStripTitle')}</h2>
-            </header>
-            <div className="pd-sponsored-xp__track">
-              {sponsoredDiscoverVisible.slice(0, 8).map((item) => (
-                <div key={item.id} className="pd-sponsored-xp__cell">
-                  <SponsoredPlaceCard item={item} t={t} variant="tile" />
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
 
         <h2 id="pd-results-heading" className="pd-sr-only">
           {t('placeDiscover', 'resultsHeading')}

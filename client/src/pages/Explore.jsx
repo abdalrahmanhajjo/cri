@@ -13,7 +13,6 @@ import {
 } from '../utils/bentoHeroImage';
 import { resolveHeroTagline } from '../config/resolveSiteTagline';
 import {
-  COMMUNITY_PATH,
   PLACES_DISCOVER_PATH,
 } from '../utils/discoverPaths';
 import { applyHomeSeoFromSettings } from '../utils/siteSeo';
@@ -22,14 +21,11 @@ import {
 } from '../utils/findYourWayGrouping';
 import {
   filterGeneralDirectoryPlaces,
-  getFoodAndStayCategoryIdSets,
-  isDedicatedGuideListing,
 } from '../utils/placeGuideExclusions';
 
 // Home Section Components
 import HomeBento from '../components/home/HomeBento';
 import TopPicksSection from '../components/home/TopPicksSection';
-import SponsoredSection from '../components/home/SponsoredSection';
 import CommunitySection from '../components/home/CommunitySection';
 import PracticalSection from '../components/home/PracticalSection';
 import PlanVisitSection from '../components/home/PlanVisitSection';
@@ -53,12 +49,9 @@ export default function Explore() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [communityPosts, setCommunityPosts] = useState([]);
-  const [sponsoredHome, setSponsoredHome] = useState([]);
   const [homeEvents, setHomeEvents] = useState([]);
   const [homeTours, setHomeTours] = useState([]);
   const [loadNonce, setLoadNonce] = useState(0);
-
-  const sponsoredHomeEnabled = settings?.sponsoredPlacesEnabled?.home !== false;
 
   useEffect(() => {
     const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
@@ -180,27 +173,6 @@ export default function Explore() {
     };
   }, []);
 
-  useEffect(() => {
-    const langParam = lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr' : 'en';
-    let cancelled = false;
-    if (!sponsoredHomeEnabled) {
-      setSponsoredHome([]);
-      return undefined;
-    }
-    api
-      .sponsoredPlaces({ surface: 'home', lang: langParam })
-      .then((r) => {
-        if (cancelled) return;
-        setSponsoredHome(Array.isArray(r.items) ? r.items : []);
-      })
-      .catch(() => {
-        if (!cancelled) setSponsoredHome([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [lang, sponsoredHomeEnabled]);
-
   const heroTitle = settings.siteName?.trim() || t('home', 'heroTitle');
   const heroTagline = resolveHeroTagline(settings, t);
   const appStoreHref = settings.appStoreUrl?.trim() || 'https://apps.apple.com';
@@ -212,18 +184,6 @@ export default function Explore() {
     () => filterGeneralDirectoryPlaces(placesList, categories),
     [placesList, categories]
   );
-
-  const sponsoredHomeVisible = useMemo(() => {
-    if (!Array.isArray(sponsoredHome) || sponsoredHome.length === 0) return [];
-    const { foodCategoryIds, stayCategoryIds } = getFoodAndStayCategoryIdSets(categories);
-    return sponsoredHome.filter((item) => {
-      const pid = item.placeId ?? item.place?.id;
-      if (pid == null) return false;
-      const pl = placesList.find((x) => String(x.id) === String(pid)) || item.place;
-      if (!pl) return false;
-      return !isDedicatedGuideListing(pl, foodCategoryIds, stayCategoryIds);
-    });
-  }, [sponsoredHome, categories, placesList]);
 
   const placeNameById = useMemo(() => {
     const m = new Map();
@@ -337,12 +297,6 @@ export default function Explore() {
         places={topPicks} 
         t={t} 
         moreTo={PLACES_DISCOVER_PATH} 
-      />
-
-      <SponsoredSection
-        enabled={sponsoredHomeEnabled}
-        items={sponsoredHomeVisible}
-        t={t}
       />
 
       <EventsAndToursSection 

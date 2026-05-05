@@ -4,6 +4,7 @@ const { authMiddleware } = require('../../middleware/auth');
 const { adminMiddleware } = require('../../middleware/admin');
 
 const router = express.Router();
+const { logAuditEvent } = require('../../utils/audit');
 const ROW_ID = 'default';
 
 /** Remove deprecated keys. */
@@ -49,6 +50,11 @@ router.put('/', async (req, res) => {
       { $set: { data: newData, updated_at: new Date() } },
       { upsert: true }
     );
+
+    // Audit log
+    const actor = { userId: req.user.userId, email: req.user.email || 'admin', ip: req.ip };
+    logAuditEvent('update_site_settings', actor, { changes: incoming });
+
     res.json({ settings: newData });
   } catch (err) {
     console.error(err);

@@ -17,12 +17,15 @@ const JWT_OPTIONS = {
 
 /**
  * Confirms user exists, is not blocked, and (for email/password accounts) has verified email.
+ * Also checks token version to support global logout/revocation.
  * @param {boolean} [opts.optional] If true, unverified/missing user returns false without sending 403;
  *   blocked users still receive 403. Caller should call next() without req.user when false and !res.headersSent.
+ * @param {number} [opts.tokenVersion] The version from the decoded JWT payload.
  * @returns {Promise<boolean>}
  */
 async function assertUserCanUseApi(userId, res, opts = {}) {
   const optional = opts.optional === true;
+  const tokenVersion = opts.tokenVersion;
   try {
     const usersColl = await getCollection('users');
     const user = await usersColl.findOne({ id: userId });
@@ -36,6 +39,16 @@ async function assertUserCanUseApi(userId, res, opts = {}) {
     if (user.is_blocked === true) {
       res.status(403).json({ error: 'Account disabled', code: 'ACCOUNT_BLOCKED' });
       return false;
+    }
+
+    // Revocation check: if token has a version, it must match or be newer than user's version
+    // If token has NO version (old token), we treat it as valid but we should phase them out
+    if (tokenVersion !== undefined && user.token_version !== undefined) {
+      if (tokenVersion < user.token_version) {
+        if (optional) return false;
+        res.status(401).json({ error: 'Session expired. Please sign in again.', code: 'TOKEN_REVOKED' });
+        return false;
+      }
     }
 
     if (user.auth_provider === 'email' && user.email_verified !== true) {
@@ -76,7 +89,10 @@ async function authMiddleware(req, res, next) {
     if (!decoded.userId) {
       return res.status(401).json({ error: 'Invalid token payload' });
     }
-    const ok = await assertUserCanUseApi(decoded.userId, res, { optional: false });
+    const ok = await assertUserCanUseApi(decoded.userId, res, { 
+      optional: false, 
+      tokenVersion: decoded.tokenVersion 
+    });
     if (!ok) return;
     req.user = decoded;
     next();
@@ -98,7 +114,10 @@ async function optionalAuthMiddleware(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET, JWT_OPTIONS);
     if (decoded.userId) {
-      const ok = await assertUserCanUseApi(decoded.userId, res, { optional: true });
+      const ok = await assertUserCanUseApi(decoded.userId, res, { 
+        optional: true, 
+        tokenVersion: decoded.tokenVersion 
+      });
       if (!ok) {
         if (res.headersSent) return;
         return next();

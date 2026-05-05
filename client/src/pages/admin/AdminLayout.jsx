@@ -11,7 +11,6 @@ const navItems = [
   { to: '/admin/experiences', end: false, icon: 'tour', label: 'Experiences' },
   { to: '/admin/events', end: false, icon: 'event', label: 'Events' },
   { to: '/admin/offers', end: false, icon: 'offer', label: 'Offers & coupons' },
-  { to: '/admin/sponsored-places', end: false, icon: 'offer', label: 'Sponsored places' },
   { to: '/admin/feed', end: false, icon: 'feed', label: 'Feed' },
   { to: '/admin/users', end: false, icon: 'users', label: 'Users' },
   { to: '/admin/email-broadcast', end: false, icon: 'mail', label: 'Email all users' },

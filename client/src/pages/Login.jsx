@@ -55,6 +55,7 @@ export default function Login() {
     Boolean(googleClientIdImmediate)
   );
 
+  /** Load Google sign-in config from the backend if no client ID is already available. */
   useEffect(() => {
     if (googleClientIdImmediate) return undefined;
     let cancelled = false;
@@ -90,10 +91,12 @@ export default function Login() {
   /** GIS load / render — shown under the button so users know what failed */
   const [googleGsiFeedback, setGoogleGsiFeedback] = useState('');
 
+  /** Clear old Google sign-in feedback when the selected client ID changes. */
   useEffect(() => {
     setGoogleGsiFeedback('');
   }, [googleClientId]);
 
+  /** Show a fallback message if the Google button does not render after setup. */
   useEffect(() => {
     if (!googleClientId || !googleClientIdResolved) return undefined;
     const checkMs = 6500;
@@ -137,6 +140,7 @@ export default function Login() {
 
   handleGoogleCredentialRef.current = handleGoogleCredential;
 
+  /** Load, initialize, render, resize, and clean up the Google sign-in button. */
   useEffect(() => {
     if (!googleClientId || !googleBtnRef.current) return undefined;
 

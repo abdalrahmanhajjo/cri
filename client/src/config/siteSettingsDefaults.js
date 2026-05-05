@@ -8,7 +8,7 @@ function emptyDiningHeroLocale() {
 }
 
 function emptyDiningSectionLabelsLocale() {
-  return { topPicksTitle: '', sponsoredKicker: '', mainCollectionTitle: '' };
+  return { topPicksTitle: '', mainCollectionTitle: '' };
 }
 
 function emptyDiscoverGuide() {
@@ -56,7 +56,6 @@ export function mergeDiningGuide(raw) {
       sl && typeof sl === 'object'
         ? {
             topPicksTitle: sl.topPicksTitle != null ? String(sl.topPicksTitle) : '',
-            sponsoredKicker: sl.sponsoredKicker != null ? String(sl.sponsoredKicker) : '',
             mainCollectionTitle: sl.mainCollectionTitle != null ? String(sl.mainCollectionTitle) : '',
           }
         : emptyDiningSectionLabelsLocale();
@@ -97,19 +96,12 @@ export function mergeWithSiteSettingsDefaults(serverSettings) {
   const diningGuide = mergeDiningGuide(s.diningGuide);
   const hotelsGuide = mergeHotelsGuide(s.hotelsGuide);
   const discoverGuide = mergeDiscoverGuide(s.discoverGuide);
-  const sponsoredPlacesEnabled = {
-    ...siteSettingsDefaultsBase.sponsoredPlacesEnabled,
-    ...(typeof s.sponsoredPlacesEnabled === 'object' && s.sponsoredPlacesEnabled !== null
-      ? s.sponsoredPlacesEnabled
-      : {}),
-  };
   return {
     ...siteSettingsDefaultsBase,
     ...s,
     diningGuide,
     hotelsGuide,
     discoverGuide,
-    sponsoredPlacesEnabled,
   };
 }
 
@@ -144,24 +136,12 @@ const siteSettingsDefaultsBase = {
   homeBentoAvatar1: '',
   homeBentoAvatar2: '',
   homeBentoAvatar3: '',
-  sponsoredPlacesEnabled: {
-    home: true,
-    discover: true,
-    feed: true,
-    dining: true,
-    hotels: true,
-  },
   /** Editorial /dining page — hero copy, imagery, curated & hidden lists */
   diningGuide: mergeDiningGuide({}),
   /** Editorial /hotels page — same shape as diningGuide */
   hotelsGuide: mergeHotelsGuide({}),
   /** Discover page controls — currently used for hiding restaurant places from user-facing discover. */
   discoverGuide: mergeDiscoverGuide({}),
-  /** Self-serve paid sponsorship (Stripe). Requires server env + migration 029. */
-  sponsorshipEnabled: false,
-  sponsorshipDurationDays: 30,
-  sponsorshipAmountCents: 4999,
-  sponsorshipCurrency: 'usd',
   /**
    * OAuth 2.0 Web client id for Google Sign-In (same as server GOOGLE_CLIENT_ID).
    * Stored in site_settings in DB; public GET /api/site-settings returns it — no frontend rebuild needed.

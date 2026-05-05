@@ -57,10 +57,4 @@ export const business = {
     update: (id, body) => baseApi.patch(`/api/business/promotions/${encodeURIComponent(id)}`, body),
     delete: (id) => baseApi.delete(`/api/business/promotions/${encodeURIComponent(id)}`),
   },
-  sponsorship: {
-    config: () => baseApi.get('/api/business/sponsorship/config'),
-    createCheckoutSession: (body) => baseApi.post('/api/business/sponsorship/checkout-session', body),
-    sessionStatus: (sessionId) =>
-      baseApi.get(`/api/business/sponsorship/session-status?session_id=${encodeURIComponent(sessionId)}`),
-  },
 };

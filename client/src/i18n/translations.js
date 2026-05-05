@@ -220,7 +220,7 @@ export const translations = {
         'Mamluk Tripoli was rebuilt as a provincial capital famed for stone architecture—about thirty-five major monuments survive, among them congregational mosques, madrasas, khans, and hammams arranged along winding lanes. Sugar, textiles, and soap fed long-distance trade; Barsbay Tower and upgraded citadel works mark the era.',
       hist_ottoman_sum: 'Ottoman period',
       hist_ottoman_body:
-        'From 1516 Tripoli headed an eyalet stretching along much of the Syrian coast; later it was folded into the Beirut vilayet. Ottoman governors restored the citadel (including an inscription of Süleyman I), sponsored mosques such as al-Muallaq, and expanded khans—notably Khan al-Saboun for the soap trade.',
+        'From 1516 Tripoli headed an eyalet stretching along much of the Syrian coast; later it was folded into the Beirut vilayet. Ottoman governors restored the citadel (including an inscription of Süleyman I), commissioned mosques such as al-Muallaq, and expanded khans—notably Khan al-Saboun for the soap trade.',
       hist_mandate_sum: 'French Mandate',
       hist_mandate_body:
         'After 1920 Greater Lebanon’s borders cut Tripoli from its Syrian hinterland. Sunni-majority Tripoli chafed at separation from Damascus; mass strikes in 1936 underscored pro-unity sentiment even as French policy shifted.',
@@ -612,9 +612,6 @@ export const translations = {
       experienceCol3Title: 'Plan around your days',
       experienceCol3Body:
         'Add stops to trips with day and time — the same planner you use elsewhere keeps everything coherent.',
-      sponsoredStripTitle: 'Partner spotlight',
-      sponsoredStripLead:
-        'These listings support Tripoli Explorer — explore them like any other place; sponsorship stays visible by design.',
     },
     diningGuide: {
       eyebrow: 'Eat & drink',
@@ -624,7 +621,6 @@ export const translations = {
       searchLabel: 'Search dining listings',
       topPicksTitle: 'Top picks',
       topPicksSub: 'Highest rated in your current filters',
-      sponsoredKicker: 'Featured partners',
       categoryFilterLabel: 'Style',
       allStyles: 'All styles',
       sortLabel: 'Sort',
@@ -646,7 +642,6 @@ export const translations = {
       experienceCol3Title: 'Meal cart',
       experienceCol3Body:
         'Save dishes from each menu in your cart, then call or message the restaurant to confirm your order or booking.',
-      sponsoredSectionLead: 'Featured listings — clearly marked. Open them like any other place.',
       flowSectionLabel: 'Quick filters',
       flowTitle: 'What do you need?',
       flowLead:
@@ -711,7 +706,6 @@ export const translations = {
         'A separate guide from dining and the main directory: hotels, guesthouses and sleep-focused listings only. Filter, compare, then open details or add to your trip.',
       topPicksTitle: 'Guest favourites',
       topPicksSub: 'Best-rated with your current search and filters',
-      sponsoredKicker: 'Featured stays',
       categoryFilterLabel: 'Type of stay',
       allStyles: 'All',
       sortLabel: 'Sort',
@@ -733,27 +727,6 @@ export const translations = {
       experienceCol3Title: 'Nights that fit the plan',
       experienceCol3Body:
         'Add stays to your trip with day and time — the same planner keeps hotels, meals, and sights aligned.',
-      sponsoredSectionLead: 'Featured stays — clearly marked. Open them like any other place.',
-    },
-    business: {
-      sponsorshipNav: 'Sponsorship',
-      sponsorshipTitle: 'Sponsored visibility',
-      sponsorshipLead:
-        'Purchase a time-limited sponsored placement across Home, Discover, and the community feed (where enabled). Your listing stays marked as sponsored for transparency.',
-      sponsorshipPickPlace: 'Choose a place you manage',
-      sponsorshipDuration: '{days} days',
-      sponsorshipPriceLine: '{amount} · one-time',
-      sponsorshipPayCta: 'Continue to secure checkout',
-      sponsorshipDisabled: 'Self-serve sponsorship is turned off. Contact us if you need visibility.',
-      sponsorshipNotConfigured: 'Online payments are not configured yet. Try again later or contact support.',
-      sponsorshipConflict: 'This place cannot start a new sponsorship right now.',
-      sponsorshipCheckoutError: 'Could not start checkout. Try again.',
-      sponsorshipNoPlaces: 'No places linked to your account yet.',
-      successTitle: 'Thank you',
-      successPending: 'Payment received. Your placement activates in a few seconds after confirmation.',
-      successActive: 'Your sponsored placement is active until {date}.',
-      successUnknown: 'Session loaded. If something looks wrong, check your email receipt or contact support.',
-      backToDashboard: 'Back to dashboard',
     },
     home: {
       heroTitle: 'Explore Tripoli',
@@ -1461,12 +1434,6 @@ export const translations = {
       offerValidPeriod: '{start} – {end}',
       offerValidFromLine: 'Valid from {date}',
       offerValidUntilLine: 'Valid until {date}',
-      sponsoredLabel: 'Sponsored',
-      sponsoredSectionTitle: 'Sponsored places',
-      sponsoredSectionSub: 'Hand-picked partners supporting Tripoli’s visitor experience — same quality bar as the rest of the guide.',
-      sponsoredDiscoverKicker: 'Featured partner',
-      sponsoredViewPlace: 'View place',
-      sponsoredLearnMore: 'Learn more',
       couponDefaultTitle: 'Special offer',
       couponPercentOff: '{value}% off',
       couponFixedOff: '{value} off',
@@ -2473,7 +2440,6 @@ export const translations = {
       searchLabel: 'البحث في قائمة الطعام',
       topPicksTitle: 'أبرز الاختيارات',
       topPicksSub: 'الأعلى تقييماً ضمن عواملك الحالية',
-      sponsoredKicker: 'شركاء مميّزون',
       categoryFilterLabel: 'الأسلوب',
       allStyles: 'كل الأنماط',
       sortLabel: 'الترتيب',
@@ -2504,7 +2470,6 @@ export const translations = {
         'دليل منفصل عن المطاعم والدليل العام: فنادق وضيافة وموجه للمبيت. صفّ، قارن، ثم افتح التفاصيل أو أضف للرحلة.',
       topPicksTitle: 'مفضلة الزوار',
       topPicksSub: 'الأعلى تقييماً مع بحثك وعواملك',
-      sponsoredKicker: 'إقامات مميّزة',
       categoryFilterLabel: 'نوع الإقامة',
       allStyles: 'الكل',
       sortLabel: 'الترتيب',
@@ -2514,26 +2479,6 @@ export const translations = {
       dockLabel: 'اختصارات الإقامة',
       resultsSr: 'نتائج الفنادق',
       heroMapCta: 'الخريطة',
-    },
-    business: {
-      sponsorshipNav: 'الرعاية',
-      sponsorshipTitle: 'ظهور مموّل',
-      sponsorshipLead:
-        'اشترِ ظهوراً مموّلاً لمدة محددة على الصفحة الرئيسية والاستكشاف وخلاصة المجتمع (حيث يُفعّل). يبقى إعلان «مُموف‘ل» لشفافية.',
-      sponsorshipPickPlace: 'اختر مكاناً تديره',
-      sponsorshipDuration: '{days} يوماً',
-      sponsorshipPriceLine: '{amount} · دفعة واحدة',
-      sponsorshipPayCta: 'المتابعة للدفع الآمن',
-      sponsorshipDisabled: 'الاشتراك الذاتي للرعاية غير مفعّل. تواصل معنا لطلب الظهور.',
-      sponsorshipNotConfigured: 'الدفع الإلكتروني غير مهيأ بعد. حاول لاحقاً أو راسل الدعم.',
-      sponsorshipConflict: 'لا يمكن بدء رعاية جديدة لهذا المكان الآن.',
-      sponsorshipCheckoutError: 'تعذر بدء الدفع. حاول مرة أخرى.',
-      sponsorshipNoPlaces: 'لا أماكن مرتبطة بحسابك بعد.',
-      successTitle: 'شكراً',
-      successPending: 'تم استلام الدفع. يُفعّل الظهور خلال ثوانٍ بعد التأكيد.',
-      successActive: 'الرعاية مفعّلة حتى {date}.',
-      successUnknown: 'تم تحميل الجلسة. إذا كان هناك خطأ، راجع البريد أو راسل الدعم.',
-      backToDashboard: 'العودة للوحة التحكم',
     },
     home: {
       heroTitle: 'استكشف طرابلس',
@@ -3198,12 +3143,6 @@ export const translations = {
       offerValidPeriod: '{start} — {end}',
       offerValidFromLine: 'صالح من {date}',
       offerValidUntilLine: 'صالح حتى {date}',
-      sponsoredLabel: 'ممول',
-      sponsoredSectionTitle: 'أماكن ممولة',
-      sponsoredSectionSub: 'شركاء مختارون يدعمون تجربة الزوار في طرابلس — معايير الجودة نفسها لبقية الدليل.',
-      sponsoredDiscoverKicker: 'شريك مميز',
-      sponsoredViewPlace: 'عرض المكان',
-      sponsoredLearnMore: 'اعرف المزيد',
       couponDefaultTitle: 'عرض خاص',
       couponPercentOff: 'خصم {value}٪',
       couponFixedOff: 'خصم {value}',
@@ -3649,9 +3588,6 @@ export const translations = {
       experienceCol3Title: 'Planifiez vos journées',
       experienceCol3Body:
         'Ajoutez des arrêts aux voyages avec le jour et l’heure — le même planificateur que vous utilisez ailleurs garde tout cohérent.',
-      sponsoredStripTitle: 'Partenaire à l’honneur',
-      sponsoredStripLead:
-        'Ces annonces soutiennent Tripoli Explorer — explorez-les comme n’importe quel autre lieu ; le parrainage reste visible par conception.',
     },
         aboutTripoli: {
       title: 'Tripoli, Liban',
@@ -3791,7 +3727,6 @@ export const translations = {
       searchLabel: 'Rechercher des adresses',
       topPicksTitle: 'Nos coups de cœur',
       topPicksSub: 'Les mieux notés selon vos filtres',
-      sponsoredKicker: 'Partenaires vedettes',
       categoryFilterLabel: 'Style',
       allStyles: 'Tous les styles',
       sortLabel: 'Trier',
@@ -3813,7 +3748,6 @@ export const translations = {
       experienceCol3Title: 'Panier gourmand',
       experienceCol3Body:
         'Enregistrez des plats de chaque menu dans votre panier, puis appelez ou envoyez un message au restaurant pour confirmer votre commande ou réservation.',
-      sponsoredSectionLead: 'Annonces vedettes — clairement identifiées. Ouvrez-les comme n’importe quel autre lieu.',
       flowSectionLabel: 'Filtres rapides',
       flowTitle: 'De quoi avez-vous besoin ?',
       flowLead:
@@ -3878,7 +3812,6 @@ export const translations = {
         'Un guide distinct de la restauration et de l’annuaire principal : hôtels, maisons d’hôtes et lieux dédiés au sommeil uniquement. Filtrez, comparez, puis ouvrez les détails ou ajoutez à votre voyage.',
       topPicksTitle: 'Favoris des voyageurs',
       topPicksSub: 'Les mieux notés avec votre recherche et filtres actuels',
-      sponsoredKicker: 'Séjours en vedette',
       categoryFilterLabel: 'Type de séjour',
       allStyles: 'Tout',
       sortLabel: 'Trier',
@@ -3900,24 +3833,6 @@ export const translations = {
       experienceCol3Title: 'Des nuits adaptées au plan',
       experienceCol3Body:
         'Ajoutez des séjours à votre voyage avec le jour et l’heure — le même planificateur garde les hôtels, les repas et les visites alignés.',
-      sponsoredSectionLead: 'Séjours vedettes — clairement identifiés. Ouvrez-les comme n’importe quel autre lieu.',
-    },
-    business: {
-      sponsorshipNav: 'Parrainage',
-      sponsorshipTitle: 'Visibilité sponsorisée',
-      sponsorshipLead:
-        'Achetez un placement sponsorisé à durée limitée sur l’Accueil, Découvrir et le fil communautaire. Votre annonce reste marquée comme sponsorisée pour la transparence.',
-      sponsorshipPickPlace: 'Choisissez un lieu que vous gérez',
-      sponsorshipDuration: '{days} jours',
-      sponsorshipPriceLine: '{amount} · paiement unique',
-      sponsorshipPayCta: 'Continuer vers le paiement sécurisé',
-      sponsorshipDisabled: 'Le parrainage en libre-service est désactivé. Contactez-nous pour la visibilité.',
-      sponsorshipNotConfigured: 'Les paiements en ligne ne sont pas encore configurés. Réessayez plus tard.',
-      sponsorshipConflict: 'Ce lieu ne peut pas démarrer un nouveau parrainage pour le moment.',
-      sponsorshipCheckoutError: 'Impossible de démarrer le paiement. Réessayez.',
-      sponsorshipNoPlaces: 'Aucun lieu lié à votre compte pour le moment.',
-      successTitle: 'Merci',
-      successPending: 'Paiement reçu. Votre placement s’activera dans quelques secondes après confirmation.',
     },
     home: {
       heroTitle: 'Explorer Tripoli',

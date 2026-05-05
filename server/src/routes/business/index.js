@@ -6,13 +6,6 @@ const { isDiningVenueRow, restaurantRowFilter } = require('../../utils/restauran
 
 const router = express.Router();
 
-router.use(
-  '/sponsorship',
-  authMiddleware,
-  businessPortalMiddleware,
-  require('./sponsorship')
-);
-
 function mapPlaceForBusiness(r, access) {
   return {
     id: r.id,

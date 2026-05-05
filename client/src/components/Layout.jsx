@@ -10,7 +10,7 @@ import BackToTop from './BackToTop';
 import { COMMUNITY_PATH, PLACES_DISCOVER_PATH } from '../utils/discoverPaths';
 import './css/Layout.css';
 
-const langLabels = { en: 'EN', ar: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', fr: 'FR' };
+const langLabels = { en: 'EN', ar: 'العربية', fr: 'FR' };
 const AI_BANNER_DISMISSED_KEY = 'tripoli_ai_banner_dismissed';
 
 export default function Layout() {
@@ -143,7 +143,7 @@ export default function Layout() {
               )}
             </div>
             <div style={{ flex: 1 }} aria-hidden="true" />
-            
+
             <nav className={`nav nav--vd nav--main ${menuOpen ? 'nav-open' : ''}`}>
               <Link to="/" className={`nav-link nav-link--home ${isHome ? 'nav-link--active' : ''}`} onClick={closeMenu}>{t('nav', 'home')}</Link>
               <Link
@@ -180,6 +180,7 @@ export default function Layout() {
               <Link to="/plan" className={`nav-link nav-link--plan ${isPlan ? 'nav-link--active' : ''}`} onClick={closeMenu}>
                 {t('nav', 'planYourVisit')}
               </Link>
+
             </nav>
 
             <div className="header-meta">
@@ -203,13 +204,13 @@ export default function Layout() {
                           type="button"
                           className={`nav-lang-option ${lang === code ? 'nav-lang-option--active' : ''}`}
                           onClick={() => {
-                           setLanguage(code);
-                           setLangOpen(false);
-                           closeMenu();
-                           showToast(t('feedback', 'languageChanged'), 'success');
-                         }}
+                            setLanguage(code);
+                            setLangOpen(false);
+                            closeMenu();
+                            showToast(t('feedback', 'languageChanged'), 'success');
+                          }}
                         >
-                          {code === 'en' ? 'English' : code === 'ar' ? '\u0627\u0644\u0639\u0631\u0628\u064a\u0629' : 'Fran\u00e7ais'}
+                          {code === 'en' ? 'English' : code === 'ar' ? 'العربية' : 'French'}
                         </button>
                       </li>
                     ))}
@@ -225,34 +226,34 @@ export default function Layout() {
               <GlobalSearchBar idPrefix="header-search" onPick={closeMenu} />
             </div>
             <div className="header-row--secondary-actions">
-            <Link to="/favourites" className="nav-icon" onClick={closeMenu} aria-label={t('nav', 'myFavourites')}><Icon name="favorite" size={22} /></Link>
-            {user ? (
-              <>
-                {user.isAdmin && (
-                  <Link to="/admin" className="nav-link nav-link--auth" onClick={closeMenu}>{t('nav', 'admin')}</Link>
-                )}
-                {user && (user.isBusinessOwner || (user.ownedPlaceCount ?? 0) > 0) && (
-                  <Link to="/business" className="nav-link nav-link--auth" onClick={closeMenu}>{t('nav', 'myBusiness')}</Link>
-                )}
-                <Link to="/messages" className="nav-link nav-link--auth" onClick={closeMenu}>
-                  {t('nav', 'venueMessages')}
-                </Link>
-                <Link
-                  to="/trips"
-                  className={`nav-link nav-link--auth ${isTripsPage ? 'nav-link--active' : ''}`}
-                  onClick={closeMenu}
-                >
-                  {t('nav', 'myTrips')}
-                </Link>
-                <Link to="/profile" className="nav-link nav-link--auth" onClick={closeMenu}>{user.name || t('nav', 'profile')}</Link>
-                <button type="button" className="btn-outline btn-sm btn-vd" onClick={handleLogout}>{t('nav', 'logOut')}</button>
-              </>
-            ) : (
-              <>
-                <Link to="/login" className="nav-link nav-link--auth" onClick={closeMenu}>{t('nav', 'signIn')}</Link>
-                <Link to="/register" className="btn-primary btn-sm btn-vd" onClick={closeMenu}>{t('nav', 'signUp')}</Link>
-              </>
-            )}
+              <Link to="/favourites" className="nav-icon" onClick={closeMenu} aria-label={t('nav', 'myFavourites')}><Icon name="favorite" size={22} /></Link>
+              {user ? (
+                <>
+                  {user.isAdmin && (
+                    <Link to="/admin" className="nav-link nav-link--auth" onClick={closeMenu}>{t('nav', 'admin')}</Link>
+                  )}
+                  {user && (user.isBusinessOwner || (user.ownedPlaceCount ?? 0) > 0) && (
+                    <Link to="/business" className="nav-link nav-link--auth" onClick={closeMenu}>{t('nav', 'myBusiness')}</Link>
+                  )}
+                  <Link to="/messages" className="nav-link nav-link--auth" onClick={closeMenu}>
+                    {t('nav', 'venueMessages')}
+                  </Link>
+                  <Link
+                    to="/trips"
+                    className={`nav-link nav-link--auth ${isTripsPage ? 'nav-link--active' : ''}`}
+                    onClick={closeMenu}
+                  >
+                    {t('nav', 'myTrips')}
+                  </Link>
+                  <Link to="/profile" className="nav-link nav-link--auth" onClick={closeMenu}>{user.name || t('nav', 'profile')}</Link>
+                  <button type="button" className="btn-outline btn-sm btn-vd" onClick={handleLogout}>{t('nav', 'logOut')}</button>
+                </>
+              ) : (
+                <>
+                  <Link to="/login" className="nav-link nav-link--auth" onClick={closeMenu}>{t('nav', 'signIn')}</Link>
+                  <Link to="/register" className="btn-primary btn-sm btn-vd" onClick={closeMenu}>{t('nav', 'signUp')}</Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -349,7 +350,7 @@ export default function Layout() {
                           showToast(t('feedback', 'languageChanged'), 'success');
                         }}
                       >
-                        {code === 'en' ? 'English' : code === 'ar' ? '\u0627\u0644\u0639\u0631\u0628\u064a\u0629' : 'Fran\u00e7ais'}
+                        {code === 'en' ? 'English' : code === 'ar' ? 'العربية' : 'French'}
                       </button>
                     </li>
                   ))}

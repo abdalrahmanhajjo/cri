@@ -260,7 +260,13 @@ router.post('/change-password', async (req, res) => {
     if (!match) return res.status(401).json({ error: 'Current password is incorrect' });
 
     const hash = await bcrypt.hash(newPassword, 12);
-    await usersColl.updateOne({ id: userId }, { $set: { password_hash: hash } });
+    await usersColl.updateOne(
+      { id: userId },
+      { 
+        $set: { password_hash: hash },
+        $inc: { token_version: 1 }
+      }
+    );
     res.json({ message: 'Password updated successfully' });
   } catch (err) {
     console.error(err);
