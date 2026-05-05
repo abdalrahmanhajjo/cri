@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
 import Icon from '../components/Icon';
-import HciSettingsPanel from '../components/HciSettingsPanel';
 import api, { getImageUrl } from '../api/client';
 import {
   checkPasswordRequirements,
@@ -33,9 +32,7 @@ function formatMemberSince(date, locale) {
 
 function formatProfileId(id) {
   if (id == null || id === '') return '—';
-  const s = String(id);
-  if (s.length <= 12) return s;
-  return `${s.slice(0, 8)}…${s.slice(-4)}`;
+  return String(id);
 }
 
 export default function Profile() {
@@ -52,8 +49,6 @@ export default function Profile() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState(null);
 
-  const [analytics, setAnalytics] = useState(true);
-  const [showTips, setShowTips] = useState(true);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -79,8 +74,6 @@ export default function Profile() {
         setName(data.name ?? '');
         setBio(data.bio ?? '');
         setCity(data.city ?? '');
-        setAnalytics(data.analytics ?? true);
-        setShowTips(data.showTips ?? true);
       })
       .catch((e) => setProfileError(e.message || t('profilePage', 'loadError')))
       .finally(() => setLoading(false));
@@ -95,8 +88,6 @@ export default function Profile() {
         name: name.trim() || undefined,
         bio: bio.trim() || undefined,
         city: city.trim() || undefined,
-        analytics,
-        showTips,
       });
       setProfile((p) => ({
         ...p,
@@ -195,7 +186,7 @@ export default function Profile() {
 
   const quickLinks = [
     { to: '/plan', label: t('profilePage', 'quickPlan'), icon: 'map' },
-    { to: '/trips', label: t('profilePage', 'quickTrips'), icon: 'event_note' },
+    { to: '/map', label: t('nav', 'viewMapNav'), icon: 'explore' },
     { to: '/favourites', label: t('profilePage', 'quickFavourites'), icon: 'favorite' },
     { to: '/messages', label: t('profilePage', 'quickMessages'), icon: 'chat' },
   ];
@@ -361,37 +352,6 @@ export default function Profile() {
             />
           </div>
 
-          <div className="profile-prefs-divider" role="presentation" />
-
-          <h3 className="profile-subheading">{t('profilePage', 'prefsTitle')}</h3>
-          <div className="profile-toggle-row">
-            <div>
-              <p className="profile-toggle-label">{t('profilePage', 'prefAnalytics')}</p>
-              <p className="profile-toggle-desc">{t('profilePage', 'prefAnalyticsDesc')}</p>
-            </div>
-            <button
-              type="button"
-              className="profile-toggle"
-              role="switch"
-              aria-pressed={analytics}
-              aria-label={t('profilePage', 'prefAnalytics')}
-              onClick={() => setAnalytics((a) => !a)}
-            />
-          </div>
-          <div className="profile-toggle-row profile-toggle-row--last">
-            <div>
-              <p className="profile-toggle-label">{t('profilePage', 'prefTips')}</p>
-              <p className="profile-toggle-desc">{t('profilePage', 'prefTipsDesc')}</p>
-            </div>
-            <button
-              type="button"
-              className="profile-toggle"
-              role="switch"
-              aria-pressed={showTips}
-              aria-label={t('profilePage', 'prefTips')}
-              onClick={() => setShowTips((s) => !s)}
-            />
-          </div>
 
           {profileMsg ? (
             <p
@@ -415,13 +375,6 @@ export default function Profile() {
         </form>
       </section>
 
-      <section className="profile-card" aria-labelledby="profile-hci-heading">
-        <h2 id="profile-hci-heading" className="profile-card-heading">
-          <Icon name="psychology" size={20} aria-hidden />
-          {t('profilePage', 'hciFeedbackHeading')}
-        </h2>
-        <HciSettingsPanel />
-      </section>
 
       <section className="profile-card" aria-labelledby="profile-security-heading">
         <h2 id="profile-security-heading" className="profile-card-heading">

@@ -1,17 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { flushSync } from 'react-dom';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
-import { getPlaceImageUrl } from '../api/client';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { useAuth } from '../context/AuthContext';
-import DeliveryImg from '../components/DeliveryImg';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
-import { DateRangeCalendar } from '../components/Calendar';
-import { filterPlacesByQuery } from '../utils/searchFilter';
-import { orderPlacesByIds } from '../utils/orderPlacesByIds';
-import { useFavourites } from '../context/FavouritesContext';
 import {
   getDayCount,
   isValidDateRange,
@@ -21,7 +15,6 @@ import {
   BEST_TIME_ORDER,
   buildTripDaysApiPayload,
   hasOverlappingTimeSlots,
-  tripHasDateConflict,
   findNextNonOverlappingDateRange,
   tripCalendarRangesOverlap,
   tripPhaseForSort,
@@ -45,6 +38,20 @@ import {
   clearManualTripBuilderTour,
 } from '../utils/manualTripOnboardingStorage';
 import AiPlannerOnboarding from '../components/AiPlannerOnboarding';
+import { filterPlacesByQuery } from '../utils/searchFilter';
+import { orderPlacesByIds } from '../utils/orderPlacesByIds';
+import { useFavourites } from '../context/FavouritesContext';
+
+// Components
+import { PlanHero } from '../components/plan/PlanHero';
+import { PlanTripList } from '../components/plan/PlanTripList';
+import { PlanCreateForm } from '../components/plan/PlanCreateForm';
+import { PlanBuilderBasics } from '../components/plan/PlanBuilderBasics';
+import { PlanBuilderDiscover } from '../components/plan/PlanBuilderDiscover';
+import { PlanBuilderFavourites } from '../components/plan/PlanBuilderFavourites';
+import { PlanBuilderItinerary } from '../components/plan/PlanBuilderItinerary';
+import { PlanDeleteConfirmModal } from '../components/plan/PlanModals';
+
 import './css/Explore.css';
 import './css/Plan.css';
 
@@ -115,7 +122,6 @@ function groupPlacesByCategory(places, categories) {
 }
 
 const TIME_SLOTS = ['morning', 'afternoon', 'evening'];
-
 const getDateForDay = getDateForDayIndex;
 
 const INITIAL_BUILDER_SECTION_COLLAPSED = {
@@ -124,128 +130,6 @@ const INITIAL_BUILDER_SECTION_COLLAPSED = {
   favourites: false,
   itinerary: false,
 };
-
-function PlaceCardDiscover({ place, isFavourite, onToggleFavourite, tripDayCount = 0, onAddToTrip, t }) {
-  if (!place || place.id == null) return null;
-  const placeId = String(place.id);
-  const imgUrl = getPlaceImageUrl(place.image || (Array.isArray(place.images) && place.images[0])) || null;
-  const name = place.name != null ? String(place.name) : '';
-  const location = place.location != null ? String(place.location) : '';
-  const rating = place.rating != null ? Number(place.rating) : null;
-  const bestTime = place.bestTime ? String(place.bestTime) : '';
-  const duration = place.duration ? String(place.duration) : '';
-  const showTripAdd = typeof onAddToTrip === 'function' && tripDayCount > 0;
-
-  return (
-    <div className="plan-discover-card">
-      <div className="plan-discover-card-top">
-        <Link to={`/place/${placeId}`} className="plan-discover-card-link">
-          <div
-            className="plan-discover-card-media"
-            style={imgUrl ? { backgroundImage: `url("${imgUrl}")` } : undefined}
-          >
-            {imgUrl ? (
-              <DeliveryImg url={imgUrl} preset="planDiscover" alt="" />
-            ) : (
-              <span className="plan-discover-card-fallback">Place</span>
-            )}
-            <div className="plan-discover-card-overlay">
-              <h3 className="plan-discover-card-title">{name || 'Place'}</h3>
-              {location && <p className="plan-discover-card-meta">{location}</p>}
-            </div>
-            {rating != null && !Number.isNaN(rating) && (
-              <span className="plan-discover-card-badge plan-discover-card-rating">
-                <Icon name="star" size={14} /> {rating.toFixed(1)}
-              </span>
-            )}
-          </div>
-        </Link>
-        <div className="plan-discover-card-summary">
-          <Link to={`/place/${placeId}`} className="plan-discover-card-summary-title">
-            {name || 'Place'}
-          </Link>
-          {location ? <p className="plan-discover-card-summary-loc">{location}</p> : null}
-          {rating != null && !Number.isNaN(rating) ? (
-            <span className="plan-discover-card-summary-rating">
-              <Icon name="star" size={14} ariaHidden /> {rating.toFixed(1)}
-            </span>
-          ) : null}
-        </div>
-      </div>
-      <div className="plan-discover-card-footer">
-        {bestTime && <span className="plan-discover-card-tag">{bestTime}</span>}
-        {duration && <span className="plan-discover-card-tag">{duration}</span>}
-        <button
-          type="button"
-          className={`plan-discover-fav-btn ${isFavourite ? 'plan-discover-fav-btn--active' : ''}`}
-          onClick={(e) => { e.preventDefault(); onToggleFavourite(placeId); }}
-          aria-label={t('home', 'planSavePlace')}
-          title={t('home', 'planSavePlaceOptional')}
-        >
-          <Icon name={isFavourite ? 'favorite' : 'favorite_border'} size={22} />
-        </button>
-      </div>
-      {showTripAdd && (
-        <div className="plan-discover-card-add">
-          <span className="plan-fav-add-label">{t('home', 'planAddToDay')}:</span>
-          <div className="plan-fav-add-btns">
-            {Array.from({ length: tripDayCount }, (_, i) => (
-              <button
-                key={i}
-                type="button"
-                className="plan-fav-add-day-btn"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onAddToTrip(placeId, name, i);
-                }}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FavouriteCard({ place, dayCount, onAddToDay, t }) {
-  if (!place || place.id == null) return null;
-  const placeId = String(place.id);
-  const imgUrl = getPlaceImageUrl(place.image || (Array.isArray(place.images) && place.images[0])) || null;
-  const name = place.name != null ? String(place.name) : '';
-  const category = place.category || '';
-  const location = place.location || '';
-
-  return (
-    <div className="plan-fav-card">
-      <Link to={`/place/${placeId}`} className="plan-fav-card-media">
-        {imgUrl ? <DeliveryImg url={imgUrl} preset="planSquare" alt="" /> : null}
-        {!imgUrl && <span className="plan-fav-card-fallback">Place</span>}
-      </Link>
-      <div className="plan-fav-card-body">
-        <Link to={`/place/${placeId}`} className="plan-fav-card-title">{name || placeId}</Link>
-        {category && <span className="plan-fav-card-cat">{category}</span>}
-        {location && <p className="plan-fav-card-loc">{location}</p>}
-        <div className="plan-fav-card-actions">
-          <span className="plan-fav-add-label">{t('home', 'planAddToDay')}:</span>
-          <div className="plan-fav-add-btns">
-            {Array.from({ length: dayCount }, (_, i) => (
-              <button
-                key={i}
-                type="button"
-                className="plan-fav-add-day-btn"
-                onClick={() => onAddToDay(placeId, name, i)}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function Plan() {
   const { t, lang } = useLanguage();
@@ -278,7 +162,6 @@ export default function Plan() {
   const [nameError, setNameError] = useState('');
   const [duplicatingId, setDuplicatingId] = useState(null);
   const [deletingTripId, setDeletingTripId] = useState(null);
-  /** Set when user taps delete — in-app sheet (mobile-friendly); avoid window.confirm on phones. */
   const [tripDeleteConfirmId, setTripDeleteConfirmId] = useState(null);
   const [schedulingDayIndex, setSchedulingDayIndex] = useState(null);
   const [builderSectionCollapsed, setBuilderSectionCollapsed] = useState(() => ({
@@ -664,7 +547,6 @@ export default function Plan() {
     });
   }, []);
 
-  /** Next-step target for the floating skip FAB (null = hide, e.g. on last section). */
   const [planSkipFabTarget, setPlanSkipFabTarget] = useState(null);
 
   const updatePlanSkipFabTarget = useCallback(() => {
@@ -720,7 +602,6 @@ export default function Plan() {
     setPlanSkipFabTarget(bestVis > 48 ? bestNext : null);
   }, []);
 
-  /** Open the target builder section and scroll it into view (manual plan steps). */
   const advancePlanBuilderStep = useCallback(
     (targetKey) => {
       const scrollTargetIds = {
@@ -798,34 +679,27 @@ export default function Plan() {
       return;
     }
     if (!datesOnOrAfterToday(start, end)) {
-      setDateError(t('home', 'tripDatesPast'));
-      showToast(t('home', 'tripDatesPast'), 'error');
+      setDateError(t('home', 'datePast'));
+      showToast(t('home', 'datePast'), 'error');
       return;
     }
-    if (tripHasDateConflict(trips, start, end, null)) {
-      setDateError(t('home', 'tripDateOverlap'));
-      showToast(t('home', 'tripDateOverlap'), 'error');
-      return;
-    }
-    setDateError(null);
-    const desc = createDescription.trim();
     setSaving(true);
     api.user
       .createTrip({
         name,
         startDate: start,
         endDate: end,
-        ...(desc ? { description: desc } : {}),
+        description: createDescription.trim() || null,
       })
-      .then((created) => {
-        loadTrips();
+      .then((data) => {
+        setTrips((prev) => [data, ...prev]);
         setShowCreateForm(false);
         setCreateName('');
         setCreateStart('');
         setCreateEnd('');
         setCreateDescription('');
-        setEditingTripId(created.id);
-        showToast(t('home', 'planToastTripCreated'));
+        setEditingTripId(data.id);
+        showToast(t('home', 'planToastTripCreated'), 'success');
       })
       .catch((err) => {
         const msg =
@@ -837,64 +711,43 @@ export default function Plan() {
       .finally(() => setSaving(false));
   };
 
-  const handleSaveTrip = () => {
+  const handleSaveTrip = useCallback(() => {
     if (!editingTripId) return;
-    if (editingTrip?.isHost === false) {
-      showToast('Only the host can edit this trip.', 'error');
-      return;
-    }
     const name = editName.trim();
+    const start = toDateOnly(editStart);
+    const end = toDateOnly(editEnd);
     setNameError('');
     if (!name) {
       setNameError(t('home', 'tripNameRequired'));
       showToast(t('home', 'tripNameRequired'), 'error');
       return;
     }
-    const start = toDateOnly(editStart);
-    const end = toDateOnly(editEnd);
+    if (!start || !end) {
+      showToast(t('home', 'planToastDatesMissing'), 'error');
+      return;
+    }
     if (!isValidDateRange(start, end)) {
       setDateError(t('home', 'dateInvalid'));
       showToast(t('home', 'dateInvalid'), 'error');
       return;
     }
-    if (tripHasDateConflict(trips, start, end, editingTripId)) {
-      setDateError(t('home', 'tripDateOverlap'));
-      showToast(t('home', 'tripDateOverlap'), 'error');
-      return;
+    if (hasOverlappingTimeSlots(editDays)) {
+      showToast(t('home', 'tripOverlappingTimes'), 'error');
     }
-    for (let i = 0; i < editDays.length; i++) {
-      const slots = dayFromApiShape(editDays[i]).slots;
-      if (hasOverlappingTimeSlots(slots)) {
-        showToast(t('home', 'tripTimeConflict'), 'error');
-        return;
-      }
-    }
-    setDateError(null);
-    const daysPayload = buildTripDaysApiPayload(editDays, start);
-    const desc = editDescription.trim();
     setSaving(true);
+    const daysPayload = buildTripDaysApiPayload(editDays, start);
     api.user
       .updateTrip(editingTripId, {
         name,
         startDate: start,
         endDate: end,
+        description: editDescription.trim() || null,
         days: daysPayload,
-        description: desc,
       })
-      .then(() => {
-        loadTrips();
-        const nextDesc = desc;
-        const nextDays = ensureDaysWithSlots(daysPayload, getDayCount(start, end));
-        setEditDays(nextDays);
-        prevEditStateRef.current = {
-          name,
-          start,
-          end,
-          description: nextDesc,
-          days: JSON.stringify(nextDays),
-        };
-        showToast(t('home', 'planToastTripUpdated'));
-        navigate(`/trips/${encodeURIComponent(editingTripId)}`);
+      .then((data) => {
+        setTrips((prev) => prev.map((tr) => (tr.id === data.id ? data : tr)));
+        setEditingTripId(null);
+        showToast(t('home', 'planToastTripSaved'), 'success');
       })
       .catch((err) => {
         const msg =
@@ -904,185 +757,85 @@ export default function Plan() {
         showToast(msg, 'error');
       })
       .finally(() => setSaving(false));
-  };
+  }, [editingTripId, editName, editStart, editEnd, editDescription, editDays, showToast, t]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingTripId(null);
+  }, []);
+
+  const handleCloseCreateForm = useCallback(() => {
+    setShowCreateForm(false);
+  }, []);
+
+  const beginDeleteTrip = useCallback((id) => {
+    setTripDeleteConfirmId(id);
+  }, []);
 
   const cancelTripDeleteConfirm = useCallback(() => {
     setTripDeleteConfirmId(null);
   }, []);
 
-  const beginDeleteTrip = useCallback(
-    (id) => {
-      if (!id || deletingTripId) return;
-      const trip = trips.find((x) => x.id === id);
-      if (trip?.isHost === false) {
-        showToast('Only the host can delete this trip.', 'error');
-        return;
-      }
-      setTripDeleteConfirmId(id);
-    },
-    [trips, deletingTripId]
-  );
-
   const executeDeleteTrip = useCallback(() => {
-    const id = tripDeleteConfirmId;
-    if (!id || deletingTripId) return;
-    setTripDeleteConfirmId(null);
-    setDeletingTripId(id);
+    if (!tripDeleteConfirmId || deletingTripId) return;
+    setDeletingTripId(tripDeleteConfirmId);
     api.user
-      .deleteTrip(id)
+      .deleteTrip(tripDeleteConfirmId)
       .then(() => {
-        showToast(t('home', 'planToastTripDeleted'));
-        setEditingTripId((current) => (current === id ? null : current));
-        loadTrips();
+        setTrips((prev) => prev.filter((tr) => tr.id !== tripDeleteConfirmId));
+        if (editingTripId === tripDeleteConfirmId) setEditingTripId(null);
+        showToast(t('home', 'planToastTripDeleted'), 'info');
       })
       .catch((err) => showToast(err.message || t('home', 'tripDeleteFailed'), 'error'))
-      .finally(() => setDeletingTripId(null));
-  }, [tripDeleteConfirmId, deletingTripId, loadTrips, t]);
-
-  useEffect(() => {
-    if (!tripDeleteConfirmId) return undefined;
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
+      .finally(() => {
+        setDeletingTripId(null);
         setTripDeleteConfirmId(null);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [tripDeleteConfirmId]);
+      });
+  }, [tripDeleteConfirmId, deletingTripId, editingTripId, showToast, t]);
 
-  const handleCancelEdit = () => {
-    if (hasUnsavedChanges && !window.confirm(t('home', 'unsavedChanges'))) return;
-    if (hasUnsavedChanges) showToast(t('home', 'planToastEditDiscarded'), 'info');
-    setEditingTripId(null);
-    setDateError(null);
-    setNameError('');
-  };
+  const createTourStepMeta = useMemo(() => [
+    { target: 'createBtn', title: t('home', 'manualTourCreateTitle'), body: t('home', 'manualTourCreateBody') },
+    { target: 'createForm', title: t('home', 'manualTourFormTitle'), body: t('home', 'manualTourFormBody') },
+    { target: 'createCalendar', title: t('home', 'manualTourCalendarTitle'), body: t('home', 'manualTourCalendarBody') },
+    { target: 'createActions', title: t('home', 'manualTourActionsTitle'), body: t('home', 'manualTourActionsBody') },
+    { target: null, title: t('home', 'manualTourDoneTitle'), body: t('home', 'manualTourDoneBody') },
+  ], [t]);
 
-  const handleCloseCreateForm = () => {
-    const hadDraft =
-      createName.trim() || createStart || createEnd || createDescription.trim();
-    if (createTourOpen && createTourStep >= 2) {
-      setCreateTourStep(1);
-    }
-    setShowCreateForm(false);
-    setDateError(null);
-    setNameError('');
-    setCreateName('');
-    setCreateStart('');
-    setCreateEnd('');
-    setCreateDescription('');
-    if (hadDraft) showToast(t('home', 'planToastCreateFormClosed'), 'info');
-  };
+  const createTourRefMap = useMemo(() => ({
+    createBtn: tourCreateBtnRef,
+    createForm: tourCreateFormRef,
+    createCalendar: tourCreateCalendarRef,
+    createActions: tourCreateActionsRef,
+  }), []);
 
-  const createTourStepMeta = useMemo(
-    () => [
-      {
-        title: t('home', 'manualCreateTourWelcomeTitle'),
-        body: t('home', 'manualCreateTourWelcomeBody'),
-        target: null,
-      },
-      {
-        title: t('home', 'manualCreateTourNewBtnTitle'),
-        body: t('home', 'manualCreateTourNewBtnBody'),
-        target: 'newBtn',
-      },
-      {
-        title: t('home', 'manualCreateTourFormTitle'),
-        body: t('home', 'manualCreateTourFormBody'),
-        target: 'form',
-      },
-      {
-        title: t('home', 'manualCreateTourDatesTitle'),
-        body: t('home', 'manualCreateTourDatesBody'),
-        target: 'dates',
-      },
-      {
-        title: t('home', 'manualCreateTourSaveTitle'),
-        body: t('home', 'manualCreateTourSaveBody'),
-        target: 'save',
-      },
-    ],
-    [t]
-  );
+  const builderTourStepMeta = useMemo(() => [
+    { target: 'nav', title: t('home', 'manualTourNavTitle'), body: t('home', 'manualTourNavBody') },
+    { target: 'basics', title: t('home', 'manualTourBasicsTitle'), body: t('home', 'manualTourBasicsBody') },
+    { target: 'discover', title: t('home', 'manualTourDiscoverTitle'), body: t('home', 'manualTourDiscoverBody') },
+    { target: 'favourites', title: t('home', 'manualTourFavTitle'), body: t('home', 'manualTourFavBody') },
+    { target: 'itinerary', title: t('home', 'manualTourItineraryTitle'), body: t('home', 'manualTourItineraryBody') },
+    { target: 'save', title: t('home', 'manualTourSaveTitle'), body: t('home', 'manualTourSaveBody') },
+  ], [t]);
 
-  const builderTourStepMeta = useMemo(
-    () => [
-      {
-        title: t('home', 'manualBuilderTourWelcomeTitle'),
-        body: t('home', 'manualBuilderTourWelcomeBody'),
-        target: null,
-      },
-      {
-        title: t('home', 'manualBuilderTourNavTitle'),
-        body: t('home', 'manualBuilderTourNavBody'),
-        target: 'nav',
-      },
-      {
-        title: t('home', 'manualBuilderTourBasicsTitle'),
-        body: t('home', 'manualBuilderTourBasicsBody'),
-        target: 'basics',
-      },
-      {
-        title: t('home', 'manualBuilderTourDiscoverTitle'),
-        body: t('home', 'manualBuilderTourDiscoverBody'),
-        target: 'discover',
-      },
-      {
-        title: t('home', 'manualBuilderTourFavouritesTitle'),
-        body: t('home', 'manualBuilderTourFavouritesBody'),
-        target: 'favourites',
-      },
-      {
-        title: t('home', 'manualBuilderTourItineraryTitle'),
-        body: t('home', 'manualBuilderTourItineraryBody'),
-        target: 'save',
-      },
-    ],
-    [t]
-  );
+  const builderTourRefMap = useMemo(() => ({
+    nav: tourBuilderNavRef,
+    basics: tourBuilderBasicsRef,
+    discover: tourBuilderDiscoverRef,
+    favourites: tourBuilderFavouritesRef,
+    itinerary: { current: typeof document !== 'undefined' ? document.getElementById('plan-itinerary') : null },
+    save: tourBuilderSaveRef,
+  }), []);
 
-  const createTourRefMap = useMemo(
-    () => ({
-      newBtn: tourCreateBtnRef,
-      form: tourCreateFormRef,
-      dates: tourCreateCalendarRef,
-      save: tourCreateActionsRef,
-    }),
-    []
-  );
-
-  const builderTourRefMap = useMemo(
-    () => ({
-      nav: tourBuilderNavRef,
-      basics: tourBuilderBasicsRef,
-      discover: tourBuilderDiscoverRef,
-      favourites: tourBuilderFavouritesRef,
-      save: tourBuilderSaveRef,
-    }),
-    []
-  );
-
-  const expandForBuilderTourTarget = useCallback((targetKey) => {
-    if (targetKey === 'basics') expandBuilderSection('basics');
-    else if (targetKey === 'discover') expandBuilderSection('discover');
-    else if (targetKey === 'favourites') expandBuilderSection('favourites');
-    else if (targetKey === 'save') {
-      expandBuilderSection('itinerary');
-    }
+  const expandForBuilderTourTarget = useCallback((target) => {
+    if (target === 'basics') expandBuilderSection('basics');
+    if (target === 'discover') expandBuilderSection('discover');
+    if (target === 'favourites') expandBuilderSection('favourites');
+    if (target === 'itinerary') expandBuilderSection('itinerary');
   }, [expandBuilderSection]);
 
   const syncCreateTourHighlightForStep = useCallback(() => {
     if (!createTourOpen) return;
-    const meta = createTourStepMeta[createTourStep];
-    const key = meta?.target;
-    const ref = key ? createTourRefMap[key] : null;
-    if (createTourStep >= 2 && !showCreateForm) {
-      flushSync(() => {
-        setShowCreateForm(true);
-      });
-    }
-    if (!key || !ref?.current) {
+    const ref = createTourStepMeta[createTourStep]?.target ? createTourRefMap[createTourStepMeta[createTourStep].target] : null;
+    if (!ref?.current) {
       setCreateTourHighlightRect(null);
       return;
     }
@@ -1429,7 +1182,7 @@ export default function Plan() {
   );
 
   const getTripPlaceIds = useCallback((tr) => {
-    if (!Array.isArray(tr.days)) return [];
+    if (!tr || !Array.isArray(tr.days)) return [];
     return tr.days.flatMap((d) => placeIdsFromDay(d));
   }, []);
 
@@ -1576,12 +1329,23 @@ export default function Plan() {
 
   return (
     <div className="vd plan-page" role="main" aria-label={t('home', 'planTitle')}>
-      <header className="plan-hero">
-        <div className="plan-hero-inner">
-          <h1 className="plan-hero-title">{t('home', 'planTitle')}</h1>
-          <p className="plan-hero-sub">{t('home', 'planTripSectionSub')}</p>
-        </div>
-      </header>
+      <PlanHero
+        t={t}
+        incomingShareRequests={incomingShareRequests}
+        shareRequestsCollapsed={shareRequestsCollapsed}
+        setShareRequestsCollapsed={setShareRequestsCollapsed}
+        expandedShareRequestIds={expandedShareRequestIds}
+        toggleRequestExpanded={toggleRequestExpanded}
+        handleRespondIncomingShare={handleRespondIncomingShare}
+        shareActionBusyId={shareActionBusyId}
+        isInBuilder={isInBuilder}
+        startCreateTour={startCreateTour}
+        aiPlannerEnabled={settings.aiPlannerEnabled}
+        showCreateForm={showCreateForm}
+        setShowCreateForm={setShowCreateForm}
+        tourCreateBtnRef={tourCreateBtnRef}
+        showToast={showToast}
+      />
 
       <div className="plan-main">
         {tripsLoading ? (
@@ -1636,430 +1400,93 @@ export default function Plan() {
           </button>
           </div>
           <div className="plan-unified" id="plan">
-            <section
-              ref={tourBuilderBasicsRef}
-              className={`plan-unified-section plan-unified-section--basics${builderSectionCollapsed.basics ? ' plan-unified-section--collapsed' : ''}`}
-              id="plan-basics"
-            >
-              <div className="plan-section-head-toggle">
-                <div className="plan-section-step">
-                  <span className="plan-step-num">1</span>
-                  <h2 className="plan-section-title" id="plan-basics-label">{t('home', 'planStepBasics')}</h2>
-                </div>
-                <button
-                  type="button"
-                  className="plan-builder-section-toggle"
-                  onClick={() => toggleBuilderSection('basics')}
-                  aria-expanded={!builderSectionCollapsed.basics}
-                  aria-controls="plan-basics-body"
-                >
-                  <Icon name={builderSectionCollapsed.basics ? 'expand_more' : 'expand_less'} size={22} aria-hidden />
-                  <span>{builderSectionCollapsed.basics ? t('home', 'planBuilderSectionShow') : t('home', 'planBuilderSectionHide')}</span>
-                </button>
-              </div>
-              {!builderSectionCollapsed.basics && (
-              <div id="plan-basics-body" className="plan-builder-section-body" role="region" aria-labelledby="plan-basics-label">
-              <div className="plan-unified-basics">
-                <button type="button" className="plan-builder-back" onClick={handleCancelEdit} aria-label={t('home', 'cancel')}>
-                  <Icon name="arrow_back" size={22} /> {t('home', 'cancel')}
-                </button>
-                <div className="plan-unified-basics-form">
-                  <input
-                    type="text"
-                    className="plan-builder-title"
-                    value={editName}
-                    maxLength={200}
-                    onChange={(e) => { setEditName(e.target.value); setNameError(''); }}
-                    placeholder={t('home', 'tripNamePlaceholder')}
-                    aria-label={t('home', 'tripName')}
-                    aria-invalid={!!nameError}
-                  />
-                  {nameError && <p className="plan-name-error" role="alert">{nameError}</p>}
-                  <p className="plan-label plan-notes-label">{t('home', 'tripNotesOptional')}</p>
-                  <textarea
-                    className="plan-notes-input"
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    placeholder={t('home', 'tripNotesPlaceholder')}
-                    rows={3}
-                    maxLength={10000}
-                    aria-label={t('home', 'tripNotesOptional')}
-                  />
-                  <div className="plan-quick-dates" role="group" aria-label={t('home', 'planQuickDates')}>
-                    <button type="button" className="plan-quick-date-chip" onClick={() => applyEditQuickPreset('today')}>{t('home', 'planQuickToday')}</button>
-                    <button type="button" className="plan-quick-date-chip" onClick={() => applyEditQuickPreset('weekend')}>{t('home', 'planQuickWeekend')}</button>
-                    <button type="button" className="plan-quick-date-chip" onClick={() => applyEditQuickPreset('week')}>{t('home', 'planQuickWeek')}</button>
-                  </div>
-                  <div className="plan-builder-dates">
-                    <label>
-                      <span className="plan-label">{t('home', 'startDate')}</span>
-                      <input type="date" value={editStart} onChange={(e) => { setEditStart(e.target.value); setDateError(null); }} aria-invalid={!!dateError} />
-                    </label>
-                    <label>
-                      <span className="plan-label">{t('home', 'endDate')}</span>
-                      <input type="date" value={editEnd} onChange={(e) => { setEditEnd(e.target.value); setDateError(null); }} aria-invalid={!!dateError} />
-                    </label>
-                  </div>
-                </div>
-                {editDays.some((d) => placeIdsFromDay(d).length > 0) && (
-                  <button
-                    type="button"
-                    className="plan-builder-map-btn"
-                    onClick={() => {
-                      showToast(t('home', 'planToastOpenMap'), 'info');
-                      navigate('/map', {
-                        state: {
-                          tripPlaceIds: editDays.flatMap((d) => placeIdsFromDay(d)),
-                          tripDays: editDays,
-                          tripName: editName || t('home', 'planTitle'),
-                          tripStartDate: editStart || '',
-                        },
-                      });
-                    }}
-                  >
-                    <Icon name="map" size={20} /> {t('detail', 'viewOnMap')}
-                  </button>
-                )}
-              </div>
-              {dateError && <p className="plan-date-error" role="alert">{dateError}</p>}
-              <div className="plan-calendar-wrap">
-                <DateRangeCalendar
-                  startDate={editStart || undefined}
-                  endDate={editEnd || undefined}
-                  onChange={onEditCalendarRangeChange}
-                  hintStart={t('home', 'selectStartDate')}
-                  hintEnd={t('home', 'selectEndDate')}
-                />
-              </div>
-              </div>
-              )}
-            </section>
+            <PlanBuilderBasics
+              builderSectionCollapsed={builderSectionCollapsed}
+              toggleBuilderSection={toggleBuilderSection}
+              handleCancelEdit={handleCancelEdit}
+              editName={editName}
+              setEditName={setEditName}
+              setNameError={setNameError}
+              nameError={nameError}
+              editDescription={editDescription}
+              setEditDescription={setEditDescription}
+              applyEditQuickPreset={applyEditQuickPreset}
+              editStart={editStart}
+              setEditStart={setEditStart}
+              editEnd={editEnd}
+              setEditEnd={setEditEnd}
+              setDateError={setDateError}
+              dateError={dateError}
+              editDays={editDays}
+              placeIdsFromDay={placeIdsFromDay}
+              showToast={showToast}
+              navigate={navigate}
+              onEditCalendarRangeChange={onEditCalendarRangeChange}
+              t={t}
+              tourBuilderBasicsRef={tourBuilderBasicsRef}
+            />
 
-            <section
-              ref={tourBuilderDiscoverRef}
-              className={`plan-unified-section plan-unified-section--discover${builderSectionCollapsed.discover ? ' plan-unified-section--collapsed' : ''}`}
-              id="plan-discover"
-            >
-              <div className="plan-section-head-toggle">
-                <div className="plan-section-step">
-                  <span className="plan-step-num">2</span>
-                  <h2 className="plan-section-title" id="plan-discover-label">{t('home', 'planStepDiscover')}</h2>
-                </div>
-                <button
-                  type="button"
-                  className="plan-builder-section-toggle"
-                  onClick={() => toggleBuilderSection('discover')}
-                  aria-expanded={!builderSectionCollapsed.discover}
-                  aria-controls="plan-discover-body"
-                >
-                  <Icon name={builderSectionCollapsed.discover ? 'expand_more' : 'expand_less'} size={22} aria-hidden />
-                  <span>{builderSectionCollapsed.discover ? t('home', 'planBuilderSectionShow') : t('home', 'planBuilderSectionHide')}</span>
-                </button>
-              </div>
-              {!builderSectionCollapsed.discover && (
-              <div id="plan-discover-body" className="plan-builder-section-body" role="region" aria-labelledby="plan-discover-label">
-              <p className="plan-section-sub">{t('home', 'planDiscoverSub')}</p>
-              <div className="plan-discover-toolbar">
-                <div className="plan-discover-toolbar-row">
-                  <div className="plan-search-wrap plan-search-wrap--grow">
-                    <Icon name="search" size={20} className="plan-search-icon" />
-                    <input
-                      type="search"
-                      className="plan-search-input"
-                      placeholder={t('home', 'planSearchPlaces')}
-                      value={placeSearch}
-                      onChange={(e) => setPlaceSearch(e.target.value)}
-                      aria-label={t('home', 'planSearchPlaces')}
-                    />
-                  </div>
-                  <div className="plan-category-filter" ref={categoryFilterRef}>
-                    <button
-                      type="button"
-                      className={`plan-category-filter-trigger ${placeCategoryFilter != null ? 'plan-category-filter-trigger--active' : ''} ${categoryFilterOpen ? 'plan-category-filter-trigger--open' : ''}`}
-                      aria-expanded={categoryFilterOpen}
-                      aria-haspopup="listbox"
-                      aria-label={t('home', 'planCategoryFilterBtnAria')}
-                      onClick={() => setCategoryFilterOpen((o) => !o)}
-                    >
-                      <Icon name="filter_list" size={22} ariaHidden />
-                    </button>
-                    {categoryFilterOpen ? (
-                      <div className="plan-category-filter-panel" role="listbox" aria-label={t('home', 'planCategoryFilterHeading')}>
-                        <p className="plan-category-filter-panel-title">{t('home', 'planCategoryFilterHeading')}</p>
-                        <div className="plan-category-pills plan-category-pills--panel">
-                          <button
-                            type="button"
-                            role="option"
-                            aria-selected={placeCategoryFilter == null}
-                            className={`plan-category-pill ${!placeCategoryFilter ? 'plan-category-pill--active' : ''}`}
-                            onClick={() => {
-                              if (placeCategoryFilter != null) {
-                                showToast(t('home', 'planToastCategoryAll'), 'info');
-                              }
-                              setPlaceCategoryFilter(null);
-                              setCategoryFilterOpen(false);
-                            }}
-                          >
-                            {t('home', 'planFilterAllCategories')}
-                          </button>
-                          {categories.map((c) => (
-                            <button
-                              key={c.id}
-                              type="button"
-                              role="option"
-                              aria-selected={placeCategoryFilter === c.id}
-                              className={`plan-category-pill ${placeCategoryFilter === c.id ? 'plan-category-pill--active' : ''}`}
-                              onClick={() => {
-                                const next = placeCategoryFilter === c.id ? null : c.id;
-                                setPlaceCategoryFilter(next);
-                                setCategoryFilterOpen(false);
-                                if (next == null) {
-                                  showToast(t('home', 'planToastCategoryAll'), 'info');
-                                } else {
-                                  showToast(
-                                    formatPlanToast(t('home', 'planToastCategoryFilter'), {
-                                      label: c.name != null ? String(c.name) : String(c.id),
-                                    }),
-                                    'info'
-                                  );
-                                }
-                              }}
-                            >
-                              {c.name || c.id}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-              <div className="plan-discover-by-category">
-                {placeSections.map((sec) => (
-                  <div key={sec.id} className="plan-category-section" id={`plan-cat-${sec.id}`}>
-                    <h3 className="plan-category-section-title">{sec.name}</h3>
-                    <div className="plan-discover-grid">
-                      {sec.places.map((p) => (
-                        <PlaceCardDiscover
-                          key={p.id}
-                          place={p}
-                          isFavourite={favouriteIds.has(String(p.id))}
-                          onToggleFavourite={toggleFavourite}
-                          tripDayCount={isInBuilder ? editDays.length : 0}
-                          onAddToTrip={isInBuilder ? addPlaceToDay : undefined}
-                          t={t}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {placeSections.length === 0 && (
-                <p className="plan-empty-msg">{t('home', 'noSpots')}</p>
-              )}
-              </div>
-              )}
-            </section>
+            <PlanBuilderDiscover
+              builderSectionCollapsed={builderSectionCollapsed}
+              toggleBuilderSection={toggleBuilderSection}
+              placeSearch={placeSearch}
+              setPlaceSearch={setPlaceSearch}
+              categoryFilterRef={categoryFilterRef}
+              placeCategoryFilter={placeCategoryFilter}
+              categoryFilterOpen={categoryFilterOpen}
+              setCategoryFilterOpen={setCategoryFilterOpen}
+              showToast={showToast}
+              setPlaceCategoryFilter={setPlaceCategoryFilter}
+              categories={categories}
+              placeSections={placeSections}
+              favouriteIds={favouriteIds}
+              toggleFavourite={toggleFavourite}
+              isInBuilder={isInBuilder}
+              editDays={editDays}
+              addPlaceToDay={addPlaceToDay}
+              formatPlanToast={formatPlanToast}
+              t={t}
+              tourBuilderDiscoverRef={tourBuilderDiscoverRef}
+            />
 
-            <section
-              ref={tourBuilderFavouritesRef}
-              className={`plan-unified-section plan-unified-section--favourites${builderSectionCollapsed.favourites ? ' plan-unified-section--collapsed' : ''}`}
-              id="plan-favourites"
-            >
-              <div className="plan-section-head-toggle">
-                <div className="plan-section-step">
-                  <span className="plan-step-num">3</span>
-                  <h2 className="plan-section-title" id="plan-favourites-label">{t('home', 'planFavouritesTitle')}</h2>
-                </div>
-                <button
-                  type="button"
-                  className="plan-builder-section-toggle"
-                  onClick={() => toggleBuilderSection('favourites')}
-                  aria-expanded={!builderSectionCollapsed.favourites}
-                  aria-controls="plan-favourites-body"
-                >
-                  <Icon name={builderSectionCollapsed.favourites ? 'expand_more' : 'expand_less'} size={22} aria-hidden />
-                  <span>{builderSectionCollapsed.favourites ? t('home', 'planBuilderSectionShow') : t('home', 'planBuilderSectionHide')}</span>
-                </button>
-              </div>
-              {!builderSectionCollapsed.favourites && (
-              <div id="plan-favourites-body" className="plan-builder-section-body" role="region" aria-labelledby="plan-favourites-label">
-              <p className="plan-section-sub">{t('home', 'planFavouritesSub')}</p>
-              {favouritePlaces.length === 0 ? (
-                <div className="plan-fav-empty">
-                  <Icon name="favorite_border" size={48} />
-                  <p>{t('home', 'planFavouritesEmptyHint')}</p>
-                </div>
-              ) : (
-                <>
-                  <div className="plan-fav-search">
-                    <div className="plan-search-wrap plan-search-wrap--sm">
-                      <Icon name="search" size={18} className="plan-search-icon" />
-                      <input
-                        type="search"
-                        className="plan-search-input"
-                        placeholder={t('home', 'planSearchFavourites')}
-                        value={favSearch}
-                        onChange={(e) => setFavSearch(e.target.value)}
-                        aria-label={t('home', 'planSearchFavourites')}
-                      />
-                    </div>
-                  </div>
-                  <div className="plan-fav-grid">
-                    {filteredFavourites.map((p) => (
-                      <FavouriteCard
-                        key={p.id}
-                        place={p}
-                        dayCount={editDays.length}
-                        onAddToDay={addPlaceToDay}
-                        t={t}
-                      />
-                    ))}
-                  </div>
-                  {filteredFavourites.length === 0 && (
-                    <p className="plan-empty-msg">{t('home', 'noSavedPlaces')}</p>
-                  )}
-                </>
-              )}
-              </div>
-              )}
-            </section>
+            <PlanBuilderFavourites
+              builderSectionCollapsed={builderSectionCollapsed}
+              toggleBuilderSection={toggleBuilderSection}
+              favouritePlaces={favouritePlaces}
+              favSearch={favSearch}
+              setFavSearch={setFavSearch}
+              filteredFavourites={filteredFavourites}
+              editDays={editDays}
+              addPlaceToDay={addPlaceToDay}
+              t={t}
+              tourBuilderFavouritesRef={tourBuilderFavouritesRef}
+            />
 
-            <section
-              className={`plan-unified-section plan-unified-section--itinerary${builderSectionCollapsed.itinerary ? ' plan-unified-section--collapsed' : ''}`}
-              id="plan-itinerary"
-            >
-              <div className="plan-section-head-toggle">
-                <div className="plan-section-step">
-                  <span className="plan-step-num">4</span>
-                  <h2 className="plan-section-title" id="plan-itinerary-label">{t('home', 'planStepItinerary')}</h2>
-                </div>
-                <button
-                  type="button"
-                  className="plan-builder-section-toggle"
-                  onClick={() => toggleBuilderSection('itinerary')}
-                  aria-expanded={!builderSectionCollapsed.itinerary}
-                  aria-controls="plan-itinerary-body"
-                >
-                  <Icon name={builderSectionCollapsed.itinerary ? 'expand_more' : 'expand_less'} size={22} aria-hidden />
-                  <span>{builderSectionCollapsed.itinerary ? t('home', 'planBuilderSectionShow') : t('home', 'planBuilderSectionHide')}</span>
-                </button>
-              </div>
-              {!builderSectionCollapsed.itinerary && (
-              <div id="plan-itinerary-body" className="plan-builder-section-body" role="region" aria-labelledby="plan-itinerary-label">
-              <div className="plan-days plan-days--unified">
-                {editDays.map((day, i) => {
-                  const groups = groupedPlacesBySlot(day, i);
-                  const nPlaces = placeIdsFromDay(day).length;
-                  return (
-                    <div key={i} className="plan-day-card plan-day-card--unified">
-                      <h3 className="plan-day-title">
-                        {t('home', 'dayLabel')} {i + 1}
-                        {editStart && getDateForDay(editStart, i) && (
-                          <span className="plan-day-date">
-                            {' '}({new Date(getDateForDay(editStart, i) + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })})
-                          </span>
-                        )}
-                      </h3>
-                      {nPlaces > 0 && (
-                        <>
-                          <button
-                            type="button"
-                            className="plan-optimize-btn"
-                            onClick={() => { void optimizeDayOrder(i); }}
-                            disabled={schedulingDayIndex !== null}
-                          >
-                            <Icon name="auto_awesome" size={18} />{' '}
-                            {schedulingDayIndex === i ? t('home', 'loading') : t('home', 'planOptimizeOrder')}
-                          </button>
-                          <p className="plan-smart-schedule-hint">{t('home', 'planSmartScheduleHint')}</p>
-                        </>
-                      )}
-                      <div className="plan-day-slots">
-                        {TIME_SLOTS.map((slot) => {
-                          const items = groups[slot] || [];
-                          if (items.length === 0) return null;
-                          return (
-                            <div key={slot} className="plan-day-slot">
-                              <span className="plan-day-slot-label">{timeSlotLabel(slot)}</span>
-                              <ul className="plan-day-places">
-                                {items.map(({ placeId, name, slot: slotRow }) => (
-                                  <li key={placeId} className="plan-day-place">
-                                    <div className="plan-day-place-main">
-                                      <Link to={`/place/${placeId}`} className="plan-day-place-link">{name || placeId}</Link>
-                                      <div className="plan-slot-times">
-                                        <label className="plan-time-field">
-                                          <span className="plan-time-field-label">{t('home', 'tripSlotStart')}</span>
-                                          <input
-                                            type="time"
-                                            value={(slotRow.startTime && String(slotRow.startTime).slice(0, 5)) || ''}
-                                            onChange={(e) => updateSlotTime(i, placeId, 'startTime', e.target.value ? `${e.target.value}:00` : '')}
-                                          />
-                                        </label>
-                                        <label className="plan-time-field">
-                                          <span className="plan-time-field-label">{t('home', 'tripSlotEnd')}</span>
-                                          <input
-                                            type="time"
-                                            value={(slotRow.endTime && String(slotRow.endTime).slice(0, 5)) || ''}
-                                            onChange={(e) => updateSlotTime(i, placeId, 'endTime', e.target.value ? `${e.target.value}:00` : '')}
-                                          />
-                                        </label>
-                                      </div>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      className="plan-day-place-remove"
-                                      onClick={() => removePlaceFromDay(i, placeId)}
-                                      aria-label={t('home', 'planRemoveFromPlan')}
-                                    >
-                                      <Icon name="close" size={18} />
-                                    </button>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      {nPlaces === 0 && (
-                        <p className="plan-day-empty">{t('home', 'planDayEmpty')}</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              </div>
-              )}
-              {hasUnsavedChanges ? (
-                <p className="plan-unsaved-hint" role="status">
-                  {t('home', 'planUnsavedHint')}
-                </p>
-              ) : null}
-              <div ref={tourBuilderSaveRef} className="plan-builder-actions">
-                <button type="button" className="vd-btn vd-btn--primary" onClick={handleSaveTrip} disabled={saving}>
-                  {saving ? t('home', 'loading') : t('home', 'saveTrip')}
-                </button>
-                <button type="button" className="vd-btn vd-btn--secondary" onClick={handleCancelEdit}>
-                  {t('home', 'cancel')}
-                </button>
-                {editingTrip?.isHost !== false && (
-                  <button
-                    type="button"
-                    className="vd-btn plan-delete-btn plan-delete-btn--icon-only"
-                    onClick={() => beginDeleteTrip(editingTripId)}
-                    disabled={saving || deletingTripId === editingTripId}
-                    aria-busy={deletingTripId === editingTripId}
-                    aria-label={
-                      deletingTripId === editingTripId
-                        ? t('home', 'loading')
-                        : t('home', 'deleteTrip')
-                    }
-                  >
-                    <Icon name="delete" size={22} ariaHidden />
-                  </button>
-                )}
-              </div>
-            </section>
+            <PlanBuilderItinerary
+              builderSectionCollapsed={builderSectionCollapsed}
+              toggleBuilderSection={toggleBuilderSection}
+              editDays={editDays}
+              editStart={editStart}
+              getDateForDay={getDateForDay}
+              placeIdsFromDay={placeIdsFromDay}
+              optimizeDayOrder={optimizeDayOrder}
+              schedulingDayIndex={schedulingDayIndex}
+              groupedPlacesBySlot={groupedPlacesBySlot}
+              TIME_SLOTS={TIME_SLOTS}
+              timeSlotLabel={timeSlotLabel}
+              updateSlotTime={updateSlotTime}
+              removePlaceFromDay={removePlaceFromDay}
+              hasUnsavedChanges={hasUnsavedChanges}
+              handleSaveTrip={handleSaveTrip}
+              handleCancelEdit={handleCancelEdit}
+              saving={saving}
+              editingTrip={editingTrip}
+              editingTripId={editingTripId}
+              beginDeleteTrip={beginDeleteTrip}
+              deletingTripId={deletingTripId}
+              t={t}
+              tourBuilderSaveRef={tourBuilderSaveRef}
+            />
           </div>
           {planSkipFabTarget ? (
             <button
@@ -2075,426 +1502,62 @@ export default function Plan() {
           </>
         ) : (
           <>
-            <section id="plan" style={{ scrollMarginTop: '100px' }}>
-              <div className="plan-section-head">
-                <h2 className="plan-section-title">{t('nav', 'myTrips')}</h2>
-                <div className="plan-section-head-actions plan-section-head-actions--my-trips">
-                  <div className="plan-mytrips-actions">
-                    <div className="plan-mytrips-actions-tools">
-                      <button
-                        type="button"
-                        className="plan-manual-tour-btn"
-                        onClick={startCreateTour}
-                        title={t('home', 'manualTourRestart')}
-                        aria-label={t('home', 'manualTourRestartAria')}
-                      >
-                        <Icon name="menu_book" size={22} ariaHidden />
-                      </button>
-                      {settings.aiPlannerEnabled !== false && (
-                        <Link to="/plan/ai" className="plan-btn-ai">
-                          <Icon name="auto_awesome" size={22} ariaHidden /> {t('nav', 'aiPlanBannerCta')}
-                        </Link>
-                      )}
-                    </div>
-                    {!showCreateForm && (
-                      <button
-                        type="button"
-                        className="plan-btn-create plan-btn-create--my-trips-primary"
-                        ref={tourCreateBtnRef}
-                        onClick={() => {
-                          setShowCreateForm(true);
-                          showToast(t('home', 'planToastNewTripForm'), 'info');
-                        }}
-                      >
-                        <Icon name="add" size={24} ariaHidden /> {t('home', 'createTrip')}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+            <PlanTripList
+              trips={trips}
+              showCreateForm={showCreateForm}
+              t={t}
+              filteredSortedTrips={filteredSortedTrips}
+              tripFiltersActive={tripFiltersActive}
+              clearTripListFilters={clearTripListFilters}
+              tripFiltersOpen={tripFiltersOpen}
+              setTripFiltersOpen={setTripFiltersOpen}
+              tripListSearch={tripListSearch}
+              setTripListSearch={setTripListSearch}
+              tripFilterFrom={tripFilterFrom}
+              setTripFilterFrom={setTripFilterFrom}
+              tripFilterTo={tripFilterTo}
+              setTripFilterTo={setTripFilterTo}
+              applyTripFilterDatePreset={applyTripFilterDatePreset}
+              tripFilterPhase={tripFilterPhase}
+              setTripFilterPhase={setTripFilterPhase}
+              tripFilterStops={tripFilterStops}
+              setTripFilterStops={setTripFilterStops}
+              navigate={navigate}
+              handleViewTripOnMap={handleViewTripOnMap}
+              handleShareTrip={handleShareTrip}
+              handleDuplicateTrip={handleDuplicateTrip}
+              beginDeleteTrip={beginDeleteTrip}
+              duplicatingId={duplicatingId}
+              deletingTripId={deletingTripId}
+              placeIdsFromDay={placeIdsFromDay}
+              formatPlanToast={formatPlanToast}
+            />
 
-              {(shareRequestsLoading || incomingShareRequests.length > 0) && (
-                <div className="plan-share-requests-panel">
-                  <div className="plan-share-requests-head">
-                    <div className="plan-share-requests-heading">
-                      <h3>Incoming trip requests</h3>
-                      <p>Review shared itineraries before accepting.</p>
-                    </div>
-                    <div className="plan-share-requests-head-actions">
-                      <span className="plan-share-requests-count">{incomingShareRequests.length}</span>
-                      <button
-                        type="button"
-                        className="plan-share-requests-collapse-btn"
-                        onClick={() => setShareRequestsCollapsed((v) => !v)}
-                      >
-                        {shareRequestsCollapsed ? 'Show all' : 'Hide all'}
-                      </button>
-                    </div>
-                  </div>
-                  {shareRequestsLoading ? (
-                    <p className="plan-share-requests-empty">{t('home', 'loading')}</p>
-                  ) : shareRequestsCollapsed ? (
-                    <p className="plan-share-requests-empty">Requests hidden.</p>
-                  ) : (
-                    <ul className="plan-share-requests-list">
-                      {incomingShareRequests.map((req) => (
-                        <li key={req.id} className="plan-share-request-item">
-                        <div className="plan-share-request-top">
-                          <p className="plan-share-request-user">
-                            <span className="plan-share-request-from-label">From</span>{' '}
-                            <strong>{req.fromUser?.name || req.fromUser?.username || 'User'}</strong>
-                          </p>
-                          <span className="plan-share-request-status">{req.status}</span>
-                        </div>
-                        {req.fromUser?.username ? (
-                          <p className="plan-share-request-handle">{req.fromUser.username}</p>
-                        ) : null}
-                        <p className="plan-share-request-trip">{req.trip?.name || 'Trip'}</p>
-                        <p className="plan-share-request-meta">
-                          {req.trip?.dayCount || 0} day(s) - {req.trip?.stopCount || 0} stop(s)
-                        </p>
-                        {req.createdAt ? (
-                          <p className="plan-share-request-time">
-                            <Icon name="schedule" size={14} ariaHidden /> {new Date(req.createdAt).toLocaleString()}
-                          </p>
-                        ) : null}
-                        {req.message ? <p className="plan-share-request-message">"{req.message}"</p> : null}
-                        <div className="plan-share-request-preview-actions">
-                          <button
-                            type="button"
-                            className="plan-share-request-link-btn"
-                            onClick={() => toggleRequestExpanded(req.id)}
-                          >
-                            {expandedShareRequestIds.has(req.id) ? 'Hide trip details' : 'View trip details'}
-                          </button>
-                        </div>
-                        {expandedShareRequestIds.has(req.id) && (
-                          <div className="plan-share-request-details">
-                            {Array.isArray(req.trip?.days) && req.trip.days.length > 0 ? (
-                              <ul className="plan-share-request-days">
-                                {req.trip.days.map((day, idx) => {
-                                  const slots = Array.isArray(day?.slots) ? day.slots : [];
-                                  const dayPlaceIds = slots.map((s) => String(s.placeId)).filter(Boolean);
-                                  return (
-                                    <li key={`${req.id}-day-${idx}`} className="plan-share-request-day">
-                                      <p className="plan-share-request-day-title">
-                                        Day {idx + 1}
-                                        {day?.date ? ` - ${day.date}` : ''}
-                                        {` (${dayPlaceIds.length} place${dayPlaceIds.length === 1 ? '' : 's'})`}
-                                      </p>
-                                      {dayPlaceIds.length > 0 ? (
-                                        <ul className="plan-share-request-day-places">
-                                          {dayPlaceIds.map((pid, pidx) => {
-                                            const placeName = placeNames[String(pid)] || placeMap[String(pid)]?.name || pid;
-                                            return (
-                                              <li key={`${req.id}-day-${idx}-place-${pidx}`} className="plan-share-request-day-place">
-                                                {placeName}
-                                              </li>
-                                            );
-                                          })}
-                                        </ul>
-                                      ) : (
-                                        <p className="plan-share-request-day-empty">No places in this day.</p>
-                                      )}
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-                            ) : (
-                              <p className="plan-share-request-day-empty">No day details provided.</p>
-                            )}
-                          </div>
-                        )}
-                        <div className="plan-share-request-actions">
-                          <button
-                            type="button"
-                            className="plan-share-request-btn plan-share-request-btn--accept"
-                            onClick={() => handleRespondIncomingShare(req.id, 'accept')}
-                            disabled={shareActionBusyId === req.id}
-                          >
-                            <Icon name="check" size={16} ariaHidden /> Accept
-                          </button>
-                          <button
-                            type="button"
-                            className="plan-share-request-btn plan-share-request-btn--reject"
-                            onClick={() => handleRespondIncomingShare(req.id, 'reject')}
-                            disabled={shareActionBusyId === req.id}
-                          >
-                            <Icon name="close" size={16} ariaHidden /> Reject
-                          </button>
-                        </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-
-              {trips.length > 0 && !showCreateForm && (
-                <div className="plan-trips-filters" aria-label={t('home', 'tripsFilterTitle')}>
-                  <div className="plan-trips-filters-toolbar">
-                    <p className="plan-trips-filters-results">
-                      {formatPlanToast(t('home', 'tripsFilterShowing'), {
-                        shown: filteredSortedTrips.length,
-                        total: trips.length,
-                      })}
-                    </p>
-                    <div className="plan-trips-filters-toolbar-actions">
-                      {tripFiltersActive && (
-                        <button type="button" className="plan-trips-filter-clear vd-btn vd-btn--secondary" onClick={clearTripListFilters}>
-                          {t('home', 'tripsFilterClearAll')}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className={`plan-trips-filters-toggle ${tripFiltersOpen ? 'plan-trips-filters-toggle--open' : ''}`}
-                        onClick={() => setTripFiltersOpen((o) => !o)}
-                        aria-expanded={tripFiltersOpen}
-                        aria-controls="plan-trips-filters-panel"
-                        id="plan-trips-filters-toggle"
-                      >
-                        <span>{tripFiltersOpen ? t('home', 'tripsFilterToggleHide') : t('home', 'tripsFilterToggleShow')}</span>
-                        <Icon name={tripFiltersOpen ? 'expand_less' : 'expand_more'} size={22} />
-                      </button>
-                    </div>
-                  </div>
-                  {tripFiltersOpen && (
-                    <div id="plan-trips-filters-panel" className="plan-trips-filters-panel" role="region" aria-labelledby="plan-trips-filters-toggle">
-                      <div className="plan-trips-filter-search" role="search">
-                        <Icon name="search" size={22} className="plan-trips-filter-search-icon" aria-hidden />
-                        <input
-                          type="search"
-                          className="plan-trips-filter-search-input"
-                          value={tripListSearch}
-                          onChange={(e) => setTripListSearch(e.target.value)}
-                          placeholder={t('home', 'tripsFilterSearchPlaceholder')}
-                          aria-label={t('home', 'tripsFilterSearchLabel')}
-                        />
-                      </div>
-                      <div className="plan-trips-filter-group">
-                        <span className="plan-trips-filter-label">{t('home', 'tripsFilterWhenLabel')}</span>
-                        <div className="plan-trips-filter-dates">
-                          <label className="plan-trips-filter-date">
-                            <input
-                              type="date"
-                              value={tripFilterFrom}
-                              onChange={(e) => setTripFilterFrom(e.target.value)}
-                              aria-label={t('home', 'tripsFilterFrom')}
-                            />
-                          </label>
-                          <span className="plan-trips-filter-date-sep" aria-hidden>–</span>
-                          <label className="plan-trips-filter-date">
-                            <input
-                              type="date"
-                              value={tripFilterTo}
-                              onChange={(e) => setTripFilterTo(e.target.value)}
-                              aria-label={t('home', 'tripsFilterTo')}
-                            />
-                          </label>
-                        </div>
-                        <div className="plan-trips-filter-quick-chips" role="group" aria-label={t('home', 'tripsFilterQuickPresets')}>
-                          <button type="button" className="plan-quick-date-chip" onClick={() => applyTripFilterDatePreset('this_month')}>
-                            {t('home', 'tripsFilterPresetThisMonth')}
-                          </button>
-                          <button type="button" className="plan-quick-date-chip" onClick={() => applyTripFilterDatePreset('next_month')}>
-                            {t('home', 'tripsFilterPresetNextMonth')}
-                          </button>
-                          <button type="button" className="plan-quick-date-chip" onClick={() => applyTripFilterDatePreset('next_30')}>
-                            {t('home', 'tripsFilterPresetNext30')}
-                          </button>
-                          {(tripFilterFrom || tripFilterTo) && (
-                            <button type="button" className="plan-quick-date-chip plan-quick-date-chip--ghost" onClick={() => applyTripFilterDatePreset('clear')}>
-                              {t('home', 'tripsFilterClearDates')}
-                            </button>
-                          )}
-                        </div>
-                        <div className="plan-calendar-wrap plan-calendar-wrap--trips-filter">
-                          <DateRangeCalendar
-                            startDate={tripFilterFrom || undefined}
-                            endDate={tripFilterTo || undefined}
-                            onChange={(start, end) => {
-                              setTripFilterFrom(start);
-                              setTripFilterTo(end);
-                            }}
-                            showHint={false}
-                          />
-                        </div>
-                      </div>
-                      <div className="plan-trips-filter-group">
-                        <span className="plan-trips-filter-label">{t('home', 'tripsFilterPhaseLabel')}</span>
-                        <div className="plan-trips-filter-pills" role="group">
-                          {(['all', 'upcoming', 'ongoing', 'past']).map((key) => (
-                            <button
-                              key={key}
-                              type="button"
-                              className={`plan-trips-filter-pill ${tripFilterPhase === key ? 'plan-trips-filter-pill--active' : ''}`}
-                              onClick={() => setTripFilterPhase(key)}
-                              aria-pressed={tripFilterPhase === key}
-                            >
-                              {t('home', key === 'all' ? 'tripsFilterPhaseAll' : key === 'upcoming' ? 'tripsFilterPhaseUpcoming' : key === 'ongoing' ? 'tripsFilterPhaseOngoing' : 'tripsFilterPhasePast')}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="plan-trips-filter-group">
-                        <span className="plan-trips-filter-label">{t('home', 'tripsFilterStopsLabel')}</span>
-                        <div className="plan-trips-filter-pills" role="group">
-                          {(['any', 'with', 'without']).map((key) => (
-                            <button
-                              key={key}
-                              type="button"
-                              className={`plan-trips-filter-pill ${tripFilterStops === key ? 'plan-trips-filter-pill--active' : ''}`}
-                              onClick={() => setTripFilterStops(key)}
-                              aria-pressed={tripFilterStops === key}
-                            >
-                              {t('home', key === 'any' ? 'tripsFilterStopsAny' : key === 'with' ? 'tripsFilterStopsWith' : 'tripsFilterStopsWithout')}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {trips.length === 0 && !showCreateForm && (
-                <div className="plan-empty">
-                  <p className="plan-empty-title">{t('home', 'planText')}</p>
-                  <p className="plan-empty-hint">{t('home', 'planEmptyHint')}</p>
-                  <div className="plan-empty-ctas">
-                    <Link to="/map" className="vd-btn vd-btn--primary">
-                      {t('home', 'viewMapCta')}
-                      <Icon name="arrow_forward" size={20} />
-                    </Link>
-                    <Link to="/favourites" className="vd-btn vd-btn--secondary">
-                      {t('nav', 'myFavourites')}
-                      <Icon name="arrow_forward" size={20} />
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {showCreateForm && (
-                <form ref={tourCreateFormRef} className="plan-create-form" onSubmit={handleCreateSubmit}>
-                  <h3 className="plan-form-title">{t('home', 'createTrip')}</h3>
-                  <label>
-                    <span className="plan-label">{t('home', 'tripName')}</span>
-                    <input type="text" value={createName} onChange={(e) => { setCreateName(e.target.value); setNameError(''); }} maxLength={200} placeholder={t('home', 'tripNamePlaceholder')} className="plan-input" aria-invalid={!!nameError} />
-                  </label>
-                  {nameError && <p className="plan-name-error" role="alert">{nameError}</p>}
-                  <label>
-                    <span className="plan-label">{t('home', 'tripNotesOptional')}</span>
-                    <textarea value={createDescription} onChange={(e) => setCreateDescription(e.target.value)} className="plan-input plan-input--textarea" rows={3} maxLength={10000} placeholder={t('home', 'tripNotesPlaceholder')} />
-                  </label>
-                  <div className="plan-quick-dates plan-quick-dates--create" role="group" aria-label={t('home', 'planQuickDates')}>
-                    <button type="button" className="plan-quick-date-chip" onClick={() => applyCreateQuickPreset('today')}>{t('home', 'planQuickToday')}</button>
-                    <button type="button" className="plan-quick-date-chip" onClick={() => applyCreateQuickPreset('weekend')}>{t('home', 'planQuickWeekend')}</button>
-                    <button type="button" className="plan-quick-date-chip" onClick={() => applyCreateQuickPreset('week')}>{t('home', 'planQuickWeek')}</button>
-                  </div>
-                  <div className="plan-create-dates">
-                    <label>
-                      <span className="plan-label">{t('home', 'startDate')}</span>
-                      <input type="date" value={createStart} onChange={(e) => { setCreateStart(e.target.value); setDateError(null); }} className="plan-input" required />
-                    </label>
-                    <label>
-                      <span className="plan-label">{t('home', 'endDate')}</span>
-                      <input type="date" value={createEnd} onChange={(e) => { setCreateEnd(e.target.value); setDateError(null); }} className="plan-input" required />
-                    </label>
-                  </div>
-                  {dateError && <p className="plan-date-error" role="alert">{dateError}</p>}
-                  <div ref={tourCreateCalendarRef} className="plan-calendar-wrap">
-                    <DateRangeCalendar
-                      startDate={createStart || undefined}
-                      endDate={createEnd || undefined}
-                      onChange={onCreateCalendarRangeChange}
-                      hintStart={t('home', 'selectStartDate')}
-                      hintEnd={t('home', 'selectEndDate')}
-                    />
-                  </div>
-                  <div ref={tourCreateActionsRef} className="plan-form-actions">
-                    <button type="submit" className="vd-btn vd-btn--primary" disabled={saving}>
-                      {saving ? t('home', 'loading') : t('home', 'saveTrip')}
-                    </button>
-                    <button type="button" className="vd-btn vd-btn--secondary" onClick={handleCloseCreateForm}>
-                      {t('home', 'cancel')}
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {trips.length > 0 && !showCreateForm && filteredSortedTrips.length === 0 && (
-                <p className="plan-trips-filter-empty" role="status">
-                  {t('home', 'tripsFilterNoResults')}
-                </p>
-              )}
-
-              {trips.length > 0 && !showCreateForm && filteredSortedTrips.length > 0 && (
-                <ul className="plan-trips-grid">
-                  {filteredSortedTrips.map((tr) => {
-                    const totalPlaces = Array.isArray(tr.days)
-                      ? tr.days.reduce((acc, d) => acc + placeIdsFromDay(d).length, 0)
-                      : 0;
-                    const numDays = getDayCount(tr.startDate, tr.endDate);
-                    const hasPlaces = totalPlaces > 0;
-                    const canHostManage = tr.isHost !== false;
-                    return (
-                      <li key={tr.id} className="plan-trip-card">
-                        <button type="button" className="plan-trip-card-inner" onClick={() => navigate(`/trips/${encodeURIComponent(tr.id)}`)}>
-                          <h3>{tr.name || t('home', 'planTitle')}</h3>
-                          {tr.description && <p className="plan-trip-desc">{tr.description}</p>}
-                          <div className="plan-trip-stats">
-                            <span className="plan-trip-stat">{numDays} {numDays === 1 ? 'day' : 'days'}</span>
-                            <span className="plan-trip-stat">{totalPlaces} {totalPlaces === 1 ? 'place' : 'places'}</span>
-                          </div>
-                          <p className="plan-trip-meta">
-                            {tr.startDate && new Date(toDateOnly(tr.startDate) + 'T12:00:00').toLocaleDateString()}
-                            {tr.endDate && ` – ${new Date(toDateOnly(tr.endDate) + 'T12:00:00').toLocaleDateString()}`}
-                          </p>
-                          <span className="plan-trip-arrow" aria-hidden="true"><Icon name="arrow_forward" size={22} /></span>
-                        </button>
-                        <div className="plan-trip-card-actions">
-                          {hasPlaces && (
-                            <button type="button" className="plan-trip-card-btn plan-trip-card-btn--primary" onClick={(e) => { e.stopPropagation(); handleViewTripOnMap(tr); }}>
-                              <Icon name="map" size={18} /> {t('detail', 'viewOnMap')}
-                            </button>
-                          )}
-                          <button type="button" className="plan-trip-card-btn" onClick={(e) => { e.stopPropagation(); handleShareTrip(tr); }}>
-                            <Icon name="share" size={18} /> {t('detail', 'share')}
-                          </button>
-                          <button type="button" className="plan-trip-card-btn" onClick={(e) => { e.stopPropagation(); handleDuplicateTrip(tr); }} disabled={duplicatingId === tr.id}>
-                            <Icon name="content_copy" size={18} /> {t('home', 'duplicate')}
-                          </button>
-                          {canHostManage && (
-                            <button
-                              type="button"
-                              className="plan-trip-card-btn plan-trip-card-btn--danger plan-trip-card-btn--icon-only"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                beginDeleteTrip(tr.id);
-                              }}
-                              disabled={deletingTripId === tr.id || duplicatingId === tr.id}
-                              aria-busy={deletingTripId === tr.id}
-                              aria-label={
-                                deletingTripId === tr.id ? t('home', 'loading') : t('home', 'deleteTrip')
-                              }
-                            >
-                              <Icon name="delete" size={20} ariaHidden />
-                            </button>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-
-              {trips.length > 0 && !showCreateForm && (
-                <div className="plan-secondary-ctas">
-                  <Link to="/map" className="vd-btn vd-btn--secondary">{t('home', 'viewMapCta')} <Icon name="arrow_forward" size={20} /></Link>
-                  <Link to="/favourites" className="vd-btn vd-btn--secondary">{t('nav', 'myFavourites')} <Icon name="arrow_forward" size={20} /></Link>
-                </div>
-              )}
-            </section>
+            {showCreateForm && (
+              <PlanCreateForm
+                tourCreateFormRef={tourCreateFormRef}
+                handleCreateSubmit={handleCreateSubmit}
+                createName={createName}
+                setCreateName={setCreateName}
+                setNameError={setNameError}
+                nameError={nameError}
+                createDescription={createDescription}
+                setCreateDescription={setCreateDescription}
+                applyCreateQuickPreset={applyCreateQuickPreset}
+                createStart={createStart}
+                setCreateStart={setCreateStart}
+                createEnd={createEnd}
+                setCreateEnd={setCreateEnd}
+                setDateError={setDateError}
+                dateError={dateError}
+                tourCreateCalendarRef={tourCreateCalendarRef}
+                onCreateCalendarRangeChange={onCreateCalendarRangeChange}
+                tourCreateActionsRef={tourCreateActionsRef}
+                saving={saving}
+                handleCloseCreateForm={handleCloseCreateForm}
+                t={t}
+              />
+            )}
           </>
         )}
       </div>
@@ -2566,49 +1629,14 @@ export default function Plan() {
         dir={lang === 'ar' ? 'rtl' : 'ltr'}
       />
 
-      {tripDeleteConfirmId ? (
-        <div className="plan-delete-confirm-root">
-          <button
-            type="button"
-            className="plan-delete-confirm-backdrop"
-            aria-label={t('home', 'cancel')}
-            onClick={cancelTripDeleteConfirm}
-          />
-          <div
-            className="plan-delete-confirm-sheet"
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="plan-delete-confirm-title"
-            aria-describedby="plan-delete-confirm-desc"
-          >
-            <p id="plan-delete-confirm-title" className="plan-delete-confirm-title">
-              {t('home', 'deleteTripConfirmTitle')}
-            </p>
-            <p id="plan-delete-confirm-desc" className="plan-delete-confirm-desc">
-              {t('home', 'deleteTripConfirmDetail')}
-              {pendingDeleteTrip ? (
-                <span className="plan-delete-confirm-name">
-                  {' '}
-                  — {pendingDeleteTrip.name?.trim() || t('home', 'planTitle')}
-                </span>
-              ) : null}
-            </p>
-            <div className="plan-delete-confirm-actions">
-              <button type="button" className="plan-delete-confirm-btn plan-delete-confirm-btn--ghost" onClick={cancelTripDeleteConfirm}>
-                {t('home', 'cancel')}
-              </button>
-              <button
-                type="button"
-                className="plan-delete-confirm-btn plan-delete-confirm-btn--danger"
-                onClick={executeDeleteTrip}
-                disabled={!!deletingTripId}
-              >
-                {deletingTripId ? t('home', 'loading') : t('home', 'deleteTrip')}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <PlanDeleteConfirmModal
+        tripDeleteConfirmId={tripDeleteConfirmId}
+        cancelTripDeleteConfirm={cancelTripDeleteConfirm}
+        pendingDeleteTrip={pendingDeleteTrip}
+        executeDeleteTrip={executeDeleteTrip}
+        deletingTripId={deletingTripId}
+        t={t}
+      />
 
       {toast && (
         <div className={`plan-toast plan-toast--${toast.type}`} role="status" aria-live="polite">

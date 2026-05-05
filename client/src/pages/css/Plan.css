@@ -103,10 +103,22 @@
   gap: 10px 12px;
 }
 
-/* My Trips: tutorial + AI on one row, create trip prominent below on narrow screens */
-.plan-page .plan-section-head-actions--my-trips {
-  flex: 1 1 280px;
-  justify-content: flex-end;
+/* ----- My Trips: actions below hero ----- */
+.plan-page .plan-mytrips-actions-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  margin-top: -32px;
+  position: relative;
+  z-index: 10;
+}
+
+@media (min-width: 768px) {
+  .plan-page .plan-mytrips-actions-container {
+    padding: 0 40px;
+    margin-top: -40px;
+  }
 }
 
 .plan-page .plan-mytrips-actions {
@@ -115,7 +127,11 @@
   align-items: stretch;
   gap: 12px;
   width: 100%;
-  max-width: 440px;
+  background: var(--plan-surface);
+  padding: 16px;
+  border-radius: 20px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  border: 1px solid var(--plan-border);
 }
 
 .plan-page .plan-mytrips-actions-tools {
@@ -126,43 +142,58 @@
 }
 
 @media (min-width: 640px) {
-  .plan-page .plan-section-head-actions--my-trips {
-    max-width: min(100%, 520px);
-  }
-
   .plan-page .plan-mytrips-actions {
-    align-items: flex-end;
-  }
-
-  .plan-page .plan-mytrips-actions-tools {
-    justify-content: flex-end;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
   }
 }
 
-@media (max-width: 639px) {
-  .plan-page .plan-section-head:has(.plan-mytrips-actions) {
-    flex-direction: column;
-    align-items: stretch;
-  }
+.plan-page .plan-btn-create--my-trips-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  background: var(--plan-accent);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
 
-  .plan-page .plan-section-head-actions--my-trips {
-    justify-content: stretch;
-    flex: 1 1 auto;
-    max-width: none;
-  }
+.plan-page .plan-btn-create--my-trips-primary:hover {
+  transform: translateY(-2px);
+  background: var(--color-primary-dark);
+  box-shadow: 0 6px 20px rgba(15, 118, 110, 0.4);
+}
 
-  .plan-page .plan-mytrips-actions {
-    max-width: none;
-  }
+.plan-page .plan-btn-create--my-trips-primary:active {
+  transform: scale(0.98);
+}
 
-  .plan-page .plan-btn-create--my-trips-primary {
-    width: 100%;
-    justify-content: center;
-    min-height: 52px;
-    box-shadow:
-      0 4px 14px color-mix(in srgb, var(--plan-accent, #0f766e) 35%, transparent),
-      0 1px 0 rgba(255, 255, 255, 0.12) inset;
-  }
+.plan-page .plan-manual-tour-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid var(--plan-border);
+  background: var(--plan-surface);
+  color: var(--plan-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.plan-page .plan-manual-tour-btn:hover {
+  background: var(--plan-accent-dim);
+  border-color: var(--plan-accent);
+  color: var(--plan-accent);
 }
 
 .plan-page .plan-share-requests-panel {

@@ -20,7 +20,6 @@ const PlaceDiscover = lazy(() => import('./pages/PlaceDiscover'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetail'));
 const TourDetail = lazy(() => import('./pages/TourDetail'));
 const EventDetail = lazy(() => import('./pages/EventDetail'));
-const Trips = lazy(() => import('./pages/Trips'));
 const TripDetail = lazy(() => import('./pages/TripDetail'));
 const Favourites = lazy(() => import('./pages/Favourites'));
 const Messages = lazy(() => import('./pages/Messages'));
@@ -249,14 +248,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="trips"
-          element={
-            <ProtectedRoute>
-              <LazyBoundary message="Loading…"><Trips /></LazyBoundary>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="trips" element={<Navigate to="/plan" replace />} />
         <Route
           path="favourites"
           element={
