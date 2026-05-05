@@ -327,7 +327,17 @@ export default function PlaceDetail() {
     api.places
       .promotions(id, { lang })
       .then((r) => {
-        if (!cancelled) setPromotions(Array.isArray(r.promotions) ? r.promotions : []);
+        if (!cancelled) {
+          let list = Array.isArray(r.promotions) ? r.promotions : [];
+          // Client-side safety filter: Hide if expired or not yet started
+          const now = new Date();
+          list = list.filter((pr) => {
+            if (pr.endsAt && new Date(pr.endsAt) < now) return false;
+            if (pr.startsAt && new Date(pr.startsAt) > now) return false;
+            return true;
+          });
+          setPromotions(list);
+        }
       })
       .catch(() => {
         if (!cancelled) setPromotions([]);

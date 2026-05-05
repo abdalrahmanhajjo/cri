@@ -59,10 +59,10 @@ async function redeemCoupon(userId, uuid, code) {
   const active = await coupons.findOne({
     id: uuid,
     $or: [
-        { expires_at: null },
-        { expires_at: { $gt: now } }
+        { valid_until: null },
+        { valid_until: { $gt: now } }
     ],
-    starts_at: { $lte: now }
+    valid_from: { $lte: now }
   });
 
   if (!active) {
@@ -102,11 +102,10 @@ async function redeemPlacePromotion(userId, promoId, code) {
   const active = await promos.findOne({
     id: promoId,
     code: { $ne: null, $not: /^\s*$/ },
-    $or: [
-        { ends_at: null },
-        { ends_at: { $gt: now } }
-    ],
-    starts_at: { $lte: now }
+    $and: [
+      { $or: [ { ends_at: null }, { ends_at: { $gt: now } } ] },
+      { $or: [ { starts_at: null }, { starts_at: { $lte: now } } ] }
+    ]
   });
 
   if (!active) {

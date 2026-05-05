@@ -25,8 +25,10 @@ router.get('/', async (req, res) => {
     const promos = await promoColl.aggregate([
       { $match: {
           active: true,
-          $or: [{ starts_at: null }, { starts_at: { $lte: now } }],
-          $or: [{ ends_at: null }, { ends_at: { $gte: now } }]
+          $and: [
+            { $or: [{ starts_at: null }, { starts_at: { $lte: now } }] },
+            { $or: [{ ends_at: null }, { ends_at: { $gte: now } }] }
+          ]
       }},
       { $lookup: {
           from: 'places',
@@ -63,8 +65,10 @@ router.get('/', async (req, res) => {
     // We fetch all "potentially" active coupons. In a high-scale app, we'd use a more efficient way to check usage limits.
     const couponsRaw = await couponColl.aggregate([
       { $match: {
-          $or: [{ valid_from: null }, { valid_from: { $lte: now } }],
-          $or: [{ valid_until: null }, { valid_until: { $gte: now } }]
+          $and: [
+            { $or: [{ valid_from: null }, { valid_from: { $lte: now } }] },
+            { $or: [{ valid_until: null }, { valid_until: { $gte: now } }] }
+          ]
       }},
       { $lookup: {
           from: 'places',

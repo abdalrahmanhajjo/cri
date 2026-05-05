@@ -239,8 +239,10 @@ router.get('/:id/promotions', async (req, res) => {
       { $match: {
           place_id: place.id,
           active: true,
-          $or: [{ starts_at: null }, { starts_at: { $lte: now } }],
-          $or: [{ ends_at: null }, { ends_at: { $gte: now } }]
+          $and: [
+            { $or: [{ starts_at: null }, { starts_at: { $lte: now } }] },
+            { $or: [{ ends_at: null }, { ends_at: { $gte: now } }] }
+          ]
       }},
       { $sort: { created_at: -1 } }
     ]).toArray();

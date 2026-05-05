@@ -858,6 +858,12 @@ export default function Discover() {
         if (placeScopeId) {
           list = list.filter((pr) => String(pr.placeId) === String(placeScopeId));
         }
+        const now = new Date();
+        list = list.filter((pr) => {
+          if (pr.endsAt && new Date(pr.endsAt) < now) return false;
+          if (pr.startsAt && new Date(pr.startsAt) > now) return false;
+          return true;
+        });
         setPromotions(list);
       })
       .catch((err) => {
